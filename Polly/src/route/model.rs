@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use serde_json::Value;
 
 // ============================================================================
@@ -34,21 +34,24 @@ pub struct RawRouteFile {
 // Derived Data Models (Saved to derived_routes/)
 // ============================================================================
 
-/// GeoJSON structure for Frontend
+/// GeoJSON FeatureCollection
 #[derive(Serialize)]
-pub struct DerivedFeatureCollection {
+pub struct RouteFeatureCollection {
     #[serde(rename = "type")]
     pub type_: String, // "FeatureCollection"
-    pub features: Vec<DerivedFeature>,
+    pub features: Vec<RouteFeature>,
 }
 
 #[derive(Serialize)]
-pub struct DerivedFeature {
+pub struct RouteFeature {
     #[serde(rename = "type")]
     pub type_: String, // "Feature"
-    pub id: String,
+    pub id: String, // Root ID (e.g., Route ID)
+
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub bbox: Option<Vec<f64>>,
-    pub properties: FrontendProperties,
+
+    pub properties: RouteProperties,
     pub geometry: RouteGeometry,
 }
 
@@ -59,22 +62,14 @@ pub struct RouteGeometry {
     pub coordinates: Vec<Vec<f64>>,
 }
 
-/// [Core] Lightweight Properties containing only essential info for Frontend
 #[derive(Serialize)]
-pub struct FrontendProperties {
-    // Basic Info
+pub struct RouteProperties {
     pub route_id: String,
     pub route_no: String,
-
-    // Station list for UI display (excluding coordinates, only Name/ID/Order)
-    // Coordinates are referenced via geometry or routeMap.json.
-    // Included here to map logical position on the path.
     pub stops: Vec<FrontendStop>,
-
-    // Indices for rendering/animation
+    #[serde(flatten)]
     pub indices: RouteIndices,
-
-    // Metadata (Minimal, for debugging)
+    #[serde(flatten)]
     pub meta: FrontendMeta,
 }
 
@@ -83,21 +78,39 @@ pub struct FrontendStop {
     pub id: String,
     pub name: String,
     pub ord: i64,
+    #[serde(rename = "ud")]
     pub up_down: i64,
 }
 
 #[derive(Serialize)]
 pub struct RouteIndices {
-    pub turn_idx: usize, // Index of the turning point coordinate
-    // Mapping: Station ID -> Index on the full route path (coordinates)
+    pub turn_idx: usize,
     pub stop_to_coord: Vec<usize>,
 }
 
 #[derive(Serialize)]
 pub struct FrontendMeta {
+    #[serde(serialize_with = "round_f64_1")]
     pub total_dist: f64,
-    pub source_ver: String, // e.g., "raw-20260121"
+    pub source_ver: String,
 }
+
+// --------------------------------------------------------
+// Helpers for Serialization
+// --------------------------------------------------------
+
+/// Rounds a f64 value to 1 decimal place during serialization
+fn round_f64_1<S>(val: &f64, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let rounded = (*val * 10.0).round() / 10.0;
+    serializer.serialize_f64(rounded)
+}
+
+// ============================================================================
+// Processing Structures
+// ============================================================================
 
 /// Internal processing structure
 pub struct RouteProcessData {

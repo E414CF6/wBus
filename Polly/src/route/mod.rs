@@ -14,8 +14,8 @@ use serde_json::{Value, json};
 
 use crate::config::{CONCURRENCY_FETCH, CONCURRENCY_SNAP, OSRM_CHUNK_SIZE, OSRM_URL, TAGO_URL};
 use crate::route::model::{
-    BusRouteProcessor, DerivedFeature, DerivedFeatureCollection, FrontendMeta, FrontendProperties,
-    FrontendStop, RawRouteFile, RawStop, RouteGeometry, RouteIndices, RouteProcessData,
+    BusRouteProcessor, FrontendMeta, FrontendStop, RawRouteFile, RawStop, RouteFeature,
+    RouteFeatureCollection, RouteGeometry, RouteIndices, RouteProcessData, RouteProperties,
 };
 use crate::utils::{
     ensure_dir, extract_items,
@@ -426,9 +426,9 @@ impl BusRouteProcessor {
             })
             .collect();
 
-        let derived_data = DerivedFeatureCollection {
+        let derived_data = RouteFeatureCollection {
             type_: "FeatureCollection".to_string(),
-            features: vec![DerivedFeature {
+            features: vec![RouteFeature {
                 type_: "Feature".to_string(),
                 id: route_id.clone(),
                 bbox: Some(bbox.to_vec()),
@@ -436,7 +436,7 @@ impl BusRouteProcessor {
                     type_: "LineString".to_string(),
                     coordinates: optimized_coordinates,
                 },
-                properties: FrontendProperties {
+                properties: RouteProperties {
                     route_id: route_id.clone(),
                     route_no,
                     stops: frontend_stops,
