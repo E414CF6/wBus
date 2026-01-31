@@ -1,6 +1,6 @@
 # Vision: The wBus Frontend
 
-[![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
 [![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
@@ -18,7 +18,7 @@ Vision is the user-facing frontend for the `wBus` project. Built with Next.js an
 
 ## Tech Stack
 
-- **Framework**: [Next.js](https://nextjs.org/) 15 (with App Router)
+- **Framework**: [Next.js](https://nextjs.org/) 16 (with App Router)
 - **UI Library**: [React](https://react.dev/) 19
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) 4
