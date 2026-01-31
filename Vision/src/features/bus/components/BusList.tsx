@@ -291,7 +291,7 @@ export default function BusList({ routeNames, allRoutes, selectedRoute, onRouteC
           )}
 
           {/* Action Row - Rearranged for single line layout */}
-          <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center justify-between mt-1">
             {/* Left: Status Dot & Text */}
             <div className="flex items-center gap-2">
               <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${uiState.dotClass}`} />
