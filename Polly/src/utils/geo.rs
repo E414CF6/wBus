@@ -1,4 +1,6 @@
-// src/utils/geo.rs
+//! Geospatial utility functions.
+//!
+//! Functions for calculating distances, finding nearest points, and computing bounding boxes.
 
 /// Calculate distance in meters between two GPS coordinates using Equirectangular approximation
 pub fn meters_between(lon1: f64, lat1: f64, lon2: f64, lat2: f64) -> f64 {

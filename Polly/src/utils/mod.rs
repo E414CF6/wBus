@@ -1,4 +1,7 @@
-// src/utils/mod.rs
+//! Utility functions and modules for Polly.
+//!
+//! This module itself contains general utility functions, while specific utilities
+//! are organized into submodules.
 
 pub mod geo;
 

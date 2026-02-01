@@ -1,4 +1,9 @@
-// src/main.rs
+//! Main Entry Point for Polly Application
+//!
+//! This module serves as the main entry point for the Polly application,
+//! which provides functionalities for bus route information collection
+//! and bus schedule crawling. It utilizes command-line arguments to
+//! determine which operation to perform.
 
 mod config;
 mod route;

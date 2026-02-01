@@ -1,4 +1,8 @@
-// src/route/model.rs
+//! Bus Route Data Models
+//!
+//! This module defines the data structures used to represent
+//! raw and derived bus route information, including GeoJSON
+//! formats for frontend consumption.
 
 use std::path::PathBuf;
 

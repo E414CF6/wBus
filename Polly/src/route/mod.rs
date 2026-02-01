@@ -1,4 +1,8 @@
-// src/route/mod.rs
+//! Bus Route Processing Module
+//!
+//! This module handles the collection and processing of bus route
+//! information. It fetches raw route data from a public API, saves it,
+//! and processes it into GeoJSON format suitable for frontend applications.
 
 mod model;
 

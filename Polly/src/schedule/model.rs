@@ -1,4 +1,7 @@
-// src/schedule/mod.rs
+//! Bus Schedule Data Models
+//!
+//! This module defines the data structures used to represent
+//! bus route metadata and parsed schedule information.
 
 use std::collections::HashMap;
 

@@ -1,4 +1,9 @@
-// src/schedule/mod.rs
+//! Bus Schedule Crawler Module
+//!
+//! This module implements a web crawler that fetches bus schedule data
+//! from a public transportation website. It mimics browser behavior to
+//! handle session cookies and parse HTML responses to extract schedule
+//! information. The extracted data is then organized and saved as JSON files.
 
 mod model;
 
