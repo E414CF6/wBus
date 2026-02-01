@@ -1,5 +1,3 @@
-// src/core/domain/station.ts
-
 // Station location data (routeMap stations map)
 export type StationLocation = {
     gpslati: number;

@@ -1,5 +1,3 @@
-// src/app/page.tsx
-
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";

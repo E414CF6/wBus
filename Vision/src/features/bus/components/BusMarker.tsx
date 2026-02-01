@@ -1,5 +1,3 @@
-// src/features/bus/components/BusMarker.tsx
-
 "use client";
 
 import L from "leaflet";

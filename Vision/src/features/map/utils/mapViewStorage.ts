@@ -1,4 +1,3 @@
-// src/features/map/utils/mapViewStorage.ts
 
 import L from "leaflet";
 

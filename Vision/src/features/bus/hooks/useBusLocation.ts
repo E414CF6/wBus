@@ -1,4 +1,3 @@
-// src/features/bus/hooks/useBusLocation.ts
 
 import { useEffect, useState } from "react";
 

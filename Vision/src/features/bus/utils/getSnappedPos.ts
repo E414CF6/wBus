@@ -1,8 +1,10 @@
-// src/features/bus/utils/getSnappedPos.ts
-
-import { snapToPolyline, type StopIndexMap } from "@bus/utils/polyUtils";
+import {
+  snapPointToPolyline,
+  getHaversineDistanceMeters,
+} from "@map/utils/geoUtils";
 
 import type { BusItem } from "@core/domain/bus";
+import type { StopIndexMap } from "@bus/utils/polyUtils";
 
 // ----------------------------------------------------------------------
 // Constants & Types
@@ -27,7 +29,7 @@ interface SnapCandidate extends SnappedResult {
   isValid: boolean;
 }
 
-interface SnapOptions {
+interface GetSnappedOptions {
   stopIndexMap?: StopIndexMap | null;
   turnIndex?: number;
   isSwapped?: boolean;
@@ -37,32 +39,6 @@ interface SnapOptions {
 // ----------------------------------------------------------------------
 // Helpers
 // ----------------------------------------------------------------------
-
-/**
- * Haversine formula to calculate distance between two Lat/Lng points in meters.
- */
-function calculateHaversineDistance(
-  p1: Coordinate,
-  p2: Coordinate
-): number {
-  const R = 6371000; // Earth radius in meters
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-
-  const dLat = toRad(p2[0] - p1[0]);
-  const dLng = toRad(p2[1] - p1[1]);
-
-  const lat1 = toRad(p1[0]);
-  const lat2 = toRad(p2[0]);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  return R * c;
-}
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -155,7 +131,7 @@ export function getSnappedPosition(
   getDirection: (nodeid: string, nodeord: number, routeid?: string | null) => number | null,
   upPolyline: Coordinate[],
   downPolyline: Coordinate[],
-  options?: SnapOptions
+  options?: GetSnappedOptions
 ): SnappedResult {
   const { gpslati, gpslong, nodeid } = bus;
   const nodeord = Number(bus.nodeord);
@@ -189,11 +165,11 @@ export function getSnappedPosition(
     const coordIndex = dir === 1 ? (stopIndexUp ?? stopIndexAny) : (stopIndexDown ?? stopIndexAny);
     const segmentHint = getSegmentHint(coordIndex, dir, line.length, turnIndex, isSwapped);
 
-    const snapped = snapToPolyline(rawPosition, line, {
+    const snapped = snapPointToPolyline(rawPosition, line, {
       segmentHint,
       searchRadius: snapIndexRange,
     });
-    const distance = calculateHaversineDistance(rawPosition, snapped.position);
+    const distance = getHaversineDistanceMeters(rawPosition, snapped.position);
 
     return {
       position: snapped.position,

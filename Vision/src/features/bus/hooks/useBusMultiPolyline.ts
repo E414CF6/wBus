@@ -1,4 +1,3 @@
-// src/features/bus/hooks/useBusMultiPolyline.ts
 
 import { useEffect, useMemo, useState } from "react";
 

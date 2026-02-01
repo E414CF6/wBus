@@ -1,4 +1,3 @@
-// src/features/bus/utils/stopFiltering.ts
 
 import type { BusStop } from "@core/domain/station";
 

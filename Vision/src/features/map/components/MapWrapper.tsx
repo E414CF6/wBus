@@ -1,5 +1,3 @@
-// src/features/map/components/MapWrapper.tsx
-
 "use client";
 
 import React from "react";

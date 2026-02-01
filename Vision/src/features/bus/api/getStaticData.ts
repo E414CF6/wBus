@@ -1,5 +1,3 @@
-// src/features/bus/api/getStaticData.ts
-
 import { fetchAPI, HttpError } from "@core/network/fetchAPI";
 import { CacheManager } from "@core/cache/CacheManager";
 

@@ -1,5 +1,3 @@
-// Vision/src/core/domain/geojson.ts
-
 // GeoJSON types for bus route polylines.
 
 export interface BusRouteFeatureCollection {

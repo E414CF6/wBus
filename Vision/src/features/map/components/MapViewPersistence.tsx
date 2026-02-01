@@ -1,5 +1,3 @@
-// src/features/map/components/MapViewPersistence.tsx
-
 "use client";
 
 import { useEffect } from "react";

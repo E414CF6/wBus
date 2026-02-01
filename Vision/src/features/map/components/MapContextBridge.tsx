@@ -1,5 +1,3 @@
-// src/features/map/components/MapContextBridge.tsx
-
 "use client";
 
 import { useEffect, ReactNode } from "react";

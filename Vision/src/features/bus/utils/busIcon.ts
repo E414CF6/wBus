@@ -1,4 +1,3 @@
-// src/features/bus/utils/busIcon.ts
 
 import L from "leaflet";
 

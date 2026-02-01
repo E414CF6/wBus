@@ -1,5 +1,3 @@
-// src/features/schedule/components/ScheduleView.tsx
-
 "use client";
 
 import { useState, useMemo, useEffect, memo } from "react";

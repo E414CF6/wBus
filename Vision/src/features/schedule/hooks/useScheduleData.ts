@@ -1,5 +1,3 @@
-// src/features/schedule/hooks/useScheduleData.ts
-
 "use client";
 
 import { useEffect, useState } from "react";

@@ -1,5 +1,3 @@
-// src/core/domain/error.ts
-
 /** Error types for bus location polling */
 export type BusDataError =
   | "ERR:NONE_RUNNING" // No buses are currently running

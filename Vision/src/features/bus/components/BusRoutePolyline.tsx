@@ -1,5 +1,3 @@
-// src/features/bus/components/BusRoutePolyline.tsx
-
 "use client";
 
 import { Polyline } from "react-leaflet";

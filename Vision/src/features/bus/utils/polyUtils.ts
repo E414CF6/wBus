@@ -1,7 +1,3 @@
-// src/features/bus/utils/polyUtils.ts
-
-import { calculateBearing } from "@map/utils/geoUtils";
-
 import type { GeoPolyline } from "@core/domain/geojson";
 
 // ----------------------------------------------------------------------
@@ -161,83 +157,10 @@ export function getPolylineMeta(data: GeoPolyline): PolylineMeta {
 }
 
 // ----------------------------------------------------------------------
-// Geometry Snapping (Marker Projection)
+// Re-export unified snapping from geoUtils
 // ----------------------------------------------------------------------
-// Keeps the math logic for snapping bus markers to the road, 
-// as this is independent of the schema structure but highly useful.
+// The snapping logic has been moved to @map/utils/geoUtils for reuse.
+// Re-export here for backward compatibility with existing imports.
 
-interface SnapResult {
-    position: Coordinate;
-    angle: number;
-    segmentIndex: number;
-    t: number; // normalized distance along segment (0~1)
-}
-
-/**
- * Snaps a raw GPS point to the nearest location on a polyline path.
- */
-export function snapToPolyline(
-    P: Coordinate,
-    polyline: Coordinate[],
-    options?: { segmentHint?: number | null; searchRadius?: number }
-): SnapResult {
-    if (!polyline || polyline.length < 2) {
-        return { position: P, angle: 0, segmentIndex: 0, t: 0 };
-    }
-
-    const lastSegment = polyline.length - 2;
-    const hint = options?.segmentHint;
-    const hasHint = typeof hint === "number" && Number.isFinite(hint);
-    const radius = Math.max(0, Math.floor(options?.searchRadius ?? 0));
-
-    const clampedHint = hasHint ? clampIndex(Math.round(hint), lastSegment) : 0;
-    const startIdx = hasHint ? clampIndex(clampedHint - radius, lastSegment) : 0;
-    const endIdx = hasHint ? clampIndex(clampedHint + radius, lastSegment) : lastSegment;
-
-    let bestDistSq = Infinity;
-    let bestPos: Coordinate = polyline[0];
-    let bestIdx = 0;
-    let bestT = 0;
-    let bestSegment = { A: polyline[0], B: polyline[0] };
-
-    // Iterate all segments to find the closest projection
-    for (let i = startIdx; i <= endIdx; i++) {
-        const A = polyline[i];
-        const B = polyline[i + 1];
-
-        const AP_x = P[0] - A[0];
-        const AP_y = P[1] - A[1];
-        const AB_x = B[0] - A[0];
-        const AB_y = B[1] - A[1];
-
-        const ab2 = AB_x * AB_x + AB_y * AB_y;
-        let t = 0;
-
-        if (ab2 > 0) {
-            const dot = AP_x * AB_x + AP_y * AB_y;
-            t = Math.max(0, Math.min(1, dot / ab2)); // Clamp t [0, 1]
-        }
-
-        const projX = A[0] + AB_x * t;
-        const projY = A[1] + AB_y * t;
-
-        const dx = P[0] - projX;
-        const dy = P[1] - projY;
-        const dSq = dx * dx + dy * dy;
-
-        if (dSq < bestDistSq) {
-            bestDistSq = dSq;
-            bestPos = [projX, projY];
-            bestIdx = i;
-            bestT = t;
-            bestSegment = { A, B };
-        }
-    }
-
-    return {
-        position: bestPos,
-        angle: calculateBearing(bestSegment.A, bestSegment.B),
-        segmentIndex: bestIdx,
-        t: bestT,
-    };
-}
+export { snapPointToPolyline as snapToPolyline } from "@map/utils/geoUtils";
+export type { SnapResult, SnapOptions } from "@map/utils/geoUtils";

@@ -1,5 +1,3 @@
-// src/core/domain/schedule.ts
-
 export interface RowItem {
     minute: string;  // Minute
     noteId?: string; // Note identifier

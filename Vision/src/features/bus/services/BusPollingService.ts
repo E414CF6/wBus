@@ -1,4 +1,3 @@
-// src/features/bus/services/BusPollingService.ts
 
 import { API_CONFIG, APP_CONFIG } from "@core/config/env";
 

@@ -1,5 +1,3 @@
-// src/domain/bus.ts
-
 // Bus Entity Item
 export type BusItem = {
     routeid: string;

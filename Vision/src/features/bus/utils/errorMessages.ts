@@ -1,4 +1,3 @@
-// src/features/bus/utils/errorMessages.ts
 
 import { UI_TEXT } from "@core/config/locale";
 

@@ -1,5 +1,3 @@
-// src/features/bus/components/BusList.tsx
-
 "use client";
 
 import React, { useMemo, useCallback, useState, useEffect } from "react";

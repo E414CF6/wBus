@@ -1,5 +1,3 @@
-// src/features/bus/utils/formatters.ts
-
 import { UI_TEXT } from "@core/config/locale";
 
 // ----------------------------------------------------------------------

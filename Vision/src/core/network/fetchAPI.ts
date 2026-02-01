@@ -1,5 +1,3 @@
-// src/core/network/fetchAPI.ts
-
 import { APP_CONFIG, API_CONFIG } from "@core/config/env";
 
 // Set a delay function for retry logic

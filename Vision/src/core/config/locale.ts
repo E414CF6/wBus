@@ -1,5 +1,3 @@
-// src/core/config/locale.ts
-
 /**
  * Localization & Text Constants
  * * UI_TEXT: User-facing strings (Korean)

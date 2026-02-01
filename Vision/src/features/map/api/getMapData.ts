@@ -1,5 +1,3 @@
-// src/features/map/api/getMapData.ts
-
 import { APP_CONFIG, API_CONFIG } from "@core/config/env";
 
 import { CacheManager } from "@core/cache/CacheManager";

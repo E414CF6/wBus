@@ -1,5 +1,3 @@
-// src/features/bus/components/BusAnimatedMarker.tsx
-
 "use client";
 
 import { memo } from "react";
@@ -7,6 +5,7 @@ import { memo } from "react";
 import { MAP_SETTINGS } from "@core/config/env";
 
 import { useAnimatedPosition } from "@map/hooks/useAnimatedPosition";
+import { normalizeAngle } from "@map/utils/geoUtils";
 
 import BusRotatedMarker from "@bus/components/BusRotatedMarker";
 
@@ -29,18 +28,6 @@ interface BusAnimatedMarkerProps {
     refreshKey?: string | number;
     eventHandlers?: LeafletEventHandlerFnMap;
     children?: React.ReactNode;
-}
-
-// ----------------------------------------------------------------------
-// Helper
-// ----------------------------------------------------------------------
-
-/**
- * Normalizes an angle to be within [0, 360) range.
- * Handles negative angles correctly (e.g., -90 -> 270).
- */
-function normalizeAngle(angle: number): number {
-    return ((angle % 360) + 360) % 360;
 }
 
 // ----------------------------------------------------------------------

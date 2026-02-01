@@ -1,4 +1,3 @@
-// src/features/bus/hooks/useBusArrivalInfo.ts
 
 import { useEffect, useState, useRef, useCallback } from "react";
 

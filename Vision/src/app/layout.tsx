@@ -1,5 +1,3 @@
-// src/app/layout.tsx
-
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 

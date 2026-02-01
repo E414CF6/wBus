@@ -1,5 +1,3 @@
-// src/shared/ui/MarqueeText.tsx
-
 // Marquee Component
 const PopupMarquee = ({ text, maxLength = 12 }: { text: string; maxLength?: number }) => {
     const shouldMarquee = text.length > maxLength;

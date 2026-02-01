@@ -1,5 +1,3 @@
-// src/core/utils/parser.ts
-
 /**
  * Parse environment variable as string with fallback
  * @param key 

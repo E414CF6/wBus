@@ -1,5 +1,3 @@
-// src/core/config/env.ts
-
 import { getEnv, getEnvNumber, getEnvBoolean, getEnvArray, getEnvBounds } from "@core/utils/parser";
 
 // ----------------------------------------------------------------------

@@ -1,5 +1,3 @@
-// src/shared/ui/Pill.tsx
-
 import { ReactNode, ElementType, ComponentPropsWithoutRef } from "react";
 
 // ----------------------------------------------------------------------

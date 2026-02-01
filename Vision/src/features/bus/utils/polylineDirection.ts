@@ -1,4 +1,3 @@
-// src/features/bus/utils/polylineDirection.ts
 
 import { snapToPolyline } from "@bus/utils/polyUtils";
 

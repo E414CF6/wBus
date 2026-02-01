@@ -1,5 +1,3 @@
-// src/core/cache/CacheManager.ts
-
 /**
  * Generic cache manager for storing and retrieving data with memory management
  * Provides a centralized way to manage cache across the application

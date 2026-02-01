@@ -1,5 +1,3 @@
-// src/features/bus/components/BusRotatedMarker.tsx
-
 "use client";
 
 import "leaflet-rotatedmarker";

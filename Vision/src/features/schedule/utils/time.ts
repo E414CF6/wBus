@@ -1,5 +1,3 @@
-// src/features/schedule/utils/time.ts
-
 import type { BusSchedule } from '@core/domain/schedule';
 
 // ----------------------------------------------------------------------

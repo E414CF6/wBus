@@ -1,4 +1,3 @@
-// src/features/bus/hooks/useBusSortedList.ts
 
 import { useMemo } from "react";
 

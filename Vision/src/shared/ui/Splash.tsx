@@ -1,5 +1,3 @@
-// src/shared/ui/Splash.tsx
-
 import { APP_CONFIG, UI_CONFIG } from "@core/config/env";
 import { UI_TEXT } from "@core/config/locale";
 

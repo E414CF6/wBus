@@ -1,4 +1,3 @@
-// src/features/bus/utils/directionIcons.ts
 
 import { ArrowUp, ArrowDown, HelpCircle, CircleGauge } from "lucide-react";
 

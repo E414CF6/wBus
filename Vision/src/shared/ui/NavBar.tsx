@@ -1,5 +1,3 @@
-// src/shared/ui/NavBar.tsx
-
 "use client";
 
 import { MapIcon } from "lucide-react";

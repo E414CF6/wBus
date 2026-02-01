@@ -1,5 +1,3 @@
-// src/features/bus/api/getRealtimeData.ts
-
 import { fetchAPI } from "@core/network/fetchAPI";
 
 import type { BusItem } from "@core/domain/bus";

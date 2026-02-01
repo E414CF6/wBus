@@ -1,5 +1,3 @@
-// src/features/bus/components/BusStopMarker.tsx
-
 "use client";
 
 import BusStopPopup from "@bus/components/BusStopPopup";

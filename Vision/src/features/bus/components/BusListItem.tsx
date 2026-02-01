@@ -1,5 +1,3 @@
-// src/features/bus/components/BusListItem.tsx
-
 import React from "react";
 import { ArrowDown, ArrowUp, HelpCircle } from "lucide-react";
 

@@ -1,5 +1,3 @@
-// src/features/map/components/Map.tsx
-
 "use client";
 
 import "maplibre-gl/dist/maplibre-gl.css";

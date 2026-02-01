@@ -1,5 +1,3 @@
-// src/core/domain/route.ts
-
 // Route Map
 export type RouteInfo = {
   routeName: string; // The route name shown to users (e.g., "30")

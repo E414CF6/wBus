@@ -1,5 +1,3 @@
-// src/features/bus/components/BusStopPopup.tsx
-
 import { useMemo } from "react";
 import { AlertTriangle, Bus, Clock, MapPin, ChevronRight } from "lucide-react";
 

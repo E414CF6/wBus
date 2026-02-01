@@ -1,5 +1,3 @@
-// src/features/map/components/MapLibreBaseLayer.tsx
-
 "use client";
 
 import L from "leaflet";
