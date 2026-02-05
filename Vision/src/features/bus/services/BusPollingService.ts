@@ -175,20 +175,19 @@ export class BusPollingService {
 
             // Fetch bus data for each routeId and track which routeId it came from
             const results = await Promise.allSettled(
-                vehicleIds.map(async (routeId) => {
+                vehicleIds.map(async (routeId): Promise<BusItem[]> => {
                     const buses = await getBusLocationData(routeId);
                     // Inject routeid into each bus item since API doesn't provide it
                     return buses.map((bus) => ({
                         ...bus,
-                        routeid: bus.routeid || routeId, // Use API value if present, otherwise inject
+                        routeid: bus.routeid ?? routeId, // Use API value if present, otherwise inject
                     }));
                 })
             );
 
             const fulfilled = results.filter(
-                (r): r is PromiseFulfilledResult<BusItem[]> =>
-                    r.status === "fulfilled"
-            );
+                (r) => r.status === "fulfilled"
+            ) as PromiseFulfilledResult<BusItem[]>[];
 
             if (fulfilled.length === 0) {
                 throw new Error("[BusPollingService] Failed to fetch BusLocationData for all vehicle IDs.");

@@ -159,7 +159,7 @@ function getMinSegmentIndex(
  */
 export function getSnappedPosition(
     bus: BusItem,
-    getDirection: (nodeid: string, nodeord: number, routeid?: string | null) => number | null,
+    getDirection: (nodeid: string | null | undefined, nodeord: number, routeid?: string | null) => number | null,
     upPolyline: Coordinate[],
     downPolyline: Coordinate[],
     options?: GetSnappedOptions

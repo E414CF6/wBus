@@ -238,7 +238,7 @@ export default function BusRoutePolyline({ routeName }: { routeName: string }) {
         const validRouteIdSet = new Set(routeIds);
         const busRouteIds = busList
             .map((bus) => bus.routeid)
-            .filter((id): id is string => Boolean(id) && validRouteIdSet.has(id));
+            .filter((id): id is string => typeof id === "string" && validRouteIdSet.has(id));
         return Array.from(new Set(busRouteIds));
     }, [busList, routeIds]);
 

@@ -10,10 +10,14 @@ import type { BusStopArrival } from "@core/domain/station";
  */
 export async function getBusLocationData(routeId: string): Promise<BusItem[]> {
     const data = await fetchAPI<{
-        response?: { body?: { items?: { item?: BusItem[] } } };
+        response?: { body?: { items?: { item?: BusItem | BusItem[] } } };
     }>(`/getBusLocation/${routeId}`);
-    const items = data.response?.body?.items?.item;
-    return items ?? [];
+    const rawItem = data.response?.body?.items?.item;
+    if (!rawItem) {
+        return [];
+    }
+    // API returns single object when only 1 bus, array when multiple
+    return Array.isArray(rawItem) ? rawItem : [rawItem];
 }
 
 /**

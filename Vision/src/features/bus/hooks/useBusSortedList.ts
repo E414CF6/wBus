@@ -32,8 +32,8 @@ export const useBusSortedList = (routeName: string) => {
         return [...mapList].sort((a, b) => {
             // If no stop information, send order to the end (Infinity)
             // Important: Do not remove with filter, just push order to the end to prevent data disappearance
-            const ordA = stopMap.get(a.nodeid) ?? Infinity;
-            const ordB = stopMap.get(b.nodeid) ?? Infinity;
+            const ordA = a.nodeid ? (stopMap.get(a.nodeid) ?? Infinity) : Infinity;
+            const ordB = b.nodeid ? (stopMap.get(b.nodeid) ?? Infinity) : Infinity;
 
             // 1st priority: If both have stop information, sort by proximity
             if (ordA !== Infinity && ordB !== Infinity && closestOrd) {
