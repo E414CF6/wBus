@@ -159,6 +159,8 @@ export interface SnapOptions {
     segmentHint?: number | null;
     /** Number of segments to search around the hint */
     searchRadius?: number;
+    /** Minimum segment index to snap to (prevents backward snapping) */
+    minSegmentIndex?: number | null;
 }
 
 /**
@@ -194,9 +196,13 @@ export function snapPointToPolyline<T extends CoordinateLike>(
     const hint = options?.segmentHint;
     const hasHint = typeof hint === "number" && Number.isFinite(hint);
     const radius = Math.max(0, Math.floor(options?.searchRadius ?? 0));
+    const minIdx = options?.minSegmentIndex;
+    const hasMinIdx = typeof minIdx === "number" && Number.isFinite(minIdx);
 
     const clampedHint = hasHint ? clampIndex(Math.round(hint), lastSegment) : 0;
-    const startIdx = hasHint ? clampIndex(clampedHint - radius, lastSegment) : 0;
+    // Apply minSegmentIndex as lower bound to prevent backward snapping
+    const baseStartIdx = hasHint ? clampIndex(clampedHint - radius, lastSegment) : 0;
+    const startIdx = hasMinIdx ? Math.max(baseStartIdx, clampIndex(Math.round(minIdx), lastSegment)) : baseStartIdx;
     const endIdx = hasHint ? clampIndex(clampedHint + radius, lastSegment) : lastSegment;
 
     let bestDistSq = Infinity;

@@ -110,6 +110,40 @@ function getSegmentHint(
     return clampIndex(localIndex - 1, lastSegment);
 }
 
+/**
+ * Calculates the minimum segment index for snapping to prevent backward movement.
+ * The bus should only snap to segments at or after its current stop position.
+ * This uses the previous stop's segment as the minimum boundary.
+ */
+function getMinSegmentIndex(
+    coordIndex: number | null,
+    direction: number,
+    lineLength: number,
+    turnIndex: number | undefined,
+    isSwapped: boolean | undefined
+): number | null {
+    if (!isFiniteNumber(coordIndex) || lineLength < 2) return null;
+
+    const lastSegment = lineLength - 2;
+    const effectiveDirection = isSwapped ? (direction === 1 ? 0 : 1) : direction;
+
+    // For UP direction (going towards turn point) or routes without turn
+    if (!isFiniteNumber(turnIndex) || effectiveDirection === 1) {
+        // The bus just passed this stop, so minimum is one segment before
+        // But we subtract 2 to allow some tolerance for GPS jitter near the stop
+        return clampIndex(coordIndex - 2, lastSegment);
+    }
+
+    const safeTurnIndex = Math.round(turnIndex);
+
+    // For DOWN direction (going from turn point to end)
+    if (coordIndex < safeTurnIndex) return null;
+
+    const localIndex = coordIndex - safeTurnIndex;
+    // Allow one segment tolerance before the stop
+    return clampIndex(localIndex - 2, lastSegment);
+}
+
 // ----------------------------------------------------------------------
 // Main Logic
 // ----------------------------------------------------------------------
@@ -162,9 +196,14 @@ export function getSnappedPosition(
         const coordIndex = dir === 1 ? (stopIndexUp ?? stopIndexAny) : (stopIndexDown ?? stopIndexAny);
         const segmentHint = getSegmentHint(coordIndex, dir, line.length, turnIndex, isSwapped);
 
+        // Use stop's coordinate index as minimum segment to prevent backward snapping
+        // The bus should only snap to segments at or after its current stop
+        const minSegmentIndex = getMinSegmentIndex(coordIndex, dir, line.length, turnIndex, isSwapped);
+
         const snapped = snapPointToPolyline(rawPosition, line, {
             segmentHint,
             searchRadius: snapIndexRange,
+            minSegmentIndex,
         });
         const distance = getHaversineDistanceMeters(rawPosition, snapped.position);
 
