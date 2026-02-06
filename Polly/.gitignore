@@ -1,11 +1,14 @@
-# .gitignore for Polly
+# .gitignore
 
 # Ignore output files
 *.geojson
 *.json
 
-# Ignore `private` directory
-.private
+# Ignore environment files
+.env
+
+# Ignore binary assets
+/storage/assets
 
 # Ignore build files
 /target
