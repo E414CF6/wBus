@@ -3,8 +3,7 @@ import { API_CONFIG, APP_CONFIG } from "@core/config/env";
 import { getBusLocationData } from "@bus/api/getRealtimeData";
 import { getRouteMap } from "@bus/api/getStaticData";
 
-import type { BusItem } from "@core/domain/bus";
-import type { BusDataError } from "@core/domain/error";
+import type { BusItem, BusDataError } from "@core/domain";
 
 // Valid error codes that can be emitted
 const VALID_ERROR_CODES: Set<Exclude<BusDataError, null>> = new Set([

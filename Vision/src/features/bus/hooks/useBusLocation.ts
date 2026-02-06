@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 
 import { busPollingService } from "@bus/services/BusPollingService";
 
-import type { BusItem } from "@core/domain/bus";
-import type { BusDataError } from "@core/domain/error";
+import type { BusItem, BusDataError } from "@core/domain";
 
 /**
  * React hook to subscribe to bus location updates for a given route.

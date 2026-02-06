@@ -1,6 +1,9 @@
-import type { BusStop } from "@core/domain/station";
+import type { BusStop } from "@core/domain";
 
 import type { LatLngBounds } from "leaflet";
+
+// Re-export from geo utils for backward compatibility
+export { getHaversineDistanceMeters as getApproximateDistance } from "@core/utils/geo";
 
 /**
  * Filter bus stops by viewport bounds and zoom level for performance optimization.
@@ -47,33 +50,4 @@ export function filterStopsByViewport(
     }
 
     return filtered;
-}
-
-/**
- * Get the approximate distance between two geographic points in meters.
- * Uses a simplified calculation for performance.
- *
- * @param lat1 - Latitude of first point
- * @param lng1 - Longitude of first point
- * @param lat2 - Latitude of second point
- * @param lng2 - Longitude of second point
- * @returns Distance in meters (approximate)
- */
-export function getApproximateDistance(
-    lat1: number,
-    lng1: number,
-    lat2: number,
-    lng2: number
-): number {
-    const R = 6371000; // Earth's radius in meters
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLng = ((lng2 - lng1) * Math.PI) / 180;
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLng / 2) *
-        Math.sin(dLng / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
 }

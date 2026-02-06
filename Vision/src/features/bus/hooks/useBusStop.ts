@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 
 import { APP_CONFIG } from "@core/config/env";
 import { CacheManager } from "@core/cache/CacheManager";
+import { getHaversineDistance } from "@core/utils/geo";
 
 import { getBusStopLocationData, getRouteStopsByRouteName } from "@bus/api/getStaticData";
 
 import { useBusContext } from "@map/context/MapContext";
-import { getHaversineDistance } from "@map/utils/geoUtils";
 
-import type { BusStop } from "@core/domain/station";
+import type { BusStop } from "@core/domain";
 
 // ----------------------------------------------------------------------
 // Constants & Caches

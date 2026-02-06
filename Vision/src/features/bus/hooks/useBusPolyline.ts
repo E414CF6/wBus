@@ -1,3 +1,6 @@
+/**
+ * @deprecated Use usePolyline.ts instead - this file is kept for backward compatibility
+ */
 import { useEffect, useState } from "react";
 
 import { APP_CONFIG } from "@core/config/env";
@@ -5,11 +8,11 @@ import { APP_CONFIG } from "@core/config/env";
 import { getPolyline } from "@bus/api/getStaticData";
 import { transformPolyline } from "@bus/utils/polyUtils";
 
+import type { Coordinate } from "@core/domain";
+
 // ----------------------------------------------------------------------
 // Types
 // ----------------------------------------------------------------------
-
-type Coordinate = [number, number];
 
 interface PolylineState {
     // Returns array of segments (Coordinate[][]) to support multi-colored segments if needed.

@@ -1,4 +1,4 @@
-import type { BusSchedule } from '@core/domain/schedule';
+import type { BusSchedule } from '@core/domain';
 
 // ----------------------------------------------------------------------
 // Constants & Types

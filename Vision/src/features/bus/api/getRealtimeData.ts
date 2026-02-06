@@ -1,7 +1,6 @@
 import { fetchAPI } from "@core/network/fetchAPI";
 
-import type { BusItem } from "@core/domain/bus";
-import type { BusStopArrival } from "@core/domain/station";
+import type { BusItem, BusStopArrival } from "@core/domain";
 
 /**
  * Fetches real-time bus location data for a specific route.

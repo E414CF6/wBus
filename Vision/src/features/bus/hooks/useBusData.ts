@@ -2,12 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 
 import { getRouteInfo } from "@bus/api/getStaticData";
 
-import { type BusPolylineSet, useBusPolylineMap } from "@bus/hooks/useBusPolylineMap";
+import { useBusPolylineMap, getFallbackPolylines, type BusPolylineSet } from "@bus/hooks/usePolyline";
 import { useBusDirection } from "@bus/hooks/useBusDirection";
 import { useBusLocationData } from "@bus/hooks/useBusLocation";
 
-import type { RouteInfo } from "@core/domain/route";
-import type { BusItem } from "@core/domain/bus";
+import type { RouteInfo, BusItem } from "@core/domain";
 
 export interface UseBusData {
     routeInfo: RouteInfo | null;
@@ -45,17 +44,10 @@ export function useBusData(routeName: string): UseBusData {
 
     const polylineMap = useBusPolylineMap(routeIds);
 
-    const fallbackPolylines: BusPolylineSet = (() => {
-        if (activeRouteId && polylineMap.has(activeRouteId)) {
-            return polylineMap.get(activeRouteId)!;
-        }
-
-        for (const polyline of polylineMap.values()) {
-            return polyline;
-        }
-
-        return { upPolyline: [], downPolyline: [] };
-    })();
+    const fallbackPolylines = useMemo(() => 
+        getFallbackPolylines(polylineMap, activeRouteId),
+        [polylineMap, activeRouteId]
+    );
 
     return {
         routeInfo,

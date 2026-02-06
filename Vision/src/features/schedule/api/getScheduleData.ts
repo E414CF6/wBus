@@ -5,7 +5,7 @@ import { fetchAPI, HttpError } from '@core/network/fetchAPI';
 
 import { API_CONFIG, APP_CONFIG } from '@core/config/env';
 
-import type { BusSchedule } from "@core/domain/schedule";
+import type { BusSchedule } from "@core/domain";
 
 // ------------------------------------------------------------------
 // Types & Interfaces

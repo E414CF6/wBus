@@ -1,3 +1,6 @@
+/**
+ * @deprecated Use usePolyline.ts instead - this file is kept for backward compatibility
+ */
 import { useEffect, useMemo, useState } from "react";
 
 import { APP_CONFIG } from "@core/config/env";
@@ -7,15 +10,7 @@ import { getPolyline, getRouteDetails, getStationMap } from "@bus/api/getStaticD
 import { getPolylineMeta, type StopIndexMap, transformPolyline } from "@bus/utils/polyUtils";
 import { shouldSwapPolylines } from "@bus/utils/polylineDirection";
 
-import type { StationLocation } from "@core/domain/station";
-import type { RouteDetail } from "@core/domain/route";
-import type { GeoPolyline } from "@core/domain/geojson";
-
-// ----------------------------------------------------------------------
-// Types
-// ----------------------------------------------------------------------
-
-type Coordinate = [number, number];
+import type { StationLocation, RouteDetail, GeoPolyline, Coordinate } from "@core/domain";
 
 export interface BusPolylineSet {
     upPolyline: Coordinate[];

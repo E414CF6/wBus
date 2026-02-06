@@ -8,7 +8,7 @@ import {
     getEuclideanDistance,
     interpolateAngle,
     snapPointToPolyline,
-} from "@map/utils/geoUtils";
+} from "@core/utils/geo";
 
 import type { LatLngTuple } from "leaflet";
 import type L from "leaflet";

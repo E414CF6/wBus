@@ -18,7 +18,7 @@ import BusAnimatedMarker from "@bus/components/BusAnimatedMarker";
 
 import PopupMarquee from "@shared/ui/MarqueeText";
 
-import type { BusItem } from "@core/domain/bus";
+import type { BusItem } from "@core/domain";
 
 // ----------------------------------------------------------------------
 // Constants & Styles

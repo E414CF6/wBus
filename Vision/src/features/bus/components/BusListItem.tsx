@@ -5,7 +5,7 @@ import PopupMarquee from "@shared/ui/MarqueeText";
 
 import { UI_TEXT } from "@core/config/locale";
 
-import type { BusItem } from "@core/domain/bus";
+import type { BusItem } from "@core/domain";
 import type { DirectionCode } from "@bus/hooks/useBusDirection";
 
 type BusListItemProps = {

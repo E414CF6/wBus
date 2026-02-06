@@ -1,21 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { APP_CONFIG, MAP_SETTINGS } from "@core/config/env";
+import { Direction, type DirectionCode } from "@core/domain";
 
 import { getRouteDetails, getRouteInfo } from "@bus/api/getStaticData";
 
 import { useBusStop } from "@bus/hooks/useBusStop";
 
+// Re-export for backward compatibility
+export { Direction, type DirectionCode } from "@core/domain";
+
 // ----------------------------------------------------------------------
 // Constants & Types
 // ----------------------------------------------------------------------
-
-export const Direction = {
-    UP: 1,
-    DOWN: 0,
-} as const;
-
-export type DirectionCode = typeof Direction[keyof typeof Direction] | null;
 
 const ALWAYS_UPWARD_NODEIDS = new Set(MAP_SETTINGS.ALWAYS_UPWARD_NODE_IDS);
 

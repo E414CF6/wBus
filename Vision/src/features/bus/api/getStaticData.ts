@@ -3,19 +3,14 @@ import { CacheManager } from "@core/cache/CacheManager";
 
 import { API_CONFIG, APP_CONFIG } from "@core/config/env";
 
-import type { GeoPolyline } from "@core/domain/geojson";
-import type { BusStop, StationLocation } from "@core/domain/station";
-import type { RouteDetail, RouteInfo } from "@core/domain/route";
-
-/**
- * Models for cached data
- */
-interface StaticData {
-    lastUpdated: string;
-    route_numbers: Record<string, string[]>;
-    route_details: Record<string, RouteDetail>;
-    stations: Record<string, StationLocation>;
-}
+import type { 
+    GeoPolyline, 
+    BusStop, 
+    StationLocation, 
+    RouteDetail, 
+    RouteInfo,
+    StaticData 
+} from "@core/domain";
 
 /**
  * Cache Managers

@@ -7,7 +7,7 @@ import { useBusArrivalInfo } from "@bus/hooks/useBusArrivalInfo";
 
 import { formatVehicleType, secondsToMinutes } from "@shared/utils/formatters";
 
-import type { BusStopArrival } from "@core/domain/station";
+import type { BusStopArrival } from "@core/domain";
 
 // Sets the theme based on arrival time in minutes
 const getStatusTheme = (minutes: number) => {

@@ -1,13 +1,10 @@
-import { snapToPolyline } from "@bus/utils/polyUtils";
+import { snapPointToPolyline } from "@core/utils/geo";
 
-import type { RouteDetail } from "@core/domain/route";
-import type { StationLocation } from "@core/domain/station";
+import type { RouteDetail, StationLocation, Coordinate } from "@core/domain";
 
 // ----------------------------------------------------------------------
-// Constants & Types
+// Constants
 // ----------------------------------------------------------------------
-
-type Coordinate = [number, number]; // [Latitude, Longitude]
 
 const MAX_SAMPLE_STOPS = 20;
 
@@ -27,7 +24,7 @@ function getSquaredDistanceToPolyline(
     point: Coordinate,
     polyline: Coordinate[]
 ): number {
-    const snapped = snapToPolyline(point, polyline);
+    const snapped = snapPointToPolyline(point, polyline);
 
     const dLat = point[0] - snapped.position[0];
     const dLng = point[1] - snapped.position[1];

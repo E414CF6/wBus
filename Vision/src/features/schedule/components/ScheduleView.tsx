@@ -7,7 +7,7 @@ import { DAY_LABELS, UI_TEXT } from "@core/config/locale";
 
 import { getCurrentDayType } from "@schedule/utils/time";
 
-import type { BusSchedule, RowItem } from "@core/domain/schedule";
+import type { BusSchedule, RowItem } from "@core/domain";
 
 // ----------------------------------------------------------------------
 // Types & Helpers

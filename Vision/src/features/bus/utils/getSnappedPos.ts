@@ -1,13 +1,11 @@
-import { getHaversineDistanceMeters, snapPointToPolyline, } from "@map/utils/geoUtils";
+import { getHaversineDistanceMeters, snapPointToPolyline } from "@core/utils/geo";
 
-import type { BusItem } from "@core/domain/bus";
+import type { BusItem, Coordinate } from "@core/domain";
 import type { StopIndexMap } from "@bus/utils/polyUtils";
 
 // ----------------------------------------------------------------------
 // Constants & Types
 // ----------------------------------------------------------------------
-
-type Coordinate = [number, number]; // [Latitude, Longitude]
 
 // Maximum distance (in meters) to consider a snap valid.
 // If the bus is further than this from the line, we assume GPS drift or off-route.

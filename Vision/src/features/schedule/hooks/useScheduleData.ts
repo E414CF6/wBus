@@ -7,7 +7,7 @@ import { fetchAPI, HttpError } from "@core/network/fetchAPI";
 import { API_CONFIG, APP_CONFIG } from "@core/config/env";
 import { UI_TEXT } from "@core/config/locale";
 
-import type { BusSchedule } from "@core/domain/schedule";
+import type { BusSchedule } from "@core/domain";
 
 // ----------------------------------------------------------------------
 // Caching & Helpers

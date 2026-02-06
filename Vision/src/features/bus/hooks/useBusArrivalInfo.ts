@@ -5,7 +5,7 @@ import { UI_TEXT } from "@core/config/locale";
 
 import { getBusStopArrivalData } from "@bus/api/getRealtimeData";
 
-import type { BusStopArrival } from "@core/domain/station";
+import type { BusStopArrival } from "@core/domain";
 
 export function useBusArrivalInfo(busStopId: string | null) {
     const [data, setData] = useState<BusStopArrival[]>([]);

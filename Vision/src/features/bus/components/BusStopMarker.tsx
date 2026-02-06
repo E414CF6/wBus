@@ -13,7 +13,7 @@ import { useIcons } from "@bus/hooks/useBusIcons";
 import { useBusStop } from "@bus/hooks/useBusStop";
 import { filterStopsByViewport } from "@bus/utils/stopFiltering";
 
-import type { BusStop } from "@core/domain/station";
+import type { BusStop } from "@core/domain";
 import type { Icon } from "leaflet";
 
 type BusStopMarkerItemProps = {

@@ -18,7 +18,7 @@ import ScheduleView from "@schedule/components/ScheduleView";
 
 import Pill from "@shared/ui/Pill";
 
-import type { BusSchedule } from "@core/domain/schedule";
+import type { BusSchedule } from "@core/domain";
 
 //-------------------------------------------------------------------
 // Types & Interfaces
