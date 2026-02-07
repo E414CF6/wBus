@@ -63,15 +63,15 @@ We use the **MLD (Multi-Level Dijkstra)** algorithm for flexibility.
 ```shell
 # Extract data using the Car profile
 podman run --rm -t -v $(pwd):/data osrm-backend:arm64 \
-  osrm-extract -t -p /opt/car.lua /data/south-korea-latest.osm.pbf
+  osrm-extract -p /opt/car.lua /data/south-korea-latest.osm.pbf
 
 # Partition the data
 podman run --rm -t -v $(pwd):/data osrm-backend:arm64 \
-  osrm-partition -t /data/south-korea-latest.osrm
+  osrm-partition /data/south-korea-latest.osrm
 
 # Customize the data
 podman run --rm -t -v $(pwd):/data osrm-backend:arm64 \
-  osrm-customize -t /data/south-korea-latest.osrm
+  osrm-customize /data/south-korea-latest.osrm
 ```
 
 ## Running the Routing Server
