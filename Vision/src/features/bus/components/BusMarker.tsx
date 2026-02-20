@@ -131,14 +131,14 @@ const BusPopupContent = memo(({ bus, stopName, DirectionIcon }: {
     stopName: string;
     DirectionIcon: React.ElementType
 }) => (
-    <div className="min-w-[240px] sm:min-w-[280px] flex flex-col bg-white dark:bg-black rounded-[20px] overflow-hidden shadow-xl border border-black/5 dark:border-white/10">
+    <div className="min-w-[240px] sm:min-w-[280px] flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl rounded-[24px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)] border border-black/[0.04] dark:border-white/[0.06]">
         {/* Header */}
-        <div className="bg-gray-50 dark:bg-white/5 px-4 py-4 border-b border-black/5 dark:border-white/5">
+        <div className="bg-transparent px-4 py-4 border-b border-black/5 dark:border-white/5">
             <div className="flex items-center gap-2.5 text-black dark:text-white">
-                <div className="p-1.5 bg-indigo-100 dark:bg-indigo-500/20 rounded-lg text-indigo-600 dark:text-indigo-400">
+                <div className="p-1.5 bg-indigo-100/50 dark:bg-indigo-500/20 rounded-[10px] text-indigo-600 dark:text-indigo-400">
                     <DirectionIcon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
                 </div>
-                <span className="font-bold text-lg tracking-tight leading-none">
+                <span className="font-extrabold text-lg tracking-tight leading-none">
                     {UI_TEXT.BUS_LIST.TITLE_ROUTE(bus.routenm)}
                 </span>
             </div>
@@ -150,7 +150,7 @@ const BusPopupContent = memo(({ bus, stopName, DirectionIcon }: {
                 <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0">
                     {UI_TEXT.BUS_ITEM.VEHICLE_NUM}
                 </span>
-                <div className="font-mono font-bold text-sm text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-white/10 px-2.5 py-1 rounded-lg">
+                <div className="font-mono font-bold text-sm text-gray-800 dark:text-gray-200 bg-black/[0.03] dark:bg-white/[0.05] px-2.5 py-1 rounded-[8px]">
                     {bus.vehicleno}
                 </div>
             </div>
@@ -159,8 +159,8 @@ const BusPopupContent = memo(({ bus, stopName, DirectionIcon }: {
                 <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0">
                     {UI_TEXT.BUS_ITEM.CURRENT_LOC}
                 </span>
-                <div className="text-sm font-semibold text-gray-800 dark:text-gray-200 min-w-0">
-                    <PopupMarquee text={stopName} maxWidthClass="max-w-[160px]" />
+                <div className="text-[13px] font-semibold text-gray-800 dark:text-gray-200 min-w-0">
+                    <PopupMarquee text={stopName} maxWidthClass="max-w-[150px]" />
                 </div>
             </div>
         </div>

@@ -48,8 +48,8 @@ function ArrivalItem({
     return (
         <button
             onClick={() => onRouteChange?.(routeName)}
-            className={`w-full group relative flex items-center justify-between p-3.5 rounded-[22px] border transition-all duration-200 
-                ${theme.bg} ${theme.border} hover:bg-gray-100/50 dark:hover:bg-gray-800/50 active:scale-[0.98]`}
+            className={`w-full group relative flex items-center justify-between p-3.5 rounded-[20px] border transition-all duration-200 
+                ${theme.bg} ${theme.border} hover:opacity-80 active:scale-[0.98]`}
         >
             <div className="flex flex-col items-start gap-1.5 overflow-hidden">
                 <div className="flex items-center gap-2">
@@ -160,7 +160,7 @@ export default function BusStopPopup({
     }, [arrivalRawData]);
 
     return (
-        <div className="w-full min-w-[260px] sm:min-w-[320px] bg-white dark:bg-black rounded-[24px] overflow-hidden">
+        <div className="w-full min-w-[260px] sm:min-w-[320px] bg-transparent overflow-hidden">
             <ArrivalList
                 loading={loading}
                 error={error}

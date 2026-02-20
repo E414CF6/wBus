@@ -36,13 +36,13 @@ export const BusListItem = React.memo(({ bus, routeName, getDirection, onClick }
         <li>
             <button
                 type="button"
-                className="flex w-full justify-between items-center py-3 px-4 cursor-pointer bg-transparent hover:bg-gray-100/80 dark:hover:bg-gray-800/80 transition-all duration-200 rounded-2xl group active:scale-[0.98] text-left border border-transparent"
+                className="flex w-full justify-between items-center py-3.5 px-4 cursor-pointer bg-transparent hover:bg-gray-50/80 dark:hover:bg-white/[0.04] transition-all duration-200 rounded-[20px] group active:scale-[0.98] text-left border border-transparent hover:border-black/[0.04] dark:hover:border-white/[0.04]"
                 onClick={() => onClick(bus.gpslati, bus.gpslong)}
                 aria-label={`${bus.vehicleno} ${UI_TEXT.BUS_ITEM.CURRENT_LOC} ${stopName}`}
             >
                 <div className="flex flex-col gap-1.5 shrink-0 min-w-fit mr-4">
                     <span
-                        className="font-bold text-base text-gray-900 dark:text-gray-100 transition-colors whitespace-nowrap leading-none">
+                        className="font-extrabold text-[17px] text-gray-900 dark:text-gray-100 transition-colors whitespace-nowrap leading-none tracking-tight">
                         {bus.vehicleno}
                     </span>
                     <Pill tone="soft" size="sm" className="w-fit !text-[10px] !px-1.5 !py-0">

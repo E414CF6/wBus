@@ -16,11 +16,11 @@ type PillSize = "sm" | "md";
  * - `glass`: Frosted glass effect for overlays.
  */
 const toneStyles: Record<PillTone, string> = {
-    soft: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-none",
+    soft: "bg-black/[0.04] text-gray-800 dark:bg-white/[0.06] dark:text-gray-200 border-none",
     solid: "bg-black text-white dark:bg-white dark:text-black border-none",
-    muted: "bg-gray-50 text-gray-500 dark:bg-gray-900 dark:text-gray-400 border-none",
-    light: "bg-white/60 dark:bg-black/60 text-black dark:text-white border-none",
-    glass: "bg-white/40 dark:bg-black/40 text-black dark:text-white backdrop-blur-xl border border-black/5 dark:border-white/10",
+    muted: "bg-black/[0.02] text-gray-500 dark:bg-white/[0.02] dark:text-gray-400 border-none",
+    light: "bg-white/60 dark:bg-white/[0.06] text-black dark:text-white border-none",
+    glass: "bg-white/40 dark:bg-[#111111]/40 text-black dark:text-white backdrop-blur-3xl border border-black/[0.04] dark:border-white/[0.06]",
 };
 
 const sizeStyles: Record<PillSize, string> = {

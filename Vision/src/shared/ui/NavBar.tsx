@@ -20,19 +20,19 @@ export default function NavBar({ className = "" }: NavBarProps) {
         >
             <div
                 className="
-          flex items-center gap-3 p-2 pr-5 
-          bg-white/70 dark:bg-black/70 backdrop-blur-xl 
-          border border-black/5 dark:border-white/10 shadow-sm rounded-full
+          flex items-center gap-3 p-2.5 pr-5 
+          bg-white/80 dark:bg-[#111111]/80 backdrop-blur-3xl 
+          border border-black/[0.04] dark:border-white/[0.06] shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] rounded-[24px]
           transition-transform hover:scale-105 active:scale-95 cursor-default
         "
             >
                 {/* Logo Icon Container */}
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-black dark:bg-white text-white dark:text-black">
+                <div className="flex items-center justify-center w-[34px] h-[34px] rounded-[14px] bg-black dark:bg-white text-white dark:text-black">
                     <MapIcon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
                 </div>
 
                 {/* App Title */}
-                <h1 className="text-[15px] font-bold text-black dark:text-white tracking-tight select-none">
+                <h1 className="text-[16px] font-extrabold text-black dark:text-white tracking-tight select-none">
                     {APP_CONFIG.NAME}
                 </h1>
             </div>

@@ -53,14 +53,14 @@ const getUrgencyClass = (minutesUntil: number): string => {
 };
 
 const STYLES = {
-    CONTAINER: "bg-white/95 dark:bg-black/85 backdrop-blur-2xl rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.6)] w-full max-w-sm border border-black/5 dark:border-white/10 overflow-hidden transition-all duration-300 pointer-events-auto mx-auto",
-    HEADER: "px-4 pt-5 pb-3 bg-transparent",
-    SELECT_WRAPPER: "relative flex items-center group transition-all duration-200 bg-gray-100/80 dark:bg-white/10 rounded-2xl px-3.5 py-2",
-    SELECT_ELEMENT: "appearance-none bg-transparent text-xl font-bold text-black dark:text-white pr-8 cursor-pointer focus:outline-none z-10 w-full tracking-tighter",
-    SELECT_ICON: "absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-black/30 dark:text-white/30 group-hover:text-black dark:group-hover:text-white transition-colors",
+    CONTAINER: "bg-white/85 dark:bg-[#111111]/85 backdrop-blur-3xl rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] w-full max-w-sm border border-black/[0.04] dark:border-white/[0.06] overflow-hidden transition-all duration-300 pointer-events-auto mx-auto",
+    HEADER: "px-5 pt-5 pb-4 bg-transparent",
+    SELECT_WRAPPER: "relative flex items-center group transition-all duration-200 bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] rounded-[20px] px-4 py-2.5",
+    SELECT_ELEMENT: "appearance-none bg-transparent text-xl font-extrabold text-black dark:text-white pr-8 cursor-pointer focus:outline-none z-10 w-full tracking-tight",
+    SELECT_ICON: "absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-black/30 dark:text-white/30 group-hover:text-black/50 dark:group-hover:text-white/50 transition-colors",
     INFO_TEXT: "text-[11px] font-bold tracking-tight",
-    LIST_CONTAINER: "text-sm text-black dark:text-white max-h-[30svh] overflow-y-auto px-2 pb-3 space-y-1 custom-scrollbar",
-    SCHEDULE_CONTAINER: "max-h-[40svh] overflow-y-auto px-4 py-3 text-black dark:text-white custom-scrollbar",
+    LIST_CONTAINER: "text-sm text-black dark:text-white max-h-[35svh] overflow-y-auto px-3 pb-4 space-y-1.5 custom-scrollbar",
+    SCHEDULE_CONTAINER: "max-h-[45svh] overflow-y-auto px-5 py-4 text-black dark:text-white custom-scrollbar",
 };
 
 //-------------------------------------------------------------------
@@ -122,10 +122,10 @@ const SchedulePreview = ({ data, loading, isOpen, onToggle }: SchedulePreviewPro
     }, [nearestBus]);
 
     return (
-        <div className="flex flex-nowrap items-center justify-between gap-2 mt-3 min-h-[28px] overflow-hidden">
-            <div className="flex items-center gap-2 shrink-0">
-                <div className={`h-2 w-2 rounded-full ${dotClass}`} />
-                <span className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 whitespace-nowrap`}>
+        <div className="flex flex-nowrap items-center justify-between gap-3 mt-4 min-h-[32px] overflow-hidden">
+            <div className="flex items-center gap-2.5 shrink-0 pl-1">
+                <div className={`h-1.5 w-1.5 rounded-full ${dotClass} shadow-[0_0_8px_currentColor] opacity-80`} />
+                <span className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 whitespace-nowrap uppercase tracking-widest`}>
                     {UI_TEXT.SCHEDULE.NEXT_BUS}
                 </span>
             </div>
@@ -292,13 +292,13 @@ export default function BusList({ routeNames, allRoutes, selectedRoute, onRouteC
                     )}
 
                     {/* Action Row */}
-                    <div className="flex items-center justify-between mt-4">
-                        <div className="flex items-center gap-2 px-1">
-                            <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${uiState.dotClass}`} />
-                            <p className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 uppercase`}>{uiState.statusText}</p>
+                    <div className="flex items-center justify-between mt-5 pt-1">
+                        <div className="flex items-center gap-2.5 px-1.5">
+                            <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${uiState.dotClass} shadow-[0_0_8px_currentColor] opacity-80`} />
+                            <p className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 uppercase tracking-widest`}>{uiState.statusText}</p>
                         </div>
                         <button onClick={() => togglePanel("bus")} className="focus:outline-none active:scale-95 transition-transform">
-                            <Pill tone={isBusExpanded ? "solid" : "soft"} size="sm" className="font-bold">
+                            <Pill tone={isBusExpanded ? "solid" : "soft"} size="sm" className="font-bold shadow-sm">
                                 {isBusExpanded ? UI_TEXT.NAV.HIDE_LIST : UI_TEXT.NAV.SHOW_LIST}
                             </Pill>
                         </button>

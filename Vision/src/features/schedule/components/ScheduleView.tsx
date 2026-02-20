@@ -155,7 +155,7 @@ const RouteInfo = ({ details, featuredStops }: { details?: string[]; featuredSto
     return (
         <div className="space-y-3">
             {details && details.length > 0 && (
-                <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-[20px] text-xs space-y-1.5">
+                <div className="p-4 bg-black/[0.02] dark:bg-white/[0.03] rounded-[20px] text-xs space-y-1.5">
                     {details.map((detail, i) => (
                         <p key={i} className="text-gray-600 dark:text-gray-300 font-medium">• {detail}</p>
                     ))}
@@ -163,7 +163,7 @@ const RouteInfo = ({ details, featuredStops }: { details?: string[]; featuredSto
             )}
 
             {featuredEntries.length > 0 && (
-                <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-[20px] text-xs">
+                <div className="p-4 bg-black/[0.02] dark:bg-white/[0.03] rounded-[20px] text-xs">
                     <p className="font-bold text-gray-800 dark:text-gray-200 mb-3">{UI_TEXT.SCHEDULE.MAJOR_STOPS}</p>
                     {featuredEntries.map(([key, stops]) => (
                         <div key={key} className="mb-3 last:mb-0">
@@ -171,7 +171,7 @@ const RouteInfo = ({ details, featuredStops }: { details?: string[]; featuredSto
                             <div className="flex flex-wrap gap-2">
                                 {stops.map((stop, i) => (
                                     <span key={i}
-                                        className="px-2.5 py-1 bg-white dark:bg-white/10 rounded-lg text-[11px] font-medium text-gray-700 dark:text-gray-200 shadow-sm border border-black/5 dark:border-white/5">
+                                        className="px-2.5 py-1 bg-white dark:bg-white/[0.06] rounded-[10px] text-[11px] font-medium text-gray-700 dark:text-gray-200 shadow-sm border border-black/[0.04] dark:border-white/[0.04]">
                                         {stop}
                                     </span>
                                 ))}
@@ -185,12 +185,12 @@ const RouteInfo = ({ details, featuredStops }: { details?: string[]; featuredSto
 };
 
 const DayTypeSelector = ({ current, onChange }: { current: DayType; onChange: (t: DayType) => void }) => (
-    <div className="flex bg-gray-100 dark:bg-white/10 p-1 rounded-xl">
+    <div className="flex bg-black/[0.03] dark:bg-white/[0.05] p-1 rounded-[14px]">
         {Object.values(DAY_TYPES).map((t) => (
             <button
                 key={t}
                 onClick={() => onChange(t)}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 ${current === t ? "bg-white dark:bg-gray-800 text-black dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400"
+                className={`flex-1 py-1.5 text-xs font-bold rounded-[10px] transition-all duration-200 ${current === t ? "bg-white dark:bg-[#222] text-black dark:text-white shadow-sm border border-black/[0.04] dark:border-white/[0.04]" : "text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white"
                     }`}
             >
                 {dayTypeToLabel[t]}
@@ -216,9 +216,9 @@ const DirectionSelector = ({
                 key={dir}
                 onClick={() => onChange(dir)}
                 className={`${isCompact ? "px-3 py-1.5" : "px-4 py-2"
-                    } rounded-full font-bold whitespace-nowrap transition-all duration-200 ${current === dir
-                        ? "bg-black dark:bg-white text-white dark:text-black shadow-md"
-                        : "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300"
+                    } rounded-[14px] font-bold whitespace-nowrap transition-all duration-200 border ${current === dir
+                        ? "bg-black dark:bg-white text-white dark:text-black border-transparent shadow-md"
+                        : "bg-black/[0.02] dark:bg-white/[0.03] text-gray-600 dark:text-gray-300 border-black/[0.04] dark:border-white/[0.04] hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
                     }`}
             >
                 {dir}
@@ -236,26 +236,26 @@ const NextBusStatus = ({
     nextBus: NextBusInfo | null;
     scheduleItems?: RowItem[];
 }) => (
-    <div className="bg-blue-50 dark:bg-blue-500/10 rounded-[20px] overflow-hidden">
+    <div className="bg-blue-50/80 dark:bg-blue-500/10 rounded-[20px] overflow-hidden border border-blue-100/50 dark:border-blue-500/20">
         <div className="grid grid-cols-[60px_1fr]">
             <div
-                className="p-3 text-center border-r border-black/5 dark:border-white/5 font-mono font-bold flex flex-col items-center gap-1 text-blue-600 dark:text-blue-400 text-sm bg-blue-100/50 dark:bg-blue-500/20">
-                <div>{hour}</div>
+                className="p-3 text-center border-r border-black/5 dark:border-white/5 font-mono font-extrabold flex flex-col items-center justify-center gap-1 text-blue-600 dark:text-blue-400 text-[15px] bg-blue-100/50 dark:bg-blue-500/20">
+                <div className="leading-none">{hour}</div>
                 {nextBus?.timeUntil && (
-                    <div className="text-[10px] font-medium text-blue-500/80 dark:text-blue-400/80 tracking-tighter">
+                    <div className="text-[10px] font-bold text-blue-500/80 dark:text-blue-400/80 tracking-tighter">
                         {nextBus.timeUntil.minutes}:{nextBus.timeUntil.seconds.toString().padStart(2, '0')}
                     </div>
                 )}
             </div>
-            <div className="p-3 flex flex-wrap gap-3 items-center">
+            <div className="p-3 pl-4 flex flex-wrap gap-x-3 gap-y-2 items-center">
                 {scheduleItems?.map((item, i) => (
                     <span
                         key={i}
-                        className={`text-sm ${nextBus && item.minute === nextBus.minute ? "text-blue-600 dark:text-blue-400 font-bold bg-blue-100/50 dark:bg-blue-500/30 px-1.5 rounded-md -ml-1.5" : "font-medium text-gray-800 dark:text-gray-200"
+                        className={`text-[15px] ${nextBus && item.minute === nextBus.minute ? "text-blue-600 dark:text-blue-400 font-extrabold bg-blue-100/80 dark:bg-blue-500/30 px-2 py-0.5 rounded-[8px] -ml-2 shadow-sm" : "font-semibold text-gray-800 dark:text-gray-200"
                             }`}
                     >
                         {item.minute}
-                        {item.noteId && <sup className="text-gray-400 ml-0.5">{item.noteId}</sup>}
+                        {item.noteId && <sup className="text-gray-400 ml-0.5 font-normal">{item.noteId}</sup>}
                     </span>
                 )) ?? <span className="text-gray-300"></span>}
             </div>
@@ -276,24 +276,24 @@ const TimetableGrid = ({
     schedule: Record<string, Record<string, RowItem[]>>;
     direction: string;
 }) => (
-    <div className="bg-white dark:bg-white/5 rounded-[20px] border border-black/5 dark:border-white/10 overflow-hidden">
+    <div className="bg-white dark:bg-white/[0.02] rounded-[24px] border border-black/[0.04] dark:border-white/[0.06] overflow-hidden">
         {hours.map((hour) => {
             const isNow = hour === highlightedHour;
             return (
                 <div
                     key={hour}
-                    className={`grid grid-cols-[60px_1fr] border-b last:border-0 border-black/5 dark:border-white/5 ${isNow ? "bg-gray-50 dark:bg-white/5" : ""
+                    className={`grid grid-cols-[60px_1fr] border-b last:border-0 border-black/5 dark:border-white/5 ${isNow ? "bg-black/[0.02] dark:bg-white/[0.03]" : ""
                         }`}
                 >
                     <div
-                        className={`p-3 text-center border-r border-black/5 dark:border-white/5 font-mono font-bold flex flex-col items-center justify-center gap-1 text-xs ${isNow ? "text-black dark:text-white bg-gray-100 dark:bg-white/10" : "text-gray-400"
+                        className={`p-3 text-center border-r border-black/5 dark:border-white/5 font-mono font-bold flex flex-col items-center justify-center gap-1 text-[13px] ${isNow ? "text-black dark:text-white bg-black/[0.03] dark:bg-white/[0.04]" : "text-gray-400 dark:text-gray-500"
                             }`}
                     >
                         <div>{hour}</div>
                     </div>
-                    <div className="p-3 flex flex-wrap gap-3 items-center">
+                    <div className="p-3 pl-4 flex flex-wrap gap-x-3 gap-y-2 items-center">
                         {schedule[hour]?.[direction]?.map((item, i) => (
-                            <span key={i} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <span key={i} className="text-[14px] font-medium text-gray-700 dark:text-gray-300">
                                 {item.minute}
                                 {item.noteId && <sup className="text-gray-400 ml-0.5">{item.noteId}</sup>}
                             </span>
@@ -360,10 +360,10 @@ function ScheduleView({ data, mode = "full" }: { data: BusSchedule; mode?: "full
             )}
 
             {!isCompact && data.notes && Object.keys(data.notes).length > 0 && (
-                <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-[20px] text-[11px] text-gray-500 space-y-1.5">
+                <div className="p-4 bg-black/[0.02] dark:bg-white/[0.03] rounded-[20px] text-[11px] text-gray-500 dark:text-gray-400 space-y-1.5 border border-transparent dark:border-white/[0.02]">
                     <p className="font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">{UI_TEXT.SCHEDULE.NOTES_TITLE}</p>
                     {Object.entries(data.notes).map(([id, text]) => (
-                        <p key={id}><span className="font-semibold">{id}:</span> {text}</p>
+                        <p key={id}><span className="font-semibold text-gray-600 dark:text-gray-300">{id}:</span> {text}</p>
                     ))}
                 </div>
             )}
