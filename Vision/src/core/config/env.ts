@@ -57,7 +57,7 @@ export const MAP_SETTINGS = {
         DEFAULT: getEnvNumber(process.env.NEXT_PUBLIC_MAP_DEFAULT_ZOOM, 13),
         MIN: getEnvNumber(process.env.NEXT_PUBLIC_MAP_MIN_ZOOM, 12),
         MAX: getEnvNumber(process.env.NEXT_PUBLIC_MAP_MAX_ZOOM, 19),
-        BUS_STOP_VISIBLE: getEnvNumber(process.env.NEXT_PUBLIC_BUS_STOP_MARKER_MIN_ZOOM, 16),
+        BUS_STOP_VISIBLE: getEnvNumber(process.env.NEXT_PUBLIC_BUS_STOP_MARKER_MIN_ZOOM, 15),
     },
     ANIMATION: {
         BUS_MOVE_MS: getEnvNumber(process.env.NEXT_PUBLIC_BUS_ANIMATION_DURATION, 4000),
