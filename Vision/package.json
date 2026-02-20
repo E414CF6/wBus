@@ -18,8 +18,8 @@
     "leaflet-defaulticon-compatibility": "^0.1.2",
     "leaflet-rotatedmarker": "^0.2.0",
     "leaflet.marker.slideto": "^0.3.0",
-    "lucide-react": "^0.563.0",
-    "maplibre-gl": "^5.17.0",
+    "lucide-react": "^0.575.0",
+    "maplibre-gl": "^5.18.0",
     "next": "^16.1.6",
     "next-themes": "^0.4.6",
     "react": "^19.2.4",
@@ -27,14 +27,14 @@
     "react-leaflet": "^5.0.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.18",
+    "@tailwindcss/postcss": "^4.2.0",
     "@types/leaflet": "^1.9.21",
-    "@types/node": "^25.2.1",
-    "@types/react": "^19.2.13",
+    "@types/node": "^25.3.0",
+    "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "eslint": "^9.39.2",
+    "eslint": "^10.0.0",
     "eslint-config-next": "^16.1.6",
-    "tailwindcss": "^4.1.18",
+    "tailwindcss": "^4.2.0",
     "typescript": "^5.9.3"
   }
 }
