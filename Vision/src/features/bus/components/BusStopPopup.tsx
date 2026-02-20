@@ -160,7 +160,7 @@ export default function BusStopPopup({
     }, [arrivalRawData]);
 
     return (
-        <div className="w-full min-w-[280px] sm:min-w-[320px] bg-white dark:bg-black rounded-[28px] overflow-hidden">
+        <div className="w-full min-w-[260px] sm:min-w-[320px] bg-white dark:bg-black rounded-[24px] overflow-hidden">
             <ArrivalList
                 loading={loading}
                 error={error}

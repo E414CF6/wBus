@@ -53,14 +53,14 @@ const getUrgencyClass = (minutesUntil: number): string => {
 };
 
 const STYLES = {
-    CONTAINER: "bg-white/90 dark:bg-black/80 backdrop-blur-2xl rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] w-full max-w-sm border border-black/5 dark:border-white/10 overflow-hidden transition-all duration-300 pointer-events-auto mx-auto",
-    HEADER: "px-5 pt-5 pb-4 bg-transparent",
-    SELECT_WRAPPER: "relative flex items-center group transition-all duration-200 bg-gray-100/80 dark:bg-white/10 rounded-2xl px-4 py-2",
-    SELECT_ELEMENT: "appearance-none bg-transparent text-2xl font-bold text-black dark:text-white pr-8 cursor-pointer focus:outline-none z-10 w-full tracking-tight",
-    SELECT_ICON: "absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-black/30 dark:text-white/30 group-hover:text-black dark:group-hover:text-white transition-colors",
+    CONTAINER: "bg-white/90 dark:bg-black/80 backdrop-blur-2xl rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] w-full max-w-sm border border-black/5 dark:border-white/10 overflow-hidden transition-all duration-300 pointer-events-auto mx-auto",
+    HEADER: "px-4 pt-4 pb-3 bg-transparent",
+    SELECT_WRAPPER: "relative flex items-center group transition-all duration-200 bg-gray-100/80 dark:bg-white/10 rounded-xl px-3 py-1.5",
+    SELECT_ELEMENT: "appearance-none bg-transparent text-xl font-bold text-black dark:text-white pr-8 cursor-pointer focus:outline-none z-10 w-full tracking-tight",
+    SELECT_ICON: "absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-black/30 dark:text-white/30 group-hover:text-black dark:group-hover:text-white transition-colors",
     INFO_TEXT: "text-xs font-semibold",
-    LIST_CONTAINER: "text-sm text-black dark:text-white max-h-[35vh] overflow-y-auto px-3 py-2 space-y-2 custom-scrollbar",
-    SCHEDULE_CONTAINER: "max-h-[50svh] overflow-y-auto px-5 py-4 text-black dark:text-white custom-scrollbar",
+    LIST_CONTAINER: "text-sm text-black dark:text-white max-h-[28svh] overflow-y-auto px-3 py-1.5 space-y-1.5 custom-scrollbar",
+    SCHEDULE_CONTAINER: "max-h-[40svh] overflow-y-auto px-4 py-3 text-black dark:text-white custom-scrollbar",
 };
 
 //-------------------------------------------------------------------
@@ -122,7 +122,7 @@ const SchedulePreview = ({ data, loading, isOpen, onToggle }: SchedulePreviewPro
     }, [nearestBus]);
 
     return (
-        <div className="flex flex-nowrap items-center justify-between gap-2 mt-4 min-h-[32px] overflow-hidden">
+        <div className="flex flex-nowrap items-center justify-between gap-2 mt-3 min-h-[28px] overflow-hidden">
             <div className="flex items-center gap-2 shrink-0">
                 <div className={`h-2 w-2 rounded-full ${dotClass}`} />
                 <span className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 whitespace-nowrap`}>
@@ -266,13 +266,13 @@ export default function BusList({ routeNames, allRoutes, selectedRoute, onRouteC
                                 className={STYLES.SELECT_ELEMENT}
                             >
                                 {allRoutes.filter(Boolean).map((route) => (
-                                    <option key={route} value={route} className="text-black font-sans">
+                                    <option key={route} value={route} className="text-black dark:text-white bg-white dark:bg-gray-900 font-sans">
                                         {UI_TEXT.BUS_LIST.TITLE_ROUTE(route)}
                                     </option>
                                 ))}
                             </select>
                             <div className={STYLES.SELECT_ICON}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
                                     strokeLinejoin="round">
                                     <path d="m6 9 6 6 6-6" />
@@ -292,7 +292,7 @@ export default function BusList({ routeNames, allRoutes, selectedRoute, onRouteC
                     )}
 
                     {/* Action Row */}
-                    <div className="flex items-center justify-between mt-4">
+                    <div className="flex items-center justify-between mt-3">
                         <div className="flex items-center gap-2">
                             <div className={`h-2 w-2 rounded-full animate-pulse ${uiState.dotClass}`} />
                             <p className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400`}>{uiState.statusText}</p>

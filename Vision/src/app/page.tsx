@@ -99,8 +99,8 @@ export default function HomePage() {
                         onRouteChange={handleRouteChange}
                     />
                     <div
-                        className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-0 right-0 flex justify-center z-30 pointer-events-none">
-                        <div className="pointer-events-auto w-full px-4 flex justify-center">
+                        className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] left-0 right-0 flex justify-center z-30 pointer-events-none">
+                        <div className="pointer-events-auto w-full px-3 sm:px-4 flex justify-center">
                             <BusList
                                 routeNames={[activeRoute]}
                                 allRoutes={allRoutes}

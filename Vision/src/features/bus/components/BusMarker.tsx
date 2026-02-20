@@ -131,7 +131,7 @@ const BusPopupContent = memo(({ bus, stopName, DirectionIcon }: {
     stopName: string;
     DirectionIcon: React.ElementType
 }) => (
-    <div className="min-w-fit sm:min-w-[220px] flex flex-col bg-white dark:bg-black rounded-[24px] overflow-hidden shadow-xl border border-black/5 dark:border-white/10">
+    <div className="min-w-fit sm:min-w-[220px] flex flex-col bg-white dark:bg-black rounded-[20px] overflow-hidden shadow-xl border border-black/5 dark:border-white/10">
         {/* Header */}
         <div className="bg-gray-50 dark:bg-white/5 px-4 py-4 border-b border-black/5 dark:border-white/5">
             <div className="flex items-center gap-2.5 text-black dark:text-white">

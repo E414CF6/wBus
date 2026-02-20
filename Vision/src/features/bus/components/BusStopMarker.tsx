@@ -43,7 +43,7 @@ const BusStopMarkerItem = memo(({ stop, icon, onRouteChange }: BusStopMarkerItem
                 maxWidth={320}
                 autoPanPadding={[50, 50]}
             >
-                <div className="flex flex-col bg-white dark:bg-black overflow-hidden rounded-[28px] shadow-2xl border border-black/5 dark:border-white/10">
+                <div className="flex flex-col bg-white dark:bg-black overflow-hidden rounded-[24px] shadow-2xl border border-black/5 dark:border-white/10">
                     {/* Header Section */}
                     <div className="relative overflow-hidden bg-gray-50 dark:bg-white/5 px-5 py-5 text-black dark:text-white border-b border-black/5 dark:border-white/5">
                         <div className="absolute -right-4 -top-4 opacity-5">

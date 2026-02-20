@@ -9,11 +9,10 @@
     --color-foreground: var(--foreground);
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --background: #0a0a0a;
-        --foreground: #ededed;
-    }
+/* Class-based dark mode to match next-themes (attribute="class") */
+.dark {
+    --background: #0a0a0a;
+    --foreground: #ededed;
 }
 
 /* Base Styles */
@@ -109,15 +108,13 @@ body {
     border-radius: 10px;
 }
 
-/* Dark Mode Scrollbar Colors */
-@media (prefers-color-scheme: dark) {
-    * {
-        scrollbar-color: #333 transparent;
-    }
+/* Dark Mode Scrollbar Colors (class-based to match next-themes) */
+.dark * {
+    scrollbar-color: #333 transparent;
+}
 
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: #333;
-    }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #333;
 }
 
 /* Utilities & Animations */

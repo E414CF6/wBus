@@ -35,7 +35,7 @@ export const BusListItem = React.memo(({ bus, routeName, getDirection, onClick }
         <li>
             <button
                 type="button"
-                className="flex w-full justify-between items-center py-3 px-3 cursor-pointer bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 rounded-2xl group active:scale-[0.98] text-left border border-transparent"
+                className="flex w-full justify-between items-center py-2.5 px-3 cursor-pointer bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 rounded-xl group active:scale-[0.98] text-left border border-transparent"
                 onClick={() => onClick(bus.gpslati, bus.gpslong)}
                 aria-label={`${bus.vehicleno} ${UI_TEXT.BUS_ITEM.CURRENT_LOC} ${stopName}`}
             >
