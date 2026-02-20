@@ -53,13 +53,13 @@ const getUrgencyClass = (minutesUntil: number): string => {
 };
 
 const STYLES = {
-    CONTAINER: "bg-white/90 dark:bg-black/80 backdrop-blur-2xl rounded-[24px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] w-full max-w-sm border border-black/5 dark:border-white/10 overflow-hidden transition-all duration-300 pointer-events-auto mx-auto",
-    HEADER: "px-4 pt-4 pb-3 bg-transparent",
-    SELECT_WRAPPER: "relative flex items-center group transition-all duration-200 bg-gray-100/80 dark:bg-white/10 rounded-xl px-3 py-1.5",
-    SELECT_ELEMENT: "appearance-none bg-transparent text-xl font-bold text-black dark:text-white pr-8 cursor-pointer focus:outline-none z-10 w-full tracking-tight",
-    SELECT_ICON: "absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-black/30 dark:text-white/30 group-hover:text-black dark:group-hover:text-white transition-colors",
-    INFO_TEXT: "text-xs font-semibold",
-    LIST_CONTAINER: "text-sm text-black dark:text-white max-h-[28svh] overflow-y-auto px-3 py-1.5 space-y-1.5 custom-scrollbar",
+    CONTAINER: "bg-white/95 dark:bg-black/85 backdrop-blur-2xl rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.6)] w-full max-w-sm border border-black/5 dark:border-white/10 overflow-hidden transition-all duration-300 pointer-events-auto mx-auto",
+    HEADER: "px-4 pt-5 pb-3 bg-transparent",
+    SELECT_WRAPPER: "relative flex items-center group transition-all duration-200 bg-gray-100/80 dark:bg-white/10 rounded-2xl px-3.5 py-2",
+    SELECT_ELEMENT: "appearance-none bg-transparent text-xl font-bold text-black dark:text-white pr-8 cursor-pointer focus:outline-none z-10 w-full tracking-tighter",
+    SELECT_ICON: "absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-black/30 dark:text-white/30 group-hover:text-black dark:group-hover:text-white transition-colors",
+    INFO_TEXT: "text-[11px] font-bold tracking-tight",
+    LIST_CONTAINER: "text-sm text-black dark:text-white max-h-[30svh] overflow-y-auto px-2 pb-3 space-y-1 custom-scrollbar",
     SCHEDULE_CONTAINER: "max-h-[40svh] overflow-y-auto px-4 py-3 text-black dark:text-white custom-scrollbar",
 };
 
@@ -292,13 +292,13 @@ export default function BusList({ routeNames, allRoutes, selectedRoute, onRouteC
                     )}
 
                     {/* Action Row */}
-                    <div className="flex items-center justify-between mt-3">
-                        <div className="flex items-center gap-2">
-                            <div className={`h-2 w-2 rounded-full animate-pulse ${uiState.dotClass}`} />
-                            <p className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400`}>{uiState.statusText}</p>
+                    <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center gap-2 px-1">
+                            <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${uiState.dotClass}`} />
+                            <p className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 uppercase`}>{uiState.statusText}</p>
                         </div>
                         <button onClick={() => togglePanel("bus")} className="focus:outline-none active:scale-95 transition-transform">
-                            <Pill tone={isBusExpanded ? "solid" : "soft"} size="sm">
+                            <Pill tone={isBusExpanded ? "solid" : "soft"} size="sm" className="font-bold">
                                 {isBusExpanded ? UI_TEXT.NAV.HIDE_LIST : UI_TEXT.NAV.SHOW_LIST}
                             </Pill>
                         </button>

@@ -2,6 +2,7 @@ import React from "react";
 import { ArrowDown, ArrowUp, HelpCircle } from "lucide-react";
 
 import PopupMarquee from "@shared/ui/MarqueeText";
+import Pill from "@shared/ui/Pill";
 
 import { UI_TEXT } from "@core/config/locale";
 
@@ -22,7 +23,7 @@ export const BusListItem = React.memo(({ bus, routeName, getDirection, onClick }
 
     const stopName = bus.nodenm || "";
     const iconProps = {
-        className: "w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0 text-gray-400 dark:text-gray-500",
+        className: "w-3.5 h-3.5 flex-shrink-0 text-gray-400 dark:text-gray-500 transition-colors group-hover:text-gray-600 dark:group-hover:text-gray-300",
         "aria-hidden": true as const,
     };
     const directionIcon = direction === 1
@@ -35,27 +36,28 @@ export const BusListItem = React.memo(({ bus, routeName, getDirection, onClick }
         <li>
             <button
                 type="button"
-                className="flex w-full justify-between items-center py-2.5 px-3 cursor-pointer bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 rounded-xl group active:scale-[0.98] text-left border border-transparent"
+                className="flex w-full justify-between items-center py-3 px-4 cursor-pointer bg-transparent hover:bg-gray-100/80 dark:hover:bg-gray-800/80 transition-all duration-200 rounded-2xl group active:scale-[0.98] text-left border border-transparent"
                 onClick={() => onClick(bus.gpslati, bus.gpslong)}
                 aria-label={`${bus.vehicleno} ${UI_TEXT.BUS_ITEM.CURRENT_LOC} ${stopName}`}
             >
-                <div className="flex flex-col gap-1 shrink-0 min-w-fit mr-2">
+                <div className="flex flex-col gap-1.5 shrink-0 min-w-fit mr-4">
                     <span
-                        className="font-bold text-base text-gray-900 dark:text-white transition-colors whitespace-nowrap">
+                        className="font-bold text-base text-gray-900 dark:text-gray-100 transition-colors whitespace-nowrap leading-none">
                         {bus.vehicleno}
                     </span>
-                    <span
-                        className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-full px-2 py-0.5 inline-block w-fit">
+                    <Pill tone="soft" size="sm" className="w-fit !text-[10px] !px-1.5 !py-0">
                         {routeName}
-                    </span>
+                    </Pill>
                 </div>
 
                 <div
-                    className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 text-right min-w-0 flex-1 justify-end">
-                    <div className="text-xs font-medium max-w-[80px]">
-                        <PopupMarquee text={stopName} maxLength={8} />
+                    className="flex items-center gap-2 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100 text-right min-w-0 flex-1 justify-end transition-colors">
+                    <div className="text-[13px] font-medium max-w-[100px]">
+                        <PopupMarquee text={stopName} maxLength={10} />
                     </div>
-                    {directionIcon}
+                    <div className="shrink-0">
+                        {directionIcon}
+                    </div>
                 </div>
             </button>
         </li>

@@ -48,37 +48,37 @@ function ArrivalItem({
     return (
         <button
             onClick={() => onRouteChange?.(routeName)}
-            className={`w-full group relative flex items-center justify-between p-3 rounded-[20px] border transition-all duration-200 
-                ${theme.bg} ${theme.border} hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-[0.98]`}
+            className={`w-full group relative flex items-center justify-between p-3.5 rounded-[22px] border transition-all duration-200 
+                ${theme.bg} ${theme.border} hover:bg-gray-100/50 dark:hover:bg-gray-800/50 active:scale-[0.98]`}
         >
             <div className="flex flex-col items-start gap-1.5 overflow-hidden">
                 <div className="flex items-center gap-2">
-                    <span className={`px-2 py-0.5 rounded-lg text-[11px] font-bold ${theme.badge}`}>
+                    <span className={`px-2.5 py-0.5 rounded-lg text-[11px] font-bold shadow-sm ${theme.badge}`}>
                         {routeName}
                     </span>
-                    <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 truncate tracking-tight">
+                    <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 truncate tracking-tight uppercase">
                         {formatVehicleType(bus.vehicletp)}
                     </span>
                 </div>
 
                 <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
-                    <MapPin className="w-3 h-3 opacity-70" />
-                    <span className="text-[11px] font-medium">
+                    <MapPin className="w-3 h-3 opacity-60" />
+                    <span className="text-[11px] font-bold">
                         {bus.arrprevstationcnt === 0 ? UI_TEXT.BUS_ITEM.ARRIVING_SOON : UI_TEXT.BUS_ITEM.STOPS_LEFT(bus.arrprevstationcnt)}
                     </span>
                 </div>
             </div>
 
-            <div className="flex flex-col items-end shrink-0">
-                <div className={`flex items-center gap-1 font-bold ${theme.text}`}>
-                    <Clock className="w-3.5 h-3.5" />
-                    <span className="text-lg leading-none tracking-tight">
+            <div className="flex flex-col items-end shrink-0 ml-4">
+                <div className={`flex items-center gap-1 font-black ${theme.text}`}>
+                    <Clock className="w-3.5 h-3.5 opacity-80" />
+                    <span className="text-xl leading-none tracking-tighter">
                         {minutes === 0 ? UI_TEXT.BUS_ITEM.ARRIVING_SOON : `${minutes}${UI_TEXT.TIME.MINUTE_SUFFIX}`}
                     </span>
                 </div>
                 <div
-                    className="flex items-center text-[10px] text-gray-400 font-semibold group-hover:text-blue-500 transition-colors mt-1.5">
-                    {UI_TEXT.BUS_ITEM.SHOW_ROUTE} <ChevronRight className="w-3 h-3 ml-0.5 opacity-70" />
+                    className="flex items-center text-[10px] text-gray-400 dark:text-gray-500 font-bold group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors mt-2">
+                    {UI_TEXT.BUS_ITEM.SHOW_ROUTE} <ChevronRight className="w-3 h-3 ml-0.5 opacity-50" />
                 </div>
             </div>
         </button>

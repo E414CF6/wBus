@@ -31,11 +31,11 @@ const PopupMarquee = ({ text, maxLength = 12 }: { text: string; maxLength?: numb
                     whitespace-nowrap -> Prevent line breaks
                     shrink-0 -> Prevent shrinking even if space is tight
                 */}
-                <span className="pr-6 font-medium text-gray-700 whitespace-nowrap shrink-0">
+                <span className="pr-6 font-medium whitespace-nowrap shrink-0">
                     {text}
                 </span>
 
-                <span className="pr-6 font-medium text-gray-700 whitespace-nowrap shrink-0">
+                <span className="pr-6 font-medium whitespace-nowrap shrink-0">
                     {text}
                 </span>
             </div>
