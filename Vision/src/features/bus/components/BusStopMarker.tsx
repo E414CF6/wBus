@@ -39,8 +39,8 @@ const BusStopMarkerItem = memo(({ stop, icon, onRouteChange }: BusStopMarkerItem
         >
             <Popup
                 className="custom-bus-stop-popup"
-                minWidth={280}
-                maxWidth={320}
+                minWidth={300}
+                maxWidth={360}
                 autoPanPadding={[50, 50]}
             >
                 <div className="flex flex-col bg-white dark:bg-black overflow-hidden rounded-[24px] shadow-2xl border border-black/5 dark:border-white/10">

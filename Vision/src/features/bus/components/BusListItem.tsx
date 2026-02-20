@@ -45,7 +45,7 @@ export const BusListItem = React.memo(({ bus, routeName, getDirection, onClick }
                         {bus.vehicleno}
                     </span>
                     <span
-                        className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 rounded-full px-2 py-0.5 inline-block w-fit">
+                        className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 rounded-full px-2 py-0.5 inline-block w-fit">
                         {routeName}
                     </span>
                 </div>

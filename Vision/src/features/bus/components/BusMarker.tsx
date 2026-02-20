@@ -104,10 +104,10 @@ function useBusMarkerIcon(refreshKey?: string | number) {
             <img src="/icons/bus-icon.png" style="width: ${w}px; height: ${h}px; transition: transform 0.3s ease;" />
             <div class="bus-route-text-container" style="
               position: absolute; top: 7px; left: 50%; transform: translateX(-50%);
-              background: #000;
+              background: #4f46e5;
               color: white; font-size: 11px; font-weight: 800;
               padding: 2px 6px; border-radius: 8px; border: 1.5px solid white;
-              box-shadow: 0 2px 8px rgba(0,0,0,0.2); letter-spacing: 0.3px;
+              box-shadow: 0 2px 8px rgba(79,70,229,0.3); letter-spacing: 0.3px;
               max-width: 26px; overflow: hidden; white-space: nowrap;
             ">
               <span class="${needsMarquee ? "bus-route-text-animate" : ""}">${displayText}</span>
@@ -131,11 +131,11 @@ const BusPopupContent = memo(({ bus, stopName, DirectionIcon }: {
     stopName: string;
     DirectionIcon: React.ElementType
 }) => (
-    <div className="min-w-fit sm:min-w-[220px] flex flex-col bg-white dark:bg-black rounded-[20px] overflow-hidden shadow-xl border border-black/5 dark:border-white/10">
+    <div className="min-w-[240px] sm:min-w-[280px] flex flex-col bg-white dark:bg-black rounded-[20px] overflow-hidden shadow-xl border border-black/5 dark:border-white/10">
         {/* Header */}
         <div className="bg-gray-50 dark:bg-white/5 px-4 py-4 border-b border-black/5 dark:border-white/5">
             <div className="flex items-center gap-2.5 text-black dark:text-white">
-                <div className="p-1.5 bg-blue-100 dark:bg-blue-500/20 rounded-lg text-blue-600 dark:text-blue-400">
+                <div className="p-1.5 bg-indigo-100 dark:bg-indigo-500/20 rounded-lg text-indigo-600 dark:text-indigo-400">
                     <DirectionIcon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
                 </div>
                 <span className="font-bold text-lg tracking-tight leading-none">
