@@ -82,8 +82,7 @@ Deploy the OSRM routing engine as a background container.
 
 ```shell
 podman run -d \
-  --name osrm-backend \
-  -p 3000:5000 \
+  --name OSRM \
   -v $(pwd):/data \
   osrm-backend:arm64 \
   osrm-routed --algorithm mld /data/south-korea-latest.osrm
@@ -108,7 +107,7 @@ You can verify the server is running correctly by sending a sample routing reque
 > **Note:** The coordinates used below represent a sample route within South Korea.
 
 ```shell
-curl "http://127.0.0.1:3000/route/v1/driving/127.0276,37.4979;129.0756,35.1796?steps=true"
+curl "http://127.0.0.1:5000/route/v1/driving/127.0276,37.4979;129.0756,35.1796?steps=true"
 ```
 
 ### Important Notes
