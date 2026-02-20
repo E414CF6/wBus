@@ -160,7 +160,7 @@ const BusPopupContent = memo(({ bus, stopName, DirectionIcon }: {
                     {UI_TEXT.BUS_ITEM.CURRENT_LOC}
                 </span>
                 <div className="text-sm font-semibold text-gray-800 dark:text-gray-200 min-w-0">
-                    <PopupMarquee text={stopName} maxLength={10} />
+                    <PopupMarquee text={stopName} maxWidthClass="max-w-[160px]" />
                 </div>
             </div>
         </div>

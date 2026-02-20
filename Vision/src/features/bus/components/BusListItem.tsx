@@ -53,7 +53,7 @@ export const BusListItem = React.memo(({ bus, routeName, getDirection, onClick }
                 <div
                     className="flex items-center gap-2 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100 text-right min-w-0 flex-1 justify-end transition-colors">
                     <div className="text-[13px] font-medium max-w-[100px]">
-                        <PopupMarquee text={stopName} maxLength={10} />
+                        <PopupMarquee text={stopName} />
                     </div>
                     <div className="shrink-0">
                         {directionIcon}

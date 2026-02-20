@@ -1,15 +1,36 @@
-// Marquee Component
-const PopupMarquee = ({ text, maxLength = 12 }: { text: string; maxLength?: number }) => {
-    const shouldMarquee = text.length > maxLength;
+import { useEffect, useRef, useState } from "react";
 
-    if (!shouldMarquee) {
-        return <span className="whitespace-nowrap block">{text}</span>;
-    }
+type PopupMarqueeProps = {
+    text: string;
+    maxWidthClass?: string;
+};
+
+// Marquee Component
+const PopupMarquee = ({ text, maxWidthClass = "max-w-full" }: PopupMarqueeProps) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [shouldMarquee, setShouldMarquee] = useState(false);
+
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el || typeof ResizeObserver === "undefined") return;
+
+        const checkOverflow = () => {
+            setShouldMarquee(el.scrollWidth > el.clientWidth + 1);
+        };
+
+        checkOverflow();
+
+        const observer = new ResizeObserver(checkOverflow);
+        observer.observe(el);
+
+        return () => observer.disconnect();
+    }, [text]);
 
     return (
-        // Parent: Cut off overflowing parts with overflow-hidden
-        // Remove 'flex' and make it a block element (to avoid unnecessary flex interference)
-        <div className="popup-marquee-container overflow-hidden w-full relative">
+        <div
+            ref={containerRef}
+            className={`popup-marquee-container overflow-hidden inline-block align-middle ${maxWidthClass}`}
+        >
             <style>{`
                 @keyframes infinite-scroll {
                     0% { transform: translateX(0); }
@@ -17,28 +38,23 @@ const PopupMarquee = ({ text, maxLength = 12 }: { text: string; maxLength?: numb
                 }
                 .animate-infinite-scroll {
                     animation: infinite-scroll 6s linear infinite;
-                    display: flex; /* Force to display horizontally */
-                    width: max-content; /* Ensure it expands to fit content */
+                    display: flex;
+                    width: max-content;
                 }
             `}</style>
 
-            {/* Animation Wrapper: 
-                w-max (width: max-content) -> Ensure it expands to fit content
-                flex-nowrap -> Prevent internal element wrapping
-            */}
-            <div className="animate-infinite-scroll flex-nowrap">
-                {/* Text Elements: 
-                    whitespace-nowrap -> Prevent line breaks
-                    shrink-0 -> Prevent shrinking even if space is tight
-                */}
-                <span className="pr-6 font-medium whitespace-nowrap shrink-0">
-                    {text}
-                </span>
-
-                <span className="pr-6 font-medium whitespace-nowrap shrink-0">
-                    {text}
-                </span>
-            </div>
+            {shouldMarquee ? (
+                <div className="animate-infinite-scroll flex-nowrap">
+                    <span className="pr-6 font-medium whitespace-nowrap shrink-0">
+                        {text}
+                    </span>
+                    <span className="pr-6 font-medium whitespace-nowrap shrink-0" aria-hidden="true">
+                        {text}
+                    </span>
+                </div>
+            ) : (
+                <span className="whitespace-nowrap block font-medium">{text}</span>
+            )}
         </div>
     );
 };
