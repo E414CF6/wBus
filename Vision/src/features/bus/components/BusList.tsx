@@ -46,21 +46,21 @@ type ExpandedPanel = "bus" | "schedule" | null;
 //-------------------------------------------------------------------
 
 const getUrgencyClass = (minutesUntil: number): string => {
-    if (minutesUntil <= 3) return "bg-red-400";
-    if (minutesUntil <= 7) return "bg-amber-400";
-    if (minutesUntil <= 15) return "bg-emerald-400";
-    return "bg-sky-300";
+    if (minutesUntil <= 3) return "bg-red-500 dark:bg-red-400";
+    if (minutesUntil <= 7) return "bg-amber-500 dark:bg-amber-400";
+    if (minutesUntil <= 15) return "bg-emerald-500 dark:bg-emerald-400";
+    return "bg-blue-500 dark:bg-blue-400";
 };
 
 const STYLES = {
-    CONTAINER: "bg-white/98 backdrop-blur-md rounded-2xl shadow-2xl w-60 sm:w-64 border border-gray-200/50 overflow-hidden transition-all duration-300",
-    HEADER: "px-4 pt-4 pb-3 bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-700",
-    SELECT_WRAPPER: "relative flex items-center group transition-all duration-200 hover:bg-white/10 rounded-lg -ml-1.5 px-1.5",
-    SELECT_ELEMENT: "appearance-none bg-transparent text-base sm:text-lg font-bold text-white pr-7 py-0.5 cursor-pointer focus:outline-none z-10 w-full tracking-tight",
-    SELECT_ICON: "absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-blue-200 group-hover:text-white transition-colors",
-    INFO_TEXT: "text-[11px] sm:text-xs font-semibold",
-    LIST_CONTAINER: "text-xs sm:text-sm text-gray-800 max-h-[220px] overflow-y-auto px-2 py-2 space-y-1",
-    SCHEDULE_CONTAINER: "max-h-[50svh] overflow-y-auto px-4 py-3 text-slate-800",
+    CONTAINER: "bg-white/90 dark:bg-black/80 backdrop-blur-2xl rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] w-full max-w-sm border border-black/5 dark:border-white/10 overflow-hidden transition-all duration-300 pointer-events-auto mx-auto",
+    HEADER: "px-5 pt-5 pb-4 bg-transparent",
+    SELECT_WRAPPER: "relative flex items-center group transition-all duration-200 bg-gray-100/80 dark:bg-white/10 rounded-2xl px-4 py-2",
+    SELECT_ELEMENT: "appearance-none bg-transparent text-2xl font-bold text-black dark:text-white pr-8 cursor-pointer focus:outline-none z-10 w-full tracking-tight",
+    SELECT_ICON: "absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-black/30 dark:text-white/30 group-hover:text-black dark:group-hover:text-white transition-colors",
+    INFO_TEXT: "text-xs font-semibold",
+    LIST_CONTAINER: "text-sm text-black dark:text-white max-h-[35vh] overflow-y-auto px-3 py-2 space-y-2 custom-scrollbar",
+    SCHEDULE_CONTAINER: "max-h-[50svh] overflow-y-auto px-5 py-4 text-black dark:text-white custom-scrollbar",
 };
 
 //-------------------------------------------------------------------
@@ -113,7 +113,7 @@ const SchedulePreview = ({ data, loading, isOpen, onToggle }: SchedulePreviewPro
     }, [data, mounted]);
 
     const statusMessage = loading || !mounted ? UI_TEXT.COMMON.LOADING : UI_TEXT.SCHEDULE.NO_SERVICE;
-    const dotClass = nearestBus ? getUrgencyClass(nearestBus.minutesUntil) : "bg-white/40";
+    const dotClass = nearestBus ? getUrgencyClass(nearestBus.minutesUntil) : "bg-gray-300 dark:bg-gray-600";
 
     const displayTime = useMemo(() => {
         if (!nearestBus) return "";
@@ -122,10 +122,10 @@ const SchedulePreview = ({ data, loading, isOpen, onToggle }: SchedulePreviewPro
     }, [nearestBus]);
 
     return (
-        <div className="flex flex-nowrap items-center justify-between gap-2 min-h-[32px] overflow-hidden">
-            <div className="flex items-center gap-1.5 shrink-0">
-                <div className={`h-1.5 w-1.5 rounded-full ${dotClass}`} />
-                <span className={`${STYLES.INFO_TEXT} text-blue-100 whitespace-nowrap`}>
+        <div className="flex flex-nowrap items-center justify-between gap-2 mt-4 min-h-[32px] overflow-hidden">
+            <div className="flex items-center gap-2 shrink-0">
+                <div className={`h-2 w-2 rounded-full ${dotClass}`} />
+                <span className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 whitespace-nowrap`}>
                     {UI_TEXT.SCHEDULE.NEXT_BUS}
                 </span>
             </div>
@@ -133,7 +133,7 @@ const SchedulePreview = ({ data, loading, isOpen, onToggle }: SchedulePreviewPro
             {nearestBus ? (
                 <div className="flex items-center gap-1.5 overflow-hidden">
                     <div className="shrink-0">
-                        <Pill tone="light" size="sm">
+                        <Pill tone="soft" size="sm">
                             {UI_TEXT.TIME.FORMAT_REMAINING(nearestBus.minutesUntil)}
                         </Pill>
                     </div>
@@ -143,11 +143,10 @@ const SchedulePreview = ({ data, loading, isOpen, onToggle }: SchedulePreviewPro
                         className="transition-transform active:scale-95 focus:outline-none shrink min-w-0"
                         aria-label="Toggle Schedule"
                     >
-                        <Pill tone={isOpen ? "glass" : "light"} size="sm">
+                        <Pill tone={isOpen ? "solid" : "soft"} size="sm">
                             <div className="flex items-center truncate">
                                 <span className="font-bold truncate">{nearestBus.destination}</span>
                                 <span className="ml-1 opacity-90 whitespace-nowrap">{displayTime}</span>
-                                {/* Visual cue for dropdown */}
                                 <svg
                                     className={`w-3 h-3 ml-1.5 opacity-70 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
                                     fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}
@@ -159,7 +158,7 @@ const SchedulePreview = ({ data, loading, isOpen, onToggle }: SchedulePreviewPro
                     </button>
                 </div>
             ) : (
-                <span className={`${STYLES.INFO_TEXT} text-blue-100/80 truncate`}>{statusMessage}</span>
+                <span className={`${STYLES.INFO_TEXT} text-gray-400 dark:text-gray-500 truncate`}>{statusMessage}</span>
             )}
         </div>
     );
@@ -240,7 +239,7 @@ export default function BusList({ routeNames, allRoutes, selectedRoute, onRouteC
 
         return {
             statusText: anyError ? getBusErrorMessage(anyError) : (isLoading ? UI_TEXT.COMMON.LOADING : UI_TEXT.BUS_LIST.COUNT_RUNNING(allBuses.length)),
-            dotClass: anyError ? "bg-red-400" : (isLoading ? "bg-blue-300" : "bg-green-400"),
+            dotClass: anyError ? "bg-red-500" : (isLoading ? "bg-blue-400" : "bg-green-500"),
             isNoData: allBuses.length === 0
         };
     }, [routeNames, routesData, allBuses.length]);
@@ -259,7 +258,7 @@ export default function BusList({ routeNames, allRoutes, selectedRoute, onRouteC
             >
                 <div className={STYLES.HEADER}>
                     {/* Combined Title & Selector */}
-                    <div className="mb-2.5">
+                    <div>
                         <div className={STYLES.SELECT_WRAPPER}>
                             <select
                                 value={selectedRoute}
@@ -267,13 +266,13 @@ export default function BusList({ routeNames, allRoutes, selectedRoute, onRouteC
                                 className={STYLES.SELECT_ELEMENT}
                             >
                                 {allRoutes.filter(Boolean).map((route) => (
-                                    <option key={route} value={route} className="text-gray-900 font-sans">
+                                    <option key={route} value={route} className="text-black font-sans">
                                         {UI_TEXT.BUS_LIST.TITLE_ROUTE(route)}
                                     </option>
                                 ))}
                             </select>
                             <div className={STYLES.SELECT_ICON}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
                                     strokeLinejoin="round">
                                     <path d="m6 9 6 6 6-6" />
@@ -282,7 +281,7 @@ export default function BusList({ routeNames, allRoutes, selectedRoute, onRouteC
                         </div>
                     </div>
 
-                    {/* Schedule Preview - Now handles the toggle interaction */}
+                    {/* Schedule Preview */}
                     {showSchedule && (
                         <SchedulePreview
                             data={scheduleData}
@@ -292,17 +291,14 @@ export default function BusList({ routeNames, allRoutes, selectedRoute, onRouteC
                         />
                     )}
 
-                    {/* Action Row - Rearranged for single line layout */}
-                    <div className="flex items-center justify-between mt-1">
-                        {/* Left: Status Dot & Text */}
+                    {/* Action Row */}
+                    <div className="flex items-center justify-between mt-4">
                         <div className="flex items-center gap-2">
-                            <div className={`h-1.5 w-1.5 rounded-full animate-pulse ${uiState.dotClass}`} />
-                            <p className={`${STYLES.INFO_TEXT} text-blue-100`}>{uiState.statusText}</p>
+                            <div className={`h-2 w-2 rounded-full animate-pulse ${uiState.dotClass}`} />
+                            <p className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400`}>{uiState.statusText}</p>
                         </div>
-
-                        {/* Right: List Toggle Button */}
-                        <button onClick={() => togglePanel("bus")}>
-                            <Pill tone={isBusExpanded ? "glass" : "light"} size="sm">
+                        <button onClick={() => togglePanel("bus")} className="focus:outline-none active:scale-95 transition-transform">
+                            <Pill tone={isBusExpanded ? "solid" : "soft"} size="sm">
                                 {isBusExpanded ? UI_TEXT.NAV.HIDE_LIST : UI_TEXT.NAV.SHOW_LIST}
                             </Pill>
                         </button>
@@ -319,7 +315,7 @@ export default function BusList({ routeNames, allRoutes, selectedRoute, onRouteC
                 {isBusExpanded && (
                     <ul className={STYLES.LIST_CONTAINER}>
                         {uiState.isNoData ? (
-                            <li className="text-center py-4 text-gray-500 text-xs italic">
+                            <li className="text-center py-6 text-gray-400 dark:text-gray-500 text-xs font-medium italic">
                                 {UI_TEXT.BUS_LIST.NO_RUNNING_DESC}
                             </li>
                         ) : (

@@ -16,16 +16,16 @@ type PillSize = "sm" | "md";
  * - `glass`: Frosted glass effect for overlays.
  */
 const toneStyles: Record<PillTone, string> = {
-    soft: "bg-blue-50 text-blue-600 border border-blue-100",
-    solid: "bg-blue-600 text-white border border-blue-600",
-    muted: "bg-slate-100 text-slate-600 border border-slate-200",
-    light: "bg-white/20 text-white border border-white/30",
-    glass: "bg-white/30 text-white border border-white/40 backdrop-blur-md",
+    soft: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 border-none",
+    solid: "bg-black text-white dark:bg-white dark:text-black border-none",
+    muted: "bg-gray-50 text-gray-500 dark:bg-gray-900 dark:text-gray-400 border-none",
+    light: "bg-white/60 dark:bg-black/60 text-black dark:text-white border-none",
+    glass: "bg-white/40 dark:bg-black/40 text-black dark:text-white backdrop-blur-xl border border-black/5 dark:border-white/10",
 };
 
 const sizeStyles: Record<PillSize, string> = {
-    sm: "px-2.5 py-0.5 text-[10px]",
-    md: "px-3 py-1 text-xs",
+    sm: "px-2.5 py-1 text-[11px]",
+    md: "px-3.5 py-1.5 text-[13px]",
 };
 
 /**
@@ -72,7 +72,7 @@ export default function Pill<T extends ElementType = "span">({
             className={`
         inline-flex items-center gap-1.5 rounded-full
         font-semibold leading-none whitespace-nowrap
-        transition-colors
+        transition-colors duration-200
         ${toneStyles[tone]}
         ${sizeStyles[size]}
         ${className}

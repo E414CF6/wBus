@@ -87,7 +87,7 @@ function findNextBus(
 }
 
 // ----------------------------------------------------------------------
-// Custom Hook: Logic Extraction
+// Custom Hook
 // ----------------------------------------------------------------------
 
 function useScheduleLogic(data: BusSchedule) {
@@ -98,7 +98,7 @@ function useScheduleLogic(data: BusSchedule) {
     const [direction, setDirection] = useState(data.directions[0]);
     const [now, setNow] = useState(() => new Date());
 
-    // Effect: Update time every second
+    // Effect: Update time every second to keep "Next Bus" info accurate
     useEffect(() => {
         const interval = setInterval(() => setNow(new Date()), 1000);
         return () => clearInterval(interval);
@@ -144,7 +144,7 @@ function useScheduleLogic(data: BusSchedule) {
 }
 
 // ----------------------------------------------------------------------
-// Sub-Components (Internal)
+// Sub-Components
 // ----------------------------------------------------------------------
 
 const RouteInfo = ({ details, featuredStops }: { details?: string[]; featuredStops?: Record<string, string[]> }) => {
@@ -153,25 +153,25 @@ const RouteInfo = ({ details, featuredStops }: { details?: string[]; featuredSto
         .filter(([, stops]) => stops.length > 0);
 
     return (
-        <>
+        <div className="space-y-3">
             {details && details.length > 0 && (
-                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs space-y-1">
+                <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-[20px] text-xs space-y-1.5">
                     {details.map((detail, i) => (
-                        <p key={i} className="text-amber-800">• {detail}</p>
+                        <p key={i} className="text-gray-600 dark:text-gray-300 font-medium">• {detail}</p>
                     ))}
                 </div>
             )}
 
             {featuredEntries.length > 0 && (
-                <div className="p-3 bg-slate-50 rounded-xl text-xs">
-                    <p className="font-bold text-slate-700 mb-2">{UI_TEXT.SCHEDULE.MAJOR_STOPS}</p>
+                <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-[20px] text-xs">
+                    <p className="font-bold text-gray-800 dark:text-gray-200 mb-3">{UI_TEXT.SCHEDULE.MAJOR_STOPS}</p>
                     {featuredEntries.map(([key, stops]) => (
-                        <div key={key} className="mb-2 last:mb-0">
-                            <p className="text-[11px] text-slate-500 mb-1">{getFeaturedStopsLabel(key)}</p>
-                            <div className="flex flex-wrap gap-1.5">
+                        <div key={key} className="mb-3 last:mb-0">
+                            <p className="text-[11px] font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">{getFeaturedStopsLabel(key)}</p>
+                            <div className="flex flex-wrap gap-2">
                                 {stops.map((stop, i) => (
                                     <span key={i}
-                                        className="px-2 py-0.5 bg-white rounded-md text-[11px] text-slate-600 border border-slate-200">
+                                        className="px-2.5 py-1 bg-white dark:bg-white/10 rounded-lg text-[11px] font-medium text-gray-700 dark:text-gray-200 shadow-sm border border-black/5 dark:border-white/5">
                                         {stop}
                                     </span>
                                 ))}
@@ -180,17 +180,17 @@ const RouteInfo = ({ details, featuredStops }: { details?: string[]; featuredSto
                     ))}
                 </div>
             )}
-        </>
+        </div>
     );
 };
 
 const DayTypeSelector = ({ current, onChange }: { current: DayType; onChange: (t: DayType) => void }) => (
-    <div className="flex bg-slate-200 p-1 rounded-xl">
+    <div className="flex bg-gray-100 dark:bg-white/10 p-1 rounded-xl">
         {Object.values(DAY_TYPES).map((t) => (
             <button
                 key={t}
                 onClick={() => onChange(t)}
-                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${current === t ? "bg-white text-blue-600 shadow-sm" : "text-slate-500"
+                className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all duration-200 ${current === t ? "bg-white dark:bg-gray-800 text-black dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400"
                     }`}
             >
                 {dayTypeToLabel[t]}
@@ -210,15 +210,15 @@ const DirectionSelector = ({
     onChange: (d: string) => void;
     isCompact: boolean;
 }) => (
-    <div className={`flex gap-2 overflow-x-auto pb-1 ${isCompact ? "text-[11px]" : "text-xs"}`}>
+    <div className={`flex gap-2 overflow-x-auto pb-1 custom-scrollbar ${isCompact ? "text-[11px]" : "text-xs"}`}>
         {directions.map((dir) => (
             <button
                 key={dir}
                 onClick={() => onChange(dir)}
-                className={`${isCompact ? "px-3 py-1.5" : "px-3.5 py-2"
-                    } rounded-full font-bold border whitespace-nowrap transition-all ${current === dir
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : "bg-white border-slate-200"
+                className={`${isCompact ? "px-3 py-1.5" : "px-4 py-2"
+                    } rounded-full font-bold whitespace-nowrap transition-all duration-200 ${current === dir
+                        ? "bg-black dark:bg-white text-white dark:text-black shadow-md"
+                        : "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300"
                     }`}
             >
                 {dir}
@@ -236,30 +236,28 @@ const NextBusStatus = ({
     nextBus: NextBusInfo | null;
     scheduleItems?: RowItem[];
 }) => (
-    <div className="bg-blue-50 rounded-xl shadow-sm border border-blue-200 overflow-hidden">
-        <div className="grid grid-cols-[56px_1fr]">
-            {/* Time Column */}
+    <div className="bg-blue-50 dark:bg-blue-500/10 rounded-[20px] overflow-hidden">
+        <div className="grid grid-cols-[60px_1fr]">
             <div
-                className="p-3 text-center border-r border-blue-200 font-mono font-bold flex flex-col items-center gap-1 text-blue-600 text-sm">
+                className="p-3 text-center border-r border-black/5 dark:border-white/5 font-mono font-bold flex flex-col items-center gap-1 text-blue-600 dark:text-blue-400 text-sm bg-blue-100/50 dark:bg-blue-500/20">
                 <div>{hour}</div>
                 {nextBus?.timeUntil && (
-                    <div className="text-[11px] font-normal text-blue-500">
+                    <div className="text-[10px] font-medium text-blue-500/80 dark:text-blue-400/80 tracking-tighter">
                         {nextBus.timeUntil.minutes}:{nextBus.timeUntil.seconds.toString().padStart(2, '0')}
                     </div>
                 )}
             </div>
-            {/* Minutes Column */}
             <div className="p-3 flex flex-wrap gap-3 items-center">
                 {scheduleItems?.map((item, i) => (
                     <span
                         key={i}
-                        className={`text-sm font-medium ${nextBus && item.minute === nextBus.minute ? "text-blue-600 font-bold" : ""
+                        className={`text-sm ${nextBus && item.minute === nextBus.minute ? "text-blue-600 dark:text-blue-400 font-bold bg-blue-100/50 dark:bg-blue-500/30 px-1.5 rounded-md -ml-1.5" : "font-medium text-gray-800 dark:text-gray-200"
                             }`}
                     >
                         {item.minute}
-                        {item.noteId && <sup className="text-red-500 ml-0.5">{item.noteId}</sup>}
+                        {item.noteId && <sup className="text-gray-400 ml-0.5">{item.noteId}</sup>}
                     </span>
-                )) ?? <span className="text-slate-300"></span>}
+                )) ?? <span className="text-gray-300"></span>}
             </div>
         </div>
     </div>
@@ -278,35 +276,28 @@ const TimetableGrid = ({
     schedule: Record<string, Record<string, RowItem[]>>;
     direction: string;
 }) => (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+    <div className="bg-white dark:bg-white/5 rounded-[20px] border border-black/5 dark:border-white/10 overflow-hidden">
         {hours.map((hour) => {
             const isNow = hour === highlightedHour;
             return (
                 <div
                     key={hour}
-                    className={`grid grid-cols-[56px_1fr] border-b last:border-0 border-slate-200 ${isNow ? "bg-blue-100/40 border-b-2 border-blue-300" : ""
+                    className={`grid grid-cols-[60px_1fr] border-b last:border-0 border-black/5 dark:border-white/5 ${isNow ? "bg-gray-50 dark:bg-white/5" : ""
                         }`}
                 >
-                    {/* Time Column */}
                     <div
-                        className={`p-3 text-center border-r border-slate-200 font-mono font-bold flex flex-col items-center gap-1 text-xs ${isNow ? "text-blue-600" : "text-slate-400"
+                        className={`p-3 text-center border-r border-black/5 dark:border-white/5 font-mono font-bold flex flex-col items-center justify-center gap-1 text-xs ${isNow ? "text-black dark:text-white bg-gray-100 dark:bg-white/10" : "text-gray-400"
                             }`}
                     >
                         <div>{hour}</div>
-                        {isNow && nextBus?.timeUntil && (
-                            <div className="text-[10px] font-normal text-blue-500">
-                                {nextBus.timeUntil.minutes}:{nextBus.timeUntil.seconds.toString().padStart(2, '0')}
-                            </div>
-                        )}
                     </div>
-                    {/* Minutes Column */}
                     <div className="p-3 flex flex-wrap gap-3 items-center">
                         {schedule[hour]?.[direction]?.map((item, i) => (
-                            <span key={i} className="text-sm font-medium">
+                            <span key={i} className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                 {item.minute}
-                                {item.noteId && <sup className="text-red-500 ml-0.5">{item.noteId}</sup>}
+                                {item.noteId && <sup className="text-gray-400 ml-0.5">{item.noteId}</sup>}
                             </span>
-                        )) ?? <span className="text-slate-300"></span>}
+                        )) ?? <span className="text-gray-300"></span>}
                     </div>
                 </div>
             );
@@ -334,19 +325,15 @@ function ScheduleView({ data, mode = "full" }: { data: BusSchedule; mode?: "full
     } = useScheduleLogic(data);
 
     return (
-        <div className={isCompact ? "space-y-3" : "space-y-4"}>
-
-            {/* 1. Route Info (Details & Featured Stops) - Full Mode Only */}
+        <div className={isCompact ? "space-y-4" : "space-y-5"}>
             {!isCompact && (
                 <RouteInfo details={data.routeDetails} featuredStops={data.featuredStops} />
             )}
 
-            {/* 2. Day Type Tabs - Full Mode Only (if applicable) */}
             {!isCompact && !isGeneralSchedule && (
                 <DayTypeSelector current={dayType} onChange={setDayType} />
             )}
 
-            {/* 3. Direction Buttons */}
             <DirectionSelector
                 directions={data.directions}
                 current={direction}
@@ -354,7 +341,6 @@ function ScheduleView({ data, mode = "full" }: { data: BusSchedule; mode?: "full
                 isCompact={isCompact}
             />
 
-            {/* 4. Highlighted 'Next Bus' Display */}
             {hours.includes(highlightedHour) && (
                 <NextBusStatus
                     hour={highlightedHour}
@@ -363,7 +349,6 @@ function ScheduleView({ data, mode = "full" }: { data: BusSchedule; mode?: "full
                 />
             )}
 
-            {/* 5. Full Timetable - Full Mode Only */}
             {!isCompact && (
                 <TimetableGrid
                     hours={hours}
@@ -374,19 +359,17 @@ function ScheduleView({ data, mode = "full" }: { data: BusSchedule; mode?: "full
                 />
             )}
 
-            {/* 6. Footer Notes - Full Mode Only */}
             {!isCompact && data.notes && Object.keys(data.notes).length > 0 && (
-                <div className="p-3 bg-slate-100 rounded-xl text-[11px] text-slate-500 space-y-1">
-                    <p className="font-bold mb-1">{UI_TEXT.SCHEDULE.NOTES_TITLE}</p>
+                <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-[20px] text-[11px] text-gray-500 space-y-1.5">
+                    <p className="font-bold text-gray-700 dark:text-gray-300 mb-2 uppercase tracking-wider">{UI_TEXT.SCHEDULE.NOTES_TITLE}</p>
                     {Object.entries(data.notes).map(([id, text]) => (
-                        <p key={id}>{id}: {text}</p>
+                        <p key={id}><span className="font-semibold">{id}:</span> {text}</p>
                     ))}
                 </div>
             )}
 
-            {/* 7. Footer Last Updated - Full Mode Only */}
             {!isCompact && (
-                <div className="text-center text-[11px] text-slate-400">
+                <div className="text-center text-[10px] text-gray-400 font-medium uppercase tracking-widest">
                     {UI_TEXT.SCHEDULE.LAST_UPDATED} {data.lastUpdated}
                 </div>
             )}

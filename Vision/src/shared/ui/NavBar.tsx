@@ -5,7 +5,6 @@ import { MapIcon } from "lucide-react";
 import { APP_CONFIG } from "@core/config/env";
 
 interface NavBarProps {
-    /** Optional class names to override positioning (default: absolute top-4 left-4) */
     className?: string;
 }
 
@@ -17,23 +16,23 @@ export default function NavBar({ className = "" }: NavBarProps) {
     return (
         <nav
             aria-label="Main Navigation"
-            className={`absolute top-4 left-4 z-50 ${className}`}
+            className={`absolute top-[env(safe-area-inset-top,1rem)] left-4 z-50 mt-4 ${className}`}
         >
             <div
                 className="
-          flex items-center gap-2 p-1.5 pr-5 
-          bg-white/90 backdrop-blur-md 
-          border border-white/20 shadow-lg rounded-full
-          transition-transform hover:scale-[1.02] active:scale-95 cursor-default
+          flex items-center gap-3 p-2 pr-5 
+          bg-white/70 dark:bg-black/70 backdrop-blur-xl 
+          border border-black/5 dark:border-white/10 shadow-sm rounded-full
+          transition-transform hover:scale-105 active:scale-95 cursor-default
         "
             >
                 {/* Logo Icon Container */}
-                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-600 text-white shadow-sm">
-                    <MapIcon className="w-5 h-5" aria-hidden="true" />
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-black dark:bg-white text-white dark:text-black">
+                    <MapIcon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
                 </div>
 
                 {/* App Title */}
-                <h1 className="text-sm font-bold text-slate-800 tracking-tight select-none">
+                <h1 className="text-[15px] font-bold text-black dark:text-white tracking-tight select-none">
                     {APP_CONFIG.NAME}
                 </h1>
             </div>

@@ -100,15 +100,15 @@ function useBusMarkerIcon(refreshKey?: string | number) {
                 iconAnchor: SETTINGS.ICON_ANCHOR,
                 popupAnchor: SETTINGS.POPUP_ANCHOR,
                 html: `
-          <div style="position: relative; width: ${w}px; height: ${h}px; filter: drop-shadow(0 2px 8px rgba(37, 99, 235, 0.4));">
+          <div style="position: relative; width: ${w}px; height: ${h}px; filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));">
             <img src="/icons/bus-icon.png" style="width: ${w}px; height: ${h}px; transition: transform 0.3s ease;" />
             <div class="bus-route-text-container" style="
               position: absolute; top: 7px; left: 50%; transform: translateX(-50%);
-              background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-              color: white; font-size: 10px; font-weight: bold;
-              padding: 2px 5px; border-radius: 6px; border: 1.5px solid white;
-              box-shadow: 0 2px 6px rgba(0,0,0,0.3); letter-spacing: 0.3px;
-              max-width: 24px; overflow: hidden; white-space: nowrap;
+              background: #000;
+              color: white; font-size: 11px; font-weight: 800;
+              padding: 2px 6px; border-radius: 8px; border: 1.5px solid white;
+              box-shadow: 0 2px 8px rgba(0,0,0,0.2); letter-spacing: 0.3px;
+              max-width: 26px; overflow: hidden; white-space: nowrap;
             ">
               <span class="${needsMarquee ? "bus-route-text-animate" : ""}">${displayText}</span>
             </div>
@@ -131,39 +131,36 @@ const BusPopupContent = memo(({ bus, stopName, DirectionIcon }: {
     stopName: string;
     DirectionIcon: React.ElementType
 }) => (
-    <div className="min-w-fit sm:min-w-[200px] flex flex-col">
+    <div className="min-w-fit sm:min-w-[220px] flex flex-col bg-white dark:bg-black rounded-[24px] overflow-hidden shadow-xl border border-black/5 dark:border-white/10">
         {/* Header */}
-        <div className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white px-4 py-3">
-            <div className="flex items-center gap-2">
-                <DirectionIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white/90" aria-hidden="true" />
-                <span className="font-bold text-sm sm:text-base tracking-tight leading-none">
+        <div className="bg-gray-50 dark:bg-white/5 px-4 py-4 border-b border-black/5 dark:border-white/5">
+            <div className="flex items-center gap-2.5 text-black dark:text-white">
+                <div className="p-1.5 bg-blue-100 dark:bg-blue-500/20 rounded-lg text-blue-600 dark:text-blue-400">
+                    <DirectionIcon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
+                </div>
+                <span className="font-bold text-lg tracking-tight leading-none">
                     {UI_TEXT.BUS_LIST.TITLE_ROUTE(bus.routenm)}
                 </span>
             </div>
         </div>
 
         {/* Body */}
-        <div className="bg-white px-4 py-3 space-y-3 text-xs sm:text-sm">
-            <div className="grid grid-cols-[auto_1fr] text-center items-center gap-2">
-                <span className="text-[10px] sm:text-xs font-semibold text-gray-500 shrink-0 whitespace-nowrap">
+        <div className="px-4 py-4 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0">
                     {UI_TEXT.BUS_ITEM.VEHICLE_NUM}
                 </span>
-                <div>
-                    <div
-                        className="inline-flex font-bold text-gray-800 bg-gray-100 px-2 py-0.5 rounded border border-gray-200 whitespace-nowrap">
-                        {bus.vehicleno}
-                    </div>
+                <div className="font-mono font-bold text-sm text-gray-800 dark:text-gray-200 bg-gray-100 dark:bg-white/10 px-2.5 py-1 rounded-lg">
+                    {bus.vehicleno}
                 </div>
             </div>
 
-            <div className="grid grid-cols-[auto_1fr] text-center items-center gap-2">
-                <span className="text-[10px] sm:text-xs font-semibold text-gray-500 shrink-0 whitespace-nowrap">
+            <div className="flex items-center justify-between gap-4">
+                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0">
                     {UI_TEXT.BUS_ITEM.CURRENT_LOC}
                 </span>
-                <div className="min-w-0">
-                    <div className="text-gray-700 font-medium text-center">
-                        <PopupMarquee text={stopName} maxLength={8} />
-                    </div>
+                <div className="text-sm font-semibold text-gray-800 dark:text-gray-200 min-w-0">
+                    <PopupMarquee text={stopName} maxLength={10} />
                 </div>
             </div>
         </div>
@@ -183,10 +180,10 @@ interface BusMarkerProps {
 }
 
 export default function BusMarker({ routeName, onPopupOpen, onPopupClose }: BusMarkerProps) {
-    // Initializations
+    // Initialize styles and data
     useBusMarkerStyles();
 
-    // Data Fetching
+    // Data Fetching and Icon Generation
     const {
         routeInfo,
         busList,
@@ -196,23 +193,17 @@ export default function BusMarker({ routeName, onPopupOpen, onPopupClose }: BusM
         activeRouteId
     } = useBusData(routeName);
 
-    // The key to reset markers on route change
     const refreshKey = `${routeName}-${activeRouteId ?? "none"}`;
-
-    // Icon Creation
     const createIcon = useBusMarkerIcon(refreshKey);
 
-    // Data Processing (Snap & Prepare)
     const markers = useMemo(() => {
         if (!routeInfo || busList.length === 0) return [];
 
         return busList.map((bus) => {
-            // Determine which polyline to snap to
             const targetRouteId = bus.routeid ?? activeRouteId ?? routeInfo.vehicleRouteIds[0] ?? null;
             const polylineSet = targetRouteId ? polylineMap.get(targetRouteId) : null;
             const { upPolyline, downPolyline, stopIndexMap, turnIndex, isSwapped } = polylineSet ?? fallbackPolylines;
 
-            // Calculate Snap
             const snapped = getSnappedPosition(bus, getDirection, upPolyline, downPolyline, {
                 stopIndexMap,
                 turnIndex,
@@ -222,7 +213,6 @@ export default function BusMarker({ routeName, onPopupOpen, onPopupClose }: BusM
             const activePolyline = snapped.direction === 1 ? upPolyline : downPolyline;
 
             return {
-                // Include routeName in the key to force unmount/mount on route change
                 key: `${routeName}-${bus.vehicleno}`,
                 bus,
                 position: snapped.position,
@@ -254,7 +244,6 @@ export default function BusMarker({ routeName, onPopupOpen, onPopupClose }: BusM
                     <BusAnimatedMarker
                         key={key}
                         position={position}
-                        // If angle is missing or NaN, use 0 to prevent errors and set initial angle
                         rotationAngle={(angle || 0) % 360}
                         icon={icon}
                         polyline={polyline}
@@ -267,7 +256,7 @@ export default function BusMarker({ routeName, onPopupOpen, onPopupClose }: BusM
                             popupclose: () => onPopupClose?.(),
                         }}
                     >
-                        <Popup autoPan={false} className="custom-bus-popup">
+                        <Popup autoPan={false} className="custom-bus-popup bg-transparent border-none shadow-none">
                             <BusPopupContent
                                 bus={bus}
                                 stopName={bus.nodenm || ""}

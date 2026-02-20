@@ -99,13 +99,15 @@ export default function HomePage() {
                         onRouteChange={handleRouteChange}
                     />
                     <div
-                        className="fixed bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] left-[calc(env(safe-area-inset-left)+0.5rem)] z-30 flex flex-col gap-3 sm:bottom-[calc(env(safe-area-inset-bottom)+1rem)] sm:left-[calc(env(safe-area-inset-left)+1rem)]">
-                        <BusList
-                            routeNames={[activeRoute]}
-                            allRoutes={allRoutes}
-                            selectedRoute={activeRoute}
-                            onRouteChange={handleRouteChange}
-                        />
+                        className="fixed bottom-[calc(env(safe-area-inset-bottom)+1rem)] left-0 right-0 flex justify-center z-30 pointer-events-none">
+                        <div className="pointer-events-auto w-full px-4 flex justify-center">
+                            <BusList
+                                routeNames={[activeRoute]}
+                                allRoutes={allRoutes}
+                                selectedRoute={activeRoute}
+                                onRouteChange={handleRouteChange}
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

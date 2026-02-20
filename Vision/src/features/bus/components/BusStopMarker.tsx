@@ -43,35 +43,34 @@ const BusStopMarkerItem = memo(({ stop, icon, onRouteChange }: BusStopMarkerItem
                 maxWidth={320}
                 autoPanPadding={[50, 50]}
             >
-                <div className="flex flex-col bg-white overflow-hidden rounded-2xl shadow-2xl border border-slate-100">
+                <div className="flex flex-col bg-white dark:bg-black overflow-hidden rounded-[28px] shadow-2xl border border-black/5 dark:border-white/10">
                     {/* Header Section */}
-                    <div className="relative overflow-hidden bg-slate-900 px-4 py-4 text-white">
-                        {/* Background decorative pattern */}
-                        <div className="absolute -right-2 -top-2 opacity-10">
-                            <BusFront size={80} strokeWidth={1} />
+                    <div className="relative overflow-hidden bg-gray-50 dark:bg-white/5 px-5 py-5 text-black dark:text-white border-b border-black/5 dark:border-white/5">
+                        <div className="absolute -right-4 -top-4 opacity-5">
+                            <BusFront size={100} strokeWidth={1} />
                         </div>
 
                         <div className="relative z-10 flex flex-col gap-2">
-                            <div className="flex items-start gap-2.5">
+                            <div className="flex items-start gap-3">
                                 <div
-                                    className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/30">
-                                    <MapPinned size={18} />
+                                    className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400">
+                                    <MapPinned size={18} strokeWidth={2.5} />
                                 </div>
-                                <div className="flex flex-col gap-0.5 overflow-hidden">
-                                    <h3 className="truncate text-base font-black leading-tight tracking-tight sm:text-lg">
+                                <div className="flex flex-col overflow-hidden">
+                                    <h3 className="truncate text-lg font-bold leading-tight tracking-tight">
                                         {stop.nodenm}
                                     </h3>
-                                    <div className="flex items-center gap-1.5 text-slate-400">
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-400">Station ID</span>
-                                        <span className="text-xs font-mono font-medium">{stop.nodeno || "N/A"}</span>
+                                    <div className="flex items-center gap-1.5 mt-1 text-gray-500">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest">Station ID</span>
+                                        <span className="text-[11px] font-mono font-semibold">{stop.nodeno || "N/A"}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Body Section: Arrival Information List */}
-                    <div className="relative min-h-[120px] bg-slate-50/50">
+                    {/* Body Section */}
+                    <div className="relative min-h-[120px] bg-transparent">
                         {isPopupOpen ? (
                             <BusStopPopup
                                 stopId={stop.nodeid}
@@ -79,20 +78,18 @@ const BusStopMarkerItem = memo(({ stop, icon, onRouteChange }: BusStopMarkerItem
                             />
                         ) : (
                             <div className="flex h-32 items-center justify-center">
-                                <div className="flex flex-col items-center gap-2">
+                                <div className="flex flex-col items-center gap-3">
                                     <div
-                                        className="h-5 w-5 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-                                    <span
-                                        className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">{UI_TEXT.COMMON.LOADING_LIVE}</span>
+                                        className="h-6 w-6 animate-spin rounded-full border-3 border-gray-200 dark:border-gray-800 border-t-black dark:border-t-white" />
                                 </div>
                             </div>
                         )}
                     </div>
 
                     {/* Footer Section */}
-                    <div className="flex items-center justify-center border-t border-slate-100 bg-white py-2 px-4">
-                        <div className="flex items-center gap-1 text-[10px] font-medium text-slate-400">
-                            <Info size={12} className="text-slate-300" />
+                    <div className="flex items-center justify-center border-t border-black/5 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 py-3 px-4">
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400">
+                            <Info size={14} />
                             <span>{UI_TEXT.BUS_ITEM.CLICK_ROUTE_FOR_INFO}</span>
                         </div>
                     </div>
