@@ -110,10 +110,10 @@ From the **root** of the project:
 mkdir -p Vision/public/data/polylines Vision/public/data/schedules
 
 # Copy the route map
-cp Polly/storage/processed_routes/routeMap.json Vision/public/data/routeMap.json
+cp Polly/storage/routeMap.json Vision/public/data/routeMap.json
 
 # Copy the snapped route polylines (use -R for recursive)
-cp -R Polly/storage/processed_routes/snapped_routes/. Vision/public/data/polylines/
+cp -R Polly/storage/polylines/. Vision/public/data/polylines/
 
 # Copy the schedules (use -R for recursive)
 cp -R Polly/storage/schedules/. Vision/public/data/schedules/

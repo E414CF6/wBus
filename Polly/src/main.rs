@@ -36,8 +36,8 @@ async fn main() -> Result<()> {
     // Load environment variables from .env file, if present
     dotenvy::dotenv().ok();
 
-    // Initialize tracing subscriber for logging
-    tracing_subscriber::fmt::init();
+    // Initialize logger
+    env_logger::Builder::from_default_env().init();
 
     // Parse command-line arguments
     let cli = Cli::parse();

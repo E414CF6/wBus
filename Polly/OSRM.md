@@ -83,6 +83,7 @@ Deploy the OSRM routing engine as a background container.
 ```shell
 podman run -d \
   --name OSRM \
+  -p 4000:5000 \
   -v $(pwd):/data \
   osrm-backend:arm64 \
   osrm-routed --algorithm mld /data/south-korea-latest.osrm

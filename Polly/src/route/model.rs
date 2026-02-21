@@ -126,6 +126,7 @@ pub struct RouteProcessData {
 
 /// Main processor structure
 pub struct BusRouteProcessor {
+    pub client: reqwest::Client,
     pub service_key: String,
     pub city_code: String,
     pub raw_dir: PathBuf,

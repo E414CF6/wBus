@@ -13,6 +13,7 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use log::{error, info, warn};
 use percent_encoding::{NON_ALPHANUMERIC, percent_encode};
 use regex::Regex;
 use reqwest::{Client, header};
@@ -52,9 +53,7 @@ pub async fn run(args: ScheduleArgs) -> Result<()> {
 
     utils::ensure_dir(&schedule_dir)?;
 
-    println!("\n============================================================");
-    println!("Starting Bus Schedule Crawler (Browser Mimic Mode)");
-    println!("============================================================\n");
+    info!("Starting Bus Schedule Crawler (Browser Mimic Mode)");
 
     // Initialize an HTTP client that mimics a web browser.
     // Cookie store is enabled to automatically handle session cookies (JSESSIONID),
@@ -66,7 +65,7 @@ pub async fn run(args: ScheduleArgs) -> Result<()> {
         .build()?;
 
     // Fetch the main schedule page to acquire session cookies and the list of all routes.
-    println!("Fetching main page (Initializing Session)...");
+    info!("Fetching main page (Initializing Session)...");
 
     let resp = client.get(BASE_URL).send().await?.text().await?;
     let document = Html::parse_document(&resp);
@@ -74,19 +73,14 @@ pub async fn run(args: ScheduleArgs) -> Result<()> {
     // Extract basic route information and the target route IDs to crawl.
     let (route_meta_map, targets) = extract_route_info(&document, args.route.as_deref())?;
 
-    println!("✓ Found info for {} routes", route_meta_map.len());
-    println!("✓ Found {} route schedules to process", targets.len());
+    info!("Found info for {} routes", route_meta_map.len());
+    info!("Found {} route schedules to process", targets.len());
 
     let mut collected_schedules: Vec<ParsedSchedule> = Vec::new();
 
     // Iterate through each target route and fetch its detailed schedule.
     for (i, route_id) in targets.iter().enumerate() {
-        print!(
-            "\r   [/{}/{}] Fetching {}... ",
-            i + 1,
-            targets.len(),
-            route_id
-        );
+        info!("Processing route {}/{}: {}", i + 1, targets.len(), route_id);
         sleep(Duration::from_millis(300)).await; // Politeness delay.
 
         // The website expects the route ID in the POST body to be percent-encoded UTF-8.
@@ -107,13 +101,13 @@ pub async fn run(args: ScheduleArgs) -> Result<()> {
         {
             Ok(r) => r,
             Err(_) => {
-                println!("✗ Failed (Network)");
+                error!("Failed (Network)");
                 continue;
             }
         };
 
         if !detail_resp.status().is_success() {
-            println!("✗ Failed (Status: {})", detail_resp.status());
+            error!("Failed (Status: {})", detail_resp.status());
             continue;
         }
 
@@ -128,22 +122,22 @@ pub async fn run(args: ScheduleArgs) -> Result<()> {
             Ok(parsed) => {
                 let count: usize = parsed.times_by_direction.values().map(|v| v.len()).sum();
                 if count > 0 {
-                    println!("✓ ({} times)", count);
+                    info!("({} times)", count);
                     collected_schedules.push(parsed);
                 } else {
                     // If parsing yields no times, save the HTML for debugging.
-                    println!("Warning: 0 times. (HTML Check Saved)");
+                    warn!("Warning: 0 times. (HTML Check Saved)");
                     fs::write(format!("debug_empty_{}.html", i), &detail_html).ok();
                 }
             }
             Err(e) => {
-                println!("✗ Error: {}", e);
+                error!("Error: {}", e);
             }
         }
     }
 
     // Merge the collected schedules and save them to JSON files.
-    println!("\nOrganizing and saving schedules...");
+    info!("Organizing and saving schedules...");
 
     let merged_routes = merge_schedules(collected_schedules, &route_meta_map);
 
@@ -505,10 +499,6 @@ fn save_route_schedule(
     let json_str = serde_json::to_string_pretty(data)?;
     fs::write(&path, json_str)?;
 
-    println!(
-        "   ✓ Saved {} to {:?}",
-        route_number,
-        path.file_name().unwrap()
-    );
+    info!("Saved {} to {:?}", route_number, path.file_name().unwrap());
     Ok(())
 }

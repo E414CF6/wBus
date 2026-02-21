@@ -42,7 +42,7 @@ pub struct RouteArgs {
     route: Option<String>,
 
     /// Output directory
-    #[arg(short, long, default_value = "./storage/processed_routes")]
+    #[arg(short, long, default_value = "./storage")]
     output_dir: PathBuf,
 
     /// Update station map only and skip snapping
@@ -60,8 +60,8 @@ pub struct RouteArgs {
 
 pub async fn run(args: RouteArgs) -> Result<()> {
     // Setup Directories
-    let raw_dir = args.output_dir.join("raw_routes");
-    let derived_dir = args.output_dir.join("derived_routes");
+    let raw_dir = args.output_dir.join("cache");
+    let derived_dir = args.output_dir.join("polylines");
 
     ensure_dir(&raw_dir)?;
     ensure_dir(&derived_dir)?;
@@ -72,6 +72,7 @@ pub async fn run(args: RouteArgs) -> Result<()> {
     }
 
     let processor = Arc::new(BusRouteProcessor {
+        client: reqwest::Client::new(),
         service_key,
         city_code: args.city_code.clone(),
         raw_dir: raw_dir.clone(),
@@ -83,70 +84,107 @@ pub async fn run(args: RouteArgs) -> Result<()> {
 
     // [Phase 1] Data Collection (Raw Save)
     if !args.osrm_only {
-        println!("\n[Phase 1: Fetching Raw Data to {:?}]", raw_dir);
+        // Check if cache already exists
+        let cache_file_count = fs::read_dir(&raw_dir)?
+            .filter_map(|e| e.ok())
+            .filter(|entry| entry.path().extension().map_or(false, |ext| ext == "json"))
+            .count();
 
-        let routes = processor.get_all_routes().await?;
-        let target_routes: Vec<Value> = if let Some(target_no) = args.route.as_ref() {
-            routes
-                .into_iter()
-                .filter(|r| parse_flexible_string(&r["routeno"]) == *target_no)
-                .collect()
-        } else {
-            routes
-        };
+        if cache_file_count == 0 {
+            // No cache exists, fetch from API
+            log::info!("[Phase 1: Fetching Raw Data to {:?}]", raw_dir);
 
-        println!(" Targeting {} routes...", target_routes.len());
+            let routes = processor.get_all_routes().await?;
+            let target_routes: Vec<Value> = if let Some(target_no) = args.route.as_ref() {
+                routes
+                    .into_iter()
+                    .filter(|r| parse_flexible_string(&r["routeno"]) == *target_no)
+                    .collect()
+            } else {
+                routes
+            };
 
-        let mut route_stream = stream::iter(target_routes)
-            .map(|route| {
-                let proc = Arc::clone(&processor);
-                async move { proc.fetch_and_save_raw(route).await }
-            })
-            .buffer_unordered(CONCURRENCY_FETCH);
+            log::info!(" Targeting {} routes...", target_routes.len());
 
-        // Aggregation for routeMap.json
-        let mut all_stops = BTreeMap::new();
-        let mut route_details_map = HashMap::new();
-        let mut route_mapping: BTreeMap<String, Vec<String>> = BTreeMap::new();
-        let mut count = 0usize;
+            let mut route_stream = stream::iter(target_routes)
+                .map(|route| {
+                    let proc = Arc::clone(&processor);
+                    async move { proc.fetch_and_save_raw(route).await }
+                })
+                .buffer_unordered(CONCURRENCY_FETCH);
 
-        while let Some(result) = route_stream.next().await {
-            match result {
-                Ok(Some(data)) => {
-                    count += 1;
-                    route_details_map.insert(data.route_id.clone(), data.details);
-                    route_mapping
-                        .entry(data.route_no)
-                        .or_default()
-                        .push(data.route_id);
-                    for (id, val) in data.stops_map {
-                        all_stops.insert(id, val);
+            // Aggregation for routeMap.json
+            let mut all_stops = BTreeMap::new();
+            let mut route_details_map = HashMap::new();
+            let mut route_mapping: BTreeMap<String, Vec<String>> = BTreeMap::new();
+            let mut count = 0usize;
+
+            while let Some(result) = route_stream.next().await {
+                match result {
+                    Ok(Some(data)) => {
+                        count += 1;
+                        route_details_map.insert(data.route_id.clone(), data.details);
+                        route_mapping
+                            .entry(data.route_no)
+                            .or_default()
+                            .push(data.route_id);
+                        for (id, val) in data.stops_map {
+                            all_stops.insert(id, val);
+                        }
+                        if count % 10 == 0 {
+                            log::debug!(".");
+                        }
                     }
-                    if count % 10 == 0 {
-                        print!(".");
-                    }
+                    Ok(None) => {}
+                    Err(e) => log::error!(" Error: {:?}", e),
                 }
-                Ok(None) => {}
-                Err(e) => eprintln!("\n Error: {:?}", e),
+            }
+            log::info!(" Processed {} raw routes.", count);
+
+            processor
+                .save_route_map_json(&route_mapping, &route_details_map, &all_stops)
+                .await?;
+        } else {
+            // Cache exists, skip API calls
+            log::info!(
+                "Cache loaded with {} route files. Skipping Phase 1 (API fetch).",
+                cache_file_count
+            );
+
+            // Verify that routeMap.json exists
+            let route_map_path = args.output_dir.join("routeMap.json");
+            if !route_map_path.exists() {
+                anyhow::bail!(
+                    "`routeMap.json` not found. Run without cache or delete {} to regenerate.",
+                    raw_dir.display()
+                );
             }
         }
-        println!("\n Processed {} raw routes.", count);
-
-        processor.save_route_map_json(&route_mapping, &route_details_map, &all_stops)?;
 
         if args.station_map_only {
-            println!("✓ Station map generated.");
+            log::info!("Station map generated.");
             return Ok(());
         }
     }
 
     // [Phase 2] Data Processing (Raw -> Derived)
-    println!(
-        "\n[Phase 2: Processing raw data to GeoJSON: {:?}]",
+    log::info!(
+        "[Phase 2: Processing raw data to GeoJSON: {:?}]",
         derived_dir
     );
 
-    // Read all JSONs from `raw_routes/`
+    // Load stationMap.json for accurate coordinates
+    let station_map_path = args.output_dir.join("stationMap.json");
+    let station_map: HashMap<String, Value> = if station_map_path.exists() {
+        let content = tokio::fs::read_to_string(&station_map_path).await?;
+        let json: Value = serde_json::from_str(&content)?;
+        serde_json::from_value(json["stations"].clone()).unwrap_or_default()
+    } else {
+        HashMap::new()
+    };
+    let station_map_arc = Arc::new(station_map);
+
+    // Read all JSONs from `cache/`
     let raw_entries: Vec<_> = fs::read_dir(&raw_dir)?.filter_map(|e| e.ok()).collect();
 
     // Process with concurrency
@@ -154,6 +192,7 @@ pub async fn run(args: RouteArgs) -> Result<()> {
         .map(|entry| {
             let proc = Arc::clone(&processor);
             let specific = args.route.clone();
+            let smap = Arc::clone(&station_map_arc);
 
             async move {
                 let path = entry.path();
@@ -167,9 +206,9 @@ pub async fn run(args: RouteArgs) -> Result<()> {
                         }
                     }
 
-                    println!(" Processing {}...", fname);
+                    log::info!("Processing {}...", fname);
 
-                    proc.process_raw_to_derived(&path).await
+                    proc.process_raw_to_derived(&path, &smap).await
                 } else {
                     Ok(())
                 }
@@ -179,11 +218,11 @@ pub async fn run(args: RouteArgs) -> Result<()> {
 
     while let Some(res) = snap_stream.next().await {
         if let Err(e) = res {
-            eprintln!(" Processing failed: {:?}", e);
+            log::error!("Processing failed: {:?}", e);
         }
     }
 
-    println!("✓ Pipeline Complete.");
+    log::info!("Pipeline Complete.");
 
     Ok(())
 }
@@ -198,18 +237,14 @@ impl BusRouteProcessor {
     async fn get_all_routes(&self) -> Result<Vec<Value>> {
         let params = [
             ("cityCode", self.city_code.as_str()),
-            ("numOfRows", "2000"),
+            ("numOfRows", "2048"),
             ("pageNo", "1"),
             ("serviceKey", self.service_key.as_str()),
             ("_type", "json"),
         ];
 
         let url = format!("{}/getRouteNoList", self.tago_base_url);
-        let resp: reqwest::Response = reqwest::Client::new()
-            .get(&url)
-            .query(&params)
-            .send()
-            .await?;
+        let resp: reqwest::Response = self.client.get(&url).query(&params).send().await?;
         let json: Value = resp.json().await?;
 
         extract_items(&json)
@@ -236,11 +271,7 @@ impl BusRouteProcessor {
         ];
 
         let url = format!("{}/getRouteAcctoThrghSttnList", self.tago_base_url);
-        let resp: reqwest::Response = reqwest::Client::new()
-            .get(&url)
-            .query(&params)
-            .send()
-            .await?;
+        let resp: reqwest::Response = self.client.get(&url).query(&params).send().await?;
 
         let json: Value = match resp.json().await {
             Ok(v) => v,
@@ -271,17 +302,6 @@ impl BusRouteProcessor {
 
         stops.sort_by_key(|s| s.node_ord);
 
-        // Save RAW file
-        let raw_file = RawRouteFile {
-            route_id: route_id.clone(),
-            route_no: route_no.clone(),
-            fetched_at: Local::now().to_rfc3339(),
-            stops: stops.clone(),
-        };
-
-        let file_path = self.raw_dir.join(format!("{}_{}.json", route_no, route_id));
-        fs::write(file_path, serde_json::to_string_pretty(&raw_file)?)?;
-
         // Generate Metadata for routeMap.json
         let sequence_meta: Vec<Value> = stops
             .iter()
@@ -305,6 +325,17 @@ impl BusRouteProcessor {
             })
             .collect();
 
+        // Save RAW file
+        let raw_file = RawRouteFile {
+            route_id: route_id.clone(),
+            route_no: route_no.clone(),
+            fetched_at: Local::now().to_rfc3339(),
+            stops,
+        };
+
+        let file_path = self.raw_dir.join(format!("{}_{}.json", route_no, route_id));
+        tokio::fs::write(file_path, serde_json::to_string_pretty(&raw_file)?).await?;
+
         Ok(Some(RouteProcessData {
             route_id,
             route_no: route_no.clone(),
@@ -314,12 +345,28 @@ impl BusRouteProcessor {
     }
 
     // Phase 2 Logic
-    async fn process_raw_to_derived(&self, raw_path: &Path) -> Result<()> {
+    async fn process_raw_to_derived(
+        &self,
+        raw_path: &Path,
+        station_map: &HashMap<String, Value>,
+    ) -> Result<()> {
         // Read Raw File
-        let content = fs::read_to_string(raw_path)?;
+        let content = tokio::fs::read_to_string(raw_path).await?;
         let raw_data: RawRouteFile = serde_json::from_str(&content)?;
 
         let mut stops = raw_data.stops;
+
+        // Apply coordinates from stationMap for accuracy
+        for stop in &mut stops {
+            if let Some(station_info) = station_map.get(&stop.node_id) {
+                if let Some(lat) = station_info.get("gpslati").and_then(|v| v.as_f64()) {
+                    stop.gps_lat = lat;
+                }
+                if let Some(lon) = station_info.get("gpslong").and_then(|v| v.as_f64()) {
+                    stop.gps_long = lon;
+                }
+            }
+        }
 
         // Sanitize coordinates (drift correction)
         self.sanitize_stops_to_corridor(&mut stops).await;
@@ -339,7 +386,6 @@ impl BusRouteProcessor {
                 break;
             }
         }
-        let turn_node_id = stops[turn_idx].node_id.clone();
 
         // OSRM Logic (Merging)
         let mut full_coordinates: Vec<Vec<f64>> = Vec::new();
@@ -400,20 +446,17 @@ impl BusRouteProcessor {
 
         // [OPTIMIZATION] Round coordinates to 6 decimal places to reduce file size
         // This is important for web performance
-        let optimized_coordinates: Vec<Vec<f64>> = full_coordinates
-            .into_iter()
-            .map(|pt| {
-                pt.iter()
-                    .map(|c| (c * 1_000_000.0).round() / 1_000_000.0)
-                    .collect()
-            })
-            .collect();
+        for pt in &mut full_coordinates {
+            for c in pt.iter_mut() {
+                *c = (*c * 1_000_000.0).round() / 1_000_000.0;
+            }
+        }
+        let optimized_coordinates = full_coordinates;
 
         // Derive Indices & Metrics
-        let turn_coord_idx = stops
-            .iter()
-            .position(|s| s.node_id == turn_node_id)
-            .and_then(|idx| stop_to_coord.get(idx).cloned())
+        let turn_coord_idx = stop_to_coord
+            .get(turn_idx)
+            .cloned()
             .unwrap_or(optimized_coordinates.len() / 2);
 
         // Calculate BBox & Distance using optimized coordinates
@@ -421,10 +464,10 @@ impl BusRouteProcessor {
 
         // Build Frontend Data Structures
         let frontend_stops: Vec<FrontendStop> = stops
-            .iter()
+            .into_iter()
             .map(|s| FrontendStop {
-                id: s.node_id.clone(),
-                name: s.node_nm.clone(),
+                id: s.node_id,
+                name: s.node_nm,
                 ord: s.node_ord,
                 up_down: s.up_down_cd,
             })
@@ -449,7 +492,7 @@ impl BusRouteProcessor {
                         stop_to_coord,
                     },
                     meta: FrontendMeta {
-                        total_dist: (total_dist * 10.0).round() / 10.0,
+                        total_dist,
                         source_ver: raw_data.fetched_at,
                     },
                 },
@@ -458,7 +501,7 @@ impl BusRouteProcessor {
 
         // Save Derived File
         let output_path = self.derived_dir.join(format!("{}.geojson", route_id));
-        fs::write(output_path, serde_json::to_string(&derived_data)?)?;
+        tokio::fs::write(output_path, serde_json::to_string(&derived_data)?).await?;
 
         Ok(())
     }
@@ -470,10 +513,10 @@ impl BusRouteProcessor {
         }
 
         for i in 1..stops.len() - 1 {
-            let prev = stops[i - 1].clone();
-            let next = stops[i + 1].clone();
-
-            if let Some(corr) = self.fetch_osrm_route_between(&prev, &next).await {
+            let corr = self
+                .fetch_osrm_route_between(&stops[i - 1], &stops[i + 1])
+                .await;
+            if let Some(corr) = corr {
                 let p = (stops[i].gps_long, stops[i].gps_lat);
                 if let Some(((cx, cy), d)) = closest_point_on_polyline(p, &corr) {
                     if d <= 90.0 {
@@ -511,39 +554,104 @@ impl BusRouteProcessor {
             coords = coords_param
         );
 
-        let resp = reqwest::get(&url).await.ok()?;
-        if !resp.status().is_success() {
-            return None;
+        let mut attempts = 0;
+        let max_attempts = 3;
+
+        while attempts < max_attempts {
+            match self.client.get(&url).send().await {
+                Ok(resp) => {
+                    if !resp.status().is_success() {
+                        log::error!("OSRM returned status: {} for URL: {}", resp.status(), url);
+                        let err_text = resp.text().await.unwrap_or_default();
+                        log::error!("OSRM Error response: {}", err_text);
+                        return None;
+                    }
+
+                    let json: Value = match resp.json().await {
+                        Ok(v) => v,
+                        Err(e) => {
+                            log::error!("Failed to parse OSRM JSON: {}", e);
+                            return None;
+                        }
+                    };
+
+                    let coords: Vec<Vec<f64>> = match serde_json::from_value(
+                        json["routes"][0]["geometry"]["coordinates"].clone(),
+                    ) {
+                        Ok(c) => c,
+                        Err(_) => return None,
+                    };
+
+                    if coords.is_empty() {
+                        log::error!("OSRM returned empty coordinates array.");
+                        return None;
+                    } else {
+                        return Some(coords);
+                    }
+                }
+                Err(e) => {
+                    attempts += 1;
+                    if attempts < max_attempts {
+                        log::warn!(
+                            "OSRM request failed (attempt {}/{}): {}. Retrying in 500ms...",
+                            attempts,
+                            max_attempts,
+                            e
+                        );
+                        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+                    } else {
+                        log::error!("OSRM request failed after {} attempts: {}", max_attempts, e);
+                    }
+                }
+            }
         }
 
-        let json: Value = resp.json().await.ok()?;
-        let coords: Vec<Vec<f64>> =
-            serde_json::from_value(json["routes"][0]["geometry"]["coordinates"].clone()).ok()?;
-
-        if coords.is_empty() {
-            None
-        } else {
-            Some(coords)
-        }
+        None
     }
 
-    fn save_route_map_json(
+    async fn save_route_map_json(
         &self,
         map: &BTreeMap<String, Vec<String>>,
         details: &HashMap<String, Value>,
         stops: &BTreeMap<String, Value>,
     ) -> Result<()> {
-        let final_data = json!({
-            "lastUpdated": Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-            "route_numbers": map,
-            "route_details": details,
-            "stations": stops
-        });
+        let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S").to_string();
 
-        fs::write(
+        // Get base directory for all mapping files
+        let base_dir = self.mapping_file.parent().unwrap();
+
+        // Save routeMap.json (route_numbers only)
+        let route_map = json!({
+            "lastUpdated": timestamp,
+            "route_numbers": map,
+        });
+        tokio::fs::write(
             &self.mapping_file,
-            serde_json::to_string_pretty(&final_data)?,
-        )?;
+            serde_json::to_string_pretty(&route_map)?,
+        )
+        .await?;
+
+        // Save routeDetails.json
+        let route_details = json!({
+            "lastUpdated": timestamp,
+            "route_details": details,
+        });
+        tokio::fs::write(
+            base_dir.join("routeDetails.json"),
+            serde_json::to_string_pretty(&route_details)?,
+        )
+        .await?;
+
+        // Save stationMap.json
+        let station_map = json!({
+            "lastUpdated": timestamp,
+            "stations": stops,
+        });
+        tokio::fs::write(
+            base_dir.join("stationMap.json"),
+            serde_json::to_string_pretty(&station_map)?,
+        )
+        .await?;
 
         Ok(())
     }
