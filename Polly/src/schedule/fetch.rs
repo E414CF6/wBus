@@ -1,7 +1,8 @@
+use std::time::Duration;
+
 use anyhow::Result;
 use percent_encoding::{NON_ALPHANUMERIC, percent_encode};
 use reqwest::{Client, header};
-use std::time::Duration;
 
 use crate::config::{BASE_URL, DETAIL_URL};
 

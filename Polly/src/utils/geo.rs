@@ -16,7 +16,7 @@ pub fn meters_between(lon1: f64, lat1: f64, lon2: f64, lat2: f64) -> f64 {
 /// Find the closest point on a polyline to a given point
 pub fn closest_point_on_polyline(
     point: (f64, f64),
-    line: &Vec<Vec<f64>>,
+    line: &[Vec<f64>],
 ) -> Option<((f64, f64), f64)> {
     if line.len() < 2 {
         return None;
@@ -55,7 +55,7 @@ pub fn closest_point_on_polyline(
 }
 
 /// Find the index of the coordinate in `line` closest to `point`
-pub fn find_nearest_coord_index(point: (f64, f64), line: &Vec<Vec<f64>>) -> Option<usize> {
+pub fn find_nearest_coord_index(point: (f64, f64), line: &[Vec<f64>]) -> Option<usize> {
     if line.is_empty() {
         return None;
     }
@@ -78,7 +78,7 @@ pub fn find_nearest_coord_index(point: (f64, f64), line: &Vec<Vec<f64>>) -> Opti
 }
 
 /// Calculate bounding box and total distance of a series of coordinates
-pub fn calculate_metrics(coords: &Vec<Vec<f64>>) -> ([f64; 4], f64) {
+pub fn calculate_metrics(coords: &[Vec<f64>]) -> ([f64; 4], f64) {
     let mut min_lon = 180.0;
     let mut min_lat = 90.0;
 

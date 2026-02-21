@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize, Serializer};
 use serde_json::Value;
 
 // ============================================================================
-// Raw Data Models (Saved to raw_routes/)
+// Raw Data Models (Saved to cache)
 // ============================================================================
 
 /// Raw station information fetched from the API (for preservation)

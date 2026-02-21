@@ -39,7 +39,7 @@ impl BusRouteProcessor {
         let params = [
             ("cityCode", self.city_code.as_str()),
             ("routeId", route_id.as_str()),
-            ("numOfRows", "1024"),
+            ("numOfRows", "2048"),
             ("serviceKey", self.service_key.as_str()),
             ("_type", "json"),
         ];

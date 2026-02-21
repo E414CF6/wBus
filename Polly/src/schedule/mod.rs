@@ -120,7 +120,7 @@ pub async fn run(args: ScheduleArgs) -> Result<()> {
 
 /// Saves the final merged schedule data for a route to a JSON file.
 fn save_route_schedule(
-    base_dir: &PathBuf,
+    base_dir: &std::path::Path,
     route_number: &str,
     data: &serde_json::Value,
 ) -> Result<()> {

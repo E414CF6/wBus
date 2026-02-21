@@ -29,35 +29,35 @@ pub fn extract_route_info(
             let route_element = cells[0];
 
             // The route_id required for the POST request is in an `onclick` attribute.
-            if let Some(onclick) = route_element.value().attr("onclick") {
-                if let Some(caps) = onclick_re.captures(onclick) {
-                    let route_id = caps.get(1).unwrap().as_str().to_string();
+            if let Some(onclick) = route_element.value().attr("onclick")
+                && let Some(caps) = onclick_re.captures(onclick)
+            {
+                let route_id = caps.get(1).unwrap().as_str().to_string();
 
-                    // If a specific route is requested, filter out all others.
-                    if let Some(f) = filter {
-                        if !route_id.starts_with(f) {
-                            continue;
-                        }
-                    }
-
-                    targets.push(route_id.clone());
-
-                    let route_no = route_id.split('(').next().unwrap_or(&route_id).to_string();
-                    let origin = cells[1].text().collect::<String>().trim().to_string();
-                    let dest = cells[2].text().collect::<String>().trim().to_string();
-
-                    // Collect all unique termini for this route number.
-                    let entry = temp_directions.entry(route_no.clone()).or_default();
-                    entry.insert(origin.clone());
-                    entry.insert(dest.clone());
-
-                    // Store metadata for the route.
-                    route_meta_map.entry(route_no).or_insert(RouteMeta {
-                        origin,
-                        destination: dest,
-                        directions: Vec::new(),
-                    });
+                // If a specific route is requested, filter out all others.
+                if let Some(f) = filter
+                    && !route_id.starts_with(f)
+                {
+                    continue;
                 }
+
+                targets.push(route_id.clone());
+
+                let route_no = route_id.split('(').next().unwrap_or(&route_id).to_string();
+                let origin = cells[1].text().collect::<String>().trim().to_string();
+                let dest = cells[2].text().collect::<String>().trim().to_string();
+
+                // Collect all unique termini for this route number.
+                let entry = temp_directions.entry(route_no.clone()).or_default();
+                entry.insert(origin.clone());
+                entry.insert(dest.clone());
+
+                // Store metadata for the route.
+                route_meta_map.entry(route_no).or_insert(RouteMeta {
+                    origin,
+                    destination: dest,
+                    directions: Vec::new(),
+                });
             }
         }
     }
@@ -148,6 +148,7 @@ pub fn parse_detail_schedule(
 
     let tr_selector = Selector::parse("tr").unwrap();
     let header_rows: Vec<_> = table.select(&tr_selector).collect();
+    let hour_re = Regex::new(r"^\d+시$").unwrap();
 
     // Parse table headers to identify directions.
     for row in &header_rows {
@@ -170,7 +171,7 @@ pub fn parse_detail_schedule(
             let clean_text = text.trim_end_matches('발').to_string();
             if !clean_text.is_empty()
                 && !["운행순번", "시", "분", "", "구분"].contains(&clean_text.as_str())
-                && !Regex::new(r"^\d+시$").unwrap().is_match(&clean_text)
+                && !hour_re.is_match(&clean_text)
             {
                 if !directions.contains(&clean_text) {
                     directions.push(clean_text.clone());

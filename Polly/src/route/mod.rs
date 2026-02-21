@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use futures::stream::{self, StreamExt};
+use log::{debug, error, info};
 use serde_json::Value;
 
 use crate::config::{CONCURRENCY_FETCH, CONCURRENCY_SNAP, OSRM_URL, TAGO_URL};
@@ -82,12 +83,12 @@ pub async fn run(args: RouteArgs) -> Result<()> {
         // Check if cache already exists
         let cache_file_count = fs::read_dir(&raw_dir)?
             .filter_map(|e| e.ok())
-            .filter(|entry| entry.path().extension().map_or(false, |ext| ext == "json"))
+            .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "json"))
             .count();
 
         if cache_file_count == 0 {
             // No cache exists, fetch from API
-            log::info!("[Phase 1: Fetching Raw Data to {:?}]", raw_dir);
+            info!("Cache does not exist, fetching Raw Data to {:?}]", raw_dir);
 
             let routes = processor.get_all_routes().await?;
             let target_routes: Vec<Value> = if let Some(target_no) = args.route.as_ref() {
@@ -99,7 +100,7 @@ pub async fn run(args: RouteArgs) -> Result<()> {
                 routes
             };
 
-            log::info!(" Targeting {} routes...", target_routes.len());
+            info!("Targeting {} routes...", target_routes.len());
 
             let mut route_stream = stream::iter(target_routes)
                 .map(|route| {
@@ -126,22 +127,22 @@ pub async fn run(args: RouteArgs) -> Result<()> {
                         for (id, val) in data.stops_map {
                             all_stops.insert(id, val);
                         }
-                        if count % 10 == 0 {
-                            log::debug!(".");
+                        if count.is_multiple_of(10) {
+                            debug!(".");
                         }
                     }
                     Ok(None) => {}
-                    Err(e) => log::error!(" Error: {:?}", e),
+                    Err(e) => error!("Error: {:?}", e),
                 }
             }
-            log::info!(" Processed {} raw routes.", count);
+            info!("Processed {} raw routes.", count);
 
             processor
                 .save_route_map_json(&route_mapping, &route_details_map, &all_stops)
                 .await?;
         } else {
             // Cache exists, skip API calls
-            log::info!(
+            info!(
                 "Cache loaded with {} route files. Skipping Phase 1 (API fetch).",
                 cache_file_count
             );
@@ -157,13 +158,13 @@ pub async fn run(args: RouteArgs) -> Result<()> {
         }
 
         if args.station_map_only {
-            log::info!("Station map generated.");
+            info!("Station map generated.");
             return Ok(());
         }
     }
 
     // [Phase 2] Data Processing (Raw -> Derived)
-    log::info!(
+    info!(
         "[Phase 2: Processing raw data to GeoJSON: {:?}]",
         derived_dir
     );
@@ -191,17 +192,18 @@ pub async fn run(args: RouteArgs) -> Result<()> {
 
             async move {
                 let path = entry.path();
-                if path.extension().map_or(false, |ext| ext == "json") {
+                if path.extension().is_some_and(|ext| ext == "json") {
                     let fname = path.file_name().unwrap().to_string_lossy();
 
                     // Filter check
-                    if let Some(ref target) = specific {
-                        if !fname.starts_with(target) && !fname.contains(target) {
-                            return Ok(());
-                        }
+                    if let Some(ref target) = specific
+                        && !fname.starts_with(target)
+                        && !fname.contains(target)
+                    {
+                        return Ok(());
                     }
 
-                    log::info!("Processing {}...", fname);
+                    info!("Processing {}...", fname);
 
                     proc.process_raw_to_derived(&path, &smap).await
                 } else {
@@ -213,11 +215,11 @@ pub async fn run(args: RouteArgs) -> Result<()> {
 
     while let Some(res) = snap_stream.next().await {
         if let Err(e) = res {
-            log::error!("Processing failed: {:?}", e);
+            error!("Processing failed: {:?}", e);
         }
     }
 
-    log::info!("Pipeline Complete.");
+    info!("Pipeline Complete.");
 
     Ok(())
 }

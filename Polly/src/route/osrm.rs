@@ -15,11 +15,11 @@ impl BusRouteProcessor {
                 .await;
             if let Some(corr) = corr {
                 let p = (stops[i].gps_long, stops[i].gps_lat);
-                if let Some(((cx, cy), d)) = closest_point_on_polyline(p, &corr) {
-                    if d <= 90.0 {
-                        stops[i].gps_long = cx;
-                        stops[i].gps_lat = cy;
-                    }
+                if let Some(((cx, cy), d)) = closest_point_on_polyline(p, &corr)
+                    && d <= 90.0
+                {
+                    stops[i].gps_long = cx;
+                    stops[i].gps_lat = cy;
                 }
             }
         }
