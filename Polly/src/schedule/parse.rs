@@ -103,14 +103,11 @@ pub fn parse_detail_schedule(
     let document = Html::parse_document(html);
 
     // Extract the route number and raw day type from the route_id string (e.g., "34-1(평일)").
-    let route_match_re = Regex::new(r"^(\S+?)(.*)?$").unwrap();
-    let (route_number, raw_day_type) = if let Some(caps) = route_match_re.captures(route_id) {
+    let (route_number, raw_day_type) = if let Some(pos) = route_id.find('(') {
         (
-            caps.get(1).map_or("", |m| m.as_str()).to_string(),
-            caps.get(2)
-                .map_or("general", |m| {
-                    m.as_str().trim_matches(|c| c == '(' || c == ')')
-                })
+            route_id[..pos].trim().to_string(),
+            route_id[pos..]
+                .trim_matches(|c| c == '(' || c == ')')
                 .to_string(),
         )
     } else {

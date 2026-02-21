@@ -31,9 +31,11 @@ use crate::utils;
 #[derive(clap::Args)]
 pub struct ScheduleArgs {
     /// Specific route number to crawl (e.g., "34-1"). If omitted, all routes are crawled.
+    #[arg(short, long)]
     pub route: Option<String>,
 
     /// Output directory for saving the schedule JSON files.
+    #[arg(short, long, default_value = "./storage")]
     pub output_dir: PathBuf,
 }
 
