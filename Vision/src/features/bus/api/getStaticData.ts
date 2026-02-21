@@ -9,13 +9,15 @@ import type {
     StationLocation,
     RouteDetail,
     RouteInfo,
-    StaticData
+    RouteMapData,
+    StationMapData
 } from "@core/domain";
 
 /**
  * Cache Managers
  */
-const staticDataCache = new CacheManager<StaticData>();
+const routeMapCache = new CacheManager<RouteMapData>();
+const stationMapCache = new CacheManager<StationMapData>();
 const polylineCache = new CacheManager<GeoPolyline | null>();
 
 /**
@@ -38,13 +40,22 @@ function getRouteMapUrl(): string {
     return "/data/routeMap.json";
 }
 
-/**
- * Fetches and caches the routeMap.json data.
- * This function ensures only one fetch request is made even if called multiple times.
- */
-async function getStaticData(): Promise<StaticData> {
-    return staticDataCache.getOrFetch("staticData", async () => {
-        return fetchAPI<StaticData>(getRouteMapUrl(), { baseUrl: "" });
+function getStationMapUrl(): string {
+    if (API_CONFIG.STATIC.USE_REMOTE && API_CONFIG.STATIC.BASE_URL) {
+        return `${API_CONFIG.STATIC.BASE_URL}/${API_CONFIG.STATIC.PATHS.STATION_MAP}`;
+    }
+    return "/data/stationMap.json";
+}
+
+async function getRouteMapData(): Promise<RouteMapData> {
+    return routeMapCache.getOrFetch("routeMap", async () => {
+        return fetchAPI<RouteMapData>(getRouteMapUrl(), { baseUrl: "" });
+    });
+}
+
+async function getStationMapData(): Promise<StationMapData> {
+    return stationMapCache.getOrFetch("stationMap", async () => {
+        return fetchAPI<StationMapData>(getStationMapUrl(), { baseUrl: "" });
     });
 }
 
@@ -54,7 +65,7 @@ async function getStaticData(): Promise<StaticData> {
  * @returns A promise that resolves to a map of route names to vehicle IDs (excludes empty routes)
  */
 export async function getRouteMap(): Promise<Record<string, string[]>> {
-    const data = await getStaticData();
+    const data = await getRouteMapData();
     // Filter out routes with empty vehicle IDs (e.g., "Shuttle": [])
     return Object.fromEntries(
         Object.entries(data.route_numbers).filter(([, ids]) => ids.length > 0)
@@ -91,13 +102,13 @@ export async function getPolyline(
 }
 
 /**
- * Fetches station location data from `routeMap.json`.
+ * Fetches station location data from \`stationMap.json\`.
  * This data is cached to minimize redundant fetch requests.
  * Maps the station key (nodeid) from the object key to the nodeid property.
  * @returns A promise that resolves to an array of station items
  */
 export async function getBusStopLocationData(): Promise<BusStop[]> {
-    const data = await getStaticData();
+    const data = await getStationMapData();
     // Map the station key (nodeid) from object keys to the nodeid property
     return Object.entries(data.stations).map(([nodeid, station]) => ({
         ...station,
@@ -110,26 +121,32 @@ export async function getBusStopLocationData(): Promise<BusStop[]> {
  * Useful for lookup-heavy operations that only need coordinates.
  */
 export async function getStationMap(): Promise<Record<string, StationLocation>> {
-    const data = await getStaticData();
+    const data = await getStationMapData();
     return data.stations;
 }
 
 /**
- * Fetches route-specific stops by joining route_details with station metadata.
+ * Fetches route-specific stops by joining route polyline features with station metadata.
  */
 export async function getRouteStopsByRouteName(
     routeName: string
 ): Promise<BusStop[]> {
-    const data = await getStaticData();
-    const routeIds = data.route_numbers[routeName] ?? [];
+    const routeMapData = await getRouteMapData();
+    const routeIds = routeMapData.route_numbers[routeName] ?? [];
 
     if (routeIds.length === 0) return [];
 
-    const stationMap = data.stations;
+    const stationMapData = await getStationMapData();
+    const stationMap = stationMapData.stations;
+
     const stopMap = new Map<string, BusStop>();
 
-    routeIds.forEach((routeId) => {
-        const detail = data.route_details[routeId];
+    // Fetch details for all route variants concurrently
+    const routeDetailsList = await Promise.all(
+        routeIds.map((routeId) => getRouteDetails(routeId))
+    );
+
+    routeDetailsList.forEach((detail) => {
         if (!detail?.sequence) return;
 
         detail.sequence.forEach((stop) => {
@@ -193,13 +210,27 @@ export async function getRouteInfo(
 }
 
 /**
- * Fetches route detail information including sequence data.
+ * Fetches route detail information including sequence data from its polyline GeoJSON.
  * @param routeId - The ID of the route (e.g., "WJB251000068")
  * @returns A promise that resolves to RouteDetail or null if not found
  */
 export async function getRouteDetails(
     routeId: string
 ): Promise<RouteDetail | null> {
-    const data = await getStaticData();
-    return data.route_details[routeId] || null;
+    const polyline = await getPolyline(routeId);
+    if (!polyline || !polyline.features || polyline.features.length === 0) return null;
+
+    const props = polyline.features[0].properties;
+    if (!props || !props.stops) return null;
+
+    const sequence = props.stops.map((s) => ({
+        nodeid: s.id,
+        nodeord: s.ord,
+        updowncd: s.ud
+    }));
+
+    return {
+        routeno: props.route_no,
+        sequence
+    };
 }

@@ -41,6 +41,7 @@ export const API_CONFIG = {
         PATHS: {
             MAP_STYLE: "config.json",
             ROUTE_MAP: "routeMap.json",
+            STATION_MAP: "stationMap.json",
             POLYLINES: "polylines",
             SCHEDULES: "schedules",
         },

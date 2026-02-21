@@ -171,9 +171,13 @@ export type DirectionCode = typeof Direction[keyof typeof Direction] | null;
 // ============================================================================
 
 /** Cached static data structure from routeMap.json */
-export interface StaticData {
+export interface RouteMapData {
     lastUpdated: string;
     route_numbers: Record<string, string[]>;
-    route_details: Record<string, RouteDetail>;
+}
+
+/** Cached static data structure from stationMap.json */
+export interface StationMapData {
+    lastUpdated: string;
     stations: Record<string, StationLocation>;
 }
