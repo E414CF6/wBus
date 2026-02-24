@@ -21,8 +21,8 @@ export default function NavBar({ className = "" }: NavBarProps) {
             <div
                 className="
           flex items-center gap-3 p-2.5 pr-5 
-          bg-white/80 dark:bg-[#111111]/80 backdrop-blur-3xl 
-          border border-black/[0.04] dark:border-white/[0.06] shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] rounded-[24px]
+          bg-white/85 dark:bg-[#111111]/85 backdrop-blur-3xl 
+          border border-black/[0.04] dark:border-white/[0.06] shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-[28px]
           transition-transform hover:scale-105 active:scale-95 cursor-default
         "
             >

@@ -65,10 +65,18 @@ body {
 .leaflet-popup-content-wrapper {
     padding: 0 !important;
     overflow: hidden !important;
-    border-radius: 12px !important;
-    border: none !important;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
-    /* Tailwind `shadow-md` */
+    border-radius: 28px !important;
+    border: 1px solid rgba(0, 0, 0, 0.04) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+}
+
+.dark .leaflet-popup-content-wrapper {
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+    background: rgba(17, 17, 17, 0.85) !important;
 }
 
 .leaflet-popup-content {

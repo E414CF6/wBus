@@ -110,7 +110,7 @@ function ArrivalList({
         return (
             <div className="p-4">
                 <div
-                    className="flex flex-col items-center gap-2 p-6 bg-red-50 dark:bg-red-500/10 rounded-2xl border border-red-100 dark:border-red-500/20 text-center">
+                    className="flex flex-col items-center gap-2 p-6 bg-red-50 dark:bg-red-500/10 rounded-[20px] border border-red-100 dark:border-red-500/20 text-center">
                     <div className="p-2 bg-red-100 dark:bg-red-500/20 text-red-500 rounded-full">
                         <AlertTriangle className="w-6 h-6" />
                     </div>
@@ -125,7 +125,7 @@ function ArrivalList({
     if (!loading && arrivalData.length === 0) {
         return (
             <div className="p-4 text-center">
-                <div className="py-10 bg-gray-50 dark:bg-white/5 rounded-[24px] border border-gray-100 dark:border-white/10">
+                <div className="py-10 bg-gray-50 dark:bg-white/5 rounded-[20px] border border-gray-100 dark:border-white/10">
                     <div className="mx-auto w-10 h-10 bg-gray-200 dark:bg-gray-800 text-gray-400 rounded-full flex items-center justify-center mb-3">
                         <Bus className="w-5 h-5" />
                     </div>

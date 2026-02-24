@@ -53,7 +53,7 @@ const getUrgencyClass = (minutesUntil: number): string => {
 };
 
 const STYLES = {
-    CONTAINER: "bg-white/85 dark:bg-[#111111]/85 backdrop-blur-3xl rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] w-full max-w-sm border border-black/[0.04] dark:border-white/[0.06] overflow-hidden transition-all duration-300 pointer-events-auto mx-auto",
+    CONTAINER: "bg-white/85 dark:bg-[#111111]/85 backdrop-blur-3xl rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] w-full max-w-sm border border-black/[0.04] dark:border-white/[0.06] overflow-hidden transition-all duration-300 pointer-events-auto mx-auto",
     HEADER: "px-5 pt-5 pb-4 bg-transparent",
     SELECT_WRAPPER: "relative flex items-center group transition-all duration-200 bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] rounded-[20px] px-4 py-2.5",
     SELECT_ELEMENT: "appearance-none bg-transparent text-xl font-extrabold text-black dark:text-white pr-8 cursor-pointer focus:outline-none z-10 w-full tracking-tight",

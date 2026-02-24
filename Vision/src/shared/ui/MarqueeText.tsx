@@ -8,20 +8,24 @@ type PopupMarqueeProps = {
 // Marquee Component
 const PopupMarquee = ({ text, maxWidthClass = "max-w-full" }: PopupMarqueeProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
+    const textRef = useRef<HTMLSpanElement>(null);
     const [shouldMarquee, setShouldMarquee] = useState(false);
 
     useEffect(() => {
-        const el = containerRef.current;
-        if (!el || typeof ResizeObserver === "undefined") return;
+        const container = containerRef.current;
+        const textEl = textRef.current;
+        if (!container || !textEl || typeof ResizeObserver === "undefined") return;
 
         const checkOverflow = () => {
-            setShouldMarquee(el.scrollWidth > el.clientWidth + 1);
+            // scrollWidth of textEl gives the true width of a single text span.
+            // If currently marqueeing, it includes pr-6 (24px) padding, which provides a nice hysteresis.
+            setShouldMarquee(textEl.scrollWidth > container.clientWidth);
         };
 
         checkOverflow();
 
         const observer = new ResizeObserver(checkOverflow);
-        observer.observe(el);
+        observer.observe(container);
 
         return () => observer.disconnect();
     }, [text]);
@@ -45,7 +49,7 @@ const PopupMarquee = ({ text, maxWidthClass = "max-w-full" }: PopupMarqueeProps)
 
             {shouldMarquee ? (
                 <div className="animate-infinite-scroll flex-nowrap">
-                    <span className="pr-6 font-medium whitespace-nowrap shrink-0">
+                    <span ref={textRef} className="pr-6 font-medium whitespace-nowrap shrink-0">
                         {text}
                     </span>
                     <span className="pr-6 font-medium whitespace-nowrap shrink-0" aria-hidden="true">
@@ -53,7 +57,7 @@ const PopupMarquee = ({ text, maxWidthClass = "max-w-full" }: PopupMarqueeProps)
                     </span>
                 </div>
             ) : (
-                <span className="whitespace-nowrap block font-medium">{text}</span>
+                <span ref={textRef} className="whitespace-nowrap block font-medium truncate">{text}</span>
             )}
         </div>
     );
