@@ -1,5 +1,3 @@
-# .gitignore
-
 # Ignore output files
 *.geojson
 *.json
@@ -7,8 +5,8 @@
 # Ignore environment files
 .env
 
-# Ignore binary assets
-/storage/assets
+# Ignore cache assets
+/storage/cache/assets
 
 # Ignore build files
 /target
