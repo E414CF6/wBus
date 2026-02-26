@@ -5,7 +5,7 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { DAY_TYPES, DayType } from "@core/config/env";
 import { DAY_LABELS, UI_TEXT } from "@core/config/locale";
 
-import { getCurrentDayType } from "@schedule/utils/time";
+import { getCurrentDayType } from "@bus/utils/time";
 
 import type { BusSchedule, RowItem } from "@core/domain";
 

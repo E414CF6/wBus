@@ -8,13 +8,14 @@ import { UI_TEXT } from "@core/config/locale";
 import { useBusContext } from "@map/context/MapContext";
 
 import { BusListItem } from "@bus/components/BusListItem";
+
 import { useBusSortedList } from "@bus/hooks/useBusSortedList";
+import { useScheduleData } from "@bus/hooks/useScheduleData";
+
 import { getBusErrorMessage } from "@bus/utils/errorMessages";
+import { formatTime, getNearestBusTime } from "@bus/utils/time";
 
-import { useScheduleData } from "@schedule/hooks/useScheduleData";
-import { formatTime, getNearestBusTime } from "@schedule/utils/time";
-
-import ScheduleView from "@schedule/components/ScheduleView";
+import ScheduleView from "@bus/components/BusScheduleView";
 
 import Pill from "@shared/ui/Pill";
 
