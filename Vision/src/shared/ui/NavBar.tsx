@@ -27,7 +27,7 @@ export default function NavBar({ className = "" }: NavBarProps) {
         "
             >
                 {/* Logo Icon Container */}
-                <div className="flex items-center justify-center w-[34px] h-[34px] rounded-[14px] bg-black dark:bg-white text-white dark:text-black">
+                <div className="flex items-center justify-center w-[34px] h-[34px] rounded-full bg-black dark:bg-white text-white dark:text-black">
                     <MapIcon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
                 </div>
 
