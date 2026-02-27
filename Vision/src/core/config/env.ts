@@ -22,10 +22,9 @@ export const APP_CONFIG = {
 export const SITE_CONFIG = {
     METADATA: {
         TITLE: getEnv(process.env.NEXT_PUBLIC_SITE_TITLE, "wBus"),
-        DESCRIPTION: getEnv(process.env.NEXT_PUBLIC_SITE_DESCRIPTION, "원주시 실시간 버스 위치 및 도착 정보 서비스"),
-        // @TODO: Enable these once the environment variables are set up
-        // BASE_URL: getEnv(process.env.NEXT_PUBLIC_SITE_BASE_URL, "http://localhost:3000"),
-        // SOCIAL_IMAGE: getEnv(process.env.NEXT_PUBLIC_SOCIAL_IMAGE_PATH, "/social-image.png"),
+        DESCRIPTION: getEnv(process.env.NEXT_PUBLIC_SITE_DESCRIPTION, "실시간 버스 위치 및 도착 정보 서비스"),
+        BASE_URL: getEnv(process.env.NEXT_PUBLIC_SITE_BASE_URL, "https://wbus.vercel.app"),
+        SOCIAL_IMAGE: getEnv(process.env.NEXT_PUBLIC_SOCIAL_IMAGE_PATH, "/opengraph-image.png"),
     },
 } as const;
 

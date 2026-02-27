@@ -9,7 +9,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-import { SITE_CONFIG } from "@core/config/env";
+import { APP_CONFIG, SITE_CONFIG } from "@core/config/env";
 
 import { MapContextProvider } from "@map/context/MapContext";
 
@@ -26,16 +26,13 @@ const geistMono = Geist_Mono({
     subsets: ["latin"],
 });
 
-// @TODO: Make BASE_URL dynamic based on environment
-const BASE_URL = "https://wbus.vercel.app";
-
 // Page Metadata
 export const metadata: Metadata = {
-    metadataBase: new URL(BASE_URL),
+    metadataBase: new URL(SITE_CONFIG.METADATA.BASE_URL),
 
     title: {
-        default: "wBus",
-        template: "%s · wBus",
+        default: APP_CONFIG.NAME,
+        template: `${APP_CONFIG.NAME} · %s`,
     },
     description: SITE_CONFIG.METADATA.DESCRIPTION,
 
@@ -45,25 +42,25 @@ export const metadata: Metadata = {
 
     openGraph: {
         type: "website",
-        url: BASE_URL,
-        siteName: "wBus",
-        title: "wBus",
+        url: SITE_CONFIG.METADATA.BASE_URL,
+        siteName: APP_CONFIG.NAME,
+        title: APP_CONFIG.NAME,
         description: SITE_CONFIG.METADATA.DESCRIPTION,
         images: [
             {
-                url: "/opengraph-image.png",
+                url: SITE_CONFIG.METADATA.SOCIAL_IMAGE,
                 width: 1200,
                 height: 630,
-                alt: "wBus",
+                alt: APP_CONFIG.NAME,
             },
         ],
     },
 
     twitter: {
         card: "summary_large_image",
-        title: "wBus",
+        title: APP_CONFIG.NAME,
         description: SITE_CONFIG.METADATA.DESCRIPTION,
-        images: ["/opengraph-image.png"],
+        images: [SITE_CONFIG.METADATA.SOCIAL_IMAGE],
     },
 
     icons: {
