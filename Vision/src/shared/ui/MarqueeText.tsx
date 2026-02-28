@@ -6,7 +6,7 @@ type PopupMarqueeProps = {
 };
 
 // Marquee Component
-const PopupMarquee = ({ text, maxWidthClass = "max-w-full" }: PopupMarqueeProps) => {
+const PopupMarquee = ({text, maxWidthClass = "max-w-full"}: PopupMarqueeProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const textRef = useRef<HTMLSpanElement>(null);
     const [shouldMarquee, setShouldMarquee] = useState(false);

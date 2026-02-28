@@ -1,8 +1,7 @@
 "use client";
 
+import { APP_CONFIG } from "@core/constants/env";
 import { MapIcon } from "lucide-react";
-
-import { APP_CONFIG } from "@core/config/env";
 
 interface NavBarProps {
     className?: string;
@@ -12,7 +11,7 @@ interface NavBarProps {
  * Floating Navigation Bar / Header.
  * Displays the App Logo and Name in a glassmorphism "pill" style.
  */
-export default function NavBar({ className = "" }: NavBarProps) {
+export default function NavBar({className = ""}: NavBarProps) {
     return (
         <nav
             aria-label="Main Navigation"
@@ -27,8 +26,9 @@ export default function NavBar({ className = "" }: NavBarProps) {
         "
             >
                 {/* Logo Icon Container */}
-                <div className="flex items-center justify-center w-[34px] h-[34px] rounded-full bg-black dark:bg-white text-white dark:text-black">
-                    <MapIcon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true" />
+                <div
+                    className="flex items-center justify-center w-[34px] h-[34px] rounded-full bg-black dark:bg-white text-white dark:text-black">
+                    <MapIcon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true"/>
                 </div>
 
                 {/* App Title */}

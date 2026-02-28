@@ -1,18 +1,28 @@
 "use client";
 
+import { APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS } from "@core/constants/env";
+import { useBusRouteMap } from "@entities/bus/hooks";
+
+import { busPollingService } from "@features/live-tracking/BusPollingService";
+
+import NavBar from "@shared/ui/NavBar";
+import Splash from "@shared/ui/Splash";
+import BusList from "@widgets/BusListSheet/BusList";
+
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS } from "@core/config/env";
-
-import { busPollingService } from "@bus/services/BusPollingService";
-import { useBusRouteMap } from "@bus/hooks/useBusRouteMap";
-
-import MapWrapper from "@map/components/MapWrapper";
-
-import BusList from "@bus/components/BusList";
-
-import Splash from "@shared/ui/Splash";
-import NavBar from "@shared/ui/NavBar";
+/**
+ * Dynamically import MapWrapper & RouteLayer with SSR disabled.
+ * Leaflet / react-leaflet / MapLibre all reference `window` at the module
+ * level, so the entire map subtree must be kept out of server rendering.
+ */
+const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
+    ssr: false,
+});
+const RouteLayer = dynamic(() => import("@widgets/MapContainer/RouteLayer"), {
+    ssr: false,
+});
 
 /**
  * Real-time bus map page for the wBus application.
@@ -88,16 +98,19 @@ export default function HomePage() {
 
     return (
         <>
-            <Splash isVisible={isSplashVisible} />
+            <Splash isVisible={isSplashVisible}/>
             <div
                 className="flex flex-col w-full min-h-svh h-dvh pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
-                <NavBar />
+                <NavBar/>
                 <div className="relative flex-1 overflow-hidden">
                     <MapWrapper
-                        routeNames={[activeRoute]}
                         onReady={handleMapReady}
-                        onRouteChange={handleRouteChange}
-                    />
+                    >
+                        <RouteLayer
+                            routeName={activeRoute}
+                            onRouteChange={handleRouteChange}
+                        />
+                    </MapWrapper>
                     <div
                         className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] left-0 right-0 flex justify-center z-30 pointer-events-none">
                         <div className="pointer-events-auto w-full px-3 sm:px-4 flex justify-center">

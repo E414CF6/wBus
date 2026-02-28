@@ -1,9 +1,8 @@
 "use client";
 
+import { APP_CONFIG } from "@core/constants/env";
+import { UI_TEXT } from "@core/constants/locale";
 import React, { Component, ErrorInfo, ReactNode } from "react";
-
-import { APP_CONFIG } from "@core/config/env";
-import { UI_TEXT } from "@core/config/locale";
 
 // ----------------------------------------------------------------------
 // Types
@@ -34,7 +33,7 @@ interface DefaultFallbackProps {
 /**
  * The default UI displayed when an error occurs and no custom fallback is provided.
  */
-const DefaultErrorFallback: React.FC<DefaultFallbackProps> = ({ error, onRetry }) => {
+const DefaultErrorFallback: React.FC<DefaultFallbackProps> = ({error, onRetry}) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     return (

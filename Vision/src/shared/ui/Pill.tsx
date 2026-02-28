@@ -58,13 +58,13 @@ type PillProps<T extends ElementType> = {
  * <Pill as="button" onClick={handleClick}>Click Me</Pill>
  */
 export default function Pill<T extends ElementType = "span">({
-    as,
-    children,
-    className = "",
-    tone = "soft",
-    size = "md",
-    ...props
-}: PillProps<T>) {
+                                                                 as,
+                                                                 children,
+                                                                 className = "",
+                                                                 tone = "soft",
+                                                                 size = "md",
+                                                                 ...props
+                                                             }: PillProps<T>) {
     const Component = as || "span";
 
     return (

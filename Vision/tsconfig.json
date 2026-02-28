@@ -32,17 +32,17 @@
       "@core/*": [
         "./src/core/*"
       ],
-      "@bus/*": [
-        "./src/features/bus/*"
+      "@entities/*": [
+        "./src/entities/*"
       ],
-      "@map/*": [
-        "./src/features/map/*"
-      ],
-      "@schedule/*": [
-        "./src/features/schedule/*"
+      "@features/*": [
+        "./src/features/*"
       ],
       "@shared/*": [
         "./src/shared/*"
+      ],
+      "@widgets/*": [
+        "./src/widgets/*"
       ]
     }
   },

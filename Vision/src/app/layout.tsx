@@ -1,19 +1,19 @@
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import React from "react";
+import { APP_CONFIG, SITE_CONFIG } from "@core/constants/env";
 
-import { ThemeProvider } from "next-themes";
-import { Geist, Geist_Mono } from "next/font/google";
+import { AppMapContextProvider } from "@shared/context/AppMapContext";
 
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 
-import { APP_CONFIG, SITE_CONFIG } from "@core/config/env";
-
-import { MapContextProvider } from "@map/context/MapContext";
-
 import type { Metadata, Viewport } from "next";
+
+import { ThemeProvider } from "next-themes";
+import { Geist, Geist_Mono } from "next/font/google";
+
+import React from "react";
 
 // Google Fonts (Geist Sans, Geist Mono)
 const geistSans = Geist({
@@ -82,23 +82,23 @@ export const viewport: Viewport = {
 // RootLayout is the main layout part that wraps around all pages.
 // It includes global styles, the MapContextProvider for map context, and analytics components.
 export default function RootLayout({
-    children,
-}: {
+                                       children,
+                                   }: {
     children: React.ReactNode;
 }) {
     return (
         <html lang="ko" suppressHydrationWarning>
-            <body
-                className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-            >
-                <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-                    {/* Provides global map context via MapContextProvider */}
-                    <MapContextProvider>{children}</MapContextProvider>
-                </ThemeProvider>
-                {/* Vercel SpeedInsights and Analytics components */}
-                <SpeedInsights />
-                <Analytics />
-            </body>
+        <body
+            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+            {/* Provides global map context via AppMapContextProvider */}
+            <AppMapContextProvider>{children}</AppMapContextProvider>
+        </ThemeProvider>
+        {/* Vercel SpeedInsights and Analytics components */}
+        <SpeedInsights/>
+        <Analytics/>
+        </body>
         </html>
     );
 }

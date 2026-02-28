@@ -1,4 +1,4 @@
-import { UI_TEXT } from "@core/config/locale";
+import { UI_TEXT } from "@core/constants/locale";
 
 /**
  * Converts seconds to minutes, rounding up to the nearest whole number.
@@ -28,5 +28,5 @@ export function formatVehicleType(vehicleType: string): string {
  * @returns The formatted string (e.g., "100번" in KR or "No. 100" depending on locale)
  */
 export function formatRouteNumber(routeNo: string): string {
-    return `${routeNo}${UI_TEXT.BUS_LIST.TITLE_ROUTE}`;
+    return UI_TEXT.BUS_LIST.TITLE_ROUTE(routeNo);
 }

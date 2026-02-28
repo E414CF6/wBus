@@ -125,6 +125,46 @@ body {
     background: #333;
 }
 
+/* ============================================================================
+ * Bus Marker & Route Styles (moved from inline <style> injection)
+ * ============================================================================ */
+
+/* Bus marker label marquee animation */
+@keyframes busRouteMarquee {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.bus-marker-with-label .bus-route-text-animate {
+    display: inline-block;
+    width: max-content;
+    min-width: 100%;
+    animation: busRouteMarquee 3s linear infinite;
+    padding-right: 4px;
+}
+
+.bus-marker-with-label .bus-route-text-container:hover .bus-route-text-animate {
+    animation-play-state: paused;
+}
+
+/* Bus route polyline dash flow animation */
+@keyframes polylineDashFlow {
+    0% {
+        stroke-dashoffset: 0;
+    }
+    100% {
+        stroke-dashoffset: -24;
+    }
+}
+
+.polyline-animated path {
+    animation: polylineDashFlow 1s linear infinite;
+}
+
 /* Utilities & Animations */
 @layer utilities {
     .scrollbar-hide {

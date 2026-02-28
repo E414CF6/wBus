@@ -1,5 +1,5 @@
-import { APP_CONFIG, UI_CONFIG } from "@core/config/env";
-import { UI_TEXT } from "@core/config/locale";
+import { APP_CONFIG, UI_CONFIG } from "@core/constants/env";
+import { UI_TEXT } from "@core/constants/locale";
 
 // ----------------------------------------------------------------------
 // Types
@@ -23,10 +23,10 @@ interface SplashProps {
  * Handles the "Enter" -> "Wait" -> "Fade Out" -> "Unmount" lifecycle.
  */
 export default function Splash({
-    isVisible,
-    duration = UI_CONFIG.TRANSITIONS.SPLASH_FADE_MS || 500,
-    showLoader = true,
-}: SplashProps) {
+                                   isVisible,
+                                   duration = UI_CONFIG.TRANSITIONS.SPLASH_FADE_MS || 500,
+                                   showLoader = true,
+                               }: SplashProps) {
     return (
         <div
             role="status"
@@ -40,7 +40,7 @@ export default function Splash({
         transition-opacity ease-out
         ${isVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}
       `}
-            style={{ transitionDuration: `${duration}ms` }}
+            style={{transitionDuration: `${duration}ms`}}
         >
             <div className="relative z-10 flex flex-col items-center">
                 {/* Spinner */}
@@ -50,7 +50,7 @@ export default function Splash({
                         aria-label="Loading application"
                     >
                         <div
-                            className="w-14 h-14 border-4 border-white/30 border-t-white rounded-full animate-spin shadow-2xl" />
+                            className="w-14 h-14 border-4 border-white/30 border-t-white rounded-full animate-spin shadow-2xl"/>
                     </div>
                 )}
 
@@ -63,7 +63,7 @@ export default function Splash({
                 <div
                     className="flex items-center gap-2.5 px-6 py-2 bg-white/10 backdrop-blur-2xl rounded-full border border-white/20 shadow-2xl">
                     <div
-                        className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]" />
+                        className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]"/>
                     <span className="text-blue-50 text-[13px] font-bold tracking-wide">
                         {UI_TEXT.COMMON.LOADING_LIVE}
                     </span>

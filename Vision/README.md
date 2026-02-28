@@ -27,10 +27,10 @@ interactive map to visualize bus locations and schedules for Wonju, South Korea.
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) 4
 - **Mapping**:
-  - [React-Leaflet](https://react-leaflet.js.org/) for React integration.
-  - [MapLibre GL JS](https://maplibre.org/) for rendering map tiles.
-  - [Leaflet.RotatedMarker](https://github.com/bbecquet/Leaflet.RotatedMarker) for bus direction.
-  - `leaflet.marker.slideto` for smooth marker animations.
+    - [React-Leaflet](https://react-leaflet.js.org/) for React integration.
+    - [MapLibre GL JS](https://maplibre.org/) for rendering map tiles.
+    - [Leaflet.RotatedMarker](https://github.com/bbecquet/Leaflet.RotatedMarker) for bus direction.
+    - `leaflet.marker.slideto` for smooth marker animations.
 - **Linting/Formatting**: ESLint
 
 ## Getting Started
