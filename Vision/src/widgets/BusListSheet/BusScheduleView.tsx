@@ -210,13 +210,13 @@ const NextBusStatus = ({
 const TimetableGrid = ({
                            hours,
                            highlightedHour,
-                           nextBus,
+                           _nextBus,
                            schedule,
                            direction
                        }: {
     hours: string[];
     highlightedHour: string;
-    nextBus: NextBusInfo | null;
+    _nextBus: NextBusInfo | null;
     schedule: Record<string, Record<string, RowItem[]>>;
     direction: string;
 }) => (
@@ -298,7 +298,7 @@ function ScheduleView({data, mode = "full"}: { data: BusSchedule; mode?: "full" 
                 <TimetableGrid
                     hours={hours}
                     highlightedHour={highlightedHour}
-                    nextBus={nextBus}
+                    _nextBus={nextBus}
                     schedule={activeSchedule}
                     direction={direction}
                 />

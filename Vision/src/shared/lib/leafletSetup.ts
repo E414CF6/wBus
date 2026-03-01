@@ -23,10 +23,10 @@ if (typeof window !== "undefined") {
     // Load legacy plugins manually after L is set globally
     // These must be 'require' inside the window check because they 
     // are browser-only and rely on 'L' existing globally.
-    // @ts-ignore
+    /* eslint-disable @typescript-eslint/no-require-imports */
     require("leaflet-rotatedmarker");
-    // @ts-ignore
     require("leaflet.marker.slideto");
+    /* eslint-enable @typescript-eslint/no-require-imports */
 }
 
 export default L;

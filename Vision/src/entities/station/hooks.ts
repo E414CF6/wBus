@@ -1,22 +1,27 @@
 import { CacheManager } from "@core/cache/CacheManager";
-import { APP_CONFIG } from "@core/constants/env";
+import { API_CONFIG, APP_CONFIG } from "@core/constants/env";
+import { UI_TEXT } from "@core/constants/locale";
+import { getBusStopArrivalData } from "@entities/bus/api";
 import { getBusStopLocationData, getRouteStopsByRouteName } from "@entities/station/api";
-import type { BusStop } from "@entities/station/types";
+import type { BusStop, BusStopArrival } from "@entities/station/types";
 import { useAppMapContext } from "@shared/context/AppMapContext";
 import { getHaversineDistance } from "@shared/utils/geo";
-import { useEffect, useState } from "react";
-
-// ── Stop Cache ─────────────────────────────────────────────────
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const MIN_VALID_STOPS = 4;
+
+// Stop Cache
+
 const stopCache = new CacheManager<BusStop[]>();
 const routeStopsCache = new CacheManager<BusStop[]>();
 
 function getSortValue(stop: BusStop, fallback: number): number {
     const nodeord = Number(stop.nodeord);
     if (Number.isFinite(nodeord)) return nodeord;
+
     const nodeno = Number(stop.nodeno);
     if (Number.isFinite(nodeno)) return nodeno;
+
     return fallback;
 }
 
@@ -26,7 +31,7 @@ function sortStops(list: BusStop[]): BusStop[] {
         .map(({stop}) => stop);
 }
 
-// ── useBusStop ─────────────────────────────────────────────────
+// useBusStop
 
 export function useBusStop(routeName: string) {
     const [stops, setStops] = useState<BusStop[]>(() => routeStopsCache.get(routeName) ?? []);
@@ -58,7 +63,9 @@ export function useBusStop(routeName: string) {
                 if (APP_CONFIG.IS_DEV) console.error(`[useBusStop] Failed to load stops for ${routeName}`, err);
             }
         };
-        fetchStops();
+
+        fetchStops().then(r => void r);
+
         return () => {
             isMounted = false;
         };
@@ -67,7 +74,7 @@ export function useBusStop(routeName: string) {
     return stops;
 }
 
-// ── useClosestStopOrd ──────────────────────────────────────────
+// useClosestStopOrd
 
 export function useClosestStopOrd(routeName: string): number | null {
     const {map} = useAppMapContext();
@@ -76,6 +83,7 @@ export function useClosestStopOrd(routeName: string): number | null {
 
     useEffect(() => {
         if (!map || stops.length === 0) return;
+
         const calculateClosest = () => {
             if (!map.getCenter) return;
             const {lat, lng} = map.getCenter();
@@ -87,8 +95,10 @@ export function useClosestStopOrd(routeName: string): number | null {
             const ord = Number(closest.nodeord);
             setClosestOrd(Number.isFinite(ord) ? ord : null);
         };
+
         map.whenReady(calculateClosest);
         map.on("moveend", calculateClosest);
+
         return () => {
             map.off("moveend", calculateClosest);
         };
@@ -97,7 +107,7 @@ export function useClosestStopOrd(routeName: string): number | null {
     return closestOrd;
 }
 
-// ── useBusArrivalInfo ──────────────────────────────────────────
+// useBusArrivalInfo
 
 export function useBusArrivalInfo(busStopId: string | null) {
     const [data, setData] = useState<BusStopArrival[]>([]);
@@ -110,8 +120,10 @@ export function useBusArrivalInfo(busStopId: string | null) {
             setData([]);
             return;
         }
+
         setLoading(true);
         setError(null);
+
         try {
             const result = await getBusStopArrivalData(busStopId);
             setData(result);
@@ -129,7 +141,7 @@ export function useBusArrivalInfo(busStopId: string | null) {
             setData([]);
             return;
         }
-        fetchData();
+        fetchData().then(r => void r);
         timerRef.current = setInterval(fetchData, API_CONFIG.LIVE.POLLING_INTERVAL_MS);
         return () => {
             if (timerRef.current) clearInterval(timerRef.current);
@@ -140,9 +152,8 @@ export function useBusArrivalInfo(busStopId: string | null) {
 }
 
 export function getNextBusArrivalInfo(routeName: string, data: BusStopArrival[]) {
-    const target = data.find((bus) =>
-        bus.routeno.replace(/-/g, "").trim() === routeName.replace(/-/g, "").trim()
-    );
+    const target = data.find((bus) => bus.routeno.replace(/-/g, "").trim() === routeName.replace(/-/g, "").trim());
     if (!target) return null;
+
     return {minutes: Math.ceil(target.arrtime / 60), stopsAway: target.arrprevstationcnt};
 }

@@ -7,6 +7,7 @@ import { busPollingService } from "@features/live-tracking/BusPollingService";
 
 import NavBar from "@shared/ui/NavBar";
 import Splash from "@shared/ui/Splash";
+
 import BusList from "@widgets/BusListSheet/BusList";
 
 import dynamic from "next/dynamic";
