@@ -9,7 +9,7 @@ import MapContextBridge from "@features/map-view/MapContextBridge";
 import MapLibreBaseLayer from "@features/map-view/MapLibreBaseLayer";
 import MapViewPersistence from "@features/map-view/MapViewPersistence";
 
-import { getInitialMapView } from "@features/map-view/mapViewStorage";
+import { getInitialMapView } from "@features/map-view/MapViewStorage";
 
 import type { LatLngBoundsExpression, LatLngExpression } from "leaflet";
 
@@ -38,7 +38,7 @@ interface MapProps {
  * are passed in via `children` — keeping the map module decoupled from
  * feature modules.
  */
-export default function Map({onReady, children}: MapProps) {
+export default function Map({ onReady, children }: MapProps) {
     // Ref to ensure the ready callback is fired exactly once
     const readyOnceRef = useRef(false);
 
@@ -71,15 +71,15 @@ export default function Map({onReady, children}: MapProps) {
             className="w-full h-full relative z-0"
         >
             {/* 1. UI Controls */}
-            <ZoomControl position="topright"/>
+            <ZoomControl position="topright" />
 
             {/* 2. Logic & Base Layers */}
             <MapContextBridge>
                 {/* Base Vector Tile Layer (MapLibre integration) */}
-                <MapLibreBaseLayer onReady={handleReadyOnce}/>
+                <MapLibreBaseLayer onReady={handleReadyOnce} />
 
                 {/* Persist user's zoom/pan state */}
-                <MapViewPersistence/>
+                <MapViewPersistence />
 
                 {/* 3. Feature Layers (injected via children) */}
                 {children}

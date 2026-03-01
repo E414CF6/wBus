@@ -77,7 +77,7 @@ export function loadStoredMapView(): StoredMapView | null {
         const maxBounds = L.latLngBounds(MAP_SETTINGS.BOUNDS.MAX);
         if (!maxBounds.contains([lat, lng])) {
             if (APP_CONFIG.IS_DEV) {
-                console.warn("[mapViewStorage] Stored view is outside allowed bounds. Resetting to default.");
+                console.warn("[MapViewStorage] Stored view is outside allowed bounds. Resetting to default.");
             }
             return null;
         }
@@ -89,7 +89,7 @@ export function loadStoredMapView(): StoredMapView | null {
 
     } catch (error) {
         if (APP_CONFIG.IS_DEV) {
-            console.error("[mapViewStorage] Failed to parse stored map view:", error);
+            console.error("[MapViewStorage] Failed to parse stored map view:", error);
         }
         return null;
     }
@@ -124,7 +124,7 @@ export function saveMapView(view: StoredMapView): void {
         localStorage.setItem(STORAGE_KEYS.MAP_VIEW, JSON.stringify(view));
     } catch (error) {
         if (APP_CONFIG.IS_DEV) {
-            console.error("[mapViewStorage] Failed to write map view to storage:", error);
+            console.error("[MapViewStorage] Failed to write map view to storage:", error);
         }
     }
 }
