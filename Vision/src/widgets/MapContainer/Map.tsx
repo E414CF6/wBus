@@ -7,7 +7,7 @@ import { getMapStyleUrl } from "@features/map-view/getMapData";
 import { createMapViewFromMap, getInitialMapView, saveMapView } from "@features/map-view/MapViewStorage";
 import { useAppMapContext } from "@shared/context/AppMapContext";
 import maplibregl from "maplibre-gl";
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import MapGL, { MapRef, NavigationControl } from "react-map-gl/maplibre";
 
 // ----------------------------------------------------------------------
@@ -34,12 +34,6 @@ export default function Map({onReady, children}: MapProps) {
     const initialView = useMemo(() => getInitialMapView(), []);
     const mapStyleUrl = useMemo(() => getMapStyleUrl(), []);
 
-    const [viewState, setViewState] = useState({
-        longitude: initialView.longitude,
-        latitude: initialView.latitude,
-        zoom: initialView.zoom,
-    });
-
     const handleLoad = useCallback(() => {
         if (readyOnceRef.current) return;
         readyOnceRef.current = true;
@@ -50,10 +44,6 @@ export default function Map({onReady, children}: MapProps) {
 
         onReady?.();
     }, [onReady, setMap]);
-
-    const handleMove = useCallback((evt: { viewState: typeof viewState }) => {
-        setViewState(evt.viewState);
-    }, []);
 
     const handleMoveEnd = useCallback(() => {
         if (mapRef.current) {
@@ -71,8 +61,11 @@ export default function Map({onReady, children}: MapProps) {
     return (
         <MapGL
             ref={mapRef}
-            {...viewState}
-            onMove={handleMove}
+            initialViewState={{
+                longitude: initialView.longitude,
+                latitude: initialView.latitude,
+                zoom: initialView.zoom,
+            }}
             onMoveEnd={handleMoveEnd}
             onLoad={handleLoad}
             mapStyle={mapStyleUrl}
@@ -81,6 +74,8 @@ export default function Map({onReady, children}: MapProps) {
             maxZoom={MAP_SETTINGS.ZOOM.MAX}
             maxBounds={MAP_SETTINGS.BOUNDS.MAX as [maplibregl.LngLatLike, maplibregl.LngLatLike]}
             style={{width: "100%", height: "100%", position: "relative", zIndex: 0}}
+            dragRotate={false}
+            touchPitch={false}
         >
             <NavigationControl position="top-right" showCompass={false}/>
             {children}

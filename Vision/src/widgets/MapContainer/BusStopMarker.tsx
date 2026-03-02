@@ -55,12 +55,12 @@ const BusStopMarkerItem = memo(({stop, onRouteChange}: BusStopMarkerItemProps) =
                 <Popup
                     longitude={stop.gpslong}
                     latitude={stop.gpslati}
-                    anchor="bottom"
                     closeButton={false}
                     closeOnClick={true}
                     onClose={handlePopupClose}
                     className="custom-bus-stop-popup"
-                    offset={[0, -12]}
+                    maxWidth="none"
+                    offset={[0, -10]}
                 >
                     <div
                         className="flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl overflow-hidden rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)] border border-black/[0.04] dark:border-white/[0.06] w-[300px] sm:w-[360px]">

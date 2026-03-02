@@ -67,7 +67,7 @@ function BusAnimatedMarker({
         }
     );
 
-    const handleMarkerClick = (e: mapboxgl.MapLayerMouseEvent | any) => {
+    const handleMarkerClick = (e: any) => {
         if (e.originalEvent) {
             e.originalEvent.stopPropagation();
         }

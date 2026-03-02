@@ -140,81 +140,85 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
 
     return (
         <>
+            <Source id="polyline-up" type="geojson" data={activeUpGeoJSON}/>
             {isNoBusRunning ? (
-                <>
-                    <Source id="polyline-up" type="geojson" data={activeUpGeoJSON}>
-                        <Layer
-                            id="polyline-up-layer"
-                            type="line"
-                            paint={{
-                                "line-color": COLORS.ACTIVE_UP,
-                                "line-width": 4,
-                                "line-opacity": 0.7,
-                                "line-dasharray": [1.5, 2]
-                            }}
-                            layout={{"line-cap": "round", "line-join": "round"}}
-                        />
-                    </Source>
-                    <Source id="polyline-down" type="geojson" data={activeDownGeoJSON}>
-                        <Layer
-                            id="polyline-down-layer"
-                            type="line"
-                            paint={{
-                                "line-color": COLORS.ACTIVE_DOWN,
-                                "line-width": 4,
-                                "line-opacity": 0.7,
-                                "line-dasharray": [1.5, 2]
-                            }}
-                            layout={{"line-cap": "round", "line-join": "round"}}
-                        />
-                    </Source>
-                </>
+                <Layer
+                    id="polyline-up-layer"
+                    source="polyline-up"
+                    type="line"
+                    paint={{
+                        "line-color": COLORS.ACTIVE_UP,
+                        "line-width": 4,
+                        "line-opacity": 0.7,
+                        "line-dasharray": [1.5, 2]
+                    }}
+                    layout={{"line-cap": "round", "line-join": "round"}}
+                />
             ) : (
                 <>
-                    <Source id="polyline-up-active" type="geojson" data={activeUpGeoJSON}>
-                        <Layer
-                            id="polyline-up-glow"
-                            type="line"
-                            paint={{
-                                "line-color": COLORS.GLOW_UP,
-                                "line-width": 10,
-                                "line-opacity": 1,
-                            }}
-                            layout={{"line-cap": "round", "line-join": "round"}}
-                        />
-                        <Layer
-                            id="polyline-up-main"
-                            type="line"
-                            paint={{
-                                "line-color": COLORS.ACTIVE_UP,
-                                "line-width": 4,
-                                "line-opacity": 1,
-                            }}
-                            layout={{"line-cap": "round", "line-join": "round"}}
-                        />
-                    </Source>
-                    <Source id="polyline-down-active" type="geojson" data={activeDownGeoJSON}>
-                        <Layer
-                            id="polyline-down-glow"
-                            type="line"
-                            paint={{
-                                "line-color": COLORS.GLOW_DOWN,
-                                "line-width": 10,
-                                "line-opacity": 1,
-                            }}
-                            layout={{"line-cap": "round", "line-join": "round"}}
-                        />
-                        <Layer
-                            id="polyline-down-main"
-                            type="line"
-                            paint={{
-                                "line-color": COLORS.ACTIVE_DOWN,
-                                "line-width": 4,
-                                "line-opacity": 1,
-                            }}
-                            layout={{"line-cap": "round", "line-join": "round"}}
-                        />
-                    </Source>
+                    <Layer
+                        id="polyline-up-glow"
+                        source="polyline-up"
+                        type="line"
+                        paint={{
+                            "line-color": COLORS.GLOW_UP,
+                            "line-width": 10,
+                            "line-opacity": 1,
+                        }}
+                        layout={{"line-cap": "round", "line-join": "round"}}
+                    />
+                    <Layer
+                        id="polyline-up-main"
+                        source="polyline-up"
+                        type="line"
+                        paint={{
+                            "line-color": COLORS.ACTIVE_UP,
+                            "line-width": 4,
+                            "line-opacity": 1,
+                        }}
+                        layout={{"line-cap": "round", "line-join": "round"}}
+                    />
+                </>
+            )}
+
+            <Source id="polyline-down" type="geojson" data={activeDownGeoJSON}/>
+            {isNoBusRunning ? (
+                <Layer
+                    id="polyline-down-layer"
+                    source="polyline-down"
+                    type="line"
+                    paint={{
+                        "line-color": COLORS.ACTIVE_DOWN,
+                        "line-width": 4,
+                        "line-opacity": 0.7,
+                        "line-dasharray": [1.5, 2]
+                    }}
+                    layout={{"line-cap": "round", "line-join": "round"}}
+                />
+            ) : (
+                <>
+                    <Layer
+                        id="polyline-down-glow"
+                        source="polyline-down"
+                        type="line"
+                        paint={{
+                            "line-color": COLORS.GLOW_DOWN,
+                            "line-width": 10,
+                            "line-opacity": 1,
+                        }}
+                        layout={{"line-cap": "round", "line-join": "round"}}
+                    />
+                    <Layer
+                        id="polyline-down-main"
+                        source="polyline-down"
+                        type="line"
+                        paint={{
+                            "line-color": COLORS.ACTIVE_DOWN,
+                            "line-width": 4,
+                            "line-opacity": 1,
+                        }}
+                        layout={{"line-cap": "round", "line-join": "round"}}
+                    />
                 </>
             )}
         </>

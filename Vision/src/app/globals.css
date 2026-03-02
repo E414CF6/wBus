@@ -64,7 +64,6 @@ body {
 /* Custom Popup Styling */
 .maplibregl-popup-content {
     padding: 0 !important;
-    overflow: hidden !important;
     border-radius: 28px !important;
     border: 1px solid rgba(0, 0, 0, 0.04) !important;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
@@ -72,7 +71,6 @@ body {
     backdrop-filter: blur(24px) !important;
     -webkit-backdrop-filter: blur(24px) !important;
     margin: 0 !important;
-    width: 100% !important;
     /* Ensure popup content font follows theme font */
     font-family: var(--font-sans, Arial, Helvetica, sans-serif), serif;
 }
@@ -85,7 +83,13 @@ body {
 
 /* Remove and style popup tip (speech bubble tail) */
 .maplibregl-popup-tip {
-    display: none;
+    border-top-color: rgba(255, 255, 255, 0.85) !important;
+    border-bottom-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.dark .maplibregl-popup-tip {
+    border-top-color: rgba(17, 17, 17, 0.85) !important;
+    border-bottom-color: rgba(17, 17, 17, 0.85) !important;
 }
 
 /* Scrollbar Customization */

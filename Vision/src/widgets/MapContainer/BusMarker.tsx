@@ -65,7 +65,7 @@ const BusPopupContent = memo(({bus, stopName, DirectionIcon}: {
     DirectionIcon: React.ElementType
 }) => (
     <div
-        className="min-w-[240px] sm:min-w-[280px] flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl rounded-[24px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)] border border-black/[0.04] dark:border-white/[0.06]">
+        className="min-w-[240px] sm:min-w-[280px] flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl rounded-[28px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)] border border-black/[0.04] dark:border-white/[0.06]">
         {/* Header */}
         <div className="bg-transparent px-4 py-4 border-b border-black/5 dark:border-white/5">
             <div className="flex items-center gap-2.5 text-black dark:text-white">
@@ -197,14 +197,14 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 <Popup
                     longitude={selectedMarker.position[1]}
                     latitude={selectedMarker.position[0]}
-                    anchor="bottom"
-                    offset={[0, -21]}
+                    offset={[0, -10]}
                     closeButton={false}
                     closeOnClick={true}
                     onClose={() => {
                         setSelectedBusKey(null);
                         onPopupClose?.();
                     }}
+                    maxWidth="none"
                     className="custom-bus-popup"
                 >
                     <BusPopupContent
