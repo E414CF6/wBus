@@ -195,9 +195,5 @@ export function getFallbackPolylines(
         return polylineMap.get(activeRouteId)!;
     }
 
-    for (const polyline of polylineMap.values()) {
-        return polyline;
-    }
-
     return {upPolyline: [], downPolyline: []};
 }

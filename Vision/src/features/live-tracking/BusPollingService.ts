@@ -1,6 +1,5 @@
 import { API_CONFIG, APP_CONFIG } from "@core/constants/env";
 import { getBusLocationData } from "@entities/bus/api";
-
 import type { BusDataError, BusItem } from "@entities/bus/types";
 import { getRouteMap } from "@entities/route/api";
 
@@ -77,17 +76,6 @@ export class BusPollingService {
         cleanupKeys(this.cache, k => k === currentRoute);
         cleanupKeys(this.dataListeners, k => k === currentRoute || (this.dataListeners[k]?.size ?? 0) > 0);
         cleanupKeys(this.errorListeners, k => k === currentRoute || (this.errorListeners[k]?.size ?? 0) > 0);
-    }
-
-    /**
-     * Clear all caches and stop all polling
-     * Useful for cleanup when component unmounts or app closes
-     */
-    cleanup(): void {
-        this.stopAllPolling();
-        this.cache = {};
-        this.dataListeners = {};
-        this.errorListeners = {};
     }
 
     /**

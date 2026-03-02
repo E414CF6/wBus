@@ -84,15 +84,13 @@ export function useBusDirection(routeName: string) {
     );
 
     // Stable resolver callback
-    const getDirection = useCallback(
+    return useCallback(
         (nodeid: string | null | undefined, nodeord: number, routeid?: string | null): DirectionCode => {
             if (!lookup) return null;
             return resolveDirection(lookup, nodeid, nodeord, routeid);
         },
         [lookup]
     );
-
-    return getDirection;
 }
 
 // ----------------------------------------------------------------------
@@ -101,11 +99,11 @@ export function useBusDirection(routeName: string) {
 
 export function useStopExists(routeName: string) {
     const stops = useBusStop(routeName);
-
     const stopSet = useMemo(() => new Set(stops.map((s) => s.nodeid)), [stops]);
 
     return useCallback((nodeid: string | null | undefined): boolean => {
-        if (!nodeid || typeof nodeid !== "string") return false;
+        if (!nodeid) return false;
+
         return stopSet.has(nodeid.trim());
     }, [stopSet]);
 }

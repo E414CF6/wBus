@@ -86,8 +86,3 @@ export async function getRouteDetails(routeId: string): Promise<RouteDetail | nu
     }));
     return {routeno: props.route_no, sequence};
 }
-
-export async function getAvailableRoutes(): Promise<string[]> {
-    const routes = await getRouteMap();
-    return Object.keys(routes);
-}

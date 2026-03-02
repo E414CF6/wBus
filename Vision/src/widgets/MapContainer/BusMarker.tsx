@@ -10,8 +10,9 @@ import { getSnappedPosition } from "@entities/route/snapService";
 import { useBusData } from "@features/live-tracking/useBusData";
 
 import PopupMarquee from "@shared/ui/MarqueeText";
+import Image from "next/image";
 
-import { memo, useMemo, useState } from "react";
+import React, { memo, useMemo, useState } from "react";
 import { Popup } from "react-map-gl/maplibre";
 import BusAnimatedMarker from "./BusAnimatedMarker";
 
@@ -27,27 +28,27 @@ const SNAP_INDEX_RANGE = 80;
 // ----------------------------------------------------------------------
 
 const BusIconDOM = memo(({routeNumber}: { routeNumber: string }) => {
-    const escapedNum = String(routeNumber)
-        .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-        .replace(/'/g, "&#39;");
-
-    const needsMarquee = routeNumber.length > SETTINGS.MARQUEE_THRESHOLD - 1;
+    const needsMarquee = routeNumber.length >= SETTINGS.MARQUEE_THRESHOLD;
     const [w, h] = SETTINGS.ICON_SIZE;
 
     return (
-        <div style={{position: 'relative', width: w, height: h, filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15))'}}>
-            <img src="/icons/bus-icon.png" style={{width: w, height: h, transition: 'transform 0.3s ease'}} alt="Bus"/>
-            <div className="bus-route-text-container" style={{
-                position: 'absolute', top: 7, left: '50%', transform: 'translateX(-50%)',
-                background: '#4f46e5',
-                color: 'white', fontSize: 11, fontWeight: 800,
-                padding: '2px 6px', borderRadius: 8, border: '1.5px solid white',
-                boxShadow: '0 2px 8px rgba(79,70,229,0.3)', letterSpacing: 0.3,
-                maxWidth: 26, overflow: 'hidden', whiteSpace: 'nowrap'
-            }}>
-                <span className={needsMarquee ? "bus-route-text-animate" : ""}
-                      dangerouslySetInnerHTML={{__html: needsMarquee ? `${escapedNum}&nbsp;${escapedNum}&nbsp;` : escapedNum}}/>
+        <div
+            className="bus-marker-with-label relative drop-shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
+            style={{width: w, height: h}}
+        >
+            <Image
+                src="/icons/bus-icon.png"
+                width={w}
+                height={h}
+                className="transition-transform duration-300 ease-in-out"
+                alt="Bus"
+            />
+            <div
+                className="bus-route-text-container absolute top-[7px] left-1/2 -translate-x-1/2 bg-[#4f46e5] text-white text-[11px] font-extrabold px-1.5 py-[2px] rounded-lg border-[1.5px] border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] max-w-[26px] overflow-hidden whitespace-nowrap">
+                <span className={needsMarquee ? "bus-route-text-animate" : ""}>
+                    {routeNumber}
+                    {needsMarquee && <>&nbsp;{routeNumber}&nbsp;</>}
+                </span>
             </div>
         </div>
     );
@@ -65,7 +66,7 @@ const BusPopupContent = memo(({bus, stopName, DirectionIcon}: {
     DirectionIcon: React.ElementType
 }) => (
     <div
-        className="min-w-[240px] sm:min-w-[280px] flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl rounded-[28px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)] border border-black/[0.04] dark:border-white/[0.06]">
+        className="min-w-60 sm:min-w-70 flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl rounded-[28px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)] border border-black/4 dark:border-white/6">
         {/* Header */}
         <div className="bg-transparent px-4 py-4 border-b border-black/5 dark:border-white/5">
             <div className="flex items-center gap-2.5 text-black dark:text-white">
@@ -86,7 +87,7 @@ const BusPopupContent = memo(({bus, stopName, DirectionIcon}: {
                     {UI_TEXT.BUS_ITEM.VEHICLE_NUM}
                 </span>
                 <div
-                    className="font-mono font-bold text-sm text-gray-800 dark:text-gray-200 bg-black/[0.03] dark:bg-white/[0.05] px-2.5 py-1 rounded-[8px]">
+                    className="font-mono font-bold text-sm text-gray-800 dark:text-gray-200 bg-black/3 dark:bg-white/5 px-2.5 py-1 rounded-lg">
                     {bus.vehicleno}
                 </div>
             </div>

@@ -20,12 +20,3 @@ export function getBusErrorMessage(error: BusDataError): string {
     if (!error) return "";
     return ERROR_MESSAGE_MAP[error] ?? UI_TEXT.ERROR.UNKNOWN(error);
 }
-
-/**
- * Check if an error should show a warning state
- * @param error - The error code
- * @returns True if the error should show a warning
- */
-export function isWarningError(error: BusDataError): boolean {
-    return error !== null && error !== "ERR:NONE_RUNNING";
-}

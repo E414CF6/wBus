@@ -142,18 +142,48 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
         <>
             <Source id="polyline-up" type="geojson" data={activeUpGeoJSON}/>
             {isNoBusRunning ? (
-                <Layer
-                    id="polyline-up-layer"
-                    source="polyline-up"
-                    type="line"
-                    paint={{
-                        "line-color": COLORS.ACTIVE_UP,
-                        "line-width": 4,
-                        "line-opacity": 0.7,
-                        "line-dasharray": [1.5, 2]
-                    }}
-                    layout={{"line-cap": "round", "line-join": "round"}}
-                />
+                <>
+                    <Layer
+                        id="polyline-up-layer"
+                        source="polyline-up"
+                        type="line"
+                        paint={{
+                            "line-color": COLORS.ACTIVE_UP,
+                            "line-width": 4,
+                            "line-opacity": 0.7,
+                            "line-dasharray": [1.5, 2]
+                        }}
+                        layout={{"line-cap": "round", "line-join": "round"}}
+                    />
+                    <Layer
+                        id="polyline-up-arrows-inactive"
+                        source="polyline-up"
+                        type="symbol"
+                        layout={{
+                            "symbol-placement": "line",
+                            "symbol-spacing": 80,
+                            "text-field": "▶",
+                            "text-font": ["Noto Sans Regular"],
+                            "text-size": [
+                                "interpolate", ["linear"], ["zoom"],
+                                10, 6,
+                                14, 12,
+                                18, 18
+                            ],
+                            "text-keep-upright": false,
+                            "text-rotation-alignment": "auto",
+                            "symbol-avoid-edges": false,
+                            "text-allow-overlap": true,
+                            "text-ignore-placement": true,
+                        }}
+                        paint={{
+                            "text-color": COLORS.ACTIVE_UP,
+                            "text-halo-color": "white",
+                            "text-halo-width": 2,
+                            "text-opacity": 0.6,
+                        }}
+                    />
+                </>
             ) : (
                 <>
                     <Layer
@@ -178,23 +208,81 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
                         }}
                         layout={{"line-cap": "round", "line-join": "round"}}
                     />
+                    <Layer
+                        id="polyline-up-arrows-active"
+                        source="polyline-up"
+                        type="symbol"
+                        layout={{
+                            "symbol-placement": "line",
+                            "symbol-spacing": 100,
+                            "text-field": "▶",
+                            "text-font": ["Noto Sans Regular"],
+                            "text-size": [
+                                "interpolate", ["linear"], ["zoom"],
+                                10, 6,
+                                14, 12,
+                                18, 18
+                            ],
+                            "text-keep-upright": false,
+                            "text-rotation-alignment": "auto",
+                            "symbol-avoid-edges": false,
+                            "text-allow-overlap": true,
+                            "text-ignore-placement": true,
+                        }}
+                        paint={{
+                            "text-color": COLORS.ACTIVE_UP,
+                            "text-halo-color": "white",
+                            "text-halo-width": 2,
+                            "text-opacity": 0.9,
+                        }}
+                    />
                 </>
             )}
 
             <Source id="polyline-down" type="geojson" data={activeDownGeoJSON}/>
             {isNoBusRunning ? (
-                <Layer
-                    id="polyline-down-layer"
-                    source="polyline-down"
-                    type="line"
-                    paint={{
-                        "line-color": COLORS.ACTIVE_DOWN,
-                        "line-width": 4,
-                        "line-opacity": 0.7,
-                        "line-dasharray": [1.5, 2]
-                    }}
-                    layout={{"line-cap": "round", "line-join": "round"}}
-                />
+                <>
+                    <Layer
+                        id="polyline-down-layer"
+                        source="polyline-down"
+                        type="line"
+                        paint={{
+                            "line-color": COLORS.ACTIVE_DOWN,
+                            "line-width": 4,
+                            "line-opacity": 0.7,
+                            "line-dasharray": [1.5, 2]
+                        }}
+                        layout={{"line-cap": "round", "line-join": "round"}}
+                    />
+                    <Layer
+                        id="polyline-down-arrows-inactive"
+                        source="polyline-down"
+                        type="symbol"
+                        layout={{
+                            "symbol-placement": "line",
+                            "symbol-spacing": 80,
+                            "text-field": "▶",
+                            "text-font": ["Noto Sans Regular"],
+                            "text-size": [
+                                "interpolate", ["linear"], ["zoom"],
+                                10, 6,
+                                14, 12,
+                                18, 18
+                            ],
+                            "text-keep-upright": false,
+                            "text-rotation-alignment": "auto",
+                            "symbol-avoid-edges": false,
+                            "text-allow-overlap": true,
+                            "text-ignore-placement": true,
+                        }}
+                        paint={{
+                            "text-color": COLORS.ACTIVE_DOWN,
+                            "text-halo-color": "white",
+                            "text-halo-width": 2,
+                            "text-opacity": 0.6,
+                        }}
+                    />
+                </>
             ) : (
                 <>
                     <Layer
@@ -218,6 +306,34 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
                             "line-opacity": 1,
                         }}
                         layout={{"line-cap": "round", "line-join": "round"}}
+                    />
+                    <Layer
+                        id="polyline-down-arrows-active"
+                        source="polyline-down"
+                        type="symbol"
+                        layout={{
+                            "symbol-placement": "line",
+                            "symbol-spacing": 100,
+                            "text-field": "▶",
+                            "text-font": ["Noto Sans Regular"],
+                            "text-size": [
+                                "interpolate", ["linear"], ["zoom"],
+                                10, 6,
+                                14, 12,
+                                18, 18
+                            ],
+                            "text-keep-upright": false,
+                            "text-rotation-alignment": "auto",
+                            "symbol-avoid-edges": false,
+                            "text-allow-overlap": true,
+                            "text-ignore-placement": true,
+                        }}
+                        paint={{
+                            "text-color": COLORS.ACTIVE_DOWN,
+                            "text-halo-color": "white",
+                            "text-halo-width": 2,
+                            "text-opacity": 0.9,
+                        }}
                     />
                 </>
             )}

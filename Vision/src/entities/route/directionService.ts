@@ -64,7 +64,8 @@ export function resolveDirection(
     nodeord: number,
     routeid?: string | null
 ): DirectionCode {
-    if (!nodeid || typeof nodeid !== "string") return null;
+    if (!nodeid) return null;
+
     const normalizedNodeId = nodeid.trim();
     if (!normalizedNodeId) return null;
 

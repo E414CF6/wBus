@@ -106,8 +106,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
         // Log error details for debugging in development
         if (APP_CONFIG.IS_DEV) {
-            const msg = error instanceof Error ? error.message : String(error);
-            console.error(UI_TEXT.ERROR.UNKNOWN(msg), errorInfo);
+            console.error(UI_TEXT.ERROR.UNKNOWN(error.message), errorInfo);
         }
 
         // Trigger parent callback if provided (e.g., for analytics logging)
