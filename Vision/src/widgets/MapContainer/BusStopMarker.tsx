@@ -117,13 +117,13 @@ const BusStopMarkerItem = memo(({stop, onRouteChange}: BusStopMarkerItemProps) =
 
 BusStopMarkerItem.displayName = "BusStopMarkerItem";
 
-export default function BusStopMarker({
-                                          routeName,
-                                          onRouteChange
-                                      }: {
+export default ({
+                    routeName,
+                    onRouteChange
+                }: {
     routeName: string;
     onRouteChange?: (routeName: string) => void;
-}) {
+}) => {
     const stops = useBusStop(routeName);
     const {map} = useAppMapContext();
 
