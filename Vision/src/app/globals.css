@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
+@import "maplibre-gl/dist/maplibre-gl.css";
 
 :root {
     --background: #ffffff;
@@ -32,8 +32,8 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Leaflet Map Overrides */
-.leaflet-container {
+/* MapLibre Map Overrides */
+.maplibregl-map {
     z-index: 0;
     /* Ensure map is behind other UI elements */
     touch-action: manipulation;
@@ -62,7 +62,7 @@ body {
 }
 
 /* Custom Popup Styling */
-.leaflet-popup-content-wrapper {
+.maplibregl-popup-content {
     padding: 0 !important;
     overflow: hidden !important;
     border-radius: 28px !important;
@@ -71,29 +71,21 @@ body {
     background: rgba(255, 255, 255, 0.85) !important;
     backdrop-filter: blur(24px) !important;
     -webkit-backdrop-filter: blur(24px) !important;
-}
-
-.dark .leaflet-popup-content-wrapper {
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
-    background: rgba(17, 17, 17, 0.85) !important;
-}
-
-.leaflet-popup-content {
     margin: 0 !important;
     width: 100% !important;
     /* Ensure popup content font follows theme font */
     font-family: var(--font-sans, Arial, Helvetica, sans-serif), serif;
 }
 
-/* Remove and style popup tip (speech bubble tail) */
-.leaflet-popup-tip-container {
-    display: none;
+.dark .maplibregl-popup-content {
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+    background: rgba(17, 17, 17, 0.85) !important;
 }
 
-.leaflet-popup-tip {
-    background: var(--background);
-    /* Recommend using theme background color instead of white */
+/* Remove and style popup tip (speech bubble tail) */
+.maplibregl-popup-tip {
+    display: none;
 }
 
 /* Scrollbar Customization */

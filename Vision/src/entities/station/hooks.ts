@@ -96,7 +96,7 @@ export function useClosestStopOrd(routeName: string): number | null {
             setClosestOrd(Number.isFinite(ord) ? ord : null);
         };
 
-        map.whenReady(calculateClosest);
+        calculateClosest();
         map.on("moveend", calculateClosest);
 
         return () => {

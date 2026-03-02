@@ -207,18 +207,19 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
     }, []);
 
     const handleBusClick = useCallback((lat: number, lng: number) => {
-        map?.flyTo([lat, lng], map.getZoom(), {
-            animate: true,
-            duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS / 1000,
+        map?.flyTo({
+            center: [lng, lat],
+            zoom: map.getZoom(),
+            duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
         });
     }, [map]);
 
     const setMapScroll = useCallback((enabled: boolean) => {
-        if (!map?.scrollWheelZoom) return;
+        if (!map?.scrollZoom) return;
         if (enabled) {
-            map.scrollWheelZoom.enable();
+            map.scrollZoom.enable();
         } else {
-            map.scrollWheelZoom.disable();
+            map.scrollZoom.disable();
         }
     }, [map]);
 

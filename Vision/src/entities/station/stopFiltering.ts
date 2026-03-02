@@ -1,9 +1,9 @@
 import type { BusStop } from "@entities/station/types";
-import type { LatLngBounds } from "leaflet";
+import type { LngLatBounds } from "maplibre-gl";
 
 export function filterStopsByViewport(
     stops: BusStop[],
-    bounds: LatLngBounds,
+    bounds: LngLatBounds,
     zoom: number
 ): BusStop[] {
     const shouldFilterByDistance = zoom <= 12;
@@ -12,7 +12,7 @@ export function filterStopsByViewport(
     let filtered = stops.filter((stop) => {
         const lat = stop.gpslati;
         const lng = stop.gpslong;
-        return bounds.contains([lat, lng]);
+        return bounds.contains([lng, lat]);
     });
 
     if (shouldFilterByDistance && filtered.length > 0) {

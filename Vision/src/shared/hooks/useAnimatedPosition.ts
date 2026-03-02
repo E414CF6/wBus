@@ -3,13 +3,14 @@
 import { MAP_SETTINGS } from "@core/constants/env";
 import {
     calculateBearing,
+    type Coordinate,
     getApproxDistanceMeters,
     getEuclideanDistance,
     interpolateAngle,
-    snapPointToPolyline,
+    snapPointToPolyline
 } from "@shared/utils/geo";
 
-import type { LatLngTuple, Marker } from "leaflet";
+import type { Marker } from "maplibre-gl";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // ----------------------------------------------------------------------
@@ -17,7 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 // ----------------------------------------------------------------------
 
 interface AnimatedPositionState {
-    position: LatLngTuple;
+    position: Coordinate;
     angle: number;
 }
 
@@ -25,7 +26,7 @@ interface UseAnimatedPositionOptions {
     /** Animation duration in ms. Defaults to global setting. */
     duration?: number;
     /** The route path to snap the marker to. */
-    polyline?: LatLngTuple[];
+    polyline?: Coordinate[];
     /** If true, the marker is projected onto the polyline. */
     snapToPolyline?: boolean;
     /** Optional segment hint to keep snapping on the expected path. */
@@ -34,7 +35,7 @@ interface UseAnimatedPositionOptions {
     snapIndexRange?: number;
     /** Forces an immediate re-sync when the key changes (e.g. route change). */
     resetKey?: string | number;
-    /** Optional ref to Leaflet marker for direct DOM updates (bypasses React state for smoother animation) */
+    /** Optional ref to MapLibre marker for direct DOM updates (bypasses React state for smoother animation) */
     markerRef?: React.RefObject<Marker | null>;
 }
 
@@ -49,9 +50,6 @@ const STATE_UPDATE_THROTTLE_MS = 50;
 // Pure Helper Functions
 // ----------------------------------------------------------------------
 
-/**
- * Detects if the new position is "behind" the previous position along the path.
- */
 function isBackwardProgress(
     startSegIdx: number,
     startT: number,
@@ -63,17 +61,14 @@ function isBackwardProgress(
     return endT < startT - BACKWARD_T_EPSILON;
 }
 
-/**
- * Builds the animation path along the polyline from start to end.
- */
 function buildPolylinePath(
-    polyline: LatLngTuple[],
-    startPos: LatLngTuple,
+    polyline: Coordinate[],
+    startPos: Coordinate,
     startSegIdx: number,
-    endPos: LatLngTuple,
+    endPos: Coordinate,
     endSegIdx: number
-): LatLngTuple[] {
-    const path: LatLngTuple[] = [startPos];
+): Coordinate[] {
+    const path: Coordinate[] = [startPos];
 
     if (startSegIdx === endSegIdx) {
         path.push(endPos);
@@ -88,18 +83,13 @@ function buildPolylinePath(
         }
         path.push(endPos);
     } else {
-        // Backward: snap immediately without animation
         path.push(endPos);
     }
 
     return path;
 }
 
-/**
- * Precomputes cumulative distances along a path.
- * Returns the distances array and total distance.
- */
-function precomputePathDistances(path: LatLngTuple[]): { distances: number[]; totalDistance: number } {
+function precomputePathDistances(path: Coordinate[]): { distances: number[]; totalDistance: number } {
     if (path.length === 0) return {distances: [], totalDistance: 0};
     if (path.length === 1) return {distances: [0], totalDistance: 0};
 
@@ -112,16 +102,12 @@ function precomputePathDistances(path: LatLngTuple[]): { distances: number[]; to
     return {distances, totalDistance};
 }
 
-/**
- * Interpolates position and angle at a given progress (0-1) along a path.
- * Uses precomputed distances for efficiency.
- */
 function interpolateAlongPathWithCache(
-    path: LatLngTuple[],
+    path: Coordinate[],
     distances: number[],
     totalDistance: number,
     progress: number
-): { position: LatLngTuple; angle: number } {
+): { position: Coordinate; angle: number } {
     if (path.length === 0) return {position: [0, 0], angle: 0};
     if (path.length === 1) return {position: path[0], angle: 0};
 
@@ -132,7 +118,6 @@ function interpolateAlongPathWithCache(
     const clampedProgress = Math.max(0, Math.min(1, progress));
     const targetDistance = totalDistance * clampedProgress;
 
-    // Binary search for active segment (more efficient for long paths)
     let segIdx = 0;
     let low = 0;
     let high = distances.length - 1;
@@ -147,12 +132,10 @@ function interpolateAlongPathWithCache(
     }
     segIdx = low;
 
-    // Handle edge case when we're at the end
     if (segIdx >= path.length - 1) {
         segIdx = path.length - 2;
     }
 
-    // Interpolate within segment
     const segStart = distances[segIdx];
     const segEnd = distances[segIdx + 1] ?? segStart;
     const segLen = segEnd - segStart;
@@ -162,7 +145,7 @@ function interpolateAlongPathWithCache(
     const p1 = path[segIdx];
     const p2 = path[segIdx + 1] ?? p1;
 
-    const position: LatLngTuple = [
+    const position: Coordinate = [
         p1[0] + (p2[0] - p1[0]) * t,
         p1[1] + (p2[1] - p1[1]) * t,
     ];
@@ -172,10 +155,6 @@ function interpolateAlongPathWithCache(
     return {position, angle};
 }
 
-/**
- * Easing functions for animation
- * - Quart: Smoother deceleration, more natural movement
- */
 function easeOutQuart(t: number): number {
     return 1 - Math.pow(1 - t, 4);
 }
@@ -184,20 +163,8 @@ function easeOutQuart(t: number): number {
 // Hook Definition
 // ----------------------------------------------------------------------
 
-/**
- * Animates a marker's position smoothly along a polyline.
- *
- * Features:
- * - Snaps GPS positions to the nearest point on the route
- * - Animates along the polyline path (not straight lines)
- * - Handles backward movement (GPS jitter) gracefully
- * - Uses requestAnimationFrame for smooth 60fps animation
- * - Optionally updates Leaflet marker directly for smoother rendering
- * - Precomputes path distances for efficient interpolation
- * - Throttles React state updates to reduce re-renders
- */
 export function useAnimatedPosition(
-    targetPosition: LatLngTuple,
+    targetPosition: Coordinate,
     targetAngle: number,
     options: UseAnimatedPositionOptions = {}
 ): AnimatedPositionState {
@@ -211,7 +178,6 @@ export function useAnimatedPosition(
         markerRef,
     } = options;
 
-    // State: Current visual position (throttled updates for React)
     const [state, setState] = useState<AnimatedPositionState>(() => {
         if (shouldSnap && polyline.length >= 2) {
             const snapped = snapPointToPolyline(targetPosition, polyline, {
@@ -223,55 +189,43 @@ export function useAnimatedPosition(
         return {position: targetPosition, angle: targetAngle};
     });
 
-    // Refs for animation state
     const animationRef = useRef<number | null>(null);
     const isFirstRender = useRef(true);
     const hasInitialSnapped = useRef(false);
     const prevPolylineLengthRef = useRef(polyline.length);
-    const prevTargetRef = useRef<LatLngTuple>(targetPosition);
+    const prevTargetRef = useRef<Coordinate>(targetPosition);
     const prevSnapIndexRef = useRef<number | null>(snapIndexHint);
 
-    const currentPosRef = useRef<LatLngTuple>(targetPosition);
+    const currentPosRef = useRef<Coordinate>(targetPosition);
     const currentAngleRef = useRef<number>(targetAngle);
 
-    // Animation path data
-    const animationPathRef = useRef<LatLngTuple[]>([]);
+    const animationPathRef = useRef<Coordinate[]>([]);
     const animationStartTimeRef = useRef<number>(0);
     const animationStartAngleRef = useRef<number>(targetAngle);
     const animationEndAngleRef = useRef<number>(targetAngle);
-    const animationEndPosRef = useRef<LatLngTuple>(targetPosition);
+    const animationEndPosRef = useRef<Coordinate>(targetPosition);
     const resetKeyRef = useRef<string | number | undefined>(resetKey);
 
-    // Precomputed path distances for efficient interpolation
     const pathDistancesRef = useRef<number[]>([]);
     const pathTotalDistanceRef = useRef<number>(0);
 
-    // Throttle state updates
     const lastStateUpdateRef = useRef<number>(0);
 
-    /**
-     * Updates the Leaflet marker directly without going through React state.
-     * This provides smoother animation by avoiding React's reconciliation.
-     */
-    const updateMarkerDirect = useCallback((pos: LatLngTuple, angle: number) => {
+    const updateMarkerDirect = useCallback((pos: Coordinate, angle: number) => {
         const marker = markerRef?.current;
         if (!marker) return false;
 
         try {
-            // Update position directly on the Leaflet marker
-            marker.setLatLng(pos);
-
-            // Update rotation if the marker supports it (leaflet-rotatedmarker)
-            if (typeof (marker as Marker).setRotationAngle === "function") {
-                (marker as Marker).setRotationAngle(angle);
-            }
+            // maplibre-gl uses [lng, lat]
+            // pos is Coordinate which is [lat, lng]
+            marker.setLngLat([pos[1], pos[0]]);
+            marker.setRotation(angle);
             return true;
         } catch {
             return false;
         }
     }, [markerRef]);
 
-    // Handle route changes (reset key)
     useEffect(() => {
         if (resetKeyRef.current === resetKey) return;
         resetKeyRef.current = resetKey;
@@ -303,16 +257,14 @@ export function useAnimatedPosition(
         setState({position: nextPos, angle: nextAngle});
     }, [resetKey, targetPosition, targetAngle, polyline, shouldSnap, snapIndexHint, snapIndexRange]);
 
-    // Main animation effect
     useEffect(() => {
         const hasPolyline = polyline.length >= 2;
         const polylineJustLoaded = hasPolyline && prevPolylineLengthRef.current < 2;
         prevPolylineLengthRef.current = polyline.length;
 
-        // First render OR polyline just became available: snap immediately
         if (isFirstRender.current || (polylineJustLoaded && !hasInitialSnapped.current)) {
             isFirstRender.current = false;
-            let initPos: LatLngTuple = targetPosition;
+            let initPos: Coordinate = targetPosition;
             let initSnapIndex: number | null = snapIndexHint;
 
             if (shouldSnap && hasPolyline) {
@@ -324,7 +276,6 @@ export function useAnimatedPosition(
                 initSnapIndex ??= snapped.segmentIndex;
                 hasInitialSnapped.current = true;
 
-                // Also update marker directly for immediate visual feedback
                 updateMarkerDirect(initPos, targetAngle);
             }
 
@@ -336,7 +287,6 @@ export function useAnimatedPosition(
             return;
         }
 
-        // Check if position actually changed
         const prev = prevTargetRef.current;
         const isSamePosition = targetPosition[0] === prev[0] && targetPosition[1] === prev[1];
 
@@ -349,7 +299,6 @@ export function useAnimatedPosition(
             return;
         }
 
-        // Cancel any running animation
         if (animationRef.current !== null) {
             cancelAnimationFrame(animationRef.current);
         }
@@ -358,8 +307,8 @@ export function useAnimatedPosition(
         const startPos = currentPosRef.current;
         const startAngle = currentAngleRef.current;
 
-        let path: LatLngTuple[];
-        let endPos: LatLngTuple;
+        let path: Coordinate[];
+        let endPos: Coordinate;
         let endAngle: number;
 
         if (shouldSnap && hasPolyline) {
@@ -372,7 +321,6 @@ export function useAnimatedPosition(
                 searchRadius: snapIndexRange,
             });
 
-            // Handle backward movement (GPS jitter)
             const isBackward = isBackwardProgress(
                 startSnapped.segmentIndex,
                 startSnapped.t,
@@ -383,12 +331,10 @@ export function useAnimatedPosition(
             if (isBackward) {
                 const backMeters = getApproxDistanceMeters(startSnapped.position, endSnapped.position);
 
-                // Small jitter: ignore
                 if (backMeters <= BACKWARD_JITTER_METERS) {
                     return;
                 }
 
-                // Large jump: teleport immediately
                 currentPosRef.current = endSnapped.position;
                 currentAngleRef.current = endSnapped.angle;
                 prevSnapIndexRef.current = snapIndexHint ?? endSnapped.segmentIndex;
@@ -407,13 +353,11 @@ export function useAnimatedPosition(
             endAngle = endSnapped.angle;
             prevSnapIndexRef.current = snapIndexHint ?? endSnapped.segmentIndex;
         } else {
-            // Direct linear interpolation
             path = [startPos, targetPosition];
             endPos = targetPosition;
             endAngle = targetAngle;
         }
 
-        // Start animation with precomputed distances
         animationPathRef.current = path;
         const {distances, totalDistance} = precomputePathDistances(path);
         pathDistancesRef.current = distances;
@@ -428,10 +372,8 @@ export function useAnimatedPosition(
         const tick = (currentTime: number) => {
             const elapsed = currentTime - animationStartTimeRef.current;
             const rawProgress = Math.min(elapsed / duration, 1);
-            // Use quartic easing for smoother deceleration
             const progress = easeOutQuart(rawProgress);
 
-            // Use precomputed distances for interpolation
             const pathResult = interpolateAlongPathWithCache(
                 animationPathRef.current,
                 pathDistancesRef.current,
@@ -451,11 +393,8 @@ export function useAnimatedPosition(
             currentPosRef.current = pathResult.position;
             currentAngleRef.current = angle;
 
-            // Try direct marker update first (bypasses React for smoother animation)
             const directUpdateSuccess = updateMarkerDirect(pathResult.position, angle);
 
-            // Throttle React state updates to reduce re-renders
-            // Only update state if direct update failed or enough time has passed
             const timeSinceLastUpdate = currentTime - lastStateUpdateRef.current;
             const shouldUpdateState = !directUpdateSuccess ||
                 timeSinceLastUpdate >= STATE_UPDATE_THROTTLE_MS ||
@@ -469,7 +408,6 @@ export function useAnimatedPosition(
             if (rawProgress < 1) {
                 animationRef.current = requestAnimationFrame(tick);
             } else {
-                // Ensure final position is exact
                 currentPosRef.current = animationEndPosRef.current;
                 currentAngleRef.current = animationEndAngleRef.current;
                 updateMarkerDirect(animationEndPosRef.current, animationEndAngleRef.current);

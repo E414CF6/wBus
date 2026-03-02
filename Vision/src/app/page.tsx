@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 /**
  * Dynamically import MapWrapper & RouteLayer with SSR disabled.
- * Leaflet / react-leaflet / MapLibre all reference `window` at the module
+ * Leaflet / react-leaflet / MapLibre all reference `windows` at the module
  * level, so the entire map subtree must be kept out of server rendering.
  */
 const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {

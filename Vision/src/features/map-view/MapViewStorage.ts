@@ -1,17 +1,19 @@
 import { APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS } from "@core/constants/env";
-import L from "@shared/lib/leafletSetup";
+import type { MapRef } from "react-map-gl/maplibre";
 
 // ----------------------------------------------------------------------
 // Types & Constants
 // ----------------------------------------------------------------------
 
 export type StoredMapView = {
-    center: [number, number]; // [Latitude, Longitude]
+    latitude: number;
+    longitude: number;
     zoom: number;
 };
 
 const DEFAULT_MAP_VIEW: StoredMapView = {
-    center: MAP_SETTINGS.BOUNDS.DEFAULT_CENTER,
+    latitude: MAP_SETTINGS.BOUNDS.DEFAULT_CENTER[0],
+    longitude: MAP_SETTINGS.BOUNDS.DEFAULT_CENTER[1],
     zoom: MAP_SETTINGS.ZOOM.DEFAULT,
 };
 
@@ -59,12 +61,12 @@ export function loadStoredMapView(): StoredMapView | null {
         const parsed = JSON.parse(raw);
 
         // Structure Check
-        if (!parsed || !Array.isArray(parsed.center) || parsed.center.length !== 2) {
+        if (!parsed || parsed.latitude === undefined || parsed.longitude === undefined) {
             return null;
         }
 
-        const lat = Number(parsed.center[0]);
-        const lng = Number(parsed.center[1]);
+        const lat = Number(parsed.latitude);
+        const lng = Number(parsed.longitude);
         const zoom = Number(parsed.zoom);
 
         // Type Validity Check
@@ -73,9 +75,8 @@ export function loadStoredMapView(): StoredMapView | null {
         }
 
         // Logic Validity Check (Is it within the allowed map area?)
-        // Uses Leaflet's bounds check to ensure we don't load a view pointing to the middle of the ocean
-        const maxBounds = L.latLngBounds(MAP_SETTINGS.BOUNDS.MAX);
-        if (!maxBounds.contains([lat, lng])) {
+        const [[minLng, minLat], [maxLng, maxLat]] = MAP_SETTINGS.BOUNDS.MAX;
+        if (lat < minLat || lat > maxLat || lng < minLng || lng > maxLng) {
             if (APP_CONFIG.IS_DEV) {
                 console.warn("[MapViewStorage] Stored view is outside allowed bounds. Resetting to default.");
             }
@@ -83,7 +84,8 @@ export function loadStoredMapView(): StoredMapView | null {
         }
 
         return {
-            center: [lat, lng],
+            latitude: lat,
+            longitude: lng,
             zoom: clampZoom(zoom)
         };
 
@@ -96,19 +98,17 @@ export function loadStoredMapView(): StoredMapView | null {
 }
 
 /**
- * Creates a clean StoredMapView object from a Leaflet Map instance.
+ * Creates a clean StoredMapView object from a MapLibre MapRef instance.
  * Precision is reduced (toFixed) to save storage space.
  */
-export function createMapViewFromMap(map: L.Map): StoredMapView {
+export function createMapViewFromMap(map: MapRef): StoredMapView {
     const center = map.getCenter();
     const zoom = map.getZoom();
 
     return {
         // Keep 6 decimal places for coordinates (~10cm precision)
-        center: [
-            Number(center.lat.toFixed(6)),
-            Number(center.lng.toFixed(6))
-        ],
+        latitude: Number(center.lat.toFixed(6)),
+        longitude: Number(center.lng.toFixed(6)),
         // Keep 2 decimal places for zoom
         zoom: Number(clampZoom(zoom).toFixed(2)),
     };

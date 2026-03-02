@@ -3,18 +3,12 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import { MAP_SETTINGS } from "@core/constants/env";
-
-// Map Sub-components
-import MapContextBridge from "@features/map-view/MapContextBridge";
-import MapLibreBaseLayer from "@features/map-view/MapLibreBaseLayer";
-import MapViewPersistence from "@features/map-view/MapViewPersistence";
-
-import { getInitialMapView } from "@features/map-view/MapViewStorage";
-
-import type { LatLngBoundsExpression, LatLngExpression } from "leaflet";
-
-import React, { useCallback, useMemo, useRef } from "react";
-import { MapContainer, ZoomControl } from "react-leaflet";
+import { getMapStyleUrl } from "@features/map-view/getMapData";
+import { createMapViewFromMap, getInitialMapView, saveMapView } from "@features/map-view/MapViewStorage";
+import { useAppMapContext } from "@shared/context/AppMapContext";
+import maplibregl from "maplibre-gl";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import MapGL, { MapRef, NavigationControl } from "react-map-gl/maplibre";
 
 // ----------------------------------------------------------------------
 // Types
@@ -31,59 +25,65 @@ interface MapProps {
 // Main Component
 // ----------------------------------------------------------------------
 
-/**
- * Generic map shell component.
- * Responsible only for initializing the Leaflet map container, base layer,
- * and context bridge. Feature-specific layers (bus markers, polylines)
- * are passed in via `children` — keeping the map module decoupled from
- * feature modules.
- */
 export default function Map({onReady, children}: MapProps) {
-    // Ref to ensure the ready callback is fired exactly once
+    const mapRef = useRef<MapRef>(null);
+    const {setMap} = useAppMapContext();
     const readyOnceRef = useRef(false);
-
-    // Handler to signal parent that map is interactive
-    const handleReadyOnce = useCallback(() => {
-        if (readyOnceRef.current) return;
-        readyOnceRef.current = true;
-        onReady?.();
-    }, [onReady]);
 
     // Load saved view state (center/zoom) or default from config
     const initialView = useMemo(() => getInitialMapView(), []);
+    const mapStyleUrl = useMemo(() => getMapStyleUrl(), []);
 
-    // Static Map Options (Memoized to prevent MapContainer re-initialization)
-    const mapOptions = useMemo(() => ({
-        center: initialView.center as LatLngExpression,
+    const [viewState, setViewState] = useState({
+        longitude: initialView.longitude,
+        latitude: initialView.latitude,
         zoom: initialView.zoom,
-        minZoom: MAP_SETTINGS.ZOOM.MIN,
-        maxZoom: MAP_SETTINGS.ZOOM.MAX,
-        maxBounds: MAP_SETTINGS.BOUNDS.MAX as LatLngBoundsExpression,
-        maxBoundsViscosity: 1.0,
-        scrollWheelZoom: true,
-        preferCanvas: true,
-        zoomControl: false,
-    }), [initialView]);
+    });
+
+    const handleLoad = useCallback(() => {
+        if (readyOnceRef.current) return;
+        readyOnceRef.current = true;
+
+        if (mapRef.current) {
+            setMap(mapRef.current);
+        }
+
+        onReady?.();
+    }, [onReady, setMap]);
+
+    const handleMove = useCallback((evt: { viewState: typeof viewState }) => {
+        setViewState(evt.viewState);
+    }, []);
+
+    const handleMoveEnd = useCallback(() => {
+        if (mapRef.current) {
+            saveMapView(createMapViewFromMap(mapRef.current));
+        }
+    }, []);
+
+    // Cleanup map context on unmount
+    useEffect(() => {
+        return () => {
+            setMap(null);
+        };
+    }, [setMap]);
 
     return (
-        <MapContainer
-            {...mapOptions}
-            className="w-full h-full relative z-0"
+        <MapGL
+            ref={mapRef}
+            {...viewState}
+            onMove={handleMove}
+            onMoveEnd={handleMoveEnd}
+            onLoad={handleLoad}
+            mapStyle={mapStyleUrl}
+            mapLib={maplibregl}
+            minZoom={MAP_SETTINGS.ZOOM.MIN}
+            maxZoom={MAP_SETTINGS.ZOOM.MAX}
+            maxBounds={MAP_SETTINGS.BOUNDS.MAX as [maplibregl.LngLatLike, maplibregl.LngLatLike]}
+            style={{width: "100%", height: "100%", position: "relative", zIndex: 0}}
         >
-            {/* 1. UI Controls */}
-            <ZoomControl position="topright"/>
-
-            {/* 2. Logic & Base Layers */}
-            <MapContextBridge>
-                {/* Base Vector Tile Layer (MapLibre integration) */}
-                <MapLibreBaseLayer onReady={handleReadyOnce}/>
-
-                {/* Persist user's zoom/pan state */}
-                <MapViewPersistence/>
-
-                {/* 3. Feature Layers (injected via children) */}
-                {children}
-            </MapContextBridge>
-        </MapContainer>
+            <NavigationControl position="top-right" showCompass={false}/>
+            {children}
+        </MapGL>
     );
 }

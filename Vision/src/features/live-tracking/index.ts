@@ -8,7 +8,7 @@ export { useBusData } from "./useBusData";
 export { useBusLocationData } from "./useBusLocation";
 export { useBusSortedList } from "./useBusSortedList";
 export { useBusDirection, useStopExists, Direction, type DirectionCode } from "./useBusDirection";
-export { useIcons } from "./useBusIcons";
+
 
 // Polyline hooks
 export {

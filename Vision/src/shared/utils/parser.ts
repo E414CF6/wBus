@@ -28,7 +28,7 @@ export function getEnvBounds(key: string | undefined, fallbackRaw: string): [[nu
     const raw = key || fallbackRaw;
     const [swLat, swLng, neLat, neLng] = raw.split(",").map(Number);
     return [
-        [swLat, swLng],
-        [neLat, neLng],
+        [swLng, swLat],
+        [neLng, neLat],
     ];
 }

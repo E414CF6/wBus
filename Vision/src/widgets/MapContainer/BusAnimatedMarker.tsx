@@ -3,29 +3,26 @@
 import { MAP_SETTINGS } from "@core/constants/env";
 
 import { useAnimatedPosition } from "@shared/hooks/useAnimatedPosition";
-import L from "@shared/lib/leafletSetup";
-
-import { normalizeAngle } from "@shared/utils/geo";
-import type { DivIcon, Icon, LatLngTuple, LeafletEventHandlerFnMap } from "leaflet";
+import { type Coordinate, normalizeAngle } from "@shared/utils/geo";
+import type { Marker as MapLibreMarker } from "maplibre-gl";
 import { memo, useRef } from "react";
-import BusRotatedMarker from "./BusRotatedMarker";
+import { Marker } from "react-map-gl/maplibre";
 
 // ----------------------------------------------------------------------
 // Types
 // ----------------------------------------------------------------------
 
 interface BusAnimatedMarkerProps {
-    position: LatLngTuple;
+    position: Coordinate;
     rotationAngle: number;
-    icon: Icon | DivIcon;
-    polyline?: LatLngTuple[];
+    polyline?: Coordinate[];
     snapIndexHint?: number | null;
     snapIndexRange?: number;
     /** Animation duration in ms. Longer = smoother but more lag behind real-time data */
     animationDuration?: number;
     /** Force a re-sync when external state (like route) changes. */
     refreshKey?: string | number;
-    eventHandlers?: LeafletEventHandlerFnMap;
+    onClick?: () => void;
     children?: React.ReactNode;
 }
 
@@ -36,22 +33,21 @@ interface BusAnimatedMarkerProps {
 /**
  * A bus marker that smoothly animates along a polyline when its position updates.
  * Uses requestAnimationFrame for smooth 60fps animation.
- * Optimized with direct Leaflet marker updates to bypass React re-renders during animation.
+ * Optimized with direct MapLibre marker updates to bypass React re-renders during animation.
  */
 function BusAnimatedMarker({
                                position,
                                rotationAngle,
-                               icon,
                                polyline = [],
                                snapIndexHint,
                                snapIndexRange,
                                animationDuration = MAP_SETTINGS.ANIMATION.BUS_MOVE_MS,
                                refreshKey,
-                               eventHandlers,
+                               onClick,
                                children,
                            }: BusAnimatedMarkerProps) {
-    // Ref to Leaflet marker for direct DOM updates (bypasses React)
-    const markerRef = useRef<L.Marker | null>(null);
+    // Ref to MapLibre marker for direct DOM updates (bypasses React)
+    const markerRef = useRef<MapLibreMarker | null>(null);
 
     // Hook handles the interpolation loop (requestAnimationFrame)
     // Now with direct marker updates for smoother animation
@@ -71,16 +67,25 @@ function BusAnimatedMarker({
         }
     );
 
+    const handleMarkerClick = (e: mapboxgl.MapLayerMouseEvent | any) => {
+        if (e.originalEvent) {
+            e.originalEvent.stopPropagation();
+        }
+        onClick?.();
+    };
+
     return (
-        <BusRotatedMarker
+        <Marker
             ref={markerRef}
-            position={animatedPosition}
-            rotationAngle={normalizeAngle(animatedAngle)}
-            icon={icon}
-            eventHandlers={eventHandlers}
+            longitude={animatedPosition[1]}
+            latitude={animatedPosition[0]}
+            rotation={normalizeAngle(animatedAngle)}
+            onClick={handleMarkerClick}
+            anchor="center"
+            style={{pointerEvents: 'auto'}}
         >
             {children}
-        </BusRotatedMarker>
+        </Marker>
     );
 }
 

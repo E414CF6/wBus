@@ -1,17 +1,17 @@
 "use client";
 
-import type { Map } from "leaflet";
 import { createContext, ReactNode, useContext, useMemo, useState } from "react";
+import type { MapRef } from "react-map-gl/maplibre";
 
 // ----------------------------------------------------------------------
 // Types
 // ----------------------------------------------------------------------
 
 interface AppMapContextType {
-    /** The raw Leaflet Map instance. Null if not yet initialized. */
-    map: Map | null;
-    /** Setter for the Leaflet Map instance. */
-    setMap: (map: Map | null) => void;
+    /** The raw MapLibre Map instance. Null if not yet initialized. */
+    map: MapRef | null;
+    /** Setter for the MapLibre Map instance. */
+    setMap: (map: MapRef | null) => void;
 }
 
 interface AppMapContextProviderProps {
@@ -29,12 +29,12 @@ const AppMapContext = createContext<AppMapContextType | undefined>(undefined);
 // ----------------------------------------------------------------------
 
 /**
- * Custom hook to access the global Leaflet Map instance.
+ * Custom hook to access the global MapLibre Map instance.
  *
  * Usage:
  * - Access the `map` instance to perform imperative actions (panTo, fitBounds).
  *
- * @throws Error if used outside of <AppMapContextProvider>
+ * @throws Error if used outside <AppMapContextProvider>
  */
 export function useAppMapContext(): AppMapContextType {
     const context = useContext(AppMapContext);
@@ -51,15 +51,15 @@ export function useAppMapContext(): AppMapContextType {
 // ----------------------------------------------------------------------
 
 /**
- * Provider component that maintains the Leaflet map instance globally.
+ * Provider component that maintains the MapLibre map instance globally.
  *
  * Architecture Note:
- * Leaflet is imperative, while React is declarative. This provider holds the
- * imperative `map` object in state so that sibling components (Sidebar, Overlays)
- * can control the map without direct parent-child prop drilling.
+ * This provider holds the imperative `map` object in state so that sibling
+ * components (Sidebar, Overlays) can control the map without direct parent-child
+ * prop drilling.
  */
 export function AppMapContextProvider({children}: AppMapContextProviderProps) {
-    const [map, setMap] = useState<Map | null>(null);
+    const [map, setMap] = useState<MapRef | null>(null);
 
     const value = useMemo(() => ({
         map,
