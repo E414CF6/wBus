@@ -89,7 +89,7 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
     // Data Fetching
     const {map} = useAppMapContext();
     const routeIds = useRouteIds(routeName);
-    const {data: busList} = useBusLocationData(routeName);
+    const {data: busList, hasFetched} = useBusLocationData(routeName);
     const lastBoundsKeyRef = useRef<string | null>(null);
 
     // Determine active route IDs (routes with running buses)
@@ -111,7 +111,7 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
 
     // Styling Logic
     const hasActiveSegments = activeUpSegments.length > 0 || activeDownSegments.length > 0;
-    const isNoBusRunning = busList.length === 0;
+    const isNoBusRunning = hasFetched && busList.length === 0;
 
     const displayActiveUpSegments = hasActiveSegments ? activeUpSegments : inactiveUpSegments;
     const displayActiveDownSegments = hasActiveSegments ? activeDownSegments : inactiveDownSegments;

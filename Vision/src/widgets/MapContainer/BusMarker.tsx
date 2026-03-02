@@ -44,7 +44,7 @@ const BusIconDOM = memo(({routeNumber}: { routeNumber: string }) => {
                 alt="Bus"
             />
             <div
-                className="bus-route-text-container absolute top-[7px] left-1/2 -translate-x-1/2 bg-[#4f46e5] text-white text-[11px] font-extrabold px-1.5 py-[2px] rounded-lg border-[1.5px] border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] max-w-[26px] overflow-hidden whitespace-nowrap">
+                className="bus-route-text-container absolute top-1.75 left-1/2 -translate-x-1/2 bg-[#4f46e5] text-white text-[11px] font-extrabold px-1.5 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] max-w-6.5 overflow-hidden whitespace-nowrap">
                 <span className={needsMarquee ? "bus-route-text-animate" : ""}>
                     {routeNumber}
                     {needsMarquee && <>&nbsp;{routeNumber}&nbsp;</>}
