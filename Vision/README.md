@@ -11,7 +11,7 @@ interactive map to visualize bus locations and schedules for Wonju, South Korea.
 ## Core Features
 
 - **Live Bus Tracking**: Displays animated bus markers on an interactive map, updating their positions in real-time.
-- **Interactive Map**: Uses MapLibre for the base layer and React-Leaflet for overlays, providing a smooth, fast map
+- **Interactive Map**: Uses MapLibre for the base layer and React Map GL for overlays, providing a smooth, fast map
   experience.
 - **Route & Schedule Display**: Allows users to select specific bus routes, view their paths, and see detailed
   schedules.
@@ -27,10 +27,8 @@ interactive map to visualize bus locations and schedules for Wonju, South Korea.
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/) 4
 - **Mapping**:
-    - [React-Leaflet](https://react-leaflet.js.org/) for React integration.
-    - [MapLibre GL JS](https://maplibre.org/) for rendering map tiles.
-    - [Leaflet.RotatedMarker](https://github.com/bbecquet/Leaflet.RotatedMarker) for bus direction.
-    - `leaflet.marker.slideto` for smooth marker animations.
+  - [react-map-gl](https://visgl.github.io/react-map-gl/) for React integration.
+  - [MapLibre GL JS](https://maplibre.org/) for rendering map tiles.
 - **Linting/Formatting**: ESLint
 
 ## Getting Started
@@ -137,11 +135,8 @@ The `src` directory is organized by feature and domain to keep the codebase modu
 src/
 ├── app/            # Next.js App Router: pages, layouts, and global styles.
 ├── core/           # Core application logic: config, domain models, network clients.
-├── features/       # Feature-based modules (bus, map, schedule).
-│   ├── bus/        # Everything related to buses: components, hooks, services.
-│   ├── map/        # Map components, context, and utilities.
-│   └── schedule/   # Schedule-related UI and data hooks.
-└── shared/         # Shared components and utilities used across features.
-    ├── ui/         # Reusable, generic UI components (e.g., NavBar, Splash screen).
-    └── utils/      # General utility functions.
+├── entities/       # Domain entities (e.g., bus, route, station) and their specific UI components/hooks.
+├── features/       # Feature-based modules (e.g., arrival-info, live-tracking, map-view).
+├── shared/         # Shared components, hooks, context, and utilities used across features.
+└── widgets/        # Complex UI blocks composing multiple features and entities.
 ```

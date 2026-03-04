@@ -26,7 +26,7 @@ The resulting data is stored locally, ready for deployment to a static file host
 
 - **Rust** (2024 Edition or later)
 - **TAGO API Service Key**: A valid (decoded) service key from [data.go.kr](https://www.data.go.kr/).
-- **OSRM Backend**: An accessible OSRM instance for route snapping. A local setup is recommended for performance. See [OSRM.md](./OSRM.md) for setup instructions.
+- **OSRM Backend**: An accessible OSRM instance for route snapping. A local setup is recommended for performance. See [OSRM Setup Guide](../Route/README.md) for setup instructions.
 - **Network Access**: Internet connectivity to reach the TAGO API and the Wonju bus information website.
 
 ## Setup and Configuration
@@ -52,7 +52,7 @@ The resulting data is stored locally, ready for deployment to a static file host
     ```dotenv
     # .env
     DATA_GO_KR_SERVICE_KEY="YOUR_DECODED_TAGO_API_KEY"
-    OSRM_API_URL="http://localhost:5000/route/v1/driving"
+    OSRM_API_URL="http://localhost:4000/route/v1/driving"
     ```
 
 ## Usage
@@ -74,7 +74,7 @@ cargo run --release -- route
 
 - `--city-code <CODE>`: Set the city code for the API. (Default: `32020` for Wonju)
 - `--route <NUMBER>`: Process only a specific route number (e.g., `--route 2`).
-- `--output-dir <PATH>`: Specify a different output directory. (Default: `./storage/processed_routes`)
+- `--output-dir <PATH>`: Specify a different output directory. (Default: `./storage`)
 - `--station-map-only`: Only fetch data and generate `routeMap.json`, skipping the OSRM snapping process.
 - `--osrm-only`: Only perform OSRM snapping on existing raw route files, skipping the TAGO API fetch.
 
@@ -100,14 +100,12 @@ The processed data is saved in the `storage/` directory, organized as follows:
 
 ```text
 storage/
-├── processed_routes/
-│   ├── raw_routes/      # Raw GeoJSON routes from TAGO (intermediate)
-│   ├── snapped_routes/  # OSRM-snapped GeoJSON routes (final)
-│   └── routeMap.json    # Consolidated station and route metadata
-└── schedules/
-    ├── 2.json           # Schedule for route 2
-    ├── ...
-    └── 100.json
+├── cache/               # Intermediate API response data (cached)
+├── polylines/           # OSRM-snapped GeoJSON routes (final)
+├── schedules/           # Structured JSON schedules for each route
+├── routeMap.json        # Consolidated station and route metadata
+├── stationMap.json      # Detailed station information
+└── routeDetails.json    # Detailed route information
 ```
 
 ## Technical Notes

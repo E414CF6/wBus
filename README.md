@@ -148,10 +148,10 @@ Your local instance of wBus should now be running at `http://localhost:3000`.
   - **Core Libraries**: Tokio (Async), Reqwest (HTTP), Serde (Serialization), Scraper (HTML Parsing), Clap (CLI).
 
 - **Frontend (Vision)**:
-  - **Framework**: Next.js 15
+  - **Framework**: Next.js 16
   - **Language**: TypeScript
-  - **UI**: React 19, Tailwind CSS
-  - **Mapping**: React-Leaflet, MapLibre GL JS
+  - **UI**: React 19, Tailwind CSS 4
+  - **Mapping**: React Map GL, MapLibre GL JS
 
 ## License
 
