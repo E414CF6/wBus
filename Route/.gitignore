@@ -1,0 +1,3 @@
+# Ignore the storage directory and its contents
+/storage/**.osm.**
+/storage/**.osrm.**
