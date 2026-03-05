@@ -2,7 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use anyhow::Result;
 use chrono::Local;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 
 use crate::route::model::{BusRouteProcessor, RawRouteFile, RawStop, RouteProcessData};
 use crate::utils::{extract_items, parse_flexible_string};

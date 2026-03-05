@@ -18,3 +18,15 @@ pub const CONCURRENCY_SNAP: usize = 4;
 
 // OSRM chunk size (number of stops per request)
 pub const OSRM_CHUNK_SIZE: usize = 120;
+
+/// Default snapping radius for OSRM in meters
+pub const OSRM_SNAP_RADIUS: f64 = 30.0;
+
+/// OSRM Overview setting: full, simplified, or false
+pub const OSRM_OVERVIEW: &str = "full";
+
+/// OSRM Geometries format: polyline, polyline6, or geojson
+pub const OSRM_GEOMETRIES: &str = "geojson";
+
+/// OSRM Continue Straight setting: forces the route to keep going straight at waypoints
+pub const OSRM_CONTINUE_STRAIGHT: bool = true;

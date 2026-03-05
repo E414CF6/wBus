@@ -96,6 +96,8 @@ pub struct RouteIndices {
 pub struct FrontendMeta {
     #[serde(serialize_with = "round_f64_1")]
     pub total_dist: f64,
+    #[serde(serialize_with = "round_f64_1")]
+    pub total_time: f64,
     pub source_ver: String,
 }
 

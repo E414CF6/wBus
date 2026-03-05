@@ -57,6 +57,8 @@ impl BusRouteProcessor {
         // OSRM Logic (Merging)
         let mut full_coordinates: Vec<Vec<f64>> = Vec::new();
         let mut stop_to_coord: Vec<usize> = Vec::with_capacity(stops.len());
+        let mut total_osrm_dist = 0.0;
+        let mut total_osrm_duration = 0.0;
         let mut start_idx = 0;
 
         while start_idx < stops.len() - 1 {
@@ -67,8 +69,10 @@ impl BusRouteProcessor {
                 break;
             }
 
-            if let Some(coords) = self.fetch_osrm_route(chunk).await {
+            if let Some((coords, chunk_dist, chunk_dur)) = self.fetch_osrm_route(chunk).await {
                 let current_total = full_coordinates.len();
+                total_osrm_dist += chunk_dist;
+                total_osrm_duration += chunk_dur;
 
                 // Merge Geometry
                 let (to_append, _offset) = if current_total > 0 {
@@ -103,6 +107,39 @@ impl BusRouteProcessor {
                 }
 
                 full_coordinates.extend_from_slice(to_append);
+            } else {
+                log::warn!(
+                    "OSRM failed for chunk {}..{} (route_no: {}). Falling back to straight lines.",
+                    start_idx,
+                    end_idx - 1,
+                    route_no
+                );
+
+                for (i, stop) in chunk.iter().enumerate() {
+                    let global_stop_idx = start_idx + i;
+                    if global_stop_idx < stop_to_coord.len() {
+                        continue;
+                    }
+
+                    let current_total = full_coordinates.len();
+                    if i == 0 && current_total > 0 {
+                        // Already handled by the previous chunk's last point
+                        stop_to_coord.push(current_total - 1);
+                    } else {
+                        full_coordinates.push(vec![stop.gps_long, stop.gps_lat]);
+                        stop_to_coord.push(full_coordinates.len() - 1);
+                    }
+
+                    if i > 0 {
+                        let s_prev = &chunk[i - 1];
+                        total_osrm_dist += crate::utils::geo::meters_between(
+                            s_prev.gps_long,
+                            s_prev.gps_lat,
+                            stop.gps_long,
+                            stop.gps_lat,
+                        );
+                    }
+                }
             }
             start_idx = end_idx - 1;
         }
@@ -126,8 +163,14 @@ impl BusRouteProcessor {
             .cloned()
             .unwrap_or(optimized_coordinates.len() / 2);
 
-        // Calculate BBox & Distance using optimized coordinates
-        let (bbox, total_dist) = calculate_metrics(&optimized_coordinates);
+        // Calculate BBox & Distance
+        // We use OSRM reported distance if available, otherwise fallback to polyline calculation
+        let (bbox, geom_dist) = calculate_metrics(&optimized_coordinates);
+        let final_dist = if total_osrm_dist > 0.0 {
+            total_osrm_dist
+        } else {
+            geom_dist
+        };
 
         // Build Frontend Data Structures
         let frontend_stops: Vec<FrontendStop> = stops
@@ -159,7 +202,8 @@ impl BusRouteProcessor {
                         stop_to_coord,
                     },
                     meta: FrontendMeta {
-                        total_dist,
+                        total_dist: final_dist,
+                        total_time: total_osrm_duration,
                         source_ver: raw_data.fetched_at,
                     },
                 },
