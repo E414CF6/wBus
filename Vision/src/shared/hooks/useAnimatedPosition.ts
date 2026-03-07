@@ -38,8 +38,11 @@ interface UseAnimatedPositionOptions {
     resetKey?: string | number;
     /** Optional ref to MapLibre marker for direct DOM updates (bypasses React state for smoother animation) */
     markerRef?: React.RefObject<Marker | null>;
-    /** Polling interval in ms. Used for velocity-based forward projection to compensate for data delay. */
+    /** Polling interval in ms. Used to align animation duration with data arrival. */
     pollingIntervalMs?: number;
+    /** Estimated data delay in ms. How old the API data is when received.
+     *  This is the primary driver for forward projection distance. */
+    dataDelayMs?: number;
 }
 
 // Thresholds for backward movement detection
@@ -78,6 +81,21 @@ const VELOCITY_SMOOTHING = 0.4;           // EMA weight for new velocity samples
 const MIN_TARGET_INTERVAL_MS = 500;        // Ignore velocity calc for very rapid target changes
 const MAX_VELOCITY_EUCLIDEAN = 0.0003;     // Cap: ~33 m/s in coordinate units (~120 km/h)
 const DEFAULT_POLLING_INTERVAL_MS = 3000;  // Fallback polling interval
+const DEFAULT_DATA_DELAY_MS = 10000;       // Fallback data delay — how old the API data typically is
+
+// Acceleration estimation constants
+const ACCELERATION_SMOOTHING = 0.35;       // EMA weight for acceleration (slightly less responsive than velocity)
+const MAX_ACCELERATION = 0.0000002;        // Cap acceleration magnitude (coord-units/ms²)
+
+// Velocity consistency tracking — used to modulate projection confidence.
+// A bus at steady cruising speed should project aggressively; a bus with
+// erratic speed changes (stop-and-go) should project conservatively.
+const CONSISTENCY_WINDOW = 5;              // Track last N velocity samples for CV calculation
+const CONSISTENCY_RAMP_SAMPLES = 5;        // Need this many samples before full projection confidence
+
+// Angular smoothing constants
+const ANGULAR_LOOKAHEAD_THRESHOLD = 0.7;   // Start interpolating to next segment at 70% of current segment
+const ANGULAR_SMOOTHING_FACTOR = 0.15;     // EMA factor for frame-to-frame angle smoothing
 
 // ----------------------------------------------------------------------
 // Pure Helper Functions
@@ -177,13 +195,24 @@ function interpolateAlongPathWithCache(
 
     const p1 = path[segIdx];
     const p2 = path[segIdx + 1] ?? p1;
+    const p3 = path[segIdx + 2];
 
     const position: Coordinate = [
         p1[0] + (p2[0] - p1[0]) * t,
         p1[1] + (p2[1] - p1[1]) * t,
     ];
 
-    const angle = calculateBearing(p1, p2);
+    const angle1 = calculateBearing(p1, p2);
+    let angle = angle1;
+
+    // Angular Look-ahead: Start interpolating toward the NEXT segment's bearing
+    // as we approach the end of the current segment (e.g. last 30% of length).
+    // This allows the bus to start "turning its wheels" before the junction.
+    if (p3 && t > ANGULAR_LOOKAHEAD_THRESHOLD) {
+        const angle2 = calculateBearing(p2, p3);
+        const lookAheadProgress = (t - ANGULAR_LOOKAHEAD_THRESHOLD) / (1 - ANGULAR_LOOKAHEAD_THRESHOLD);
+        angle = interpolateAngle(angle1, angle2, lookAheadProgress);
+    }
 
     return {position, angle};
 }
@@ -206,6 +235,7 @@ export function useAnimatedPosition(
         resetKey,
         markerRef,
         pollingIntervalMs = DEFAULT_POLLING_INTERVAL_MS,
+        dataDelayMs = DEFAULT_DATA_DELAY_MS,
     } = options;
 
     const [state, setState] = useState<AnimatedPositionState>(() => {
@@ -259,6 +289,13 @@ export function useAnimatedPosition(
     const hasRawEndRef = useRef<boolean>(false);      // Whether raw end data has been initialized
     const effectiveDurationRef = useRef<number>(duration); // Per-animation effective duration
 
+    // Acceleration tracking — enables kinematic projection (s = v·t + ½·a·t²)
+    const accelerationEMARef = useRef<number>(0);     // Smoothed acceleration (coord-units/ms²)
+    const prevVelocityRef = useRef<number>(0);        // Previous velocity for acceleration calc
+
+    // Velocity consistency tracking — coefficient of variation over recent samples
+    const velocityHistoryRef = useRef<number[]>([]);  // Ring buffer of recent velocity samples
+
     const updateMarkerDirect = useCallback((pos: Coordinate, angle: number) => {
         const marker = markerRef?.current;
         if (!marker) return false;
@@ -289,6 +326,9 @@ export function useAnimatedPosition(
         velocitySamplesRef.current = 0;
         lastTargetChangeTimeRef.current = 0;
         hasRawEndRef.current = false;
+        accelerationEMARef.current = 0;
+        prevVelocityRef.current = 0;
+        velocityHistoryRef.current = [];
 
         const hasPolyline = polyline.length >= 2;
         let nextPos = targetPosition;
@@ -420,14 +460,17 @@ export function useAnimatedPosition(
                 velocityEMARef.current = 0;
                 velocitySamplesRef.current = 0;
                 lastTargetChangeTimeRef.current = 0;
+                accelerationEMARef.current = 0;
+                prevVelocityRef.current = 0;
+                velocityHistoryRef.current = [];
                 setState({position: endSnapped.position, angle: endSnapped.angle});
                 return;
             }
 
-            // ── Velocity estimation (EMA) ──
-            // Polling data is always behind real-time. By estimating velocity from
-            // consecutive raw positions, we can project forward to show the bus
-            // closer to where it *actually is* right now.
+            // ── Velocity & acceleration estimation (EMA) ──
+            // Polling data is always behind real-time. By estimating velocity AND
+            // acceleration from consecutive raw positions, we can project forward
+            // using kinematics to show the bus closer to where it *actually is*.
             const now = performance.now();
             const dtMs = lastTargetChangeTimeRef.current > 0
                 ? now - lastTargetChangeTimeRef.current : 0;
@@ -436,6 +479,8 @@ export function useAnimatedPosition(
             if (dtMs > MIN_TARGET_INTERVAL_MS && hasRawEndRef.current) {
                 const dist = getEuclideanDistance(rawEndPosRef.current, endSnapped.position);
                 const v = dist / dtMs;
+                const prevVelocity = velocityEMARef.current;
+
                 velocityEMARef.current = velocitySamplesRef.current === 0
                     ? Math.min(v, MAX_VELOCITY_EUCLIDEAN)
                     : Math.min(
@@ -443,6 +488,21 @@ export function useAnimatedPosition(
                         MAX_VELOCITY_EUCLIDEAN
                     );
                 velocitySamplesRef.current++;
+
+                // Track acceleration (change in velocity over time)
+                if (velocitySamplesRef.current >= 2 && dtMs > 0) {
+                    const rawAccel = (velocityEMARef.current - prevVelocity) / dtMs;
+                    const clampedAccel = Math.max(-MAX_ACCELERATION, Math.min(MAX_ACCELERATION, rawAccel));
+                    accelerationEMARef.current = prevVelocityRef.current === 0
+                        ? clampedAccel
+                        : ACCELERATION_SMOOTHING * clampedAccel + (1 - ACCELERATION_SMOOTHING) * accelerationEMARef.current;
+                }
+                prevVelocityRef.current = velocityEMARef.current;
+
+                // Track velocity history for consistency (coefficient of variation)
+                const history = velocityHistoryRef.current;
+                history.push(velocityEMARef.current);
+                if (history.length > CONSISTENCY_WINDOW) history.shift();
             }
 
             // Save raw (non-projected) snap data for next velocity calculation
@@ -451,20 +511,55 @@ export function useAnimatedPosition(
             rawEndTRef.current = endSnapped.t;
             hasRawEndRef.current = true;
 
-            // ── Forward projection ──
-            // The raw target is where the bus was ~pollingInterval ago.
-            // Project forward along the polyline by velocity × pollingInterval
-            // to estimate where the bus is *now*.
+            // ── Forward projection (kinematic with consistency-based confidence) ──
+            // The raw target is where the bus was ~dataDelayMs ago.
+            // Project forward using kinematics: s = v·t + ½·a·t²
+            // where t = dataDelayMs (not pollingInterval — we compensate for the
+            // full data staleness, not just the polling gap).
             let finalEndPos = endSnapped.position;
             let finalEndAngle = endSnapped.angle;
             let finalEndSegIdx = endSnapped.segmentIndex;
             let finalEndT = endSnapped.t;
 
             if (velocitySamplesRef.current > 0 && velocityEMARef.current > 0) {
-                // Scale projection by confidence: ramp up over first 3 samples
-                // to avoid overshooting from noisy initial velocity estimates.
-                const projectionConfidence = Math.min(velocitySamplesRef.current / 3, 1);
-                const projDist = velocityEMARef.current * pollingIntervalMs * projectionConfidence;
+                // ── Confidence: ramp-up × consistency ──
+                // Ramp up over first CONSISTENCY_RAMP_SAMPLES to avoid noisy early estimates.
+                const rampConfidence = Math.min(velocitySamplesRef.current / CONSISTENCY_RAMP_SAMPLES, 1);
+
+                // Velocity consistency: low CV → high confidence, high CV → low confidence.
+                // CV = stddev / mean. A steady 40 km/h bus → CV ≈ 0.05 → confidence ≈ 1.0
+                // A bus in stop-and-go traffic → CV ≈ 0.8 → confidence ≈ 0.5
+                let consistencyConfidence = 1;
+                const history = velocityHistoryRef.current;
+                if (history.length >= 3) {
+                    const mean = history.reduce((s, v) => s + v, 0) / history.length;
+                    if (mean > 0) {
+                        const variance = history.reduce((s, v) => s + (v - mean) ** 2, 0) / history.length;
+                        const cv = Math.sqrt(variance) / mean;
+                        // Map CV to confidence: CV=0 → 1.0, CV≥1.0 → 0.4 (never fully zero)
+                        consistencyConfidence = Math.max(0.4, 1 - cv * 0.6);
+                    }
+                }
+
+                const projectionConfidence = rampConfidence * consistencyConfidence;
+
+                // Kinematic projection: s = v·t + ½·a·t²
+                // Use dataDelayMs as projection time (compensates for full data staleness)
+                const t_proj = dataDelayMs;
+                const v = velocityEMARef.current;
+                const a = accelerationEMARef.current;
+
+                // Predicted velocity at end of projection: v_end = v + a·t
+                // If acceleration would make the bus go backward, clamp to zero.
+                const v_end = Math.max(0, v + a * t_proj);
+                // Distance: use average of current and predicted velocity × time
+                // This is equivalent to s = v·t + ½·a·t² but naturally clamps when v_end → 0
+                let projDist = ((v + v_end) / 2) * t_proj * projectionConfidence;
+
+                // Safety cap: never project more than what the bus could cover at max speed
+                const maxProjection = MAX_VELOCITY_EUCLIDEAN * dataDelayMs;
+                projDist = Math.min(projDist, maxProjection);
+
                 const projected = advanceAlongPolyline(
                     polyline, endSnapped.segmentIndex, endSnapped.t, projDist
                 );
@@ -531,10 +626,20 @@ export function useAnimatedPosition(
         // Coast speed: prefer EMA velocity if available, otherwise derive from path.
         // Reduce by COAST_ENTRY_SPEED_RATIO because smoothstep easing ends at ~0 velocity —
         // a full-speed coast would cause a visible speed jump at the Phase 1→2 boundary.
-        coastSpeedRef.current = (velocityEMARef.current > 0
+        // When decelerating (negative acceleration), further reduce coast speed so the
+        // marker naturally slows toward a stop; when accelerating, allow slightly more coast.
+        const baseCoastSpeed = (velocityEMARef.current > 0
                 ? velocityEMARef.current
                 : (totalDistance > 0 ? totalDistance / effectiveDurationRef.current : 0)
         ) * COAST_ENTRY_SPEED_RATIO;
+
+        // Acceleration-aware coast modulation:
+        // accelFactor ranges ~0.5 (strong decel) to ~1.3 (strong accel), centered at 1.0
+        const accelFactor = accelerationEMARef.current !== 0
+            ? Math.max(0.5, Math.min(1.3,
+                1 + (accelerationEMARef.current / (velocityEMARef.current || 1e-9)) * COAST_DECAY_TAU_MS))
+            : 1;
+        coastSpeedRef.current = baseCoastSpeed * accelFactor;
 
         // If the bus is likely stopped (very low velocity with enough samples),
         // disable coast entirely so the marker rests naturally.
@@ -552,13 +657,13 @@ export function useAnimatedPosition(
             const elapsed = currentTime - animationStartTimeRef.current;
             const animDuration = effectiveDurationRef.current;
             const linearProgress = Math.min(elapsed / animDuration, 1);
-            // Smoothstep easing: smooth acceleration → cruise → smooth deceleration.
-            // Mimics realistic bus motion and eliminates the jarring instant-speed
-            // start/stop of pure linear interpolation.
-            const easedProgress = linearProgress * linearProgress * (3 - 2 * linearProgress);
+
+            // Smootherstep easing: 2nd derivative continuous (zero acceleration at start/end)
+            // Formula: 6t^5 - 15t^4 + 10t^3.  More sophisticated than standard smoothstep.
+            const easedProgress = linearProgress * linearProgress * linearProgress * (linearProgress * (linearProgress * 6 - 15) + 10);
 
             let pos: Coordinate;
-            let angle: number;
+            let targetAngle: number;
 
             if (linearProgress < 1) {
                 // ── Phase 1: Eased interpolation along the precomputed path ──
@@ -570,7 +675,7 @@ export function useAnimatedPosition(
                 );
 
                 const usePathAngle = animationPathRef.current.length > 1;
-                angle = usePathAngle
+                targetAngle = usePathAngle
                     ? pathResult.angle
                     : interpolateAngle(
                         animationStartAngleRef.current,
@@ -583,9 +688,6 @@ export function useAnimatedPosition(
                 coastSpeedRef.current > 0
             ) {
                 // ── Phase 2: Coast forward with exponential deceleration ──
-                // Keeps the bus moving between polling intervals so it never "stops",
-                // but decelerates naturally to limit overshoot.
-                // v(t) = v0 * e^(-t/τ), integrated distance = v0 * τ * (1 - e^(-t/τ))
                 const coastElapsed = elapsed - animDuration;
                 const tau = COAST_DECAY_TAU_MS;
                 const coastDist = coastSpeedRef.current * tau * (1 - Math.exp(-coastElapsed / tau));
@@ -596,12 +698,17 @@ export function useAnimatedPosition(
                     coastDist
                 );
                 pos = coastResult.position;
-                angle = coastResult.angle;
+                targetAngle = coastResult.angle;
             } else {
                 // No polyline to coast along — finalize at end position
                 pos = animationEndPosRef.current;
-                angle = animationEndAngleRef.current;
+                targetAngle = animationEndAngleRef.current;
             }
+
+            // Apply Angular Inertia/Smoothing to currentAngleRef.current
+            // This makes the rotation "catch up" to the target angle over time
+            // instead of jumping, even if the target angle jumps between segments.
+            const angle = interpolateAngle(currentAngleRef.current, targetAngle, ANGULAR_SMOOTHING_FACTOR);
 
             currentPosRef.current = pos;
             currentAngleRef.current = angle;
@@ -640,7 +747,7 @@ export function useAnimatedPosition(
             }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [targetPosition[0], targetPosition[1], targetAngle, duration, polyline, shouldSnap, snapIndexHint, snapIndexRange, pollingIntervalMs, updateMarkerDirect]);
+    }, [targetPosition[0], targetPosition[1], targetAngle, duration, polyline, shouldSnap, snapIndexHint, snapIndexRange, pollingIntervalMs, dataDelayMs, updateMarkerDirect]);
 
     return state;
 }

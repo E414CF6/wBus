@@ -184,6 +184,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                         snapIndexRange={SNAP_INDEX_RANGE}
                         animationDuration={MAP_SETTINGS.ANIMATION.BUS_MOVE_MS}
                         pollingIntervalMs={API_CONFIG.LIVE.POLLING_INTERVAL_MS}
+                        dataDelayMs={API_CONFIG.LIVE.DATA_DELAY_MS}
                         refreshKey={refreshKey}
                         onClick={() => {
                             setSelectedBusKey(key);
