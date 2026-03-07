@@ -65,6 +65,15 @@ const OVERSHOOT_VELOCITY_DAMPEN = 0.3;
 // Maximum overshoot distance (meters) before we teleport instead of holding.
 const OVERSHOOT_HOLD_METERS = 50;
 
+// Coast entry speed ratio.  Smoothstep easing ends at ~0 velocity;
+// multiply the base coast speed by this factor so the Phase 1→2
+// transition doesn't jump from "nearly stopped" to "full speed".
+const COAST_ENTRY_SPEED_RATIO = 0.35;
+
+// Below this velocity (coord-units/ms, ≈ 2 km/h) the bus is likely
+// stopped at a bus stop — skip coast entirely so the marker rests.
+const STOP_VELOCITY_THRESHOLD = 0.000006;
+
 // Velocity estimation constants for forward projection.
 // Polling data is always behind real-time; these constants control how we
 // extrapolate forward to show the bus closer to its *current* position.
@@ -535,10 +544,19 @@ export function useAnimatedPosition(
         pathDistancesRef.current = distances;
         pathTotalDistanceRef.current = totalDistance;
 
-        // Coast speed: prefer EMA velocity if available, otherwise derive from path
-        coastSpeedRef.current = velocityEMARef.current > 0
-            ? velocityEMARef.current
-            : (totalDistance > 0 ? totalDistance / effectiveDurationRef.current : 0);
+        // Coast speed: prefer EMA velocity if available, otherwise derive from path.
+        // Reduce by COAST_ENTRY_SPEED_RATIO because smoothstep easing ends at ~0 velocity —
+        // a full-speed coast would cause a visible speed jump at the Phase 1→2 boundary.
+        coastSpeedRef.current = (velocityEMARef.current > 0
+                ? velocityEMARef.current
+                : (totalDistance > 0 ? totalDistance / effectiveDurationRef.current : 0)
+        ) * COAST_ENTRY_SPEED_RATIO;
+
+        // If the bus is likely stopped (very low velocity with enough samples),
+        // disable coast entirely so the marker rests naturally.
+        if (velocitySamplesRef.current >= 2 && velocityEMARef.current < STOP_VELOCITY_THRESHOLD) {
+            coastSpeedRef.current = 0;
+        }
 
         animationStartTimeRef.current = performance.now();
         animationStartAngleRef.current = startAngle;
@@ -549,18 +567,22 @@ export function useAnimatedPosition(
         const tick = (currentTime: number) => {
             const elapsed = currentTime - animationStartTimeRef.current;
             const animDuration = effectiveDurationRef.current;
-            const rawProgress = Math.min(elapsed / animDuration, 1);
+            const linearProgress = Math.min(elapsed / animDuration, 1);
+            // Smoothstep easing: smooth acceleration → cruise → smooth deceleration.
+            // Mimics realistic bus motion and eliminates the jarring instant-speed
+            // start/stop of pure linear interpolation.
+            const easedProgress = linearProgress * linearProgress * (3 - 2 * linearProgress);
 
             let pos: Coordinate;
             let angle: number;
 
-            if (rawProgress < 1) {
-                // ── Phase 1: Linear interpolation along the precomputed path ──
+            if (linearProgress < 1) {
+                // ── Phase 1: Eased interpolation along the precomputed path ──
                 const pathResult = interpolateAlongPathWithCache(
                     animationPathRef.current,
                     pathDistancesRef.current,
                     pathTotalDistanceRef.current,
-                    rawProgress // linear — constant speed, no easing
+                    easedProgress
                 );
 
                 const usePathAngle = animationPathRef.current.length > 1;
@@ -569,7 +591,7 @@ export function useAnimatedPosition(
                     : interpolateAngle(
                         animationStartAngleRef.current,
                         animationEndAngleRef.current,
-                        rawProgress
+                        easedProgress
                     );
                 pos = pathResult.position;
             } else if (
@@ -603,7 +625,7 @@ export function useAnimatedPosition(
             const directUpdateSuccess = updateMarkerDirect(pos, angle);
 
             // Determine if the animation loop should end
-            const isFinished = rawProgress >= 1 && (
+            const isFinished = linearProgress >= 1 && (
                 coastPolylineRef.current.length < 2 ||
                 coastSpeedRef.current <= 0 ||
                 (elapsed - animDuration) >= MAX_COAST_MS
