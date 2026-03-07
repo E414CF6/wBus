@@ -8,7 +8,7 @@ import {
     getApproxDistanceMeters,
     getEuclideanDistance,
     interpolateAngle,
-    snapPointToPolyline
+    snapPointToPolyline,
 } from "@shared/utils/geo";
 
 import type { Marker } from "maplibre-gl";
@@ -51,7 +51,19 @@ const STATE_UPDATE_THROTTLE_MS = 50;
 
 // Maximum duration (ms) to coast along the polyline after interpolation completes.
 // Covers delayed polling responses without pushing the marker too far.
-const MAX_COAST_MS = 5000;
+const MAX_COAST_MS = 3000;
+
+// Time constant (ms) for exponential decay during coast phase.
+// Coast speed decays as v(t) = v0 * e^(-t/τ), preventing overshoot
+// while keeping the marker moving smoothly between polling updates.
+const COAST_DECAY_TAU_MS = 1500;
+
+// How much to multiply velocity EMA when an overshoot is detected.
+// Dampens future projection/coast to prevent repeated overshoots.
+const OVERSHOOT_VELOCITY_DAMPEN = 0.3;
+
+// Maximum overshoot distance (meters) before we teleport instead of holding.
+const OVERSHOOT_HOLD_METERS = 50;
 
 // Velocity estimation constants for forward projection.
 // Polling data is always behind real-time; these constants control how we
@@ -443,7 +455,10 @@ export function useAnimatedPosition(
             let finalEndT = endSnapped.t;
 
             if (velocitySamplesRef.current > 0 && velocityEMARef.current > 0) {
-                const projDist = velocityEMARef.current * pollingIntervalMs;
+                // Scale projection by confidence: ramp up over first 3 samples
+                // to avoid overshooting from noisy initial velocity estimates.
+                const projectionConfidence = Math.min(velocitySamplesRef.current / 3, 1);
+                const projDist = velocityEMARef.current * pollingIntervalMs * projectionConfidence;
                 const projected = advanceAlongPolyline(
                     polyline, endSnapped.segmentIndex, endSnapped.t, projDist
                 );
@@ -451,6 +466,37 @@ export function useAnimatedPosition(
                 finalEndAngle = projected.angle;
                 finalEndSegIdx = projected.segmentIndex;
                 finalEndT = projected.t;
+            }
+
+            // ── Overshoot detection ──
+            // Coast or forward projection may have pushed the animated marker
+            // ahead of the new target. Detect and prevent backward animation.
+            const isAnimatedAhead = isBackwardProgress(
+                startSnapped.segmentIndex, startSnapped.t,
+                finalEndSegIdx, finalEndT
+            );
+
+            if (isAnimatedAhead) {
+                velocityEMARef.current *= OVERSHOOT_VELOCITY_DAMPEN;
+                coastSpeedRef.current = 0;
+
+                const overshootMeters = getApproxDistanceMeters(
+                    startSnapped.position, finalEndPos
+                );
+
+                if (overshootMeters <= OVERSHOOT_HOLD_METERS) {
+                    // Small overshoot: hold position, next poll will catch up
+                    prevSnapIndexRef.current = snapIndexHint ?? startSnapped.segmentIndex;
+                    return;
+                }
+
+                // Larger overshoot: teleport to corrected position
+                currentPosRef.current = finalEndPos;
+                currentAngleRef.current = finalEndAngle;
+                prevSnapIndexRef.current = snapIndexHint ?? finalEndSegIdx;
+                updateMarkerDirect(finalEndPos, finalEndAngle);
+                setState({position: finalEndPos, angle: finalEndAngle});
+                return;
             }
 
             path = buildPolylinePath(
@@ -530,10 +576,13 @@ export function useAnimatedPosition(
                 coastPolylineRef.current.length >= 2 &&
                 coastSpeedRef.current > 0
             ) {
-                // ── Phase 2: Coast forward along the polyline at estimated speed ──
-                // Keeps the bus moving between polling intervals so it never "stops".
+                // ── Phase 2: Coast forward with exponential deceleration ──
+                // Keeps the bus moving between polling intervals so it never "stops",
+                // but decelerates naturally to limit overshoot.
+                // v(t) = v0 * e^(-t/τ), integrated distance = v0 * τ * (1 - e^(-t/τ))
                 const coastElapsed = elapsed - animDuration;
-                const coastDist = coastSpeedRef.current * coastElapsed;
+                const tau = COAST_DECAY_TAU_MS;
+                const coastDist = coastSpeedRef.current * tau * (1 - Math.exp(-coastElapsed / tau));
                 const coastResult = advanceAlongPolyline(
                     coastPolylineRef.current,
                     coastEndSegIdxRef.current,
