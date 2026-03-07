@@ -62,9 +62,6 @@ const COAST_DECAY_TAU_MS = 1500;
 // Dampens future projection/coast to prevent repeated overshoots.
 const OVERSHOOT_VELOCITY_DAMPEN = 0.3;
 
-// Maximum overshoot distance (meters) before we teleport instead of holding.
-const OVERSHOOT_HOLD_METERS = 50;
-
 // Coast entry speed ratio.  Smoothstep easing ends at ~0 velocity;
 // multiply the base coast speed by this factor so the Phase 1→2
 // transition doesn't jump from "nearly stopped" to "full speed".
@@ -486,25 +483,12 @@ export function useAnimatedPosition(
             );
 
             if (isAnimatedAhead) {
+                // Polling data is behind our interpolated position — hold current
+                // position so the marker never jumps backward. Mildly dampen
+                // velocity to gradually align projection with reality.
                 velocityEMARef.current *= OVERSHOOT_VELOCITY_DAMPEN;
                 coastSpeedRef.current = 0;
-
-                const overshootMeters = getApproxDistanceMeters(
-                    startSnapped.position, finalEndPos
-                );
-
-                if (overshootMeters <= OVERSHOOT_HOLD_METERS) {
-                    // Small overshoot: hold position, next poll will catch up
-                    prevSnapIndexRef.current = snapIndexHint ?? startSnapped.segmentIndex;
-                    return;
-                }
-
-                // Larger overshoot: teleport to corrected position
-                currentPosRef.current = finalEndPos;
-                currentAngleRef.current = finalEndAngle;
-                prevSnapIndexRef.current = snapIndexHint ?? finalEndSegIdx;
-                updateMarkerDirect(finalEndPos, finalEndAngle);
-                setState({position: finalEndPos, angle: finalEndAngle});
+                prevSnapIndexRef.current = snapIndexHint ?? startSnapped.segmentIndex;
                 return;
             }
 
