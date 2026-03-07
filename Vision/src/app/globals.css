@@ -147,6 +147,42 @@ body {
     animation-play-state: paused;
 }
 
+/* PopupMarquee (MarqueeText.tsx) – pause-scroll-pause cycle */
+@keyframes marqueeScroll {
+    0% {
+        transform: translateX(0);
+    }
+    /* Hold still for the first 20% of the cycle (~2s) */
+    20% {
+        transform: translateX(0);
+    }
+    /* Scroll from 20% to 80% (~6s of movement) */
+    80% {
+        transform: translateX(-50%);
+    }
+    /* Hold still at the end for the last 20% (~2s) */
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.marquee-scroll {
+    display: flex;
+    width: max-content;
+    animation: marqueeScroll 10s linear infinite;
+}
+
+/* Accessibility: disable all marquee animations for users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    .bus-marker-with-label .bus-route-text-animate {
+        animation: none;
+    }
+
+    .marquee-scroll {
+        animation: none;
+    }
+}
+
 /* Bus route polyline dash flow animation */
 @keyframes polylineDashFlow {
     0% {

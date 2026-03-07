@@ -41,7 +41,7 @@ const DefaultErrorFallback: React.FC<DefaultFallbackProps> = ({error, onRetry}) 
             <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full">
                 {/* Icon */}
                 <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
-                    <span className="text-2xl" role="img" aria-label="Error">⚠️</span>
+                    <span className="text-2xl" role="img" aria-label={UI_TEXT.ACCESSIBILITY.ERROR_ICON}>⚠️</span>
                 </div>
 
                 {/* Title & Message */}

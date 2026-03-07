@@ -1,6 +1,6 @@
 "use client";
 
-import { MAP_SETTINGS } from "@core/constants/env";
+import { API_CONFIG, MAP_SETTINGS } from "@core/constants/env";
 import { UI_TEXT } from "@core/constants/locale";
 import { getDirectionIcon } from "@entities/bus/directionIcons";
 
@@ -41,7 +41,7 @@ const BusIconDOM = memo(({routeNumber}: { routeNumber: string }) => {
                 width={w}
                 height={h}
                 className="transition-transform duration-300 ease-in-out"
-                alt="Bus"
+                alt={UI_TEXT.ACCESSIBILITY.BUS_ICON_ALT}
             />
             <div
                 className="bus-route-text-container absolute top-1.75 left-1/2 -translate-x-1/2 bg-[#4f46e5] text-white text-[11px] font-extrabold px-1.5 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] max-w-6.5 overflow-hidden whitespace-nowrap">
@@ -183,6 +183,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                         snapIndexHint={snapIndexHint}
                         snapIndexRange={SNAP_INDEX_RANGE}
                         animationDuration={MAP_SETTINGS.ANIMATION.BUS_MOVE_MS}
+                        pollingIntervalMs={API_CONFIG.LIVE.POLLING_INTERVAL_MS}
                         refreshKey={refreshKey}
                         onClick={() => {
                             setSelectedBusKey(key);

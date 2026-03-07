@@ -47,7 +47,7 @@ export default function Splash({
                 {showLoader && (
                     <div
                         className="mb-8"
-                        aria-label="Loading application"
+                        aria-label={UI_TEXT.ACCESSIBILITY.LOADING_APP}
                     >
                         <div
                             className="w-14 h-14 border-4 border-white/30 border-t-white rounded-full animate-spin shadow-2xl"/>

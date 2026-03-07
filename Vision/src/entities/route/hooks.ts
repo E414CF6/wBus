@@ -105,7 +105,7 @@ export function useScheduleData(routeId: string | null) {
 
                 // Log error in Dev mode
                 if (APP_CONFIG.IS_DEV) {
-                    console.error(UI_TEXT.ERROR.FETCH_FAILED("Schedule Data", 500), err);
+                    console.error(UI_TEXT.ERROR.FETCH_FAILED(UI_TEXT.DATA_LABELS.SCHEDULE_DATA, 500), err);
                 }
 
                 setSnapshot({

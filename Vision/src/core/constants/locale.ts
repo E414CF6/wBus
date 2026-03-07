@@ -68,6 +68,11 @@ export const UI_TEXT = {
         BUS_LOCATION_DESC: '지도에서 실시간으로 버스 위치를 확인하세요.',
     },
 
+    STOP_POPUP: {
+        STATION_ID_LABEL: '정류장 ID',
+        STATION_ID_FALLBACK: 'N/A',
+    },
+
     // User-facing Error Messages
     ERROR: {
         TITLE: '문제가 발생했습니다',
@@ -89,6 +94,18 @@ export const UI_TEXT = {
     NOTICE: {
         SECTION_TITLE: '공지사항',
         NO_NOTICES: '공지사항이 없습니다.'
+    },
+
+    ACCESSIBILITY: {
+        MAIN_NAV: '메인 내비게이션',
+        LOADING_APP: '앱 로딩 중',
+        TOGGLE_SCHEDULE: '시간표 토글',
+        ERROR_ICON: '오류',
+        BUS_ICON_ALT: '버스',
+    },
+
+    DATA_LABELS: {
+        SCHEDULE_DATA: '시간표 데이터',
     },
 
     FOOTER: {

@@ -5,7 +5,13 @@ type PopupMarqueeProps = {
     maxWidthClass?: string;
 };
 
-// Marquee Component
+/**
+ * A text component that scrolls horizontally (marquee) only when the content
+ * overflows its container. Includes:
+ * - Pause-scroll-pause cycle for readability (not a constant infinite scroll)
+ * - `prefers-reduced-motion` support (falls back to truncation)
+ * - ResizeObserver-based overflow detection
+ */
 const PopupMarquee = ({text, maxWidthClass = "max-w-full"}: PopupMarqueeProps) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const textRef = useRef<HTMLSpanElement>(null);
@@ -17,8 +23,6 @@ const PopupMarquee = ({text, maxWidthClass = "max-w-full"}: PopupMarqueeProps) =
         if (!container || !textEl || typeof ResizeObserver === "undefined") return;
 
         const checkOverflow = () => {
-            // scrollWidth of textEl gives the true width of a single text span.
-            // If currently marqueeing, it includes pr-6 (24px) padding, which provides a nice hysteresis.
             setShouldMarquee(textEl.scrollWidth > container.clientWidth);
         };
 
@@ -33,22 +37,10 @@ const PopupMarquee = ({text, maxWidthClass = "max-w-full"}: PopupMarqueeProps) =
     return (
         <div
             ref={containerRef}
-            className={`popup-marquee-container overflow-hidden inline-block align-middle ${maxWidthClass}`}
+            className={`marquee-container overflow-hidden inline-block align-middle ${maxWidthClass}`}
         >
-            <style>{`
-                @keyframes infinite-scroll {
-                    0% { transform: translateX(0); }
-                    100% { transform: translateX(-50%); }
-                }
-                .animate-infinite-scroll {
-                    animation: infinite-scroll 6s linear infinite;
-                    display: flex;
-                    width: max-content;
-                }
-            `}</style>
-
             {shouldMarquee ? (
-                <div className="animate-infinite-scroll flex-nowrap">
+                <div className="marquee-scroll flex-nowrap">
                     <span ref={textRef} className="pr-6 font-medium whitespace-nowrap shrink-0">
                         {text}
                     </span>

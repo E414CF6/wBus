@@ -84,9 +84,9 @@ const BusStopMarkerItem = memo(({stop, onRouteChange}: BusStopMarkerItemProps) =
                                         </h3>
                                         <div className="flex items-center gap-1.5 mt-1 text-gray-500">
                                             <span
-                                                className="text-[10px] font-bold uppercase tracking-widest">Station ID</span>
+                                                className="text-[10px] font-bold uppercase tracking-widest">{UI_TEXT.STOP_POPUP.STATION_ID_LABEL}</span>
                                             <span
-                                                className="text-[11px] font-mono font-semibold">{stop.nodeno || "N/A"}</span>
+                                                className="text-[11px] font-mono font-semibold">{stop.nodeno || UI_TEXT.STOP_POPUP.STATION_ID_FALLBACK}</span>
                                         </div>
                                     </div>
                                 </div>

@@ -141,7 +141,7 @@ const SchedulePreview = ({data, loading, isOpen, onToggle}: SchedulePreviewProps
                     <button
                         onClick={onToggle}
                         className="transition-transform active:scale-95 focus:outline-none shrink min-w-0"
-                        aria-label="Toggle Schedule"
+                        aria-label={UI_TEXT.ACCESSIBILITY.TOGGLE_SCHEDULE}
                     >
                         <Pill tone={isOpen ? "solid" : "soft"} size="sm">
                             <div className="flex items-center truncate">

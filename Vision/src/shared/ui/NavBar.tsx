@@ -1,6 +1,7 @@
 "use client";
 
 import { APP_CONFIG } from "@core/constants/env";
+import { UI_TEXT } from "@core/constants/locale";
 import { MapIcon } from "lucide-react";
 
 interface NavBarProps {
@@ -14,7 +15,7 @@ interface NavBarProps {
 export default function NavBar({className = ""}: NavBarProps) {
     return (
         <nav
-            aria-label="Main Navigation"
+            aria-label={UI_TEXT.ACCESSIBILITY.MAIN_NAV}
             className={`absolute top-[env(safe-area-inset-top,1rem)] left-4 z-50 mt-4 ${className}`}
         >
             <div

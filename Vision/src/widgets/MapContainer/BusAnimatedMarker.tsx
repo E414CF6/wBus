@@ -20,6 +20,8 @@ interface BusAnimatedMarkerProps {
     snapIndexRange?: number;
     /** Animation duration in ms. Longer = smoother but more lag behind real-time data */
     animationDuration?: number;
+    /** Polling interval in ms. Used for velocity-based forward projection. */
+    pollingIntervalMs?: number;
     /** Force a re-sync when external state (like route) changes. */
     refreshKey?: string | number;
     onClick?: () => void;
@@ -42,6 +44,7 @@ function BusAnimatedMarker({
                                snapIndexHint,
                                snapIndexRange,
                                animationDuration = MAP_SETTINGS.ANIMATION.BUS_MOVE_MS,
+                               pollingIntervalMs,
                                refreshKey,
                                onClick,
                                children,
@@ -64,6 +67,8 @@ function BusAnimatedMarker({
             snapIndexRange,
             // Pass marker ref for direct DOM updates during animation
             markerRef,
+            // Pass polling interval for velocity-based forward projection
+            pollingIntervalMs,
         }
     );
 

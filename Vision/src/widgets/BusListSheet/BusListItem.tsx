@@ -3,7 +3,6 @@ import { UI_TEXT } from "@core/constants/locale";
 import type { BusItem } from "@entities/bus/types";
 import type { DirectionCode } from "@features/live-tracking/useBusDirection";
 
-import PopupMarquee from "@shared/ui/MarqueeText";
 import Pill from "@shared/ui/Pill";
 import { ArrowDown, ArrowUp, HelpCircle } from "lucide-react";
 import React from "react";
@@ -51,9 +50,9 @@ export const BusListItem = React.memo(({bus, routeName, getDirection, onClick}: 
 
                 <div
                     className="flex items-center gap-2 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100 text-right min-w-0 flex-1 justify-end transition-colors">
-                    <div className="text-[13px] font-medium max-w-[100px]">
-                        <PopupMarquee text={stopName}/>
-                    </div>
+                    <span className="text-[13px] font-medium truncate min-w-0" title={stopName}>
+                        {stopName}
+                    </span>
                     <div className="shrink-0">
                         {directionIcon}
                     </div>
