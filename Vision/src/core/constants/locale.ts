@@ -29,6 +29,7 @@ export const UI_TEXT = {
         BACK_LIST: '목록으로 돌아가기',
         SHOW_LIST: '버스 목록 보기',
         HIDE_LIST: '버스 목록 숨기기',
+        BUS_LIST_LABEL: '버스 목록',
     },
 
     SCHEDULE: {

@@ -303,7 +303,15 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
                         <button onClick={() => togglePanel("bus")}
                                 className="focus:outline-none active:scale-95 transition-transform">
                             <Pill tone={isBusExpanded ? "solid" : "soft"} size="sm" className="font-bold shadow-sm">
-                                {isBusExpanded ? UI_TEXT.NAV.HIDE_LIST : UI_TEXT.NAV.SHOW_LIST}
+                                <div className="flex items-center">
+                                    <span>{UI_TEXT.NAV.BUS_LIST_LABEL}</span>
+                                    <svg
+                                        className={`w-3 h-3 ml-1.5 opacity-70 transition-transform duration-200 shrink-0 ${isBusExpanded ? "rotate-180" : ""}`}
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </div>
                             </Pill>
                         </button>
                     </div>
