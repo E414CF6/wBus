@@ -90,6 +90,7 @@ function BusAnimatedMarker({
             longitude={animatedPosition[1]}
             latitude={animatedPosition[0]}
             rotation={normalizeAngle(animatedAngle)}
+            rotationAlignment="map"
             onClick={handleMarkerClick}
             anchor="center"
             style={{pointerEvents: 'auto'}}

@@ -9,12 +9,14 @@ export type StoredMapView = {
     latitude: number;
     longitude: number;
     zoom: number;
+    bearing: number;
 };
 
 const DEFAULT_MAP_VIEW: StoredMapView = {
     latitude: MAP_SETTINGS.BOUNDS.DEFAULT_CENTER[0],
     longitude: MAP_SETTINGS.BOUNDS.DEFAULT_CENTER[1],
     zoom: MAP_SETTINGS.ZOOM.DEFAULT,
+    bearing: 0,
 };
 
 // ----------------------------------------------------------------------
@@ -83,10 +85,13 @@ export function loadStoredMapView(): StoredMapView | null {
             return null;
         }
 
+        const bearing = Number(parsed.bearing ?? 0);
+
         return {
             latitude: lat,
             longitude: lng,
-            zoom: clampZoom(zoom)
+            zoom: clampZoom(zoom),
+            bearing: isValidCoordinate(bearing) ? bearing : 0,
         };
 
     } catch (error) {
@@ -111,6 +116,7 @@ export function createMapViewFromMap(map: MapRef): StoredMapView {
         longitude: Number(center.lng.toFixed(6)),
         // Keep 2 decimal places for zoom
         zoom: Number(clampZoom(zoom).toFixed(2)),
+        bearing: Number(map.getBearing().toFixed(2)),
     };
 }
 

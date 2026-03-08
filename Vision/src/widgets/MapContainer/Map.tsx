@@ -65,6 +65,7 @@ export default function Map({onReady, children}: MapProps) {
                 longitude: initialView.longitude,
                 latitude: initialView.latitude,
                 zoom: initialView.zoom,
+                bearing: initialView.bearing,
             }}
             onMoveEnd={handleMoveEnd}
             onLoad={handleLoad}
@@ -74,10 +75,9 @@ export default function Map({onReady, children}: MapProps) {
             maxZoom={MAP_SETTINGS.ZOOM.MAX}
             maxBounds={MAP_SETTINGS.BOUNDS.MAX as [maplibregl.LngLatLike, maplibregl.LngLatLike]}
             style={{width: "100%", height: "100%", position: "relative", zIndex: 0}}
-            dragRotate={false}
             touchPitch={false}
         >
-            <NavigationControl position="top-right" showCompass={false}/>
+            <NavigationControl position="top-right" showCompass={true}/>
             {children}
         </MapGL>
     );
