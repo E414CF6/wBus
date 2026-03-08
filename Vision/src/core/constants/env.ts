@@ -24,7 +24,7 @@ export const API_CONFIG = {
     LIVE: {
         URL: getEnv(process.env.NEXT_PUBLIC_LIVE_API_URL, "NOT_SET"),
         POLLING_INTERVAL_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_API_REFRESH_INTERVAL, 3000),
-        DATA_DELAY_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_DATA_DELAY, 10000),
+        DATA_DELAY_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_DATA_DELAY, 20000),
     },
     STATIC: {
         BASE_URL: STATIC_BASE_URL,

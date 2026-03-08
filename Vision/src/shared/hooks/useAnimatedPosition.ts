@@ -54,12 +54,12 @@ const STATE_UPDATE_THROTTLE_MS = 50;
 
 // Maximum duration (ms) to coast along the polyline after interpolation completes.
 // Covers delayed polling responses without pushing the marker too far.
-const MAX_COAST_MS = 3000;
+const MAX_COAST_MS = 5000;
 
 // Time constant (ms) for exponential decay during coast phase.
 // Coast speed decays as v(t) = v0 * e^(-t/τ), preventing overshoot
 // while keeping the marker moving smoothly between polling updates.
-const COAST_DECAY_TAU_MS = 1500;
+const COAST_DECAY_TAU_MS = 2500;
 
 // How much to multiply velocity EMA when an overshoot is detected.
 // Dampens future projection/coast to prevent repeated overshoots.
@@ -68,7 +68,7 @@ const OVERSHOOT_VELOCITY_DAMPEN = 0.3;
 // Coast entry speed ratio.  Smoothstep easing ends at ~0 velocity;
 // multiply the base coast speed by this factor so the Phase 1→2
 // transition doesn't jump from "nearly stopped" to "full speed".
-const COAST_ENTRY_SPEED_RATIO = 0.35;
+const COAST_ENTRY_SPEED_RATIO = 0.45;
 
 // Below this velocity (coord-units/ms, ≈ 2 km/h) the bus is likely
 // stopped at a bus stop — skip coast entirely so the marker rests.
@@ -77,11 +77,11 @@ const STOP_VELOCITY_THRESHOLD = 0.000006;
 // Velocity estimation constants for forward projection.
 // Polling data is always behind real-time; these constants control how we
 // extrapolate forward to show the bus closer to its *current* position.
-const VELOCITY_SMOOTHING = 0.4;           // EMA weight for new velocity samples (higher = more responsive)
+const VELOCITY_SMOOTHING = 0.5;           // EMA weight for new velocity samples (higher = more responsive)
 const MIN_TARGET_INTERVAL_MS = 500;        // Ignore velocity calc for very rapid target changes
 const MAX_VELOCITY_EUCLIDEAN = 0.0003;     // Cap: ~33 m/s in coordinate units (~120 km/h)
 const DEFAULT_POLLING_INTERVAL_MS = 3000;  // Fallback polling interval
-const DEFAULT_DATA_DELAY_MS = 10000;       // Fallback data delay — how old the API data typically is
+const DEFAULT_DATA_DELAY_MS = 20000;       // Fallback data delay — how old the API data typically is
 
 // Acceleration estimation constants
 const ACCELERATION_SMOOTHING = 0.35;       // EMA weight for acceleration (slightly less responsive than velocity)
@@ -91,7 +91,7 @@ const MAX_ACCELERATION = 0.0000002;        // Cap acceleration magnitude (coord-
 // A bus at steady cruising speed should project aggressively; a bus with
 // erratic speed changes (stop-and-go) should project conservatively.
 const CONSISTENCY_WINDOW = 5;              // Track last N velocity samples for CV calculation
-const CONSISTENCY_RAMP_SAMPLES = 5;        // Need this many samples before full projection confidence
+const CONSISTENCY_RAMP_SAMPLES = 3;        // Need this many samples before full projection confidence
 
 // Angular smoothing constants
 const ANGULAR_LOOKAHEAD_THRESHOLD = 0.7;   // Start interpolating to next segment at 70% of current segment
@@ -536,8 +536,8 @@ export function useAnimatedPosition(
                     if (mean > 0) {
                         const variance = history.reduce((s, v) => s + (v - mean) ** 2, 0) / history.length;
                         const cv = Math.sqrt(variance) / mean;
-                        // Map CV to confidence: CV=0 → 1.0, CV≥1.0 → 0.4 (never fully zero)
-                        consistencyConfidence = Math.max(0.4, 1 - cv * 0.6);
+                        // Map CV to confidence: CV=0 → 1.0, CV≥1.0 → 0.5 (never fully zero)
+                        consistencyConfidence = Math.max(0.5, 1 - cv * 0.5);
                     }
                 }
 
