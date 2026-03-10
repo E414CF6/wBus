@@ -72,9 +72,10 @@ const DEFAULT_DATA_DELAY_MS = 60000;
 // 1 degree ≈ 111 km → 30 km/h = 8.33 m/s ≈ 7.5e-8 deg/ms
 const CITY_BUS_BASE_VELOCITY = 0.000000075;
 
-// Initial crawl velocity — start at city bus base speed immediately
-// so the marker begins moving from the first frame.
-const INITIAL_CRAWL_VELOCITY = CITY_BUS_BASE_VELOCITY;
+// Initial crawl velocity — start gently (~10 km/h) so the marker
+// doesn't shoot forward before we have real velocity data.
+// (1 degree ≈ 111 km, so 2.5e-8 deg/ms ≈ 2.8 m/s ≈ 10 km/h)
+const INITIAL_CRAWL_VELOCITY = 0.000000025;
 
 // On overshoot, scale velocity by this factor.
 // More gentle since with 60s prediction overshoots are expected.
@@ -429,12 +430,12 @@ export function useAnimatedPosition(
                 prevDataTimeRef.current = performance.now();
                 sampleCountRef.current = 0;
 
-                // Start with city bus base speed and project forward
-                // immediately — the data is already ~60s old.
+                // Start with gentle crawl — don't project far on the
+                // very first data point since we have zero velocity info.
+                // Let the tick loop advance frame-by-frame; real projection
+                // kicks in once the second data point arrives.
                 velocityRef.current = INITIAL_CRAWL_VELOCITY;
-                const projDist = INITIAL_CRAWL_VELOCITY * dataDelayMs;
-                const totalDist = cumDist[cumDist.length - 1] ?? 0;
-                targetDistRef.current = Math.min(dist + projDist, totalDist);
+                targetDistRef.current = dist;
 
                 currentPosRef.current = snapped.position;
                 currentAngleRef.current = targetAngle;
