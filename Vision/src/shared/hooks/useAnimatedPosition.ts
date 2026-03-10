@@ -31,14 +31,16 @@ interface UseAnimatedPositionOptions {
     markerRef?: React.RefObject<Marker | null>;
     pollingIntervalMs?: number;
     dataDelayMs?: number;
+    /** Polyline coordinate indices where bus stops are located. */
+    stopCoordIndices?: number[];
 }
 
 // ----------------------------------------------------------------------
-// Constants
+// Constants — Aggressive Prediction for ~60s Data Delay
 // ----------------------------------------------------------------------
 
 // Ignore backward jumps smaller than this (GPS jitter).
-const BACKWARD_JITTER_METERS = 12;
+const BACKWARD_JITTER_METERS = 15;
 
 // React state update throttle — 20 Hz is plenty for UI consumers.
 const STATE_UPDATE_THROTTLE_MS = 50;
@@ -46,12 +48,13 @@ const STATE_UPDATE_THROTTLE_MS = 50;
 // Cap per-frame dt to prevent huge jumps when tab was backgrounded.
 const MAX_DT_MS = 200;
 
-// How fast the marker catches up to the target when it falls behind.
-// τ=1000ms → 63 % of the gap closed in 1 second.
-const CATCHUP_TAU_MS = 1000;
+// Catch-up time constant. τ=600ms → 63% of gap closed in 0.6s.
+// Aggressive: we want fast convergence since predictions drift far.
+const CATCHUP_TAU_MS = 600;
 
-// Velocity EMA weight — 0.6 blends 60 % new sample, 40 % history.
-const VELOCITY_SMOOTHING = 0.6;
+// Velocity EMA weight — favour new measurements over history
+// since old measurements are very stale with 60s delay.
+const VELOCITY_SMOOTHING = 0.7;
 
 // Skip velocity calc if two data points arrive within this window.
 const MIN_DT_FOR_VELOCITY_MS = 400;
@@ -60,27 +63,48 @@ const MIN_DT_FOR_VELOCITY_MS = 400;
 const MAX_VELOCITY = 0.0003;
 
 // Below this the bus is considered stopped.
-const STOP_THRESHOLD = 0.000005;
+const STOP_THRESHOLD = 0.000003;
 
-// Default estimated staleness of incoming position data.
-const DEFAULT_DATA_DELAY_MS = 15000;
+// Default estimated staleness of incoming position data — 60 seconds.
+const DEFAULT_DATA_DELAY_MS = 60000;
 
-// Initial crawl velocity (coord-units/ms) applied before real velocity
-// is estimated. ~20 km/h — just enough to show the marker is alive.
-// (1 degree ≈ 111 km, so 5e-8 deg/ms ≈ 5.5 m/s ≈ 20 km/h)
-const INITIAL_CRAWL_VELOCITY = 0.00000005;
+// City bus base speed prior (coord-units/ms).
+// 1 degree ≈ 111 km → 30 km/h = 8.33 m/s ≈ 7.5e-8 deg/ms
+const CITY_BUS_BASE_VELOCITY = 0.000000075;
 
-// On overshoot, scale velocity by this factor (coast, don't stop).
-const OVERSHOOT_DAMPEN = 0.6;
+// Initial crawl velocity — start at city bus base speed immediately
+// so the marker begins moving from the first frame.
+const INITIAL_CRAWL_VELOCITY = CITY_BUS_BASE_VELOCITY;
 
-// If marker falls behind by more than this many "polling intervals"
-// worth of distance, boost velocity to catch up.
-const CATCHUP_GAP_FACTOR = 1.5;
-const CATCHUP_BOOST = 1.4;
+// On overshoot, scale velocity by this factor.
+// More gentle since with 60s prediction overshoots are expected.
+const OVERSHOOT_DAMPEN = 0.7;
+
+// Catch-up boost when marker falls behind significantly.
+const CATCHUP_GAP_FACTOR = 1.2;
+const CATCHUP_BOOST = 1.6;
+
+// How much of the measured velocity to trust vs the prior.
+// Starts at 0 (all prior), ramps up as we get more data.
+const VELOCITY_PRIOR_BLEND_MIN = 0.3;  // minimum trust in measurement
+const VELOCITY_PRIOR_BLEND_MAX = 0.85; // maximum trust after many samples
+const VELOCITY_PRIOR_RAMP_SAMPLES = 5; // samples to reach max trust
 
 // Angular smoothing
 const ANGULAR_LOOKAHEAD_THRESHOLD = 0.7;
 const ANGULAR_SMOOTHING_FACTOR = 0.15;
+
+// --- Stop-aware speed modulation ---
+// Deceleration zone before a stop (in polyline coord-units).
+// ~200m ≈ 0.0018 degrees
+const STOP_DECEL_ZONE = 0.0018;
+// Acceleration zone after a stop.
+// ~120m ≈ 0.0011 degrees
+const STOP_ACCEL_ZONE = 0.0011;
+// Minimum speed multiplier at a stop (dwell / slow-pass).
+const STOP_MIN_SPEED_MULT = 0.25;
+// How long the bus "dwells" at a stop in the prediction (ms).
+const STOP_DWELL_MS = 4000;
 
 // ----------------------------------------------------------------------
 // Pure Helper Functions
@@ -145,22 +169,114 @@ function positionFromSegT(
 }
 
 // ----------------------------------------------------------------------
+// Stop-aware speed modulation
+// ----------------------------------------------------------------------
+
+/** Convert stop coordinate indices to scalar distances on the polyline. */
+function computeStopDistances(
+    stopCoordIndices: number[],
+    cumDist: number[],
+): number[] {
+    if (cumDist.length < 2 || stopCoordIndices.length === 0) return [];
+    const maxIdx = cumDist.length - 1;
+    return stopCoordIndices
+        .map(idx => {
+            const clamped = Math.max(0, Math.min(idx, maxIdx));
+            return cumDist[clamped] ?? 0;
+        })
+        .sort((a, b) => a - b);
+}
+
+/**
+ * Returns a speed multiplier [STOP_MIN_SPEED_MULT, 1.0] based on
+ * proximity to the nearest upcoming stop.
+ *
+ * - Far from any stop → 1.0 (full speed)
+ * - Approaching a stop (within STOP_DECEL_ZONE) → ramps down
+ * - At a stop → STOP_MIN_SPEED_MULT
+ * - Leaving a stop (within STOP_ACCEL_ZONE) → ramps back up
+ */
+function getStopSpeedMultiplier(
+    markerDist: number,
+    stopDistances: number[],
+): number {
+    if (stopDistances.length === 0) return 1.0;
+
+    let minMult = 1.0;
+
+    // Binary search for the nearest stop ahead
+    let lo = 0, hi = stopDistances.length;
+    while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (stopDistances[mid] < markerDist) lo = mid + 1;
+        else hi = mid;
+    }
+
+    // Check the stop ahead and the stop just passed
+    for (let i = Math.max(0, lo - 1); i <= Math.min(lo, stopDistances.length - 1); i++) {
+        const stopDist = stopDistances[i];
+        const delta = markerDist - stopDist; // negative = approaching, positive = leaving
+
+        let mult = 1.0;
+        if (delta < 0) {
+            // Approaching stop
+            const distToStop = -delta;
+            if (distToStop < STOP_DECEL_ZONE) {
+                const progress = 1 - distToStop / STOP_DECEL_ZONE;
+                // Smooth easing: cubic
+                const eased = progress * progress * (3 - 2 * progress);
+                mult = 1.0 - eased * (1.0 - STOP_MIN_SPEED_MULT);
+            }
+        } else {
+            // Leaving stop
+            if (delta < STOP_ACCEL_ZONE) {
+                const progress = delta / STOP_ACCEL_ZONE;
+                const eased = progress * progress * (3 - 2 * progress);
+                mult = STOP_MIN_SPEED_MULT + eased * (1.0 - STOP_MIN_SPEED_MULT);
+            }
+        }
+
+        minMult = Math.min(minMult, mult);
+    }
+
+    return minMult;
+}
+
+/**
+ * Blend measured velocity with the city bus base speed prior.
+ * Early on (few samples), lean heavily on the prior.
+ * As we collect more measurements, trust them more.
+ */
+function blendVelocityWithPrior(
+    measured: number,
+    sampleCount: number,
+): number {
+    const trust = Math.min(
+        VELOCITY_PRIOR_BLEND_MAX,
+        VELOCITY_PRIOR_BLEND_MIN +
+        (VELOCITY_PRIOR_BLEND_MAX - VELOCITY_PRIOR_BLEND_MIN) *
+        (sampleCount / VELOCITY_PRIOR_RAMP_SAMPLES),
+    );
+    return trust * measured + (1 - trust) * CITY_BUS_BASE_VELOCITY;
+}
+
+// ----------------------------------------------------------------------
 // Hook
 // ----------------------------------------------------------------------
 
 /**
- * Animates a bus marker along a polyline with continuous motion.
+ * Animates a bus marker along a polyline with aggressive predictive motion.
  *
- * Design:
- *  1. The marker **always moves forward** at its estimated velocity.
- *     It never pauses between data updates.
- *  2. When new data arrives, we compute a "target" (raw position +
- *     forward projection) and reconcile:
- *     - Target ahead of marker → keep velocity, or boost if gap is large.
- *     - Target behind marker (overshoot) → gently reduce velocity.
- *  3. Each frame, the marker advances by `velocity × dt`. If it is
- *     behind the target, an exponential catch-up term is added.
- *     If it is ahead, it simply coasts — no pull-back.
+ * Designed for ~60 second data delay:
+ *  1. Uses city bus base speed (~30 km/h) as a prior, blended with
+ *     measured velocity as more samples arrive.
+ *  2. Forward-projects the bus position by the full data delay.
+ *  3. Modulates speed near bus stops — decelerates on approach,
+ *     brief dwell, then accelerates away.
+ *  4. Allows generous overshoot (up to ~2 polling periods) so the
+ *     marker never freezes between updates.
+ *  5. On each frame, advances at the blended velocity with stop-aware
+ *     speed multiplier, plus exponential catch-up if behind target.
  */
 export function useAnimatedPosition(
     targetPosition: Coordinate,
@@ -175,6 +291,7 @@ export function useAnimatedPosition(
         resetKey,
         markerRef,
         dataDelayMs = DEFAULT_DATA_DELAY_MS,
+        stopCoordIndices = [],
     } = options;
 
     // ---- React state (throttled) ----
@@ -213,6 +330,10 @@ export function useAnimatedPosition(
     const prevDataTimeRef = useRef(0);  // performance.now() of last data arrival
     const prevRawDistRef = useRef(0);   // raw scalar distance of last data point
     const hasDataRef = useRef(false);   // true after first snap
+    const sampleCountRef = useRef(0);   // number of velocity samples collected
+
+    // ---- Stop-aware data ----
+    const stopDistancesRef = useRef<number[]>([]);
 
     // ----------------------------------------------------------------
     // Direct MapLibre marker update (bypasses React for 60 fps)
@@ -230,13 +351,15 @@ export function useAnimatedPosition(
     }, [markerRef]);
 
     // ----------------------------------------------------------------
-    // Sync cumulative distances when polyline changes
+    // Sync cumulative distances & stop distances when polyline changes
     // ----------------------------------------------------------------
     useEffect(() => {
         polylineRef.current = polyline;
-        cumDistRef.current = polyline.length >= 2
+        const cumDist = polyline.length >= 2
             ? computeCumulativeDistances(polyline) : [];
-    }, [polyline]);
+        cumDistRef.current = cumDist;
+        stopDistancesRef.current = computeStopDistances(stopCoordIndices, cumDist);
+    }, [polyline, stopCoordIndices]);
 
     // ----------------------------------------------------------------
     // Reset on route change (resetKey)
@@ -251,6 +374,7 @@ export function useAnimatedPosition(
         hasDataRef.current = false;
         isFirstDataRef.current = true;
         lastFrameRef.current = 0;
+        sampleCountRef.current = 0;
 
         const hasPolyline = polyline.length >= 2;
         let nextPos = targetPosition;
@@ -300,17 +424,17 @@ export function useAnimatedPosition(
                 const dist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
 
                 markerDistRef.current = dist;
-                targetDistRef.current = dist;
                 prevRawDistRef.current = dist;
                 hasDataRef.current = true;
                 prevDataTimeRef.current = performance.now();
+                sampleCountRef.current = 0;
 
-                // Start with a small crawl velocity so the marker begins
-                // moving immediately. It will be replaced by the real
-                // estimate as soon as the second data point arrives.
-                // Don't project the target — just let the tick loop
-                // nudge the marker forward frame by frame.
+                // Start with city bus base speed and project forward
+                // immediately — the data is already ~60s old.
                 velocityRef.current = INITIAL_CRAWL_VELOCITY;
+                const projDist = INITIAL_CRAWL_VELOCITY * dataDelayMs;
+                const totalDist = cumDist[cumDist.length - 1] ?? 0;
+                targetDistRef.current = Math.min(dist + projDist, totalDist);
 
                 currentPosRef.current = snapped.position;
                 currentAngleRef.current = targetAngle;
@@ -353,7 +477,8 @@ export function useAnimatedPosition(
             // Large backward jump — teleport
             markerDistRef.current = rawDist;
             targetDistRef.current = rawDist;
-            velocityRef.current = 0;
+            velocityRef.current = CITY_BUS_BASE_VELOCITY; // restart with prior
+            sampleCountRef.current = 0;
             prevRawDistRef.current = rawDist;
             prevDataTimeRef.current = performance.now();
             currentPosRef.current = snapped.position;
@@ -363,32 +488,61 @@ export function useAnimatedPosition(
             return;
         }
 
-        // ── Estimate velocity ──
+        // ── Estimate velocity (blend measured with prior) ──
         const now = performance.now();
         const dtMs = prevDataTimeRef.current > 0 ? now - prevDataTimeRef.current : 0;
 
         if (dtMs > MIN_DT_FOR_VELOCITY_MS && hasDataRef.current) {
             const moved = rawDist - prevRawDistRef.current;
-            const v = Math.max(0, moved / dtMs);
-            const clamped = Math.min(v, MAX_VELOCITY);
+            const rawV = Math.max(0, moved / dtMs);
+            const clampedV = Math.min(rawV, MAX_VELOCITY);
 
-            velocityRef.current = velocityRef.current === 0
-                ? clamped
-                : Math.min(VELOCITY_SMOOTHING * clamped
-                    + (1 - VELOCITY_SMOOTHING) * velocityRef.current,
-                    MAX_VELOCITY);
+            sampleCountRef.current++;
+            const samples = sampleCountRef.current;
+
+            // EMA on measured velocity
+            const measuredEMA = velocityRef.current <= STOP_THRESHOLD
+                ? clampedV
+                : VELOCITY_SMOOTHING * clampedV
+                  + (1 - VELOCITY_SMOOTHING) * velocityRef.current;
+
+            // Blend with city bus base speed prior
+            velocityRef.current = Math.min(
+                blendVelocityWithPrior(measuredEMA, samples),
+                MAX_VELOCITY,
+            );
         }
 
         prevRawDistRef.current = rawDist;
         prevDataTimeRef.current = now;
         hasDataRef.current = true;
 
-        // ── Forward projection ──
-        // Data is stale by ~dataDelayMs. Project the bus forward.
+        // ── Aggressive forward projection ──
+        // Data is stale by ~dataDelayMs. Project the bus forward by
+        // that amount, using the blended velocity.
         let projDist = 0;
-        if (velocityRef.current > STOP_THRESHOLD) {
-            projDist = velocityRef.current * dataDelayMs;
-            projDist = Math.min(projDist, MAX_VELOCITY * dataDelayMs);
+        const v = velocityRef.current;
+        if (v > STOP_THRESHOLD) {
+            projDist = v * dataDelayMs;
+            // Account for stop dwell times in the projection window.
+            // Each stop the bus would pass through in the projection
+            // adds a dwell penalty.
+            const stopDists = stopDistancesRef.current;
+            if (stopDists.length > 0) {
+                let stopsInProjection = 0;
+                for (let i = 0; i < stopDists.length; i++) {
+                    const sd = stopDists[i];
+                    if (sd > rawDist && sd < rawDist + projDist) {
+                        stopsInProjection++;
+                    }
+                }
+                // Reduce projection by dwell time equivalent distance per stop
+                const dwellDistPerStop = v * STOP_DWELL_MS;
+                projDist = Math.max(
+                    projDist * 0.3,
+                    projDist - stopsInProjection * dwellDistPerStop,
+                );
+            }
         }
         const newTarget = Math.min(rawDist + projDist, totalDist);
 
@@ -397,17 +551,19 @@ export function useAnimatedPosition(
         const marker = markerDistRef.current;
 
         if (newTarget >= marker) {
-            // Normal case — data is ahead or at marker.
+            // Normal — data target is ahead of or at marker.
             const gap = newTarget - marker;
-            const nominalStep = velocityRef.current * 3000;
+            const nominalStep = v * 3000;
             if (nominalStep > 0 && gap > nominalStep * CATCHUP_GAP_FACTOR) {
                 velocityRef.current = Math.min(
                     velocityRef.current * CATCHUP_BOOST, MAX_VELOCITY);
             }
         } else {
-            // Overshoot — marker ran ahead. Slow down gently.
+            // Overshoot — marker ran ahead. Gently slow down.
             velocityRef.current *= OVERSHOOT_DAMPEN;
-            if (velocityRef.current < STOP_THRESHOLD) velocityRef.current = 0;
+            if (velocityRef.current < STOP_THRESHOLD) {
+                velocityRef.current = CITY_BUS_BASE_VELOCITY * 0.5;
+            }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [targetPosition[0], targetPosition[1], targetAngle, polyline, shouldSnap, snapIndexHint, snapIndexRange, dataDelayMs, updateMarkerDirect]);
@@ -438,18 +594,25 @@ export function useAnimatedPosition(
                 const target = targetDistRef.current;
                 const gap = target - dist;
 
+                // Stop-aware speed multiplier
+                const stopMult = getStopSpeedMultiplier(
+                    dist, stopDistancesRef.current);
+
                 let advance: number;
                 if (gap > 0) {
-                    // Behind target — advance at velocity + catch-up correction.
-                    advance = v * clampedDt + gap * Math.min(clampedDt / CATCHUP_TAU_MS, 1);
+                    // Behind target — advance at modulated velocity + catch-up.
+                    const baseAdvance = v * stopMult * clampedDt;
+                    const catchup = gap * Math.min(clampedDt / CATCHUP_TAU_MS, 1);
+                    advance = baseAdvance + catchup;
                 } else {
-                    // At or ahead of target — coast forward slowly.
-                    // Allow a small overshoot (up to ~1 polling interval ahead)
-                    // so the marker doesn't freeze while waiting for data.
-                    const maxOvershoot = v * 3000; // ~one polling period
+                    // At or ahead of target — coast forward with stop modulation.
+                    // Allow generous overshoot (2 polling periods worth)
+                    // since our 60s projection will often undershoot reality.
+                    const maxOvershoot = v * 6000;
                     const overshootRoom = maxOvershoot - (-gap);
                     if (overshootRoom > 0) {
-                        advance = v * clampedDt * Math.min(overshootRoom / maxOvershoot, 1);
+                        const coastFactor = Math.min(overshootRoom / maxOvershoot, 1);
+                        advance = v * stopMult * clampedDt * coastFactor;
                     } else {
                         advance = 0;
                     }

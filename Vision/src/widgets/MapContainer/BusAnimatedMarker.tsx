@@ -24,6 +24,8 @@ interface BusAnimatedMarkerProps {
     pollingIntervalMs?: number;
     /** Estimated data delay in ms. How old the API data is when received. */
     dataDelayMs?: number;
+    /** Polyline coordinate indices where bus stops are located. */
+    stopCoordIndices?: number[];
     /** Force a re-sync when external state (like route) changes. */
     refreshKey?: string | number;
     onClick?: () => void;
@@ -48,6 +50,7 @@ function BusAnimatedMarker({
                                animationDuration = MAP_SETTINGS.ANIMATION.BUS_MOVE_MS,
                                pollingIntervalMs,
                                dataDelayMs,
+                               stopCoordIndices,
                                refreshKey,
                                onClick,
                                children,
@@ -74,6 +77,8 @@ function BusAnimatedMarker({
             pollingIntervalMs,
             // Pass data delay for accurate projection distance
             dataDelayMs,
+            // Pass stop coordinate indices for speed modulation
+            stopCoordIndices,
         }
     );
 
