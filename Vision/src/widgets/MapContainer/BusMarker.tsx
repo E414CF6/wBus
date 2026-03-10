@@ -47,7 +47,7 @@ const BusIconDOM = memo(({routeNumber}: { routeNumber: string }) => {
                 aria-label={UI_TEXT.ACCESSIBILITY.BUS_ICON_ALT}
                 role="img"
             >
-                <rect x="4" y="2" width="32" height="48" rx="10" fill="#4f46e5" stroke="white" strokeWidth="2.5"/>
+                <rect x="4" y="2" width="32" height="48" rx="10" fill="#4f46e5"/>
             </svg>
             <div
                 className="bus-route-text-container absolute top-1.75 left-1/2 -translate-x-1/2 bg-[#4f46e5] text-white text-[11px] font-extrabold px-1.5 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] max-w-6.5 overflow-hidden whitespace-nowrap">
