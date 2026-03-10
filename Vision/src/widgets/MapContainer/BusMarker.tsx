@@ -10,7 +10,6 @@ import { getSnappedPosition } from "@entities/route/snapService";
 import { useBusData } from "@features/live-tracking/useBusData";
 
 import PopupMarquee from "@shared/ui/MarqueeText";
-import Image from "next/image";
 
 import React, { memo, useMemo, useState } from "react";
 import { Popup } from "react-map-gl/maplibre";
@@ -27,22 +26,29 @@ const SNAP_INDEX_RANGE = 80;
 // Sub-Component: Bus Icon DOM
 // ----------------------------------------------------------------------
 
+/**
+ * Minimal 3D top-down bus marker
+ */
 const BusIconDOM = memo(({routeNumber}: { routeNumber: string }) => {
     const needsMarquee = routeNumber.length >= SETTINGS.MARQUEE_THRESHOLD;
     const [w, h] = SETTINGS.ICON_SIZE;
 
     return (
         <div
-            className="bus-marker-with-label relative drop-shadow-[0_4px_12px_rgba(0,0,0,0.15)]"
-            style={{width: w, height: h}}
+            className="bus-marker-with-label relative"
+            style={{width: w, height: h, filter: "drop-shadow(0 3px 8px rgba(0,0,0,0.3))"}}
         >
-            <Image
-                src="/icons/bus-icon.png"
+            <svg
                 width={w}
                 height={h}
-                className="transition-transform duration-300 ease-in-out"
-                alt={UI_TEXT.ACCESSIBILITY.BUS_ICON_ALT}
-            />
+                viewBox="0 0 40 46"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-label={UI_TEXT.ACCESSIBILITY.BUS_ICON_ALT}
+                role="img"
+            >
+                <rect x="4" y="2" width="32" height="48" rx="10" fill="#4f46e5" stroke="white" strokeWidth="2.5"/>
+            </svg>
             <div
                 className="bus-route-text-container absolute top-1.75 left-1/2 -translate-x-1/2 bg-[#4f46e5] text-white text-[11px] font-extrabold px-1.5 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] max-w-6.5 overflow-hidden whitespace-nowrap">
                 <span className={needsMarquee ? "bus-route-text-animate" : ""}>
