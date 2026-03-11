@@ -30,7 +30,6 @@ const SNAP_INDEX_RANGE = 80;
  * Minimal 3D top-down bus marker
  */
 const BusIconDOM = memo(({routeNumber}: { routeNumber: string }) => {
-    const needsMarquee = routeNumber.length >= SETTINGS.MARQUEE_THRESHOLD;
     const [w, h] = SETTINGS.ICON_SIZE;
 
     return (
@@ -47,14 +46,11 @@ const BusIconDOM = memo(({routeNumber}: { routeNumber: string }) => {
                 aria-label={UI_TEXT.ACCESSIBILITY.BUS_ICON_ALT}
                 role="img"
             >
-                <rect x="4" y="2" width="32" height="48" rx="10" fill="#4f46e5"/>
+                <rect x="4" y="2" width="32" height="50" rx="10" fill="#4f46e5"/>
             </svg>
             <div
-                className="bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 bg-[#4f46e5] text-white text-[11px] font-extrabold px-1.5 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] max-w-6.5 overflow-hidden whitespace-nowrap">
-                <span className={needsMarquee ? "bus-route-text-animate" : ""}>
-                    {routeNumber}
-                    {needsMarquee && <>&nbsp;{routeNumber}&nbsp;{routeNumber}&nbsp;{routeNumber}</>}
-                </span>
+                className="bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 bg-[#4f46e5] text-white text-[11px] font-extrabold px-1 py-px rounded-lg border-[1.5px] text-center border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] min-w-7.5 overflow-hidden whitespace-nowrap">
+                {routeNumber}
             </div>
         </div>
     );
@@ -156,7 +152,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
             // Extract stop coordinate indices for speed modulation.
             // stopIndexMap values are indices into the full (unsplit) polyline.
             // For the down direction, adjust by turnIndex offset.
-            let stopCoordIndices: number[] = [];
+            let stopCordIndices: number[] = [];
             if (stopIndexMap) {
                 const allIndices = new Set<number>();
                 const effectiveDir = isSwapped
@@ -166,14 +162,14 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 // Collect indices for this direction from byIdDir and byOrdDir
                 const dirSuffix = `-${effectiveDir}`;
                 for (const [key, idx] of Object.entries(stopIndexMap.byIdDir)) {
-                    if (key.endsWith(dirSuffix) && typeof idx === "number") {
+                    if (key.endsWith(dirSuffix)) {
                         allIndices.add(idx);
                     }
                 }
                 // Fallback: if no direction-specific entries, use all
                 if (allIndices.size === 0) {
                     for (const idx of Object.values(stopIndexMap.byId)) {
-                        if (typeof idx === "number") allIndices.add(idx);
+                        allIndices.add(idx);
                     }
                 }
 
@@ -181,12 +177,12 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 // so we need to offset the indices.
                 if (snapped.direction === 0 && turnIndex !== undefined) {
                     const safeTurn = Math.round(turnIndex);
-                    stopCoordIndices = [...allIndices]
+                    stopCordIndices = [...allIndices]
                         .map(i => i - safeTurn)
                         .filter(i => i >= 0 && i < activePolyline.length)
                         .sort((a, b) => a - b);
                 } else {
-                    stopCoordIndices = [...allIndices]
+                    stopCordIndices = [...allIndices]
                         .filter(i => i >= 0 && i < activePolyline.length)
                         .sort((a, b) => a - b);
                 }
@@ -200,7 +196,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 direction: snapped.direction,
                 polyline: activePolyline,
                 snapIndexHint: snapped.segmentIndex ?? null,
-                stopCoordIndices,
+                stopCoordIndices: stopCordIndices,
             };
         });
     }, [
