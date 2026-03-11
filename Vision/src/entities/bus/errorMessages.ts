@@ -1,6 +1,5 @@
-import { UI_TEXT } from "@core/constants/locale";
-
 import type { BusDataError } from "@entities/bus/types";
+import { UI_TEXT } from "@shared/config/locale";
 
 /**
  * Map of error codes to user-friendly messages

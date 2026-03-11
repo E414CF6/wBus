@@ -1,6 +1,6 @@
-import { fetchAPI } from "@core/api/fetchAPI";
 import type { BusItem } from "@entities/bus/types";
 import type { BusStopArrival } from "@entities/station/types";
+import { fetchAPI } from "@shared/api/fetchAPI";
 
 export async function getBusLocationData(routeId: string): Promise<BusItem[]> {
     const data = await fetchAPI<{

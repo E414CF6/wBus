@@ -1,5 +1,5 @@
-import { APP_CONFIG } from "@core/constants/env";
 import { getRouteMap } from "@entities/route/api";
+import { APP_CONFIG } from "@shared/config/env";
 import { useEffect, useRef, useState } from "react";
 
 /**

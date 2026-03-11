@@ -1,7 +1,7 @@
-import { fetchAPI, HttpError } from "@core/api/fetchAPI";
-import { CacheManager } from "@core/cache/CacheManager";
-import { API_CONFIG, APP_CONFIG } from "@core/constants/env";
 import type { GeoPolyline, RouteDetail, RouteInfo, RouteMapData, } from "@entities/route/types";
+import { fetchAPI, HttpError } from "@shared/api/fetchAPI";
+import { CacheManager } from "@shared/cache/CacheManager";
+import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
 
 // ── Caches ─────────────────────────────────────────────────────
 

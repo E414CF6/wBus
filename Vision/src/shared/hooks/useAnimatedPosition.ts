@@ -505,7 +505,7 @@ export function useAnimatedPosition(
             const measuredEMA = velocityRef.current <= STOP_THRESHOLD
                 ? clampedV
                 : VELOCITY_SMOOTHING * clampedV
-                  + (1 - VELOCITY_SMOOTHING) * velocityRef.current;
+                + (1 - VELOCITY_SMOOTHING) * velocityRef.current;
 
             // Blend with city bus base speed prior
             velocityRef.current = Math.min(

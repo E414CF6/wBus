@@ -1,7 +1,7 @@
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { APP_CONFIG, SITE_CONFIG } from "@core/constants/env";
+import { APP_CONFIG, SITE_CONFIG } from "@shared/config/env";
 
 import { AppMapContextProvider } from "@shared/context/AppMapContext";
 

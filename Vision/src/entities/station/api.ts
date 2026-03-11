@@ -1,8 +1,8 @@
-import { fetchAPI } from "@core/api/fetchAPI";
-import { CacheManager } from "@core/cache/CacheManager";
-import { API_CONFIG } from "@core/constants/env";
 import { getRouteDetails, getRouteMapData } from "@entities/route/api";
 import type { BusStop, StationLocation, StationMapData } from "@entities/station/types";
+import { fetchAPI } from "@shared/api/fetchAPI";
+import { CacheManager } from "@shared/cache/CacheManager";
+import { API_CONFIG } from "@shared/config/env";
 
 // Cache
 

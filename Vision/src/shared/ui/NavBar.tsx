@@ -1,7 +1,7 @@
 "use client";
 
-import { APP_CONFIG } from "@core/constants/env";
-import { UI_TEXT } from "@core/constants/locale";
+import { APP_CONFIG } from "@shared/config/env";
+import { UI_TEXT } from "@shared/config/locale";
 import { MapIcon } from "lucide-react";
 
 interface NavBarProps {

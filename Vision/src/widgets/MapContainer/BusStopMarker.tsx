@@ -1,11 +1,11 @@
 "use client";
 
-import { MAP_SETTINGS } from "@core/constants/env";
-import { UI_TEXT } from "@core/constants/locale";
 import { useBusStop } from "@entities/station/hooks";
 import { filterStopsByViewport } from "@entities/station/stopFiltering";
 
 import type { BusStop } from "@entities/station/types";
+import { MAP_SETTINGS } from "@shared/config/env";
+import { UI_TEXT } from "@shared/config/locale";
 import { useAppMapContext } from "@shared/context/AppMapContext";
 
 import BusStopPopup from "@widgets/BusListSheet/BusStopPopup";

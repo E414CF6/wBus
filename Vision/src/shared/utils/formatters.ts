@@ -1,4 +1,4 @@
-import { UI_TEXT } from "@core/constants/locale";
+import { UI_TEXT } from "@shared/config/locale";
 
 /**
  * Converts seconds to minutes, rounding up to the nearest whole number.

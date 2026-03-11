@@ -1,9 +1,9 @@
 "use client";
 
-import { APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS } from "@core/constants/env";
 import { useBusRouteMap } from "@entities/bus/hooks";
 
 import { busPollingService } from "@features/live-tracking/BusPollingService";
+import { APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS } from "@shared/config/env";
 
 import NavBar from "@shared/ui/NavBar";
 import Splash from "@shared/ui/Splash";

@@ -1,8 +1,8 @@
-import { CacheManager } from "@core/cache/CacheManager";
 import { getPolyline, getRouteDetails } from "@entities/route/api";
 import type { Coordinate, GeoPolyline, RouteDetail } from "@entities/route/types";
 import { getStationMap } from "@entities/station/api";
 import type { StationLocation } from "@entities/station/types";
+import { CacheManager } from "@shared/cache/CacheManager";
 import { isFiniteNumber } from "@shared/utils/geo";
 
 export interface StopIndexMap {

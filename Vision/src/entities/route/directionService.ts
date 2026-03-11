@@ -1,6 +1,6 @@
-import { APP_CONFIG, MAP_SETTINGS } from "@core/constants/env";
 import { getRouteDetails } from "@entities/route/api";
 import { Direction, type DirectionCode } from "@entities/route/types";
+import { APP_CONFIG, MAP_SETTINGS } from "@shared/config/env";
 
 export { Direction, type DirectionCode } from "@entities/route/types";
 

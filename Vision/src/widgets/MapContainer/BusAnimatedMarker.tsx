@@ -1,6 +1,6 @@
 "use client";
 
-import { MAP_SETTINGS } from "@core/constants/env";
+import { MAP_SETTINGS } from "@shared/config/env";
 
 import { useAnimatedPosition } from "@shared/hooks/useAnimatedPosition";
 import { type Coordinate, normalizeAngle } from "@shared/utils/geo";

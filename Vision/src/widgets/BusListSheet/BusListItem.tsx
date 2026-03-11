@@ -1,7 +1,6 @@
-import { UI_TEXT } from "@core/constants/locale";
-
 import type { BusItem } from "@entities/bus/types";
 import type { DirectionCode } from "@features/live-tracking/useBusDirection";
+import { UI_TEXT } from "@shared/config/locale";
 
 import Pill from "@shared/ui/Pill";
 import { ArrowDown, ArrowUp, HelpCircle } from "lucide-react";

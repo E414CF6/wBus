@@ -3,10 +3,10 @@
  * Polls real-time bus arrival data for a specific stop.
  */
 
-import { API_CONFIG, APP_CONFIG } from "@core/constants/env";
-import { UI_TEXT } from "@core/constants/locale";
 import { getBusStopArrivalData } from "@entities/bus/api";
 import type { BusStopArrival } from "@entities/station/types";
+import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
+import { UI_TEXT } from "@shared/config/locale";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export function useBusArrivalInfo(busStopId: string | null) {

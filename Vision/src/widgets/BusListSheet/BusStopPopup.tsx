@@ -1,7 +1,7 @@
-import { UI_TEXT } from "@core/constants/locale";
 import { useBusArrivalInfo } from "@entities/station/hooks";
 
 import type { BusStopArrival } from "@entities/station/types";
+import { UI_TEXT } from "@shared/config/locale";
 
 import { formatVehicleType, secondsToMinutes } from "@shared/utils/formatters";
 import { AlertTriangle, Bus, ChevronRight, Clock, MapPin } from "lucide-react";

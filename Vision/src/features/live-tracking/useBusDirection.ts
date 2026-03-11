@@ -1,4 +1,3 @@
-import { APP_CONFIG } from "@core/constants/env";
 import { getRouteDetails, getRouteInfo } from "@entities/route/api";
 
 import {
@@ -10,6 +9,7 @@ import {
 import type { DirectionCode } from "@entities/route/types";
 
 import { useBusStop } from "@entities/station/hooks";
+import { APP_CONFIG } from "@shared/config/env";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 // Re-export for backward compatibility

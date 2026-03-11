@@ -1,7 +1,7 @@
-import { API_CONFIG, APP_CONFIG } from "@core/constants/env";
 import { getBusLocationData } from "@entities/bus/api";
 import type { BusDataError, BusItem } from "@entities/bus/types";
 import { getRouteMap } from "@entities/route/api";
+import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
 
 // Valid error codes that can be emitted
 const VALID_ERROR_CODES: Set<Exclude<BusDataError, null>> = new Set([

@@ -1,9 +1,9 @@
-import { CacheManager } from "@core/cache/CacheManager";
-import { API_CONFIG, APP_CONFIG } from "@core/constants/env";
-import { UI_TEXT } from "@core/constants/locale";
 import { getBusStopArrivalData } from "@entities/bus/api";
 import { getBusStopLocationData, getRouteStopsByRouteName } from "@entities/station/api";
 import type { BusStop, BusStopArrival } from "@entities/station/types";
+import { CacheManager } from "@shared/cache/CacheManager";
+import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
+import { UI_TEXT } from "@shared/config/locale";
 import { useAppMapContext } from "@shared/context/AppMapContext";
 import { getHaversineDistance } from "@shared/utils/geo";
 import { useCallback, useEffect, useRef, useState } from "react";

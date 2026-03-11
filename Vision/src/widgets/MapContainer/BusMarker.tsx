@@ -1,13 +1,13 @@
 "use client";
 
-import { API_CONFIG, MAP_SETTINGS } from "@core/constants/env";
-import { UI_TEXT } from "@core/constants/locale";
 import { getDirectionIcon } from "@entities/bus/directionIcons";
 
 import type { BusItem } from "@entities/bus/types";
 
 import { getSnappedPosition } from "@entities/route/snapService";
 import { useBusData } from "@features/live-tracking/useBusData";
+import { API_CONFIG, MAP_SETTINGS } from "@shared/config/env";
+import { UI_TEXT } from "@shared/config/locale";
 
 import PopupMarquee from "@shared/ui/MarqueeText";
 

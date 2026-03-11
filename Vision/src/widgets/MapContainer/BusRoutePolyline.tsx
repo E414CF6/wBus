@@ -1,10 +1,10 @@
 "use client";
 
-import { APP_CONFIG, MAP_SETTINGS } from "@core/constants/env";
 import { getRouteInfo } from "@entities/route/api";
 
 import { useBusLocationData } from "@features/live-tracking/useBusLocation";
 import { type PolylineSegment, useMultiPolyline } from "@features/live-tracking/usePolyline";
+import { APP_CONFIG, MAP_SETTINGS } from "@shared/config/env";
 
 import { useAppMapContext } from "@shared/context/AppMapContext";
 import type { FeatureCollection, LineString } from "geojson";

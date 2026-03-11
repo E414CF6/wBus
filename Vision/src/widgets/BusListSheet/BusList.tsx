@@ -1,8 +1,5 @@
 "use client";
 
-import { MAP_SETTINGS } from "@core/constants/env";
-import { UI_TEXT } from "@core/constants/locale";
-
 import { getBusErrorMessage } from "@entities/bus/errorMessages";
 import { useScheduleData } from "@entities/route/hooks";
 import { formatTime, getNearestBusTime } from "@entities/route/time";
@@ -10,6 +7,8 @@ import { formatTime, getNearestBusTime } from "@entities/route/time";
 import type { BusSchedule } from "@entities/route/types";
 
 import { useBusSortedList } from "@features/live-tracking/useBusSortedList";
+import { MAP_SETTINGS } from "@shared/config/env";
+import { UI_TEXT } from "@shared/config/locale";
 
 import { useAppMapContext } from "@shared/context/AppMapContext";
 

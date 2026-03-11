@@ -1,4 +1,4 @@
-import { API_CONFIG, APP_CONFIG } from "@core/constants/env";
+import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

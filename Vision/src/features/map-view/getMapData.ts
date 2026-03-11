@@ -1,6 +1,6 @@
-import { fetchAPI } from "@core/api/fetchAPI";
-import { CacheManager } from "@core/cache/CacheManager";
-import { API_CONFIG, APP_CONFIG } from "@core/constants/env";
+import { fetchAPI } from "@shared/api/fetchAPI";
+import { CacheManager } from "@shared/cache/CacheManager";
+import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
 
 // ----------------------------------------------------------------------
 // Types & State

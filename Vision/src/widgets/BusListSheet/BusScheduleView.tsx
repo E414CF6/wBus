@@ -1,10 +1,10 @@
 "use client";
 
-import { DAY_LABELS, UI_TEXT } from "@core/constants/locale";
 import { findNextBus, getCurrentDayType, type NextBusInfo } from "@entities/route/time";
 
 import type { BusSchedule, RowItem } from "@entities/route/types";
 import { DAY_TYPES, type DayType } from "@entities/route/types";
+import { DAY_LABELS, UI_TEXT } from "@shared/config/locale";
 import { memo, useEffect, useMemo, useState } from "react";
 
 // ----------------------------------------------------------------------
@@ -12,7 +12,7 @@ import { memo, useEffect, useMemo, useState } from "react";
 // ----------------------------------------------------------------------
 
 /**
- * Maps internal day type constants to localized UI labels.
+ * Maps internal day type config to localized UI labels.
  */
 const dayTypeToLabel = {
     [DAY_TYPES.WEEKDAY]: DAY_LABELS.WEEKDAY,

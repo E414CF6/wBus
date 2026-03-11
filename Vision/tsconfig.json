@@ -29,9 +29,6 @@
       "@app/*": [
         "./src/app/*"
       ],
-      "@core/*": [
-        "./src/core/*"
-      ],
       "@entities/*": [
         "./src/entities/*"
       ],

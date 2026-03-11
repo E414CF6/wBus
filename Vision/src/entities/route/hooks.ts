@@ -1,10 +1,9 @@
 "use client";
 
-import { fetchAPI, HttpError } from "@core/api/fetchAPI";
-import { API_CONFIG, APP_CONFIG } from "@core/constants/env";
-import { UI_TEXT } from "@core/constants/locale";
-
 import type { BusSchedule } from "@entities/route/types";
+import { fetchAPI, HttpError } from "@shared/api/fetchAPI";
+import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
+import { UI_TEXT } from "@shared/config/locale";
 import { useEffect, useState } from "react";
 
 // ----------------------------------------------------------------------
