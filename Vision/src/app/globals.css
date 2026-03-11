@@ -75,10 +75,9 @@ body {
     font-family: var(--font-sans, Arial, Helvetica, sans-serif), serif;
 }
 
-/* Remove and style popup tip (speech bubble tail) */
+/* Remove popup tip (speech bubble tail) */
 .maplibregl-popup-tip {
-    border-top-color: rgba(17, 17, 17, 0.85) !important;
-    border-bottom-color: rgba(17, 17, 17, 0.85) !important;
+    display: none !important;
 }
 
 /* Scrollbar Customization */
