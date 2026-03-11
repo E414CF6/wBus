@@ -66,8 +66,8 @@ body {
     padding: 0 !important;
     border-radius: 28px !important;
     border: 1px solid rgba(0, 0, 0, 0.04) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
-    background: rgba(255, 255, 255, 0.85) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+    background: rgba(17, 17, 17, 0.85) !important;
     backdrop-filter: blur(24px) !important;
     -webkit-backdrop-filter: blur(24px) !important;
     margin: 0 !important;
@@ -75,19 +75,8 @@ body {
     font-family: var(--font-sans, Arial, Helvetica, sans-serif), serif;
 }
 
-.dark .maplibregl-popup-content {
-    border: 1px solid rgba(255, 255, 255, 0.06) !important;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
-    background: rgba(17, 17, 17, 0.85) !important;
-}
-
 /* Remove and style popup tip (speech bubble tail) */
 .maplibregl-popup-tip {
-    border-top-color: rgba(255, 255, 255, 0.85) !important;
-    border-bottom-color: rgba(255, 255, 255, 0.85) !important;
-}
-
-.dark .maplibregl-popup-tip {
     border-top-color: rgba(17, 17, 17, 0.85) !important;
     border-bottom-color: rgba(17, 17, 17, 0.85) !important;
 }
@@ -125,26 +114,11 @@ body {
  * Bus Marker & Route Styles (moved from inline <style> injection)
  * ============================================================================ */
 
-/* Bus marker label marquee animation */
-@keyframes busRouteMarquee {
-    0% {
-        transform: translateX(0);
-    }
-    100% {
-        transform: translateX(-50%);
-    }
-}
-
 .bus-marker-with-label {
     display: inline-block;
     width: max-content;
     min-width: 100%;
-    animation: busRouteMarquee 3s linear infinite;
     padding-right: 4px;
-}
-
-.bus-marker-with-label .bus-route-text-container:hover {
-    animation-play-state: paused;
 }
 
 /* PopupMarquee (MarqueeText.tsx) – pause-scroll-pause cycle */
