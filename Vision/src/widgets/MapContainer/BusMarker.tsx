@@ -41,7 +41,7 @@ const BusIconDOM = memo(({routeNumber}: { routeNumber: string }) => {
             <svg
                 width={w}
                 height={h}
-                viewBox="0 0 40 46"
+                viewBox="0 0 40 50"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
                 aria-label={UI_TEXT.ACCESSIBILITY.BUS_ICON_ALT}
@@ -50,10 +50,10 @@ const BusIconDOM = memo(({routeNumber}: { routeNumber: string }) => {
                 <rect x="4" y="2" width="32" height="48" rx="10" fill="#4f46e5"/>
             </svg>
             <div
-                className="bus-route-text-container absolute top-1.75 left-1/2 -translate-x-1/2 bg-[#4f46e5] text-white text-[11px] font-extrabold px-1.5 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] max-w-6.5 overflow-hidden whitespace-nowrap">
+                className="bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 bg-[#4f46e5] text-white text-[11px] font-extrabold px-1.5 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] max-w-6.5 overflow-hidden whitespace-nowrap">
                 <span className={needsMarquee ? "bus-route-text-animate" : ""}>
                     {routeNumber}
-                    {needsMarquee && <>&nbsp;{routeNumber}&nbsp;</>}
+                    {needsMarquee && <>&nbsp;{routeNumber}&nbsp;{routeNumber}&nbsp;{routeNumber}</>}
                 </span>
             </div>
         </div>
