@@ -15,7 +15,7 @@ export default tseslint.config(// Ignored paths
     // TypeScript recommended rules
     ...tseslint.configs.recommended,
 
-    // ── Next.js plugin
+    // Next.js plugin
     {
         plugins: {
             "@next/next": nextPlugin,
@@ -24,14 +24,14 @@ export default tseslint.config(// Ignored paths
         },
     },
 
-    // ── React Hooks plugin ────────────────────────────────────────
+    // React Hooks plugin
     {
         plugins: {
             "react-hooks": reactHooksPlugin,
         }, rules: reactHooksPlugin.configs.recommended.rules,
     },
 
-    // ── Language / environment options ─────────────────────────────
+    // Language / Environment options
     {
         languageOptions: {
             globals: {
@@ -44,7 +44,7 @@ export default tseslint.config(// Ignored paths
         },
     },
 
-    // ── Custom rule overrides ─────────────────────────────────────
+    // Custom rule overrides
     {
         rules: {
             // Disable base rules that conflict with TypeScript

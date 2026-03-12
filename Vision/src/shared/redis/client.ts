@@ -12,7 +12,7 @@ export async function getRedisClient(): Promise<RedisClientType> {
     // Prevent race condition: concurrent requests share the same connection promise
     if (connecting) return connecting;
 
-    const promise = (async (): Promise<RedisClientType> => {
+    connecting = (async (): Promise<RedisClientType> => {
         const url = process.env.REDIS_URL;
         if (!url) {
             throw new Error("[Redis] REDIS_URL is not set in environment variables.");
@@ -27,8 +27,6 @@ export async function getRedisClient(): Promise<RedisClientType> {
         client = newClient as RedisClientType;
         return client;
     })();
-
-    connecting = promise;
 
     try {
         return await connecting;

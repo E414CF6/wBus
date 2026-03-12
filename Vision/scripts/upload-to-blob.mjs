@@ -19,7 +19,7 @@ import {config} from "dotenv";
 config({path: ".env.local"});
 
 const DATA_DIR = join(process.cwd(), "public", "data");
-const PREFIX = "data"; // Blob path prefix
+const PREFIX = ""; // Blob path prefix
 
 const CONTENT_TYPES = {
     ".json": "application/json",
@@ -30,7 +30,9 @@ function walkDir(dir) {
     const results = [];
     for (const entry of readdirSync(dir)) {
         if (entry.startsWith(".")) continue;
+
         const fullPath = join(dir, entry);
+
         if (statSync(fullPath).isDirectory()) {
             results.push(...walkDir(fullPath));
         } else {
@@ -42,8 +44,10 @@ function walkDir(dir) {
 
 async function cleanOldBlobs() {
     console.log("Cleaning existing blobs...");
+
     let cursor;
     let deleted = 0;
+
     do {
         const result = await list({prefix: PREFIX, cursor, limit: 1000});
         if (result.blobs.length > 0) {
@@ -52,6 +56,7 @@ async function cleanOldBlobs() {
         }
         cursor = result.hasMore ? result.cursor : undefined;
     } while (cursor);
+
     console.log(`\tDeleted ${deleted} old blobs.`);
 }
 
@@ -69,7 +74,6 @@ async function upload() {
         const blobPath = `${PREFIX}/${relPath}`;
         const ext = extname(file);
         const contentType = CONTENT_TYPES[ext] || "application/octet-stream";
-
         const body = readFileSync(file);
         const result = await put(blobPath, body, {
             access: "public",
@@ -93,12 +97,9 @@ async function upload() {
     }
 
     console.log(`\nDone! ${uploaded} files uploaded.`);
-    console.log(`\nSet this in your .env.local and Vercel environment:\n`);
-    console.log(`\tNEXT_PUBLIC_STATIC_API_URL="${baseUrl}"`);
-    console.log(`\tNEXT_PUBLIC_USE_REMOTE_STATIC_DATA="true"\n`);
 }
 
 upload().catch((err) => {
-    console.error("Upload failed:", err);
+    console.error("\nUpload failed:", err);
     process.exit(1);
 });

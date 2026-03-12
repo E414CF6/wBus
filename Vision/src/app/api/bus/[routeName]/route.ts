@@ -11,14 +11,18 @@ const CACHE_TTL = 3; // seconds
  * Falls back to undefined → use local filesystem.
  */
 function getBlobBaseUrl(): string | undefined {
+    if (process.env.NEXT_PUBLIC_USE_REMOTE_STATIC_DATA !== "true") return undefined;
+
     const explicit = process.env.NEXT_PUBLIC_STATIC_API_URL;
     if (explicit?.startsWith("http")) return explicit;
 
     const token = process.env.BLOB_READ_WRITE_TOKEN;
+
     if (!token) return undefined;
     const match = token.match(/^vercel_blob_rw_([^_]+)_/);
+
     if (!match) return undefined;
-    return `https://${match[1].toLowerCase()}.public.blob.vercel-storage.com/data`;
+    return `https://${match[1].toLowerCase()}.public.blob.vercel-storage.com`;
 }
 
 // In-memory cache for routeMap (loaded once per cold start)
@@ -28,6 +32,7 @@ async function getRouteIds(routeName: string): Promise<string[]> {
     if (!routeMapCache) {
         let raw;
         const blobUrl = getBlobBaseUrl();
+
         if (blobUrl) {
             const res = await fetch(`${blobUrl}/routeMap.json`);
             if (!res.ok) throw new Error(`Failed to fetch routeMap: ${res.status}`);
@@ -36,8 +41,10 @@ async function getRouteIds(routeName: string): Promise<string[]> {
             const filePath = join(process.cwd(), "public", "data", "routeMap.json");
             raw = JSON.parse(readFileSync(filePath, "utf-8"));
         }
+
         routeMapCache = raw.route_numbers as Record<string, string[]>;
     }
+
     return routeMapCache[routeName] ?? [];
 }
 

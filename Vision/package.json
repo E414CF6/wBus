@@ -6,10 +6,10 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "upload-data": "node scripts/upload-to-blob.mjs",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "upload-data": "node scripts/upload-to-blob.mjs"
   },
   "dependencies": {
     "@types/mapbox-gl": "^3.4.1",
