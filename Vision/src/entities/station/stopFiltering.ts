@@ -18,12 +18,10 @@ export function filterStopsByViewport(
     if (shouldFilterByDistance && filtered.length > 0) {
         filtered = filtered
             .sort((a, b) => {
-                const aOrd = Number.isFinite(Number(a.nodeord))
-                    ? Number(a.nodeord)
-                    : Number(a.nodeno);
-                const bOrd = Number.isFinite(Number(b.nodeord))
-                    ? Number(b.nodeord)
-                    : Number(b.nodeno);
+                const aNum = Number(a.nodeord);
+                const aOrd = Number.isFinite(aNum) ? aNum : Number(a.nodeno);
+                const bNum = Number(b.nodeord);
+                const bOrd = Number.isFinite(bNum) ? bNum : Number(b.nodeno);
 
                 if (!Number.isFinite(aOrd) && !Number.isFinite(bOrd)) return 0;
                 if (!Number.isFinite(aOrd)) return 1;

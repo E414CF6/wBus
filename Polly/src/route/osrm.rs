@@ -120,8 +120,12 @@ impl BusRouteProcessor {
                             attempts += 1;
                             if attempts < max_attempts {
                                 current_radius += 100.0;
+                                let radius_str = format!("{:.0}", current_radius);
                                 custom_radiuses = Some(
-                                    vec![format!("{:.0}", current_radius); num_coords].join(";"),
+                                    (0..num_coords)
+                                        .map(|_| radius_str.as_str())
+                                        .collect::<Vec<_>>()
+                                        .join(";"),
                                 );
                                 log::warn!(
                                     "OSRM NoSegment error (attempt {}/{}). Retrying with radius {}m...",

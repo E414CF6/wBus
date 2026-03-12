@@ -55,6 +55,10 @@ pub fn closest_point_on_polyline(
 }
 
 /// Find the index of the coordinate in `line` closest to `point`
+///
+/// Uses a fast squared Euclidean approximation instead of full haversine,
+/// which is valid since we only need the relative ordering of distances
+/// (not absolute values) and the coordinates span a small geographic area.
 pub fn find_nearest_coord_index(point: (f64, f64), line: &[Vec<f64>]) -> Option<usize> {
     if line.is_empty() {
         return None;
@@ -63,13 +67,15 @@ pub fn find_nearest_coord_index(point: (f64, f64), line: &[Vec<f64>]) -> Option<
     let (px, py) = point;
 
     let mut best_idx = 0;
-    let mut min_dist = f64::MAX;
+    let mut min_dist_sq = f64::MAX;
 
     for (i, coord) in line.iter().enumerate() {
-        let d = meters_between(px, py, coord[0], coord[1]);
+        let dx = px - coord[0];
+        let dy = py - coord[1];
+        let dist_sq = dx * dx + dy * dy;
 
-        if d < min_dist {
-            min_dist = d;
+        if dist_sq < min_dist_sq {
+            min_dist_sq = dist_sq;
             best_idx = i;
         }
     }
