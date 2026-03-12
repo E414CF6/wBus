@@ -190,13 +190,14 @@ export function createMultiPolylineData(
     const segmentMap = new Map<string, PolylineSegment>();
     const activeSet = new Set(activeRouteIds ?? []);
     const generateKey = (coords: Coordinate[]) => {
-        // Use a lightweight fingerprint (endpoints + length) instead of
+        // Use a lightweight fingerprint (endpoints + midpoint + length) instead of
         // stringifying every coordinate, which creates very large strings.
         const n = coords.length;
         if (n === 0) return "empty";
         const first = coords[0];
         const last = coords[n - 1];
-        return `${n}:${first[0].toFixed(6)},${first[1].toFixed(6)}:${last[0].toFixed(6)},${last[1].toFixed(6)}`;
+        const mid = coords[Math.floor(n / 2)];
+        return `${n}:${first[0].toFixed(6)},${first[1].toFixed(6)}:${mid[0].toFixed(6)},${mid[1].toFixed(6)}:${last[0].toFixed(6)},${last[1].toFixed(6)}`;
     };
     const addSegments = (routeId: string, coords: Coordinate[], dir: "up" | "down") => {
         if (coords.length < 2) return;

@@ -162,7 +162,7 @@ export class CacheManager<T> {
      * Evict the least recently used item from the cache
      */
     private evictLRU(): void {
-        let oldestKey = "";
+        let oldestKey: string | null = null;
         let oldestTime = Infinity;
 
         for (const [key, time] of this.accessTimes) {
@@ -172,7 +172,7 @@ export class CacheManager<T> {
             }
         }
 
-        if (oldestKey) {
+        if (oldestKey !== null) {
             this.cache.delete(oldestKey);
             this.accessTimes.delete(oldestKey);
             this.pendingRequests.delete(oldestKey);

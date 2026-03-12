@@ -66,8 +66,8 @@ pub fn merge_schedules(
                             let new_id = note_counter.to_string();
                             *note_counter += 1;
                             route_json["notes"][&new_id] = json!(note_text);
-                            let id = e.insert(new_id).clone();
-                            Some(id)
+                            e.insert(new_id.clone());
+                            Some(new_id)
                         }
                     }
                 } else {
