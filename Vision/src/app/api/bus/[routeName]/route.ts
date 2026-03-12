@@ -7,22 +7,16 @@ import { join } from "path";
 const CACHE_TTL = 3; // seconds
 
 /**
- * Resolve Blob base URL from token (production) or env var.
+ * Return a remote base URL when USE_REMOTE is enabled.
+ * In production, next.config.ts derives the Blob URL from BLOB_READ_WRITE_TOKEN
+ * and sets it as NEXT_PUBLIC_STATIC_API_URL automatically.
  * Falls back to undefined → use local filesystem.
  */
-function getBlobBaseUrl(): string | undefined {
+function getRemoteBaseUrl(): string | undefined {
     if (process.env.NEXT_PUBLIC_USE_REMOTE_STATIC_DATA !== "true") return undefined;
 
-    const explicit = process.env.NEXT_PUBLIC_STATIC_API_URL;
-    if (explicit?.startsWith("http")) return explicit;
-
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-
-    if (!token) return undefined;
-    const match = token.match(/^vercel_blob_rw_([^_]+)_/);
-
-    if (!match) return undefined;
-    return `https://${match[1].toLowerCase()}.public.blob.vercel-storage.com`;
+    const url = process.env.NEXT_PUBLIC_STATIC_API_URL;
+    return url?.startsWith("http") ? url : undefined;
 }
 
 // In-memory cache for routeMap (loaded once per cold start)
@@ -31,10 +25,10 @@ let routeMapCache: Record<string, string[]> | null = null;
 async function getRouteIds(routeName: string): Promise<string[]> {
     if (!routeMapCache) {
         let raw;
-        const blobUrl = getBlobBaseUrl();
+        const remoteUrl = getRemoteBaseUrl();
 
-        if (blobUrl) {
-            const res = await fetch(`${blobUrl}/routeMap.json`);
+        if (remoteUrl) {
+            const res = await fetch(`${remoteUrl}/routeMap.json`);
             if (!res.ok) throw new Error(`Failed to fetch routeMap: ${res.status}`);
             raw = await res.json();
         } else {

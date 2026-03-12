@@ -85,8 +85,8 @@ async function upload() {
 
         // Extract base URL from the first uploaded file
         if (!baseUrl) {
-            // result.url = https://{store}.public.blob.vercel-storage.com/data/routeMap.json
-            // We want: https://{store}.public.blob.vercel-storage.com/data
+            // result.url = https://{store}.public.blob.vercel-storage.com/routeMap.json
+            // We want: https://{store}.public.blob.vercel-storage.com
             const idx = result.url.indexOf(`/${PREFIX}/`);
             baseUrl = result.url.substring(0, idx + PREFIX.length + 1);
         }
