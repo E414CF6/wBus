@@ -6,7 +6,7 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 
 Vision is the user-facing frontend for the **wBus** project — a real-time bus tracking app for
-Wonju (원주), South Korea. It renders live bus positions on an interactive map, animates their
+Wŏnju (원주), South Korea. It renders live bus positions on an interactive map, animates their
 movement along route polylines, and displays arrival predictions and timetables.
 
 ## Architecture
@@ -56,10 +56,10 @@ Vision consumes two categories of data through a three-tier caching pipeline:
 │  (Live bus API)           (Static GeoJSON, schedules)  (View state)  │
 └────────┬──────────────────────────┬────────────────────────┬─────────┘
          │                          │                        │
-    ┌────▼────┐               ┌─────▼──────┐          ┌─────▼──────┐
-    │  Redis  │               │ CacheManager│          │  Browser   │
-    │ (3-600s)│               │ (LRU, dedup)│          │  Storage   │
-    └────┬────┘               └─────┬──────┘          └────────────┘
+    ┌────▼────┐               ┌─────▼────────┐          ┌─────▼──────┐
+    │  Redis  │               │ CacheManager │          │  Browser   │
+    │ (3-600s)│               │ (LRU, dedup) │          │  Storage   │
+    └────┬────┘               └─────┬────────┘          └────────────┘
          │                          │
     ┌────▼──────────────────────────▼──────────────────────────────────┐
     │                         API ROUTES (Server)                      │
@@ -105,7 +105,7 @@ API routes.
 | `/api/bus-stops/[routeId]`     | `stops:{routeId}`     | 600 sec | Route stop list API    |
 
 The Redis layer implements a "smart cache" — when one user's request triggers a fetch, the result is
-cached for all subsequent users within the TTL window.
+cached for all later users within the TTL window.
 
 **Client-side polling (SWR):**
 
@@ -129,7 +129,7 @@ When a user selects route **"30"**:
 3. Polyline GeoJSON files are loaded for each route ID, split at `turn_idx` into **up** and **down**
    segments
 4. Bus GPS positions are snapped to the nearest point on the polyline
-5. `BusAnimatedMarker` smoothly animates markers along the polyline path (4s duration)
+5. `BusAnimatedMarker` smoothly animates markers along the polyline path (3-seconds duration)
 6. Every 10 seconds, SWR refetches and markers animate to updated positions
 
 ## Client-Side State
@@ -222,7 +222,7 @@ app runs without any configuration in development mode (using local static data)
 | `NEXT_PUBLIC_STATIC_API_URL`            | `/data`                     | Base URL for static data (local path or Blob URL) |
 | `NEXT_PUBLIC_MAP_DEFAULT_POSITION`      | `37.3421,127.91976`         | Initial map center (lat, lng)                     |
 | `NEXT_PUBLIC_MAP_DEFAULT_ZOOM`          | `13`                        | Initial zoom level                                |
-| `NEXT_PUBLIC_MAP_MAX_BOUNDS`            | `37.10,127.60,37.60,128.30` | Map boundary limits                               |
+| `NEXT_PUBLIC_MAP_MÏAX_BOUNDS`           | `37.10,127.60,37.60,128.30` | Map boundary limits                               |
 | `NEXT_PUBLIC_BUS_STOP_MARKER_MIN_ZOOM`  | `15`                        | Zoom threshold for stop markers                   |
 | `NEXT_PUBLIC_BUS_ANIMATION_DURATION`    | `4000`                      | Bus marker animation duration (ms)                |
 | `NEXT_PUBLIC_LIVE_API_REFRESH_INTERVAL` | `10000`                     | Live data polling interval (ms)                   |
