@@ -45,14 +45,14 @@ const BACKWARD_JITTER_METERS = 15;
 // React state update throttle — 20 Hz is plenty for UI consumers.
 const STATE_UPDATE_THROTTLE_MS = 50;
 
-// Cap per-frame dt to prevent huge jumps when tab was backgrounded.
+// Cap per-frame dt to prevent huge jumps when the tab was backgrounder.
 const MAX_DT_MS = 200;
 
-// Catch-up time constant. τ=600ms → 63% of gap closed in 0.6s.
+// Catch-up time constant. τ=600ms → 63% of a gap closed in 0.6s.
 // Aggressive: we want fast convergence since predictions drift far.
 const CATCHUP_TAU_MS = 600;
 
-// Velocity EMA weight — favour new measurements over history
+// Velocity EMA weight — favor new measurements over history
 // since old measurements are very stale with 60s delay.
 const VELOCITY_SMOOTHING = 0.7;
 
@@ -68,7 +68,7 @@ const STOP_THRESHOLD = 0.000003;
 // Default estimated staleness of incoming position data — 60 seconds.
 const DEFAULT_DATA_DELAY_MS = 60000;
 
-// City bus base speed prior (coord-units/ms).
+// City bus base speed prior (cord-units/ms).
 // 1 degree ≈ 111 km → 30 km/h = 8.33 m/s ≈ 7.5e-8 deg/ms
 const CITY_BUS_BASE_VELOCITY = 0.000000075;
 

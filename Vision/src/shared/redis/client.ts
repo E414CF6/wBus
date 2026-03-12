@@ -38,7 +38,7 @@ export async function getRedisClient(): Promise<RedisClientType> {
 const CACHE_TTL_SECONDS = 10;
 
 /**
- * Get data from Redis cache, or fetch fresh data if stale/missing.
+ * Get data from Redis cache or fetch fresh data if stale/missing.
  * This is the core "smart cache" — one user's fetch refreshes data for everyone.
  */
 export async function getCachedOrFetch<T>(
@@ -69,7 +69,7 @@ export async function getCachedOrFetch<T>(
         timestamp: Date.now(),
     };
 
-    // Store in Redis with auto-expiry (2x TTL as safety net)
+    // Store in Redis with auto-expiry (2x TTL as a safety net)
     await redis.set(key, JSON.stringify(entry), {EX: ttlSeconds * 2});
 
     return entry;

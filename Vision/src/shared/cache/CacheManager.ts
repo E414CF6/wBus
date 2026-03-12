@@ -6,7 +6,7 @@ export class CacheManager<T> {
     private cache: Map<string, T> = new Map();
     private pendingRequests: Map<string, Promise<T>> = new Map();
     private accessTimes: Map<string, number> = new Map();
-    private maxSize: number;
+    private readonly maxSize: number;
 
     /**
      * Create a new cache manager
@@ -40,7 +40,7 @@ export class CacheManager<T> {
     }
 
     /**
-     * Check if key exists in cache
+     * Check if a key exists in the cache
      */
     // noinspection JSUnusedGlobalSymbols
     has(key: string): boolean {
@@ -48,7 +48,7 @@ export class CacheManager<T> {
     }
 
     /**
-     * Delete a specific key from cache
+     * Delete a specific key from the cache
      */
     // noinspection JSUnusedGlobalSymbols
     delete(key: string): void {
@@ -102,12 +102,12 @@ export class CacheManager<T> {
             return this.cache.get(key)!;
         }
 
-        // Return pending request if one exists
+        // Return a pending request if one exists
         if (this.pendingRequests.has(key)) {
             return this.pendingRequests.get(key)!;
         }
 
-        // Create new request
+        // Create a new request
         const promise = fetchFn()
             .then((data) => {
                 this.set(key, data);
@@ -159,7 +159,7 @@ export class CacheManager<T> {
     }
 
     /**
-     * Evict the least recently used item from cache
+     * Evict the least recently used item from the cache
      */
     private evictLRU(): void {
         const oldestKey = Array.from(this.accessTimes.entries())
