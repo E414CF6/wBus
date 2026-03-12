@@ -35,11 +35,12 @@ export async function fetchAPI<T = unknown>(
 
     for (let i = 0; i < retries; i++) {
         try {
+            const isExternal = url.startsWith("http");
             const response = await fetch(url, {
                 ...init,
                 method: "GET",
                 headers: {
-                    Client: APP_CONFIG.NAME,
+                    ...(isExternal ? {} : { Client: APP_CONFIG.NAME }),
                     ...(init?.headers ?? {}),
                 },
             });

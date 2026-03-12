@@ -3,12 +3,12 @@ import { fetchAPI, HttpError } from "@shared/api/fetchAPI";
 import { CacheManager } from "@shared/cache/CacheManager";
 import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
 
-// ── Caches ─────────────────────────────────────────────────────
+// Caches
 
 const routeMapCache = new CacheManager<RouteMapData>();
 const polylineCache = new CacheManager<GeoPolyline | null>();
 
-// ── URL Builders ───────────────────────────────────────────────
+// URL Builders
 
 function getPolylineUrl(routeKey: string): string {
     if (API_CONFIG.STATIC.USE_REMOTE && API_CONFIG.STATIC.BASE_URL) {
@@ -24,7 +24,7 @@ function getRouteMapUrl(): string {
     return "/data/routeMap.json";
 }
 
-// ── Internal Helpers ───────────────────────────────────────────
+// Internal Helpers
 
 export async function getRouteMapData(): Promise<RouteMapData> {
     return routeMapCache.getOrFetch("routeMap", async () => {
@@ -32,7 +32,7 @@ export async function getRouteMapData(): Promise<RouteMapData> {
     });
 }
 
-// ── Public API ─────────────────────────────────────────────────
+// Public API
 
 export async function getRouteMap(): Promise<Record<string, string[]>> {
     const data = await getRouteMapData();
