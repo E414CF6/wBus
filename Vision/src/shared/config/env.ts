@@ -22,7 +22,7 @@ export const SITE_CONFIG = {
 
 export const API_CONFIG = {
     LIVE: {
-        POLLING_INTERVAL_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_API_REFRESH_INTERVAL, 10000),
+        POLLING_INTERVAL_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_API_REFRESH_INTERVAL, 3000),
         DATA_DELAY_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_DATA_DELAY, 60000),
     },
     STATIC: {
@@ -30,11 +30,11 @@ export const API_CONFIG = {
         USE_REMOTE: getEnvBoolean(process.env.NEXT_PUBLIC_USE_REMOTE_STATIC_DATA, false),
         REVALIDATE_SEC: 3600,
         PATHS: {
+            POLYLINES: "polylines",
+            SCHEDULES: "schedules",
             MAP_STYLE: "config.json",
             ROUTE_MAP: "routeMap.json",
             STATION_MAP: "stationMap.json",
-            POLYLINES: "polylines",
-            SCHEDULES: "schedules",
         },
     },
     MAP_STYLE_FALLBACK: getEnv(process.env.NEXT_PUBLIC_MAP_FALLBACK_API_URL, "https://tiles.openfreemap.org/styles/liberty"),
@@ -49,7 +49,7 @@ export const MAP_SETTINGS = {
         DEFAULT: getEnvNumber(process.env.NEXT_PUBLIC_MAP_DEFAULT_ZOOM, 13),
         MIN: getEnvNumber(process.env.NEXT_PUBLIC_MAP_MIN_ZOOM, 10),
         MAX: getEnvNumber(process.env.NEXT_PUBLIC_MAP_MAX_ZOOM, 20),
-        BUS_STOP_VISIBLE: getEnvNumber(process.env.NEXT_PUBLIC_BUS_STOP_MARKER_MIN_ZOOM, 15),
+        BUS_STOP_VISIBLE: getEnvNumber(process.env.NEXT_PUBLIC_BUS_STOP_MARKER_MIN_ZOOM, 14),
     },
     ANIMATION: {
         BUS_MOVE_MS: getEnvNumber(process.env.NEXT_PUBLIC_BUS_ANIMATION_DURATION, 4000),
@@ -57,11 +57,7 @@ export const MAP_SETTINGS = {
     },
     MARKERS: {
         BUS: {
-            ICON_SIZE: [29, 43] as [number, number],
-            ICON_ANCHOR: [14, 21] as [number, number],
-            POPUP_ANCHOR: [0, -21] as [number, number],
-            LABEL_STYLE_ID: "bus-route-label-style",
-            MARQUEE_THRESHOLD: 3,
+            ICON_SIZE: [29, 43] as [number, number]
         }
     },
     ALWAYS_UPWARD_NODE_IDS: getEnvArray(process.env.NEXT_PUBLIC_ALWAYS_UPWARD_NODE_IDS, ","),
