@@ -40,7 +40,7 @@ export async function fetchAPI<T = unknown>(
                 ...init,
                 method: "GET",
                 headers: {
-                    ...(isExternal ? {} : { Client: APP_CONFIG.NAME }),
+                    ...(isExternal ? {} : {Client: APP_CONFIG.NAME}),
                     ...(init?.headers ?? {}),
                 },
             });
