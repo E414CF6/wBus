@@ -1,18 +1,4 @@
-import { fetchAPI } from "@shared/api/fetchAPI";
-import { CacheManager } from "@shared/cache/CacheManager";
 import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
-
-// ----------------------------------------------------------------------
-// Types & State
-// ----------------------------------------------------------------------
-
-// @TODO: Define strict typing for Mapbox/MapLibre style JSON structure
-export type MapStyleConfig = Record<string, unknown>;
-
-/**
- * Cache instance to prevent redundant network requests for the static map style.
- */
-const mapStyleCache = new CacheManager<MapStyleConfig>();
 
 // ----------------------------------------------------------------------
 // Helpers
@@ -65,33 +51,4 @@ export function getMapStyleUrl(): string {
         : "/data";
 
     return joinUrl(localBase, styleFileName);
-}
-
-// ----------------------------------------------------------------------
-// API Functions
-// ----------------------------------------------------------------------
-
-/**
- * Fetches the map style JSON configuration.
- * Uses a caching strategy to return existing data if already loaded.
- * * @returns The map style configuration object.
- */
-export async function getMapStyle(): Promise<MapStyleConfig> {
-    const cacheKey = "mapStyle";
-    const url = getMapStyleUrl();
-
-    return await mapStyleCache.getOrFetch(cacheKey, async () => {
-        try {
-            return await fetchAPI<MapStyleConfig>(url, {
-                baseUrl: "", // URL is already fully resolved
-                init: {cache: 'force-cache'} // Leverage browser cache if available
-            });
-        } catch (error) {
-            if (APP_CONFIG.IS_DEV) {
-                console.error(`[getMapStyle] Failed to load map style from: ${url}`, error);
-            }
-            // In a real scenario, you might want to return a minimal fallback style object here
-            throw error;
-        }
-    });
 }

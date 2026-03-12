@@ -1,28 +1,29 @@
 import type { NextConfig } from "next";
 
+/**
+ * Derive Vercel Blob store URL from BLOB_READ_WRITE_TOKEN.
+ * Token format: vercel_blob_rw_{storeId}_{secret}
+ */
+function getBlobBaseUrl(): string | undefined {
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!token) return undefined;
+    const match = token.match(/^vercel_blob_rw_([^_]+)_/);
+    if (!match) return undefined;
+    return `https://${match[1].toLowerCase()}.public.blob.vercel-storage.com/data`;
+}
+
+const isProduction = process.env.NODE_ENV === "production";
+const hasExplicitUrl = process.env.NEXT_PUBLIC_STATIC_API_URL?.startsWith("http");
+const blobUrl = getBlobBaseUrl();
+
 const nextConfig: NextConfig = {
-    // Resolve CORS issues by proxying requests through the Next.js server
-    // Should be used in development only
-    async rewrites() {
-        // If not in development mode, no rewrites are needed
-        if (process.env.NODE_ENV !== 'development') {
-            return [];
-        }
-
-        // If in development mode but the environment variable is missing, warn the developer
-        const remoteApiUrl = process.env.REMOTE_API_URL;
-        if (!remoteApiUrl) {
-            console.warn("[DEVELOPMENT MODE] 'REMOTE_API_URL' is not set in .env.local. Proxy will not work.");
-            return [];
-        }
-
-        return [
-            {
-                source: '/dev/:path*',
-                destination: `${remoteApiUrl}/:path*`,
-            },
-        ];
-    }
+    // In production, auto-derive Blob URL from token (no manual config needed)
+    env: {
+        ...(isProduction && blobUrl && !hasExplicitUrl ? {
+            NEXT_PUBLIC_STATIC_API_URL: blobUrl,
+            NEXT_PUBLIC_USE_REMOTE_STATIC_DATA: "true",
+        } : {}),
+    },
 };
 
 export default nextConfig;

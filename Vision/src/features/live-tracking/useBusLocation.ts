@@ -1,60 +1,45 @@
 import type { BusDataError, BusItem } from "@entities/bus/types";
-import { useEffect, useState } from "react";
-import { busPollingService } from "./BusPollingService";
+import { API_CONFIG } from "@shared/config/env";
+import type { CachedData } from "@shared/redis/types";
+import useSWR from "swr";
+
+const fetcher = async (url: string): Promise<CachedData<BusItem[]>> => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+};
 
 /**
- * React hook to subscribe to bus location updates for a given route.
- * Automatically manages subscription lifecycle and cleanup.
+ * React hook to fetch bus location data via SWR.
+ * All users share the same Redis-cached data on the server.
  */
 export function useBusLocationData(routeName: string): {
     data: BusItem[];
     error: BusDataError;
     hasFetched: boolean;
 } {
-    const [snapshot, setSnapshot] = useState<{
-        routeName: string;
-        data: BusItem[];
-        error: BusDataError;
-        hasFetched: boolean;
-    }>({
-        routeName: "",
-        data: [],
-        error: null,
-        hasFetched: false,
-    });
+    const {data, error, isLoading} = useSWR<CachedData<BusItem[]>>(
+        routeName ? `/api/bus/${routeName}` : null,
+        fetcher,
+        {
+            refreshInterval: API_CONFIG.LIVE.POLLING_INTERVAL_MS,
+            revalidateOnFocus: true,
+            dedupingInterval: 2000,
+        }
+    );
 
-    useEffect(() => {
-        if (!routeName) return;
+    if (error) {
+        return {data: [], error: "ERR:NETWORK", hasFetched: true};
+    }
 
-        // Subscribe to bus location updates
-        return busPollingService.subscribe(
-            routeName,
-            (data) => {
-                setSnapshot({
-                    routeName,
-                    data,
-                    error: null,
-                    hasFetched: true,
-                });
-                // Only clear other caches after we have data for the new route
-                busPollingService.clearOtherCaches(routeName);
-            },
-            (err) => {
-                setSnapshot((prev) => ({
-                    routeName,
-                    data: err !== null && err !== undefined ? [] : (prev.routeName === routeName ? prev.data : []),
-                    error: err,
-                    hasFetched: true,
-                }));
-            }
-        );
-    }, [routeName]);
+    if (!data || isLoading) {
+        return {data: [], error: null, hasFetched: false};
+    }
 
-    const isActive = snapshot.routeName === routeName;
+    const buses = data.data;
+    if (buses.length === 0) {
+        return {data: [], error: "ERR:NONE_RUNNING", hasFetched: true};
+    }
 
-    return {
-        data: isActive ? snapshot.data : [],
-        error: isActive ? snapshot.error : null,
-        hasFetched: isActive ? snapshot.hasFetched : false,
-    };
+    return {data: buses, error: null, hasFetched: true};
 }

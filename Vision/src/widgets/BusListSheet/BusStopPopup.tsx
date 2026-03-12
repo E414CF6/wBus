@@ -88,7 +88,7 @@ function LoadingSkeleton() {
     return (
         <div className="p-4 space-y-3">
             {[1, 2, 3].map((i) => (
-                <div key={i} className="h-[72px] w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-[20px]"/>
+                <div key={i} className="h-18 w-full bg-gray-100 dark:bg-gray-800 animate-pulse rounded-[20px]"/>
             ))}
         </div>
     );
@@ -137,7 +137,7 @@ function ArrivalList({
     }
 
     return (
-        <div className="max-h-[320px] overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-2">
+        <div className="max-h-80 overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-2">
             {arrivalData.map((bus, idx) => (
                 <ArrivalItem key={`${bus.routeno}-${idx}`} bus={bus} onRouteChange={onRouteChange}/>
             ))}
@@ -161,7 +161,7 @@ export default function BusStopPopup({
     }, [arrivalRawData]);
 
     return (
-        <div className="w-full min-w-[260px] sm:min-w-[320px] bg-transparent overflow-hidden">
+        <div className="w-full min-w-65 sm:min-w-[320px] bg-transparent overflow-hidden">
             <ArrivalList
                 loading={loading}
                 error={error}

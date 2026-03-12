@@ -25,16 +25,12 @@ export async function fetchAPI<T = unknown>(
     const {retries = 3, retryDelay = 1000, isStatic = false, baseUrl: customBaseUrl, init} = options;
 
     if (customBaseUrl === undefined) {
-        if (!isStatic && API_CONFIG.LIVE.URL === "NOT_SET") {
-            throw new Error("[fetchAPI] Environment variable `LIVE_API_URL` is not set.");
-        }
-
         if (isStatic && API_CONFIG.STATIC.BASE_URL === "NOT_SET") {
             throw new Error("[fetchAPI] Environment variable `STATIC_API_URL` is not set.");
         }
     }
 
-    const baseUrl = customBaseUrl ?? (isStatic ? API_CONFIG.STATIC.BASE_URL : API_CONFIG.LIVE.URL);
+    const baseUrl = customBaseUrl ?? API_CONFIG.STATIC.BASE_URL;
     const url = `${baseUrl}${endpoint}`;
 
     for (let i = 0; i < retries; i++) {

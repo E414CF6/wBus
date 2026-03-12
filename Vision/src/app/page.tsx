@@ -2,7 +2,6 @@
 
 import { useBusRouteMap } from "@entities/bus/hooks";
 
-import { busPollingService } from "@features/live-tracking/BusPollingService";
 import { APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS } from "@shared/config/env";
 
 import NavBar from "@shared/ui/NavBar";
@@ -85,17 +84,6 @@ export default function HomePage() {
     const handleMapReady = useCallback(() => {
         setIsSplashVisible(false);
     }, []);
-
-    // Effect to start bus polling for selected route only
-    useEffect(() => {
-        if (!activeRoute) return;
-
-        const cleanup = busPollingService.startPolling(activeRoute);
-
-        return () => {
-            cleanup();
-        };
-    }, [activeRoute]);
 
     return (
         <>

@@ -8,7 +8,6 @@ import {
 } from "@entities/route/directionService";
 import type { DirectionCode } from "@entities/route/types";
 
-import { useBusStop } from "@entities/station/hooks";
 import { APP_CONFIG } from "@shared/config/env";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -93,17 +92,3 @@ export function useBusDirection(routeName: string) {
     );
 }
 
-// ----------------------------------------------------------------------
-// Helper Hook: useStopExists
-// ----------------------------------------------------------------------
-
-export function useStopExists(routeName: string) {
-    const stops = useBusStop(routeName);
-    const stopSet = useMemo(() => new Set(stops.map((s) => s.nodeid)), [stops]);
-
-    return useCallback((nodeid: string | null | undefined): boolean => {
-        if (!nodeid) return false;
-
-        return stopSet.has(nodeid.trim());
-    }, [stopSet]);
-}

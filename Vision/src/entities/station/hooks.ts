@@ -1,12 +1,12 @@
-import { getBusStopArrivalData } from "@entities/bus/api";
 import { getBusStopLocationData, getRouteStopsByRouteName } from "@entities/station/api";
 import type { BusStop, BusStopArrival } from "@entities/station/types";
 import { CacheManager } from "@shared/cache/CacheManager";
 import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
-import { UI_TEXT } from "@shared/config/locale";
 import { useAppMapContext } from "@shared/context/AppMapContext";
+import type { CachedData } from "@shared/redis/types";
 import { getHaversineDistance } from "@shared/utils/geo";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import useSWR from "swr";
 
 const MIN_VALID_STOPS = 4;
 
@@ -109,46 +109,28 @@ export function useClosestStopOrd(routeName: string): number | null {
 
 // useBusArrivalInfo
 
+const arrivalFetcher = async (url: string): Promise<CachedData<BusStopArrival[]>> => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+};
+
 export function useBusArrivalInfo(busStopId: string | null) {
-    const [data, setData] = useState<BusStopArrival[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-    const fetchData = useCallback(async () => {
-        if (!busStopId || busStopId.trim() === "") {
-            setData([]);
-            return;
+    const {data, error, isLoading} = useSWR<CachedData<BusStopArrival[]>>(
+        busStopId && busStopId.trim() !== "" ? `/api/bus-arrival/${busStopId}` : null,
+        arrivalFetcher,
+        {
+            refreshInterval: API_CONFIG.LIVE.POLLING_INTERVAL_MS,
+            revalidateOnFocus: true,
+            dedupingInterval: 2000,
         }
+    );
 
-        setLoading(true);
-        setError(null);
-
-        try {
-            const result = await getBusStopArrivalData(busStopId);
-            setData(result);
-        } catch (e) {
-            if (APP_CONFIG.IS_DEV) console.error("[useBusArrivalInfo] Error fetching bus arrival data:", e);
-            setError(UI_TEXT.ERROR.NO_ARRIVAL_INFO);
-        } finally {
-            setLoading(false);
-        }
-    }, [busStopId]);
-
-    useEffect(() => {
-        if (timerRef.current) clearInterval(timerRef.current);
-        if (!busStopId || busStopId.trim() === "") {
-            setData([]);
-            return;
-        }
-        fetchData().then(r => void r);
-        timerRef.current = setInterval(fetchData, API_CONFIG.LIVE.POLLING_INTERVAL_MS);
-        return () => {
-            if (timerRef.current) clearInterval(timerRef.current);
-        };
-    }, [busStopId, fetchData]);
-
-    return {data, loading, error};
+    return useMemo(() => ({
+        data: data?.data ?? [],
+        loading: isLoading,
+        error: error ? "도착 정보를 불러올 수 없습니다." : null,
+    }), [data, isLoading, error]);
 }
 
 export function getNextBusArrivalInfo(routeName: string, data: BusStopArrival[]) {

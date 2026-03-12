@@ -123,11 +123,6 @@ export const UI_TEXT = {
 // Domain Constants (Labels used in logic/display mix)
 // ============================================================================
 
-export const ARRIVAL_STATUS_LABELS = {
-    LOADING: '정보 수신 중...',
-    NO_INFO: '도착 정보 없음',
-    ENDED: '운행 종료',
-} as const;
 
 export const DAY_LABELS = {
     WEEKDAY: '평일',

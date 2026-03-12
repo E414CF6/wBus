@@ -1,5 +1,3 @@
-import { UI_TEXT } from "@shared/config/locale";
-
 /**
  * Converts seconds to minutes, rounding up to the nearest whole number.
  * Ensures the result is never negative.
@@ -20,13 +18,4 @@ export function secondsToMinutes(seconds: number): number {
 export function formatVehicleType(vehicleType: string): string {
     if (!vehicleType) return "";
     return vehicleType.slice(0, 2);
-}
-
-/**
- * Formats a route number with the localized suffix.
- * * @param routeNo - The raw route number (e.g., "100")
- * @returns The formatted string (e.g., "100번" in KR or "No. 100" depending on locale)
- */
-export function formatRouteNumber(routeNo: string): string {
-    return UI_TEXT.BUS_LIST.TITLE_ROUTE(routeNo);
 }

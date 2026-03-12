@@ -238,6 +238,4 @@ export function createMultiPolylineData(
     };
 }
 
-export function clearPolylineCache(): void {
-    processedCache.clear();
-}
+
