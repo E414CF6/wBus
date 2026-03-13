@@ -22,11 +22,6 @@ export interface NextBusInfo {
 // ----------------------------------------------------------------------
 // Utility Functions
 // ----------------------------------------------------------------------
-
-function getCurrentHour(date: Date = new Date()): string {
-    return String(date.getHours()).padStart(2, '0');
-}
-
 export function getCurrentDayType(date: Date = new Date()): 'weekday' | 'weekend' {
     const day = date.getDay();
     return day === 0 || day === 6 ? 'weekend' : 'weekday';
@@ -38,16 +33,6 @@ export function formatTime(hour: string, minute: string): string {
 
 function getCurrentMinutes(date: Date = new Date()): number {
     return date.getHours() * MINUTES_IN_HOUR + date.getMinutes();
-}
-
-function timeToMinutes(timeStr: string): number {
-    const colonIndex = timeStr.indexOf(':');
-    if (colonIndex === -1) {
-        return parseInt(timeStr, 10) * MINUTES_IN_HOUR;
-    }
-    const hours = parseInt(timeStr.substring(0, colonIndex), 10);
-    const minutes = parseInt(timeStr.substring(colonIndex + 1), 10);
-    return (hours * MINUTES_IN_HOUR) + minutes;
 }
 
 export function getNearestBusTime(busData: BusSchedule): NearestBusInfo | null {
