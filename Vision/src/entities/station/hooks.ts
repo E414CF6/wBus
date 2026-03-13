@@ -115,6 +115,8 @@ const arrivalFetcher = async (url: string): Promise<CachedData<BusStopArrival[]>
     return res.json();
 };
 
+const EMPTY_ARRIVAL_LIST: BusStopArrival[] = [];
+
 export function useBusArrivalInfo(busStopId: string | null) {
     const {data, error, isLoading} = useSWR<CachedData<BusStopArrival[]>>(
         busStopId && busStopId.trim() !== "" ? `/api/bus-arrival/${busStopId}` : null,
@@ -127,7 +129,7 @@ export function useBusArrivalInfo(busStopId: string | null) {
     );
 
     return useMemo(() => ({
-        data: data?.data ?? [],
+        data: data?.data ?? EMPTY_ARRIVAL_LIST,
         loading: isLoading,
         error: error ? "도착 정보를 불러올 수 없습니다." : null,
     }), [data, isLoading, error]);

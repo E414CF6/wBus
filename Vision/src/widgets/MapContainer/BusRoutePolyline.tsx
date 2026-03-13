@@ -93,13 +93,19 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
     const lastBoundsKeyRef = useRef<string | null>(null);
 
     // Determine active route IDs (routes with running buses)
-    const activeRouteIds = useMemo(() => {
+    // We stringify the IDs to use as a stable dependency and prevent expensive polyline recalculations
+    const activeRouteIdsStr = useMemo(() => {
         const validRouteIdSet = new Set(routeIds);
         const busRouteIds = busList
             .map((bus) => bus.routeid)
             .filter((id): id is string => typeof id === "string" && validRouteIdSet.has(id));
-        return Array.from(new Set(busRouteIds));
+
+        return Array.from(new Set(busRouteIds)).sort().join(",");
     }, [busList, routeIds]);
+
+    const activeRouteIds = useMemo(() => {
+        return activeRouteIdsStr ? activeRouteIdsStr.split(",") : [];
+    }, [activeRouteIdsStr]);
 
     const {
         activeUpSegments,

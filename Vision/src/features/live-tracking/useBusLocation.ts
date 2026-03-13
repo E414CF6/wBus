@@ -9,6 +9,8 @@ const fetcher = async (url: string): Promise<CachedData<BusItem[]>> => {
     return res.json();
 };
 
+const EMPTY_BUS_LIST: BusItem[] = [];
+
 /**
  * React hook to fetch bus location data via SWR.
  * All users share the same Redis-cached data on the server.
@@ -29,16 +31,16 @@ export function useBusLocationData(routeName: string): {
     );
 
     if (error) {
-        return {data: [], error: "ERR:NETWORK", hasFetched: true};
+        return {data: EMPTY_BUS_LIST, error: "ERR:NETWORK", hasFetched: true};
     }
 
     if (!data || isLoading) {
-        return {data: [], error: null, hasFetched: false};
+        return {data: EMPTY_BUS_LIST, error: null, hasFetched: false};
     }
 
     const buses = data.data;
     if (buses.length === 0) {
-        return {data: [], error: "ERR:NONE_RUNNING", hasFetched: true};
+        return {data: EMPTY_BUS_LIST, error: "ERR:NONE_RUNNING", hasFetched: true};
     }
 
     return {data: buses, error: null, hasFetched: true};

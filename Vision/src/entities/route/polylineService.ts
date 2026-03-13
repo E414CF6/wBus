@@ -150,7 +150,7 @@ function extractBBox(data: GeoPolyline): [[number, number], [number, number]] | 
     return [[minLat, minLng], [maxLat, maxLng]];
 }
 
-export async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
+async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
     const cached = processedCache.get(routeId);
     if (cached) return cached;
     const [rawData, routeDetail, stationMap] = await Promise.all([

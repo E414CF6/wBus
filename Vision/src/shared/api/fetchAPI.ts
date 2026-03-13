@@ -47,14 +47,10 @@ export async function fetchAPI<T = unknown>(
 
             if (!response.ok) {
                 const errorText = await response.text();
-                const httpError = new HttpError(
+                throw new HttpError(
                     `[fetchAPI] Fetch failed for ${url} with status ${response.status}: ${errorText}`,
                     response.status
                 );
-                if (i === retries - 1) {
-                    throw httpError;
-                }
-                throw httpError;
             }
 
             return (await response.json()) as T;

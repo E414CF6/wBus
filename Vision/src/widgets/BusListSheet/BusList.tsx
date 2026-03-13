@@ -200,7 +200,15 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
 
     const handleDataUpdate = useCallback((name: string, data: RouteData) => {
         setRoutesData((prev) => {
-            if (prev[name]?.sortedList === data.sortedList && prev[name]?.error === data.error) return prev;
+            const current = prev[name];
+            if (
+                current &&
+                current.sortedList === data.sortedList &&
+                current.error === data.error &&
+                current.hasFetched === data.hasFetched
+            ) {
+                return prev;
+            }
             return {...prev, [name]: data};
         });
     }, []);

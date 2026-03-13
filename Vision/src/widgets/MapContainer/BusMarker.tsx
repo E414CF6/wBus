@@ -133,6 +133,54 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
 
     const refreshKey = `${routeName}-${activeRouteId ?? "none"}`;
 
+    const routeIndicesMap = useMemo(() => {
+        if (!routeInfo) return new Map();
+
+        const map = new Map();
+        for (const id of routeInfo.vehicleRouteIds) {
+            const polylineSet = polylineMap.get(id) ?? fallbackPolylines;
+            const {stopIndexMap, turnIndex, isSwapped, upPolyline, downPolyline} = polylineSet;
+
+            let upIndices: number[] = [];
+            let downIndices: number[] = [];
+
+            if (stopIndexMap) {
+                const getIndicesForDir = (dir: number) => {
+                    const allIndices = new Set<number>();
+                    const dirSuffix = `-${dir}`;
+                    for (const [key, idx] of Object.entries(stopIndexMap.byIdDir)) {
+                        if (key.endsWith(dirSuffix)) allIndices.add(idx as number);
+                    }
+                    if (allIndices.size === 0) {
+                        for (const idx of Object.values(stopIndexMap.byId)) allIndices.add(idx as number);
+                    }
+                    return Array.from(allIndices);
+                };
+
+                const effectiveUp = isSwapped ? 0 : 1;
+                const effectiveDown = isSwapped ? 1 : 0;
+
+                const rawUp = getIndicesForDir(effectiveUp);
+                const rawDown = getIndicesForDir(effectiveDown);
+
+                upIndices = rawUp.filter(i => i >= 0 && i < upPolyline.length).sort((a, b) => a - b);
+
+                if (turnIndex !== undefined) {
+                    const safeTurn = Math.round(turnIndex);
+                    downIndices = rawDown
+                        .map(i => i - safeTurn)
+                        .filter(i => i >= 0 && i < downPolyline.length)
+                        .sort((a, b) => a - b);
+                } else {
+                    downIndices = rawDown.filter(i => i >= 0 && i < downPolyline.length).sort((a, b) => a - b);
+                }
+            }
+
+            map.set(id, {upIndices, downIndices});
+        }
+        return map;
+    }, [routeInfo, polylineMap, fallbackPolylines]);
+
     const markers = useMemo(() => {
         if (!routeInfo || busList.length === 0) return [];
 
@@ -149,43 +197,10 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
             });
             const activePolyline = snapped.direction === 1 ? upPolyline : downPolyline;
 
-            // Extract stop coordinate indices for speed modulation.
-            // stopIndexMap values are indices into the full (unsplit) polyline.
-            // For the down direction, adjust by turnIndex offset.
-            let stopCordIndices: number[] = [];
-            if (stopIndexMap) {
-                const allIndices = new Set<number>();
-                const effectiveDir = isSwapped
-                    ? (snapped.direction === 1 ? 0 : 1)
-                    : snapped.direction;
-
-                // Collect indices for this direction from byIdDir and byOrdDir
-                const dirSuffix = `-${effectiveDir}`;
-                for (const [key, idx] of Object.entries(stopIndexMap.byIdDir)) {
-                    if (key.endsWith(dirSuffix)) {
-                        allIndices.add(idx);
-                    }
-                }
-                // Fallback: if no direction-specific entries, use all
-                if (allIndices.size === 0) {
-                    for (const idx of Object.values(stopIndexMap.byId)) {
-                        allIndices.add(idx);
-                    }
-                }
-
-                // For down polyline, the polyline starts at turnIndex,
-                // so we need to offset the indices.
-                if (snapped.direction === 0 && turnIndex !== undefined) {
-                    const safeTurn = Math.round(turnIndex);
-                    stopCordIndices = [...allIndices]
-                        .map(i => i - safeTurn)
-                        .filter(i => i >= 0 && i < activePolyline.length)
-                        .sort((a, b) => a - b);
-                } else {
-                    stopCordIndices = [...allIndices]
-                        .filter(i => i >= 0 && i < activePolyline.length)
-                        .sort((a, b) => a - b);
-                }
+            const routeIndices = targetRouteId ? routeIndicesMap.get(targetRouteId) : null;
+            let stopCoordIndices: number[] = [];
+            if (routeIndices) {
+                stopCoordIndices = snapped.direction === 1 ? routeIndices.upIndices : routeIndices.downIndices;
             }
 
             return {
@@ -196,7 +211,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 direction: snapped.direction,
                 polyline: activePolyline,
                 snapIndexHint: snapped.segmentIndex ?? null,
-                stopCoordIndices: stopCordIndices,
+                stopCoordIndices,
             };
         });
     }, [
@@ -206,7 +221,8 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
         polylineMap,
         fallbackPolylines,
         activeRouteId,
-        routeName
+        routeName,
+        routeIndicesMap
     ]);
 
     if (!routeInfo || markers.length === 0) return null;
