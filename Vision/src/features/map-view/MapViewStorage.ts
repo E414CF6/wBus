@@ -5,7 +5,7 @@ import type { MapRef } from "react-map-gl/maplibre";
 // Types & Constants
 // ----------------------------------------------------------------------
 
-export type StoredMapView = {
+type StoredMapView = {
     latitude: number;
     longitude: number;
     zoom: number;
@@ -53,7 +53,7 @@ export function getInitialMapView(): StoredMapView {
  * Loads and validates the map view from Local Storage.
  * Returns null if no data exists, or if data is corrupted/out-of-bounds.
  */
-export function loadStoredMapView(): StoredMapView | null {
+function loadStoredMapView(): StoredMapView | null {
     if (typeof window === "undefined") return null;
 
     try {

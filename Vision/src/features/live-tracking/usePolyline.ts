@@ -7,7 +7,6 @@
 
 import {
     createMultiPolylineData,
-    fetchRoutePolyline,
     fetchRoutePolylines,
     type MultiPolylineData,
     type PolylineData,
@@ -21,7 +20,7 @@ import { useEffect, useMemo, useState } from "react";
 // Types (Re-exported for convenience)
 // ============================================================================
 
-export type { PolylineData, PolylineSegment, MultiPolylineData };
+export type { PolylineData, PolylineSegment };
 
 export interface BusPolylineSet {
     upPolyline: Coordinate[];
@@ -34,42 +33,6 @@ export interface BusPolylineSet {
 // ============================================================================
 // Hook: useBusPolyline (Single Route)
 // ============================================================================
-
-const EMPTY_POLYLINE: PolylineData = {
-    upPolyline: [],
-    downPolyline: [],
-};
-
-/**
- * Fetches and returns polyline data for a single route.
- * Replaces the old useBusPolyline hook.
- */
-export function useBusPolyline(routeId?: string | null): PolylineData {
-    const [snapshot, setSnapshot] = useState<{
-        routeId: string;
-        data: PolylineData;
-    } | null>(null);
-
-    useEffect(() => {
-        if (!routeId) return;
-
-        let mounted = true;
-
-        fetchRoutePolyline(routeId).then((data) => {
-            if (mounted) setSnapshot({routeId, data});
-        });
-
-        return () => {
-            mounted = false;
-        };
-    }, [routeId]);
-
-    if (!routeId || snapshot?.routeId !== routeId) {
-        return EMPTY_POLYLINE;
-    }
-
-    return snapshot.data;
-}
 
 // ============================================================================
 // Hook: useBusPolylineMap (Multiple Routes)

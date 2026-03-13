@@ -1,8 +1,6 @@
-import { getRouteDetails } from "@entities/route/api";
 import { Direction, type DirectionCode } from "@entities/route/types";
-import { APP_CONFIG, MAP_SETTINGS } from "@shared/config/env";
+import { MAP_SETTINGS } from "@shared/config/env";
 
-export { Direction, type DirectionCode } from "@entities/route/types";
 
 export interface RouteSequenceData {
     routeid: string;
@@ -22,7 +20,7 @@ interface SequenceCandidate {
 
 type SequenceLookupMap = Map<string, SequenceCandidate[]>;
 
-export interface DirectionLookup {
+interface DirectionLookup {
     sequenceMap: SequenceLookupMap;
     routeMixedDirMap: Map<string, boolean>;
     fallbackDirMap: Map<string, DirectionCode>;
@@ -103,17 +101,3 @@ export function resolveDirection(
     return bestMatch.updowncd === 0 ? Direction.DOWN : Direction.UP;
 }
 
-export async function getDirectionFromRouteDetails(
-    routeid: string, nodeord: number
-): Promise<DirectionCode> {
-    try {
-        const detail = await getRouteDetails(routeid);
-        if (!detail?.sequence) return null;
-        const match = detail.sequence.find((s) => s.nodeord === nodeord);
-        if (match) return match.updowncd === 0 ? Direction.DOWN : Direction.UP;
-        return null;
-    } catch (err) {
-        if (APP_CONFIG.IS_DEV) console.error("[getDirectionFromRouteDetails] Failed:", err);
-        return null;
-    }
-}

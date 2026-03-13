@@ -11,10 +11,6 @@ import type { DirectionCode } from "@entities/route/types";
 import { APP_CONFIG } from "@shared/config/env";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-// Re-export for backward compatibility
-export { Direction, type DirectionCode } from "@entities/route/types";
-export { getDirectionFromRouteDetails } from "@entities/route/directionService";
-
 // ----------------------------------------------------------------------
 // Main Hook: useBusDirection
 // ----------------------------------------------------------------------

@@ -7,7 +7,7 @@ import type { BusSchedule, RowItem } from "@entities/route/types";
 const MINUTES_IN_HOUR = 60;
 const MINUTES_IN_DAY = 1440;
 
-export interface NearestBusInfo {
+interface NearestBusInfo {
     time: string;
     minutesUntil: number;
     destination: string;
@@ -23,7 +23,7 @@ export interface NextBusInfo {
 // Utility Functions
 // ----------------------------------------------------------------------
 
-export function getCurrentHour(date: Date = new Date()): string {
+function getCurrentHour(date: Date = new Date()): string {
     return String(date.getHours()).padStart(2, '0');
 }
 
@@ -36,11 +36,11 @@ export function formatTime(hour: string, minute: string): string {
     return `${hour}:${minute.padStart(2, '0')}`;
 }
 
-export function getCurrentMinutes(date: Date = new Date()): number {
+function getCurrentMinutes(date: Date = new Date()): number {
     return date.getHours() * MINUTES_IN_HOUR + date.getMinutes();
 }
 
-export function timeToMinutes(timeStr: string): number {
+function timeToMinutes(timeStr: string): number {
     const colonIndex = timeStr.indexOf(':');
     if (colonIndex === -1) {
         return parseInt(timeStr, 10) * MINUTES_IN_HOUR;

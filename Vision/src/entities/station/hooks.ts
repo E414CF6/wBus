@@ -133,9 +133,3 @@ export function useBusArrivalInfo(busStopId: string | null) {
     }), [data, isLoading, error]);
 }
 
-export function getNextBusArrivalInfo(routeName: string, data: BusStopArrival[]) {
-    const target = data.find((bus) => bus.routeno.replace(/-/g, "").trim() === routeName.replace(/-/g, "").trim());
-    if (!target) return null;
-
-    return {minutes: Math.ceil(target.arrtime / 60), stopsAway: target.arrprevstationcnt};
-}

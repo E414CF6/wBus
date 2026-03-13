@@ -33,11 +33,6 @@ export function getEuclideanDistance(P: CoordinateLike, Q: CoordinateLike): numb
     return Math.sqrt(dx * dx + dy * dy);
 }
 
-export function getEuclideanDistanceSq(P: CoordinateLike, Q: CoordinateLike): number {
-    const dx = P[0] - Q[0];
-    const dy = P[1] - Q[1];
-    return dx * dx + dy * dy;
-}
 
 export function calculateBearing(A: CoordinateLike, B: CoordinateLike): number {
     const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -50,11 +45,6 @@ export function calculateBearing(A: CoordinateLike, B: CoordinateLike): number {
     return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
-export function calculateAngle(A: Coordinate, B: Coordinate): number {
-    const deltaLat = B[0] - A[0];
-    const deltaLng = B[1] - A[1];
-    return (Math.atan2(deltaLat, deltaLng) * 180) / Math.PI;
-}
 
 export function normalizeAngle(angle: number): number {
     return ((angle % 360) + 360) % 360;
@@ -69,29 +59,19 @@ export function interpolateAngle(from: number, to: number, progress: number): nu
     return normalizeAngle(normFrom + diff * progress);
 }
 
-export interface SnapResult {
+interface SnapResult {
     position: Coordinate;
     angle: number;
     segmentIndex: number;
     t: number;
 }
 
-export interface SnapOptions {
+interface SnapOptions {
     segmentHint?: number | null;
     searchRadius?: number;
     minSegmentIndex?: number | null;
 }
 
-export function projectPointOnSegment(
-    P: Coordinate, A: Coordinate, B: Coordinate
-): Coordinate {
-    const AP = [P[0] - A[0], P[1] - A[1]];
-    const AB = [B[0] - A[0], B[1] - A[1]];
-    const abSquared = AB[0] * AB[0] + AB[1] * AB[1];
-    if (abSquared === 0) return A;
-    const t = Math.max(0, Math.min(1, (AP[0] * AB[0] + AP[1] * AB[1]) / abSquared));
-    return [A[0] + AB[0] * t, A[1] + AB[1] * t];
-}
 
 export function snapPointToPolyline<T extends CoordinateLike>(
     point: CoordinateLike, polyline: T[], options?: SnapOptions
@@ -164,81 +144,3 @@ export function isFiniteNumber(value: unknown): value is number {
  * Used for "coasting" — continuing movement beyond the last known target position
  * so that the bus marker never appears to stop between polling intervals.
  */
-export function advanceAlongPolyline(
-    polyline: CoordinateLike[],
-    startSegIdx: number,
-    startT: number,
-    distance: number
-): { position: Coordinate; angle: number; segmentIndex: number; t: number } {
-    if (!polyline || polyline.length < 2) {
-        const pos: Coordinate = polyline?.length ? [polyline[0][0], polyline[0][1]] : [0, 0];
-        return {position: pos, angle: 0, segmentIndex: 0, t: 0};
-    }
-
-    const lastSeg = polyline.length - 2;
-    const segIdx0 = clamp(startSegIdx, 0, lastSeg);
-    const t0 = clamp(startT, 0, 1);
-
-    if (distance <= 0) {
-        const A = polyline[segIdx0];
-        const B = polyline[segIdx0 + 1];
-        return {
-            position: [A[0] + (B[0] - A[0]) * t0, A[1] + (B[1] - A[1]) * t0],
-            angle: calculateBearing(A, B),
-            segmentIndex: segIdx0,
-            t: t0,
-        };
-    }
-
-    let remaining = distance;
-    let segIdx = segIdx0;
-
-    // Consume remaining distance on the current segment
-    const A0 = polyline[segIdx];
-    const B0 = polyline[segIdx + 1];
-    const segLen0 = getEuclideanDistance(A0, B0);
-    const leftOnSeg0 = segLen0 * (1 - t0);
-
-    if (segLen0 > 0 && remaining <= leftOnSeg0) {
-        const newT = t0 + remaining / segLen0;
-        return {
-            position: [A0[0] + (B0[0] - A0[0]) * newT, A0[1] + (B0[1] - A0[1]) * newT],
-            angle: calculateBearing(A0, B0),
-            segmentIndex: segIdx,
-            t: newT,
-        };
-    }
-
-    remaining -= leftOnSeg0;
-    segIdx++;
-
-    // Advance through subsequent segments
-    while (segIdx <= lastSeg) {
-        const A = polyline[segIdx];
-        const B = polyline[segIdx + 1];
-        const segLen = getEuclideanDistance(A, B);
-
-        if (segLen > 0 && remaining <= segLen) {
-            const newT = remaining / segLen;
-            return {
-                position: [A[0] + (B[0] - A[0]) * newT, A[1] + (B[1] - A[1]) * newT],
-                angle: calculateBearing(A, B),
-                segmentIndex: segIdx,
-                t: newT,
-            };
-        }
-
-        remaining -= segLen;
-        segIdx++;
-    }
-
-    // Reached the end of polyline — clamp to last point
-    const endIdx = polyline.length - 1;
-    const prevIdx = polyline.length - 2;
-    return {
-        position: [polyline[endIdx][0], polyline[endIdx][1]],
-        angle: calculateBearing(polyline[prevIdx], polyline[endIdx]),
-        segmentIndex: lastSeg,
-        t: 1,
-    };
-}

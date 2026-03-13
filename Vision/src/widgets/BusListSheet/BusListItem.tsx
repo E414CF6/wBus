@@ -1,5 +1,5 @@
 import type { BusItem } from "@entities/bus/types";
-import type { DirectionCode } from "@features/live-tracking/useBusDirection";
+import type { DirectionCode } from "@entities/route/types";
 import { UI_TEXT } from "@shared/config/locale";
 
 import Pill from "@shared/ui/Pill";

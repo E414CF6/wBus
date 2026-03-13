@@ -94,9 +94,21 @@ items) and **request deduplication** — concurrent fetches for the same key sha
 
 Real-time bus positions and arrival info are fetched from the
 [Korea Public Data Portal](https://www.data.go.kr/) (`apis.data.go.kr`), proxied through server-side
-API routes.
+API routes. Next.js API routes are marked with `export const dynamic = "force-dynamic"` to bypass default static caching
+and ensure our Redis layer handles all caching logic.
 
 **Server-side caching (Redis):**
+To optimize the API and prevent timeouts from the public portal, the Redis caching layer (`src/shared/redis/client.ts`)
+implements several advanced strategies:
+
+1. **Smart Caching (3-600s TTL):** Live bus positions/arrivals are cached for 3 seconds, while bus stop metadata is
+   cached for 10 minutes.
+2. **In-Flight Request Coalescing:** Prevents **Cache Stampedes (Thundering Herd)**. If a cache expires and multiple
+   users request the same data simultaneously, only *one* outgoing request is made to the public API, and all concurrent
+   requests await its resolution.
+3. **Stale Data Fallback:** The public API is occasionally unstable. The Redis cache keeps expired entries for an
+   extended period (e.g., 5x TTL). If the public API fails (with exponential backoff retries), the system catches the
+   error and serves the older "stale" data instead of showing an error to the user, ensuring uninterrupted service.
 
 | API Route                      | Redis Key             | TTL     | Data Source            |
 |--------------------------------|-----------------------|---------|------------------------|

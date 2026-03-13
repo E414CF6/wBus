@@ -412,7 +412,7 @@ export function useAnimatedPosition(
         const polylineJustLoaded = hasPolyline && prevPolylineLenRef.current < 2;
         prevPolylineLenRef.current = polyline.length;
 
-        // ── First data / polyline just arrived ──
+        // First data / polyline just arrived 
         if (isFirstDataRef.current || polylineJustLoaded) {
             isFirstDataRef.current = false;
 
@@ -450,7 +450,7 @@ export function useAnimatedPosition(
             return;
         }
 
-        // ── Same position → skip ──
+        // Same position → skip
         const prev = prevTargetRef.current;
         if (targetPosition[0] === prev[0] && targetPosition[1] === prev[1]) return;
         prevTargetRef.current = targetPosition;
@@ -466,7 +466,7 @@ export function useAnimatedPosition(
         const rawDist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
         const totalDist = cumDist[cumDist.length - 1];
 
-        // ── Backward detection ──
+        // Backward detection
         if (hasDataRef.current && rawDist < prevRawDistRef.current) {
             const backMeters = getApproxDistanceMeters(
                 currentPosRef.current, snapped.position);
@@ -489,7 +489,7 @@ export function useAnimatedPosition(
             return;
         }
 
-        // ── Estimate velocity (blend measured with prior) ──
+        // Estimate velocity (blend measured with prior) 
         const now = performance.now();
         const dtMs = prevDataTimeRef.current > 0 ? now - prevDataTimeRef.current : 0;
 
@@ -518,7 +518,7 @@ export function useAnimatedPosition(
         prevDataTimeRef.current = now;
         hasDataRef.current = true;
 
-        // ── Aggressive forward projection ──
+        // Aggressive forward projection 
         // Data is stale by ~dataDelayMs. Project the bus forward by
         // that amount, using the blended velocity.
         let projDist = 0;
@@ -547,7 +547,7 @@ export function useAnimatedPosition(
         }
         const newTarget = Math.min(rawDist + projDist, totalDist);
 
-        // ── Reconcile target vs marker ──
+        // Reconcile target vs marker 
         targetDistRef.current = newTarget;
         const marker = markerDistRef.current;
 

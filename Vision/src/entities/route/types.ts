@@ -1,10 +1,7 @@
-import type { StationLocation } from "@entities/station/types";
-
 // Re-export Coordinate from shared geo utils (the canonical definition)
 export type Coordinate = [number, number];
-export type GeoJSONCoordinate = [number, number];
 
-// ── Route ──────────────────────────────────────────────────────
+// Route Info
 
 export type RouteInfo = {
     routeName: string;
@@ -22,14 +19,14 @@ export type RouteDetail = {
     sequence: SequenceItem[];
 };
 
-// ── GeoJSON ────────────────────────────────────────────────────
+// GeoJSON
 
-export interface BusRouteFeatureCollection {
+interface BusRouteFeatureCollection {
     type: "FeatureCollection";
     features: BusRouteFeature[];
 }
 
-export interface BusRouteFeature {
+interface BusRouteFeature {
     type: "Feature";
     id: string;
     bbox: [number, number, number, number];
@@ -40,7 +37,7 @@ export interface BusRouteFeature {
     properties: BusRouteProperties;
 }
 
-export interface BusRouteProperties {
+interface BusRouteProperties {
     route_id: string;
     route_no: string;
     stops: Array<{
@@ -56,9 +53,9 @@ export interface BusRouteProperties {
 }
 
 export type GeoPolyline = BusRouteFeatureCollection;
-export type GeoFeature = BusRouteFeature;
+type GeoFeature = BusRouteFeature;
 
-// ── Schedule ───────────────────────────────────────────────────
+// Schedule Items
 
 export interface RowItem {
     minute: string;
@@ -85,7 +82,7 @@ export interface BusSchedule {
     notes?: { [key: string]: string };
 }
 
-// ── Direction ──────────────────────────────────────────────────
+// Direction
 
 export const Direction = {
     UP: 1,
@@ -94,7 +91,7 @@ export const Direction = {
 
 export type DirectionCode = (typeof Direction)[keyof typeof Direction] | null;
 
-// ── Day Type ───────────────────────────────────────────────────
+// Day Types
 
 export const DAY_TYPES = {
     WEEKDAY: 'weekday',
@@ -103,14 +100,9 @@ export const DAY_TYPES = {
 
 export type DayType = (typeof DAY_TYPES)[keyof typeof DAY_TYPES];
 
-// ── Map Data ───────────────────────────────────────────────────
+// Map Data
 
 export interface RouteMapData {
     lastUpdated: string;
     route_numbers: Record<string, string[]>;
-}
-
-export interface StationMapData {
-    lastUpdated: string;
-    stations: Record<string, StationLocation>;
 }

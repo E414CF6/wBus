@@ -7,7 +7,7 @@ import { useBusLocationData } from "./useBusLocation";
 
 import { type BusPolylineSet, getFallbackPolylines, useBusPolylineMap } from "./usePolyline";
 
-export interface UseBusData {
+interface UseBusData {
     routeInfo: RouteInfo | null;
     busList: BusItem[];
     getDirection: ReturnType<typeof useBusDirection>;
