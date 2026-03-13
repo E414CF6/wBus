@@ -41,10 +41,10 @@ const PopupMarquee = ({text, maxWidthClass = "max-w-full"}: PopupMarqueeProps) =
         >
             {shouldMarquee ? (
                 <div className="marquee-scroll flex-nowrap">
-                    <span ref={textRef} className="pr-6 font-medium whitespace-nowrap shrink-0">
+                    <span ref={textRef} className="pr-2 font-medium whitespace-nowrap shrink-0">
                         {text}
                     </span>
-                    <span className="pr-6 font-medium whitespace-nowrap shrink-0" aria-hidden="true">
+                    <span className="pr-2 font-medium whitespace-nowrap shrink-0" aria-hidden="true">
                         {text}
                     </span>
                 </div>
