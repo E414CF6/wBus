@@ -49,7 +49,7 @@ const PopupMarquee = ({text, maxWidthClass = "max-w-full"}: PopupMarqueeProps) =
                     </span>
                 </div>
             ) : (
-                <span ref={textRef} className="whitespace-nowrap block font-medium truncate">{text}</span>
+                <span ref={textRef} className="whitespace-nowrap block font-medium">{text}</span>
             )}
         </div>
     );
