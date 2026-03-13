@@ -53,7 +53,6 @@ interface BusRouteProperties {
 }
 
 export type GeoPolyline = BusRouteFeatureCollection;
-type GeoFeature = BusRouteFeature;
 
 // Schedule Items
 
