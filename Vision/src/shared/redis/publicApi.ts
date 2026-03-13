@@ -52,7 +52,7 @@ function extractItems<T>(data: { response?: { body?: { items?: { item?: T | T[] 
     return Array.isArray(raw) ? raw : [raw];
 }
 
-// ── Public Functions ────────────────────────────────────────────
+// Public Functions
 
 export interface RawBusLocation {
     routeid?: string;
