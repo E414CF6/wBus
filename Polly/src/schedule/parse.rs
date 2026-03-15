@@ -1,10 +1,17 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::LazyLock;
 
 use anyhow::{Context, Result};
 use regex::Regex;
 use scraper::{Html, Selector};
 
 use crate::schedule::model::{ParsedSchedule, RouteMeta, TimeEntry};
+
+// Compile regexes once at program start instead of on every function call.
+static ONCLICK_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"goDetail\('([^']+)'\)").unwrap());
+static HOUR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\d+시$").unwrap());
+static TIME_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(\d{1,2}:\d{2})").unwrap());
 
 /// Parses the main schedule page to extract a list of all available routes.
 /// It creates a map of route metadata and a list of `route_id`s used for fetching details.
@@ -18,7 +25,6 @@ pub fn extract_route_info(
 
     let row_selector = Selector::parse("table tr").unwrap();
     let cell_selector = Selector::parse("td").unwrap();
-    let onclick_re = Regex::new(r"goDetail\('([^']+)'\)").unwrap();
 
     let mut temp_directions: HashMap<String, HashSet<String>> = HashMap::new();
 
@@ -30,7 +36,7 @@ pub fn extract_route_info(
 
             // The route_id required for the POST request is in an `onclick` attribute.
             if let Some(onclick) = route_element.value().attr("onclick")
-                && let Some(caps) = onclick_re.captures(onclick)
+                && let Some(caps) = ONCLICK_RE.captures(onclick)
             {
                 let route_id = caps.get(1).unwrap().as_str().to_string();
 
@@ -145,7 +151,6 @@ pub fn parse_detail_schedule(
 
     let tr_selector = Selector::parse("tr").unwrap();
     let header_rows: Vec<_> = table.select(&tr_selector).collect();
-    let hour_re = Regex::new(r"^\d+시$").unwrap();
 
     // Parse table headers to identify directions.
     for row in &header_rows {
@@ -168,7 +173,7 @@ pub fn parse_detail_schedule(
             let clean_text = text.trim_end_matches('발').to_string();
             if !clean_text.is_empty()
                 && !["운행순번", "시", "분", "", "구분"].contains(&clean_text.as_str())
-                && !hour_re.is_match(&clean_text)
+                && !HOUR_RE.is_match(&clean_text)
             {
                 if !directions.contains(&clean_text) {
                     directions.push(clean_text.clone());
@@ -193,7 +198,6 @@ pub fn parse_detail_schedule(
     }
 
     let td_selector = Selector::parse("td").unwrap();
-    let time_re = Regex::new(r"^(\d{1,2}:\d{2})").unwrap();
 
     let mut times_by_direction: HashMap<String, Vec<TimeEntry>> = HashMap::new();
     for dir in &directions {
@@ -224,7 +228,7 @@ pub fn parse_detail_schedule(
         for (col_idx, cell) in cells.iter().enumerate() {
             if let Some(dir_name) = col_map.get(&col_idx) {
                 let text = cell.text().collect::<String>().trim().to_string();
-                if let Some(caps) = time_re.captures(&text) {
+                if let Some(caps) = TIME_RE.captures(&text) {
                     let clean_time = caps.get(1).unwrap().as_str().to_string();
 
                     if let Some(list) = times_by_direction.get_mut(dir_name) {

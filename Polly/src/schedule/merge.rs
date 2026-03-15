@@ -1,3 +1,4 @@
+use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap};
 
 use serde_json::json;
@@ -59,14 +60,15 @@ pub fn merge_schedules(
             for entry in entries {
                 // Handle notes: assign a unique ID to each note text.
                 let note_id = if let Some(note_text) = entry.note {
-                    if !note_map.contains_key(&note_text) {
-                        let new_id = note_counter.to_string();
-                        note_map.insert(note_text.clone(), new_id.clone());
-                        *note_counter += 1;
-                        route_json["notes"][&new_id] = json!(note_text);
-                        Some(new_id)
-                    } else {
-                        Some(note_map[&note_text].clone())
+                    match note_map.entry(note_text.clone()) {
+                        Entry::Occupied(e) => Some(e.get().clone()),
+                        Entry::Vacant(e) => {
+                            let new_id = note_counter.to_string();
+                            *note_counter += 1;
+                            route_json["notes"][&new_id] = json!(note_text);
+                            e.insert(new_id.clone());
+                            Some(new_id)
+                        }
                     }
                 } else {
                     None
