@@ -63,14 +63,14 @@ Vision consumes two categories of data through a three-tier caching pipeline:
          │                          │
     ┌────▼──────────────────────────▼──────────────────────────────────┐
     │                         API ROUTES (Server)                      │
-    │  GET /api/bus/[routeName]        → CachedData<BusItem[]>         │
+    │  GET /api/bus/[routeId]          → CachedData<BusItem[]>         │
     │  GET /api/bus-arrival/[busStopId] → CachedData<BusStopArrival[]> │
     │  GET /api/bus-stops/[routeId]    → CachedData<RawBusStop[]>      │
     └────────────────────────┬─────────────────────────────────────────┘
                              │
     ┌────────────────────────▼─────────────────────────────────────────┐
     │                     CLIENT (SWR + Hooks)                         │
-    │  useBusLocationData()  ─── 10s polling ──→ /api/bus/{name}       │
+    │  useBusLocationData()  ─── 10s polling ──→ /api/bus/{routeId}    │
     │  useBusArrivalInfo()   ─── 10s polling ──→ /api/bus-arrival/{id} │
     │  useBusData()          ─── combines live data + static polylines │
     └──────────────────────────────────────────────────────────────────┘
@@ -112,7 +112,7 @@ implements several advanced strategies:
 
 | API Route                      | Redis Key             | TTL     | Data Source            |
 |--------------------------------|-----------------------|---------|------------------------|
-| `/api/bus/[routeName]`         | `bus:{routeName}`     | 3 sec   | Bus location API       |
+| `/api/bus/[routeId]`           | `bus:{routeId}`       | 3 sec   | Bus location API       |
 | `/api/bus-arrival/[busStopId]` | `arrival:{busStopId}` | 3 sec   | Arrival prediction API |
 | `/api/bus-stops/[routeId]`     | `stops:{routeId}`     | 600 sec | Route stop list API    |
 
@@ -136,8 +136,8 @@ MapLibre.
 When a user selects route **"30"**:
 
 1. `routeMap.json` resolves `"30"` → `["WJB251000068", "WJB251000376", ...]`
-2. SWR fetches `/api/bus/30` → server checks Redis → on miss, calls the public API for each route
-   ID in parallel
+2. SWR fetches `/api/bus/{routeId}` for each route ID → server checks Redis → on miss, calls the
+   public API
 3. Polyline GeoJSON files are loaded for each route ID, split at `turn_idx` into **up** and **down**
    segments
 4. Bus GPS positions are snapped to the nearest point on the polyline
