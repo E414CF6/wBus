@@ -1,9 +1,10 @@
 "use client";
 
 import type { BusSchedule } from "@entities/route/types";
-import { fetchAPI, HttpError } from "@shared/api/fetchAPI";
+import { HttpError } from "@shared/api/fetchAPI";
 import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
 import { UI_TEXT } from "@shared/config/locale";
+import { loadStaticData } from "@shared/utils/dataLoader";
 import { useEffect, useState } from "react";
 
 // ----------------------------------------------------------------------
@@ -17,27 +18,12 @@ import { useEffect, useState } from "react";
 const GlobalScheduleCache = new Map<string, BusSchedule | null>();
 
 /**
- * Resolves the URL for the schedule JSON file.
- * Handles switching between remote API and local public directory based on config.
- */
-function resolveScheduleUrl(routeId: string): string {
-    const {USE_REMOTE, BASE_URL, PATHS} = API_CONFIG.STATIC;
-
-    if (USE_REMOTE && BASE_URL) {
-        return `${BASE_URL}/${PATHS.SCHEDULES}/${routeId}.json`;
-    }
-
-    return `/data/schedules/${routeId}.json`;
-}
-
-/**
  * Fetches the schedule data from the network.
  * Returns `null` if the file is not found (404/403), otherwise throws an error.
  */
 async function fetchScheduleData(routeId: string): Promise<BusSchedule | null> {
     try {
-        const url = resolveScheduleUrl(routeId);
-        return await fetchAPI<BusSchedule>(url, {baseUrl: "", retries: 1});
+        return await loadStaticData<BusSchedule>(`${API_CONFIG.STATIC.PATHS.SCHEDULES}/${routeId}.json`);
     } catch (error) {
         // Treat 404 (Not Found) or 403 (Forbidden) as "Data Missing" (null) rather than an error
         if (error instanceof HttpError && (error.status === 404 || error.status === 403)) {

@@ -1,4 +1,4 @@
-import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
+import { APP_CONFIG } from "@shared/config/env";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -12,41 +12,31 @@ export class HttpError extends Error {
     }
 }
 
+export interface FetchApiOptions extends RequestInit {
+    retries?: number;
+    retryDelay?: number;
+}
+
 export async function fetchAPI<T = unknown>(
-    endpoint: string,
-    options: {
-        retries?: number;
-        retryDelay?: number;
-        isStatic?: boolean;
-        baseUrl?: string;
-        init?: RequestInit;
-    } = {}
+    url: string,
+    options: FetchApiOptions = {}
 ): Promise<T> {
-    const {retries = 3, retryDelay = 1000, isStatic = false, baseUrl: customBaseUrl, init} = options;
-
-    if (customBaseUrl === undefined) {
-        if (isStatic && API_CONFIG.STATIC.BASE_URL === "NOT_SET") {
-            throw new Error("[fetchAPI] Environment variable `STATIC_API_URL` is not set.");
-        }
-    }
-
-    const baseUrl = customBaseUrl ?? API_CONFIG.STATIC.BASE_URL;
-    const url = `${baseUrl}${endpoint}`;
+    const {retries = 3, retryDelay = 1000, ...init} = options;
 
     for (let i = 0; i < retries; i++) {
         try {
             const isExternal = url.startsWith("http");
             const response = await fetch(url, {
                 ...init,
-                method: "GET",
+                method: init.method ?? "GET",
                 headers: {
                     ...(isExternal ? {} : {Client: APP_CONFIG.NAME}),
-                    ...(init?.headers ?? {}),
+                    ...(init.headers ?? {}),
                 },
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
+                const errorText = await response.text().catch(() => "");
                 throw new HttpError(
                     `[fetchAPI] Fetch failed for ${url} with status ${response.status}: ${errorText}`,
                     response.status
