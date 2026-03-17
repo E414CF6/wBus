@@ -17,7 +17,11 @@ export async function GET(
             CACHE_TTL
         );
 
-        return NextResponse.json(result);
+        return NextResponse.json(result, {
+            headers: {
+                "Cache-Control": "public, s-maxage=3, stale-while-revalidate=3",
+            },
+        });
     } catch (err) {
         console.error(`[API /bus-arrival/${busStopId}]`, err);
         return NextResponse.json(

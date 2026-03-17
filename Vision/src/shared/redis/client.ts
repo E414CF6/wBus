@@ -1,9 +1,10 @@
 import { createClient, type RedisClientType } from "redis";
 import type { CachedData } from "./types";
 
-
 let client: RedisClientType | null = null;
 let connecting: Promise<RedisClientType> | null = null;
+
+const pendingRequests = new Map<string, Promise<unknown>>();
 
 async function getRedisClient(): Promise<RedisClientType> {
     if (client && client.isOpen) return client;
@@ -35,10 +36,15 @@ async function getRedisClient(): Promise<RedisClientType> {
 }
 
 const CACHE_TTL_SECONDS = 10;
+const STALE_WHILE_REVALIDATE_SECONDS = 60; // Keep stale data for 1 minute
 
 /**
- * Get data from Redis cache or fetch fresh data if stale/missing.
- * This is the core "smart cache" — one user's fetch refreshes data for everyone.
+ * Get data from Redis cache with Stale-While-Revalidate strategy.
+ *
+ * 1. If fresh in Redis -> Return immediately.
+ * 2. If stale in Redis (but < SWR window) -> Return stale immediately, update in background.
+ * 3. If missing or expired -> Fetch, cache, and return.
+ * 4. Deduplicates concurrent fetches for the same key on this instance.
  */
 export async function getCachedOrFetch<T>(
     key: string,
@@ -46,30 +52,88 @@ export async function getCachedOrFetch<T>(
     ttlSeconds: number = CACHE_TTL_SECONDS
 ): Promise<CachedData<T>> {
     const redis = await getRedisClient();
-    const cached = await redis.get(key);
 
-    if (cached) {
+    // 1. Check Redis
+    const cachedString = await redis.get(key);
+    let cachedEntry: CachedData<T> | null = null;
+
+    if (cachedString) {
         try {
-            const parsed = JSON.parse(cached) as CachedData<T>;
-            const age = (Date.now() - parsed.timestamp) / 1000;
-
-            if (age < ttlSeconds) {
-                return parsed;
-            }
+            cachedEntry = JSON.parse(cachedString) as CachedData<T>;
         } catch {
-            // Corrupted cache entry — treat as cache miss
+            console.warn(`[Redis] Corrupted cache for key: ${key}`);
         }
     }
 
-    // Cache miss or stale — fetch fresh data
+    const now = Date.now();
+
+    // Calculate age in seconds
+    const age = cachedEntry ? (now - cachedEntry.timestamp) / 1000 : Infinity;
+
+    // STRATEGY: Fresh -> Return
+    if (cachedEntry && age < ttlSeconds) {
+        return cachedEntry;
+    }
+
+    // STRATEGY: Stale-While-Revalidate -> Return Stale, Fetch Background
+    if (cachedEntry && age < (ttlSeconds + STALE_WHILE_REVALIDATE_SECONDS)) {
+        // Trigger background update (fire and forget)
+        // We use the deduplication logic even for background updates to prevent spamming
+        fetchAndCache(key, fetcher, ttlSeconds, redis).catch(err =>
+            console.error(`[Redis] Background update failed for ${key}:`, err)
+        );
+
+        return cachedEntry;
+    }
+
+    // STRATEGY: Cache Miss or Expired -> Fetch (blocking)
+    // Use deduplication to prevent stampedes
+    return getOrFetchDeduplicated(key, fetcher, ttlSeconds, redis);
+}
+
+/**
+ * Handles fetching, caching, and request deduplication.
+ */
+async function getOrFetchDeduplicated<T>(
+    key: string,
+    fetcher: () => Promise<T>,
+    ttlSeconds: number,
+    redis: RedisClientType
+): Promise<CachedData<T>> {
+    // Check if there's already a pending request for this key
+    if (pendingRequests.has(key)) {
+        return pendingRequests.get(key) as Promise<CachedData<T>>;
+    }
+
+    const promise = fetchAndCache(key, fetcher, ttlSeconds, redis)
+        .finally(() => {
+            pendingRequests.delete(key);
+        });
+
+    pendingRequests.set(key, promise);
+    return promise;
+}
+
+/**
+ * Performs the actual fetch and cache update.
+ */
+async function fetchAndCache<T>(
+    key: string,
+    fetcher: () => Promise<T>,
+    ttlSeconds: number,
+    redis: RedisClientType
+): Promise<CachedData<T>> {
     const freshData = await fetcher();
     const entry: CachedData<T> = {
         data: freshData,
         timestamp: Date.now(),
     };
 
-    // Store in Redis with auto-expiry (2x TTL as a safety net)
-    await redis.set(key, JSON.stringify(entry), {EX: ttlSeconds * 2});
+    // Store in Redis with expiration (TTL + SWR window)
+    // We keep it longer in Redis than the strict TTL to allow for SWR
+    const redisTtl = ttlSeconds + STALE_WHILE_REVALIDATE_SECONDS;
+
+    await redis.set(key, JSON.stringify(entry), {EX: redisTtl});
 
     return entry;
 }

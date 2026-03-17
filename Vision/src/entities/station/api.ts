@@ -1,27 +1,18 @@
 import { getRouteDetails, getRouteMapData } from "@entities/route/api";
 import type { BusStop, StationLocation, StationMapData } from "@entities/station/types";
-import { fetchAPI } from "@shared/api/fetchAPI";
 import { CacheManager } from "@shared/cache/CacheManager";
 import { API_CONFIG } from "@shared/config/env";
+import { loadStaticData } from "@shared/utils/dataLoader";
 
 // Cache
 
 const stationMapCache = new CacheManager<StationMapData>();
 
-// URL Builder
-
-function getStationMapUrl(): string {
-    if (API_CONFIG.STATIC.USE_REMOTE && API_CONFIG.STATIC.BASE_URL) {
-        return `${API_CONFIG.STATIC.BASE_URL}/${API_CONFIG.STATIC.PATHS.STATION_MAP}`;
-    }
-    return "/data/stationMap.json";
-}
-
 // Internal API
 
 async function getStationMapData(): Promise<StationMapData> {
     return stationMapCache.getOrFetch("stationMap", async () => {
-        return fetchAPI<StationMapData>(getStationMapUrl(), {baseUrl: ""});
+        return loadStaticData<StationMapData>(API_CONFIG.STATIC.PATHS.STATION_MAP);
     });
 }
 

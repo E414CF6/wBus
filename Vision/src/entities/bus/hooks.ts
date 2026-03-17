@@ -1,28 +1,28 @@
 import { getRouteMap } from "@entities/route/api";
 import { APP_CONFIG } from "@shared/config/env";
-import { useEffect, useRef, useState } from "react";
+import useSWR from "swr";
 
 /**
  * Get (routeName) -> routeIds[] mapping for bus routes.
  * Example: { "30": ["30100123", "30100124"] }
+ *
+ * Uses SWR for caching and revalidation.
  */
 export function useBusRouteMap(): Record<string, string[]> | null {
-    const [data, setData] = useState<Record<string, string[]> | null>(null);
-    const hasFetched = useRef(false);
+    const {data, error} = useSWR(
+        "busRouteMap", // specific key for this resource
+        getRouteMap,
+        {
+            revalidateOnFocus: false, // Static data rarely changes
+            revalidateOnReconnect: false,
+            dedupingInterval: 60000, // Dedup for 1 minute
+            errorRetryCount: 3,
+        }
+    );
 
-    useEffect(() => {
-        if (hasFetched.current) return;
-        hasFetched.current = true;
+    if (error && APP_CONFIG.IS_DEV) {
+        console.error("[useBusRouteMap] Error fetching route map", error);
+    }
 
-        getRouteMap()
-            .then((map) => {
-                setData(map);
-            })
-            .catch((err) => {
-                if (APP_CONFIG.IS_DEV)
-                    console.error("[useBusRouteMap] Error fetching route map", err);
-            });
-    }, []);
-
-    return data;
+    return data ?? null;
 }

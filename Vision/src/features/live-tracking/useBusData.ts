@@ -1,7 +1,8 @@
 import type { BusItem } from "@entities/bus/types";
 import { getRouteInfo } from "@entities/route/api";
 import type { RouteInfo } from "@entities/route/types";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
+import useSWR from "swr";
 import { useBusDirection } from "./useBusDirection";
 import { useBusLocationData } from "./useBusLocation";
 
@@ -18,28 +19,32 @@ interface UseBusData {
 
 /**
  * Custom hook that aggregates all bus-related data for a given route.
- * Combines route information, bus locations, polylines, and direction data.
+ * Now uses routeId-based API for more efficient data fetching.
  * @param routeName - The name of the route (e.g., "30", "34")
  * @returns An object containing all bus data for the route
  */
 export function useBusData(routeName: string): UseBusData {
-    const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
-    const {data: busList} = useBusLocationData(routeName);
-    const directionFn = useBusDirection(routeName);
-
-    useEffect(() => {
-        getRouteInfo(routeName).then(setRouteInfo);
-    }, [routeName]);
-
-    const activeRouteId = useMemo(() => {
-        const liveRouteId = busList.find((bus) => bus.routeid)?.routeid;
-        return liveRouteId ?? routeInfo?.vehicleRouteIds[0] ?? null;
-    }, [busList, routeInfo]);
+    // Use SWR for route info to gain caching and deduplication
+    const {data: routeInfo} = useSWR(
+        routeName ? ["routeInfo", routeName] : null,
+        ([, name]) => getRouteInfo(name),
+        {
+            revalidateOnFocus: false, // Route info is static
+            dedupingInterval: 60000,
+        }
+    );
 
     const routeIds = useMemo(
         () => routeInfo?.vehicleRouteIds ?? [],
         [routeInfo]
     );
+    const {data: busList} = useBusLocationData(routeIds);
+    const directionFn = useBusDirection(routeName);
+
+    const activeRouteId = useMemo(() => {
+        const liveRouteId = busList.find((bus) => bus.routeid)?.routeid;
+        return liveRouteId ?? routeIds[0] ?? null;
+    }, [busList, routeIds]);
 
     const polylineMap = useBusPolylineMap(routeIds);
 
@@ -49,7 +54,7 @@ export function useBusData(routeName: string): UseBusData {
     );
 
     return {
-        routeInfo,
+        routeInfo: routeInfo ?? null,
         busList,
         getDirection: directionFn,
         polylineMap,

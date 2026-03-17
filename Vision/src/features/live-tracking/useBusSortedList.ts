@@ -1,10 +1,19 @@
+import { getRouteInfo } from "@entities/route/api";
 import { useBusStop, useClosestStopOrd } from "@entities/station/hooks";
+import type { BusStop } from "@entities/station/types";
 import { useMemo } from "react";
+import useSWR from "swr";
 import { useBusDirection } from "./useBusDirection";
 import { useBusLocationData } from "./useBusLocation";
 
 export const useBusSortedList = (routeName: string) => {
-    const {data: mapList, error: mapError, hasFetched: locationFetched} = useBusLocationData(routeName);
+    const {data: routeInfo} = useSWR(
+        routeName ? ["routeInfo", routeName] : null,
+        ([, name]) => getRouteInfo(name),
+        {revalidateOnFocus: false, dedupingInterval: 60000}
+    );
+    const routeIds = routeInfo?.vehicleRouteIds ?? [];
+    const {data: mapList, error: mapError, hasFetched: locationFetched} = useBusLocationData(routeIds);
 
     // Get bus stop data for the route
     const stops = useBusStop(routeName);
@@ -15,9 +24,8 @@ export const useBusSortedList = (routeName: string) => {
     // Combine errors
     const error = mapError;
 
-    // Map of stop nodeid to nodeord for sorting
     const stopMap = useMemo(
-        () => new Map(stops.map((s) => [s.nodeid, s.nodeord])),
+        () => new Map(stops.map((s: BusStop) => [s.nodeid, s.nodeord])),
         [stops]
     );
 
@@ -36,7 +44,7 @@ export const useBusSortedList = (routeName: string) => {
 
             // 1st priority: If both have stop information, sort by proximity
             if (ordA !== Infinity && ordB !== Infinity && closestOrd) {
-                return Math.abs(ordA - closestOrd) - Math.abs(ordB - closestOrd);
+                return Math.abs((ordA as number) - closestOrd) - Math.abs((ordB as number) - closestOrd);
             }
 
             // 2nd priority: Move those with stop information forward

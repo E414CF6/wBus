@@ -1,34 +1,18 @@
 import type { GeoPolyline, RouteDetail, RouteInfo, RouteMapData, } from "@entities/route/types";
-import { fetchAPI, HttpError } from "@shared/api/fetchAPI";
 import { CacheManager } from "@shared/cache/CacheManager";
 import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
+import { loadStaticData } from "@shared/utils/dataLoader";
 
 // Caches
 
 const routeMapCache = new CacheManager<RouteMapData>();
 const polylineCache = new CacheManager<GeoPolyline | null>();
 
-// URL Builders
-
-function getPolylineUrl(routeKey: string): string {
-    if (API_CONFIG.STATIC.USE_REMOTE && API_CONFIG.STATIC.BASE_URL) {
-        return `${API_CONFIG.STATIC.BASE_URL}/${API_CONFIG.STATIC.PATHS.POLYLINES}/${routeKey}.geojson`;
-    }
-    return `/data/polylines/${routeKey}.geojson`;
-}
-
-function getRouteMapUrl(): string {
-    if (API_CONFIG.STATIC.USE_REMOTE && API_CONFIG.STATIC.BASE_URL) {
-        return `${API_CONFIG.STATIC.BASE_URL}/${API_CONFIG.STATIC.PATHS.ROUTE_MAP}`;
-    }
-    return "/data/routeMap.json";
-}
-
 // Internal Helpers
 
 export async function getRouteMapData(): Promise<RouteMapData> {
     return routeMapCache.getOrFetch("routeMap", async () => {
-        return fetchAPI<RouteMapData>(getRouteMapUrl(), {baseUrl: ""});
+        return loadStaticData<RouteMapData>(API_CONFIG.STATIC.PATHS.ROUTE_MAP);
     });
 }
 
@@ -44,15 +28,15 @@ export async function getRouteMap(): Promise<Record<string, string[]>> {
 export async function getPolyline(routeKey: string): Promise<GeoPolyline | null> {
     return polylineCache.getOrFetch(routeKey, async () => {
         try {
-            return await fetchAPI<GeoPolyline>(getPolylineUrl(routeKey), {baseUrl: ""});
-        } catch (error) {
-            if (error instanceof HttpError && error.status === 404) {
-                if (APP_CONFIG.IS_DEV) {
-                    console.warn(`[getPolyline] Polyline file not found: ${routeKey}`);
-                }
-                return null;
+            const path = `${API_CONFIG.STATIC.PATHS.POLYLINES}/${routeKey}.geojson`;
+            return await loadStaticData<GeoPolyline>(path);
+        } catch {
+            // Simplified error check - assume any error is 404-like for static files
+            // or specific FS errors
+            if (APP_CONFIG.IS_DEV) {
+                console.warn(`[getPolyline] Polyline file not found: ${routeKey}`);
             }
-            throw error;
+            return null;
         }
     });
 }
