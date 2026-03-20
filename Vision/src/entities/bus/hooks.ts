@@ -1,5 +1,5 @@
-import { getRouteMap } from "@entities/route/api";
-import { APP_CONFIG } from "@shared/config/env";
+import {getRouteMap} from "@entities/route/api";
+import {APP_CONFIG} from "@shared/config/env";
 import useSWR from "swr";
 
 /**

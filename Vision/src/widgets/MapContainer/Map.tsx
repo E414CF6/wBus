@@ -1,14 +1,14 @@
 "use client";
 
 import "maplibre-gl/dist/maplibre-gl.css";
-import { getMapStyleUrl } from "@features/map-view/getMapData";
-import { createMapViewFromMap, getInitialMapView, saveMapView } from "@features/map-view/MapViewStorage";
+import {getMapStyleUrl} from "@features/map-view/getMapData";
+import {createMapViewFromMap, getInitialMapView, saveMapView} from "@features/map-view/MapViewStorage";
 
-import { MAP_SETTINGS } from "@shared/config/env";
-import { useAppMapContext } from "@shared/context/AppMapContext";
+import {MAP_SETTINGS} from "@shared/config/env";
+import {useAppMapContext} from "@shared/context/AppMapContext";
 import maplibregl from "maplibre-gl";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import MapGL, { MapRef, NavigationControl } from "react-map-gl/maplibre";
+import React, {useCallback, useEffect, useMemo, useRef} from "react";
+import MapGL, {MapRef, NavigationControl} from "react-map-gl/maplibre";
 
 // ----------------------------------------------------------------------
 // Types

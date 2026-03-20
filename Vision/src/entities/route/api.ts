@@ -1,8 +1,8 @@
-import type { GeoPolyline, RouteDetail, RouteInfo, RouteMapData } from "@entities/route/types";
-import { HttpError } from "@shared/api/fetchAPI";
-import { CacheManager } from "@shared/cache/CacheManager";
-import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
-import { loadStaticData } from "@shared/utils/dataLoader";
+import type {GeoPolyline, RouteDetail, RouteInfo, RouteMapData} from "@entities/route/types";
+import {HttpError} from "@shared/api/fetchAPI";
+import {CacheManager} from "@shared/cache/CacheManager";
+import {API_CONFIG, APP_CONFIG} from "@shared/config/env";
+import {loadStaticData} from "@shared/utils/dataLoader";
 
 // Caches
 

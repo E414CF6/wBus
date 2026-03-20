@@ -1,5 +1,5 @@
-import { getCachedOrFetch } from "@shared/redis/client";
-import { NextResponse } from "next/server";
+import {getCachedOrFetch} from "@shared/redis/client";
+import {NextResponse} from "next/server";
 
 export interface ApiHandlerConfig<T> {
     paramKey: string;

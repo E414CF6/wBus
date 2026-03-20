@@ -1,6 +1,6 @@
-import { getRouteStopsByRouteName } from "@entities/station/api";
-import type { BusStop } from "@entities/station/types";
-import { createApiHandler } from "@shared/api/createApiHandler";
+import {getRouteStopsByRouteName} from "@entities/station/api";
+import type {BusStop} from "@entities/station/types";
+import {createApiHandler} from "@shared/api/createApiHandler";
 
 // Cache stops for 24 hours as they change very rarely
 export const GET = createApiHandler<BusStop[]>({

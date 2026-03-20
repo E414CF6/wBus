@@ -1,8 +1,8 @@
 "use client";
 
-import { useBusRouteMap } from "@entities/bus/hooks";
+import {useBusRouteMap} from "@entities/bus/hooks";
 
-import { APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS } from "@shared/config/env";
+import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 
 import NavBar from "@shared/ui/NavBar";
 import Splash from "@shared/ui/Splash";
@@ -10,7 +10,7 @@ import Splash from "@shared/ui/Splash";
 import BusList from "@widgets/BusListSheet/BusList";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 
 /**
  * Dynamically import MapWrapper & RouteLayer with SSR disabled.

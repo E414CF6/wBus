@@ -1,9 +1,9 @@
-import type { BusStop, BusStopArrival } from "@entities/station/types";
-import { API_CONFIG } from "@shared/config/env";
-import { useAppMapContext } from "@shared/context/AppMapContext";
-import type { CachedData } from "@shared/redis/types";
-import { getHaversineDistance } from "@shared/utils/geo";
-import { useEffect, useMemo, useState } from "react";
+import type {BusStop, BusStopArrival} from "@entities/station/types";
+import {API_CONFIG} from "@shared/config/env";
+import {useAppMapContext} from "@shared/context/AppMapContext";
+import type {CachedData} from "@shared/redis/types";
+import {getHaversineDistance} from "@shared/utils/geo";
+import {useEffect, useMemo, useState} from "react";
 import useSWR from "swr";
 
 // Fetcher for the new API

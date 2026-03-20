@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, CircleGauge, HelpCircle } from "lucide-react";
+import {ArrowDown, ArrowUp, CircleGauge, HelpCircle} from "lucide-react";
 
 /**
  * Get direction icon component based on direction code

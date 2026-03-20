@@ -1,5 +1,5 @@
-import { APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS } from "@shared/config/env";
-import type { MapRef } from "react-map-gl/maplibre";
+import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
+import type {MapRef} from "react-map-gl/maplibre";
 
 // ----------------------------------------------------------------------
 // Types & Constants

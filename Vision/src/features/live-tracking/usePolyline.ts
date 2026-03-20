@@ -13,14 +13,14 @@ import {
     type PolylineSegment,
 } from "@entities/route/polylineService";
 
-import type { Coordinate } from "@entities/route/types";
-import { useEffect, useMemo, useState } from "react";
+import type {Coordinate} from "@entities/route/types";
+import {useEffect, useMemo, useState} from "react";
 
 // ============================================================================
 // Types (Re-exported for convenience)
 // ============================================================================
 
-export type { PolylineData, PolylineSegment };
+export type {PolylineData, PolylineSegment};
 
 export interface BusPolylineSet {
     upPolyline: Coordinate[];

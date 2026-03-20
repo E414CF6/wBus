@@ -1,12 +1,12 @@
-import type { BusItem } from "@entities/bus/types";
-import { getRouteInfo } from "@entities/route/api";
-import type { RouteInfo } from "@entities/route/types";
-import { useMemo } from "react";
+import type {BusItem} from "@entities/bus/types";
+import {getRouteInfo} from "@entities/route/api";
+import type {RouteInfo} from "@entities/route/types";
+import {useMemo} from "react";
 import useSWR from "swr";
-import { useBusDirection } from "./useBusDirection";
-import { useBusLocationData } from "./useBusLocation";
+import {useBusDirection} from "./useBusDirection";
+import {useBusLocationData} from "./useBusLocation";
 
-import { type BusPolylineSet, getFallbackPolylines, useBusPolylineMap } from "./usePolyline";
+import {type BusPolylineSet, getFallbackPolylines, useBusPolylineMap} from "./usePolyline";
 
 interface UseBusData {
     routeInfo: RouteInfo | null;

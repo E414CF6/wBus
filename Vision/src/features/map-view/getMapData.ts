@@ -1,4 +1,4 @@
-import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
+import {API_CONFIG, APP_CONFIG} from "@shared/config/env";
 
 // ----------------------------------------------------------------------
 // Helpers

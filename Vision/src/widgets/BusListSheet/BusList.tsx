@@ -1,20 +1,20 @@
 "use client";
 
-import { getBusErrorMessage } from "@entities/bus/errorMessages";
-import { useScheduleData } from "@entities/route/hooks";
-import { formatTime, getNearestBusTime } from "@entities/route/time";
+import {getBusErrorMessage} from "@entities/bus/errorMessages";
+import {useScheduleData} from "@entities/route/hooks";
+import {formatTime, getNearestBusTime} from "@entities/route/time";
 
-import type { BusSchedule } from "@entities/route/types";
+import type {BusSchedule} from "@entities/route/types";
 
-import { useBusSortedList } from "@features/live-tracking/useBusSortedList";
-import { MAP_SETTINGS } from "@shared/config/env";
-import { UI_TEXT } from "@shared/config/locale";
+import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
+import {MAP_SETTINGS} from "@shared/config/env";
+import {UI_TEXT} from "@shared/config/locale";
 
-import { useAppMapContext } from "@shared/context/AppMapContext";
+import {useAppMapContext} from "@shared/context/AppMapContext";
 
 import Pill from "@shared/ui/Pill";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { BusListItem } from "./BusListItem";
+import React, {useCallback, useEffect, useMemo, useState} from "react";
+import {BusListItem} from "./BusListItem";
 
 import ScheduleView from "./BusScheduleView";
 

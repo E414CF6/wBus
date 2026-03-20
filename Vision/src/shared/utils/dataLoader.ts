@@ -1,5 +1,5 @@
-import { fetchAPI, HttpError } from "@shared/api/fetchAPI";
-import { API_CONFIG } from "@shared/config/env";
+import {fetchAPI, HttpError} from "@shared/api/fetchAPI";
+import {API_CONFIG} from "@shared/config/env";
 
 /**
  * Loads static JSON/GeoJSON data.

@@ -1,8 +1,8 @@
-import { getRouteDetails, getRouteMapData } from "@entities/route/api";
-import type { BusStop, StationLocation, StationMapData } from "@entities/station/types";
-import { CacheManager } from "@shared/cache/CacheManager";
-import { API_CONFIG } from "@shared/config/env";
-import { loadStaticData } from "@shared/utils/dataLoader";
+import {getRouteDetails, getRouteMapData} from "@entities/route/api";
+import type {BusStop, StationLocation, StationMapData} from "@entities/station/types";
+import {CacheManager} from "@shared/cache/CacheManager";
+import {API_CONFIG} from "@shared/config/env";
+import {loadStaticData} from "@shared/utils/dataLoader";
 
 // Cache
 

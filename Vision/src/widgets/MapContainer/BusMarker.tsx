@@ -1,18 +1,18 @@
 "use client";
 
-import { getDirectionIcon } from "@entities/bus/directionIcons";
+import {getDirectionIcon} from "@entities/bus/directionIcons";
 
-import type { BusItem } from "@entities/bus/types";
+import type {BusItem} from "@entities/bus/types";
 
-import { getSnappedPosition } from "@entities/route/snapService";
-import { useBusData } from "@features/live-tracking/useBusData";
-import { API_CONFIG, MAP_SETTINGS } from "@shared/config/env";
-import { UI_TEXT } from "@shared/config/locale";
+import {getSnappedPosition} from "@entities/route/snapService";
+import {useBusData} from "@features/live-tracking/useBusData";
+import {API_CONFIG, MAP_SETTINGS} from "@shared/config/env";
+import {UI_TEXT} from "@shared/config/locale";
 
 import PopupMarquee from "@shared/ui/MarqueeText";
 
-import React, { memo, useMemo, useState } from "react";
-import { Popup } from "react-map-gl/maplibre";
+import React, {memo, useMemo, useState} from "react";
+import {Popup} from "react-map-gl/maplibre";
 import BusAnimatedMarker from "./BusAnimatedMarker";
 
 // ----------------------------------------------------------------------

@@ -1,5 +1,5 @@
-import { APP_CONFIG, UI_CONFIG } from "@shared/config/env";
-import { UI_TEXT } from "@shared/config/locale";
+import {APP_CONFIG, UI_CONFIG} from "@shared/config/env";
+import {UI_TEXT} from "@shared/config/locale";
 
 // ----------------------------------------------------------------------
 // Types

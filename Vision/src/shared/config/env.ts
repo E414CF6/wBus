@@ -1,4 +1,4 @@
-import { getEnv, getEnvArray, getEnvBoolean, getEnvBounds, getEnvNumber } from "@shared/utils/parser";
+import {getEnv, getEnvArray, getEnvBoolean, getEnvBounds, getEnvNumber} from "@shared/utils/parser";
 
 const RAW_POSITION = getEnv(process.env.NEXT_PUBLIC_MAP_DEFAULT_POSITION, "37.3421,127.91976");
 const [defaultLat, defaultLng] = RAW_POSITION.split(",").map(Number);

@@ -1,7 +1,7 @@
-import type { BusItem } from "@entities/bus/types";
-import type { StopIndexMap } from "@entities/route/polylineService";
-import type { Coordinate } from "@entities/route/types";
-import { getHaversineDistanceMeters, isFiniteNumber, snapPointToPolyline } from "@shared/utils/geo";
+import type {BusItem} from "@entities/bus/types";
+import type {StopIndexMap} from "@entities/route/polylineService";
+import type {Coordinate} from "@entities/route/types";
+import {getHaversineDistanceMeters, isFiniteNumber, snapPointToPolyline} from "@shared/utils/geo";
 
 // ----------------------------------------------------------------------
 // Constants & Types

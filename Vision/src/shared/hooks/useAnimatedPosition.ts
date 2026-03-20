@@ -9,8 +9,8 @@ import {
     snapPointToPolyline,
 } from "@shared/utils/geo";
 
-import type { Marker } from "maplibre-gl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import type {Marker} from "maplibre-gl";
+import {useCallback, useEffect, useRef, useState} from "react";
 
 // ----------------------------------------------------------------------
 // Types & Options

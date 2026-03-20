@@ -1,4 +1,4 @@
-import { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
+import {ComponentPropsWithoutRef, ElementType, ReactNode} from "react";
 
 // ----------------------------------------------------------------------
 // Types & Config

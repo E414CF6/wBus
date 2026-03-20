@@ -1,6 +1,6 @@
 "use client";
 
-import React, { memo } from "react";
+import React, {memo} from "react";
 import BusMarker from "./BusMarker";
 import BusRoutePolyline from "./BusRoutePolyline";
 import BusStopMarker from "./BusStopMarker";

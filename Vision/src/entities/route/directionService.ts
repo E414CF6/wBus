@@ -1,5 +1,5 @@
-import { Direction, type DirectionCode } from "@entities/route/types";
-import { MAP_SETTINGS } from "@shared/config/env";
+import {Direction, type DirectionCode} from "@entities/route/types";
+import {MAP_SETTINGS} from "@shared/config/env";
 
 
 export interface RouteSequenceData {

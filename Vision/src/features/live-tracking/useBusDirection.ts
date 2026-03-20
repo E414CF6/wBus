@@ -1,4 +1,4 @@
-import { getRouteDetails, getRouteInfo } from "@entities/route/api";
+import {getRouteDetails, getRouteInfo} from "@entities/route/api";
 
 import {
     buildDirectionLookup,
@@ -6,10 +6,10 @@ import {
     resolveDirection,
     type RouteSequenceData,
 } from "@entities/route/directionService";
-import type { DirectionCode } from "@entities/route/types";
+import type {DirectionCode} from "@entities/route/types";
 
-import { APP_CONFIG } from "@shared/config/env";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {APP_CONFIG} from "@shared/config/env";
+import {useCallback, useEffect, useMemo, useState} from "react";
 
 // ----------------------------------------------------------------------
 // Main Hook: useBusDirection

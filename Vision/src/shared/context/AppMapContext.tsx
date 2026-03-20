@@ -1,7 +1,7 @@
 "use client";
 
-import { createContext, ReactNode, useContext, useMemo, useState } from "react";
-import type { MapRef } from "react-map-gl/maplibre";
+import {createContext, ReactNode, useContext, useMemo, useState} from "react";
+import type {MapRef} from "react-map-gl/maplibre";
 
 // ----------------------------------------------------------------------
 // Types

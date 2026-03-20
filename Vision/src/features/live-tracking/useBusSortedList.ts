@@ -1,10 +1,10 @@
-import { getRouteInfo } from "@entities/route/api";
-import { useBusStop, useClosestStopOrd } from "@entities/station/hooks";
-import type { BusStop } from "@entities/station/types";
-import { useMemo } from "react";
+import {getRouteInfo} from "@entities/route/api";
+import {useBusStop, useClosestStopOrd} from "@entities/station/hooks";
+import type {BusStop} from "@entities/station/types";
+import {useMemo} from "react";
 import useSWR from "swr";
-import { useBusDirection } from "./useBusDirection";
-import { useBusLocationData } from "./useBusLocation";
+import {useBusDirection} from "./useBusDirection";
+import {useBusLocationData} from "./useBusLocation";
 
 export const useBusSortedList = (routeName: string) => {
     const {data: routeInfo} = useSWR(

@@ -1,5 +1,5 @@
-import type { BusStop } from "@entities/station/types";
-import type { LngLatBounds } from "maplibre-gl";
+import type {BusStop} from "@entities/station/types";
+import type {LngLatBounds} from "maplibre-gl";
 
 export function filterStopsByViewport(
     stops: BusStop[],

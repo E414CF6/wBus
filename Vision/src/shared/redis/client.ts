@@ -1,5 +1,5 @@
-import { createClient, type RedisClientType } from "redis";
-import type { CachedData } from "./types";
+import {createClient, type RedisClientType} from "redis";
+import type {CachedData} from "./types";
 
 let client: RedisClientType | null = null;
 let connecting: Promise<RedisClientType> | null = null;

@@ -1,11 +1,11 @@
 "use client";
 
-import type { BusSchedule } from "@entities/route/types";
-import { HttpError } from "@shared/api/fetchAPI";
-import { API_CONFIG, APP_CONFIG } from "@shared/config/env";
-import { UI_TEXT } from "@shared/config/locale";
-import { loadStaticData } from "@shared/utils/dataLoader";
-import { useEffect, useState } from "react";
+import type {BusSchedule} from "@entities/route/types";
+import {HttpError} from "@shared/api/fetchAPI";
+import {API_CONFIG, APP_CONFIG} from "@shared/config/env";
+import {UI_TEXT} from "@shared/config/locale";
+import {loadStaticData} from "@shared/utils/dataLoader";
+import {useEffect, useState} from "react";
 
 // ----------------------------------------------------------------------
 // Caching & Helpers

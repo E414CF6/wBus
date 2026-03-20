@@ -1,11 +1,11 @@
 "use client";
 
-import { findNextBus, getCurrentDayType, type NextBusInfo } from "@entities/route/time";
+import {findNextBus, getCurrentDayType, type NextBusInfo} from "@entities/route/time";
 
-import type { BusSchedule, RowItem } from "@entities/route/types";
-import { DAY_TYPES, type DayType } from "@entities/route/types";
-import { DAY_LABELS, UI_TEXT } from "@shared/config/locale";
-import { memo, useEffect, useMemo, useState } from "react";
+import type {BusSchedule, RowItem} from "@entities/route/types";
+import {DAY_TYPES, type DayType} from "@entities/route/types";
+import {DAY_LABELS, UI_TEXT} from "@shared/config/locale";
+import {memo, useEffect, useMemo, useState} from "react";
 
 // ----------------------------------------------------------------------
 // Types & Helpers

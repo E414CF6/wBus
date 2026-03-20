@@ -1,4 +1,4 @@
-import type { BusSchedule, RowItem } from "@entities/route/types";
+import type {BusSchedule, RowItem} from "@entities/route/types";
 
 // ----------------------------------------------------------------------
 // Constants & Types

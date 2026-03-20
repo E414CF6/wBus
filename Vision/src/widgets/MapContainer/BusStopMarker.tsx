@@ -1,19 +1,19 @@
 "use client";
 
-import { useBusStop } from "@entities/station/hooks";
-import { filterStopsByViewport } from "@entities/station/stopFiltering";
+import {useBusStop} from "@entities/station/hooks";
+import {filterStopsByViewport} from "@entities/station/stopFiltering";
 
-import type { BusStop } from "@entities/station/types";
-import { MAP_SETTINGS } from "@shared/config/env";
-import { UI_TEXT } from "@shared/config/locale";
-import { useAppMapContext } from "@shared/context/AppMapContext";
+import type {BusStop} from "@entities/station/types";
+import {MAP_SETTINGS} from "@shared/config/env";
+import {UI_TEXT} from "@shared/config/locale";
+import {useAppMapContext} from "@shared/context/AppMapContext";
 
 import BusStopPopup from "@widgets/BusListSheet/BusStopPopup";
-import { BusFront, Info, MapPinned } from "lucide-react";
+import {BusFront, Info, MapPinned} from "lucide-react";
 import mapboxgl from "mapbox-gl";
 
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { Marker, Popup } from "react-map-gl/maplibre";
+import {memo, useCallback, useEffect, useMemo, useState} from "react";
+import {Marker, Popup} from "react-map-gl/maplibre";
 
 type BusStopMarkerItemProps = {
     stop: BusStop;

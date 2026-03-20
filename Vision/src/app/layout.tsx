@@ -1,17 +1,17 @@
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import { APP_CONFIG, SITE_CONFIG } from "@shared/config/env";
+import {APP_CONFIG, SITE_CONFIG} from "@shared/config/env";
 
-import { AppMapContextProvider } from "@shared/context/AppMapContext";
+import {AppMapContextProvider} from "@shared/context/AppMapContext";
 
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import {Analytics} from "@vercel/analytics/react";
+import {SpeedInsights} from "@vercel/speed-insights/next";
 
-import type { Metadata, Viewport } from "next";
+import type {Metadata, Viewport} from "next";
 
-import { ThemeProvider } from "next-themes";
-import { Geist, Geist_Mono } from "next/font/google";
+import {ThemeProvider} from "next-themes";
+import {Geist, Geist_Mono} from "next/font/google";
 
 import React from "react";
 

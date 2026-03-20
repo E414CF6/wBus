@@ -1,12 +1,12 @@
 "use client";
 
-import { MAP_SETTINGS } from "@shared/config/env";
+import {MAP_SETTINGS} from "@shared/config/env";
 
-import { useAnimatedPosition } from "@shared/hooks/useAnimatedPosition";
-import { type Coordinate, normalizeAngle } from "@shared/utils/geo";
-import type { Marker as MapLibreMarker } from "maplibre-gl";
-import { memo, useRef } from "react";
-import { Marker } from "react-map-gl/maplibre";
+import {useAnimatedPosition} from "@shared/hooks/useAnimatedPosition";
+import {type Coordinate, normalizeAngle} from "@shared/utils/geo";
+import type {Marker as MapLibreMarker} from "maplibre-gl";
+import {memo, useRef} from "react";
+import {Marker} from "react-map-gl/maplibre";
 
 // ----------------------------------------------------------------------
 // Types

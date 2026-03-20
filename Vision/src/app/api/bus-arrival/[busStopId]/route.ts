@@ -1,5 +1,5 @@
-import { createApiHandler } from "@shared/api/createApiHandler";
-import { fetchBusArrivals, type RawBusArrival } from "@shared/redis/publicApi";
+import {createApiHandler} from "@shared/api/createApiHandler";
+import {fetchBusArrivals, type RawBusArrival} from "@shared/redis/publicApi";
 
 export const GET = createApiHandler<RawBusArrival[]>({
     paramKey: "busStopId",

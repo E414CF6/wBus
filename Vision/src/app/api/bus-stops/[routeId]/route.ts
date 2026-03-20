@@ -1,5 +1,5 @@
-import { createApiHandler } from "@shared/api/createApiHandler";
-import { fetchRouteStops, type RawBusStop } from "@shared/redis/publicApi";
+import {createApiHandler} from "@shared/api/createApiHandler";
+import {fetchRouteStops, type RawBusStop} from "@shared/redis/publicApi";
 
 // Bus stop locations rarely change — cache for 10 minutes
 export const GET = createApiHandler<RawBusStop[]>({

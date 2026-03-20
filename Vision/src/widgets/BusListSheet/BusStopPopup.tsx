@@ -1,11 +1,11 @@
-import { useBusArrivalInfo } from "@entities/station/hooks";
+import {useBusArrivalInfo} from "@entities/station/hooks";
 
-import type { BusStopArrival } from "@entities/station/types";
-import { UI_TEXT } from "@shared/config/locale";
+import type {BusStopArrival} from "@entities/station/types";
+import {UI_TEXT} from "@shared/config/locale";
 
-import { formatVehicleType, secondsToMinutes } from "@shared/utils/formatters";
-import { AlertTriangle, Bus, ChevronRight, Clock, MapPin } from "lucide-react";
-import { useMemo } from "react";
+import {formatVehicleType, secondsToMinutes} from "@shared/utils/formatters";
+import {AlertTriangle, Bus, ChevronRight, Clock, MapPin} from "lucide-react";
+import {useMemo} from "react";
 
 // Sets the theme based on arrival time in minutes
 const getStatusTheme = (minutes: number) => {

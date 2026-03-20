@@ -1,7 +1,7 @@
-import type { BusDataError, BusItem } from "@entities/bus/types";
-import { API_CONFIG } from "@shared/config/env";
-import type { CachedData } from "@shared/redis/types";
-import { useMemo } from "react";
+import type {BusDataError, BusItem} from "@entities/bus/types";
+import {API_CONFIG} from "@shared/config/env";
+import type {CachedData} from "@shared/redis/types";
+import {useMemo} from "react";
 import useSWR from "swr";
 
 const fetchRouteData = async (url: string): Promise<CachedData<BusItem[]>> => {
