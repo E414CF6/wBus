@@ -3,11 +3,11 @@ import type {CachedData} from "./types";
 
 /**
  * Redis Client for Real-Time Data Caching Only
- * 
+ *
  * This Redis instance is used EXCLUSIVELY for caching real-time transit data:
  * - Bus locations (GET /api/bus/[routeId]) - 3s TTL
  * - Arrival predictions (GET /api/bus-arrival/[busStopId]) - 3s TTL
- * 
+ *
  * Static data (routes, stops, polylines) bypasses Redis and uses CDN caching only.
  */
 
@@ -22,7 +22,7 @@ async function getRedisClient(): Promise<RedisClientType> {
     // Prevent race condition: concurrent requests share the same connection promise
     if (connecting) return connecting;
 
-    connecting = (async (): Promise<RedisClientType> => {
+    connecting = (async () => {
         const url = process.env.REDIS_URL;
         if (!url) {
             throw new Error("[Redis] REDIS_URL is not set in environment variables.");
@@ -50,7 +50,7 @@ const STALE_WHILE_REVALIDATE_SECONDS = 60; // Keep stale data for 1 minute
 
 /**
  * Get data from Redis cache with Stale-While-Revalidate strategy.
- * 
+ *
  * USAGE: Only for real-time data endpoints (/api/bus, /api/bus-arrival).
  * Static endpoints should use createStaticApiHandler() instead.
  *
@@ -59,11 +59,7 @@ const STALE_WHILE_REVALIDATE_SECONDS = 60; // Keep stale data for 1 minute
  * 3. If missing or expired -> Fetch, cache, and return.
  * 4. Deduplicates concurrent fetches for the same key on this instance.
  */
-export async function getCachedOrFetch<T>(
-    key: string,
-    fetcher: () => Promise<T>,
-    ttlSeconds: number = CACHE_TTL_SECONDS
-): Promise<CachedData<T>> {
+export async function getCachedOrFetch<T>(key: string, fetcher: () => Promise<T>, ttlSeconds: number = CACHE_TTL_SECONDS): Promise<CachedData<T>> {
     const redis = await getRedisClient();
 
     // 1. Check Redis
@@ -92,9 +88,7 @@ export async function getCachedOrFetch<T>(
     if (cachedEntry && age < (ttlSeconds + STALE_WHILE_REVALIDATE_SECONDS)) {
         // Trigger background update (fire and forget)
         // We use the deduplication logic even for background updates to prevent spamming
-        fetchAndCache(key, fetcher, ttlSeconds, redis).catch(err =>
-            console.error(`[Redis] Background update failed for ${key}:`, err)
-        );
+        fetchAndCache(key, fetcher, ttlSeconds, redis).catch(err => console.error(`[Redis] Background update failed for ${key}:`, err));
 
         return cachedEntry;
     }
@@ -107,12 +101,7 @@ export async function getCachedOrFetch<T>(
 /**
  * Handles fetching, caching, and request deduplication.
  */
-async function getOrFetchDeduplicated<T>(
-    key: string,
-    fetcher: () => Promise<T>,
-    ttlSeconds: number,
-    redis: RedisClientType
-): Promise<CachedData<T>> {
+async function getOrFetchDeduplicated<T>(key: string, fetcher: () => Promise<T>, ttlSeconds: number, redis: RedisClientType): Promise<CachedData<T>> {
     // Check if there's already a pending request for this key
     if (pendingRequests.has(key)) {
         return pendingRequests.get(key) as Promise<CachedData<T>>;
@@ -130,16 +119,10 @@ async function getOrFetchDeduplicated<T>(
 /**
  * Performs the actual fetch and cache update.
  */
-async function fetchAndCache<T>(
-    key: string,
-    fetcher: () => Promise<T>,
-    ttlSeconds: number,
-    redis: RedisClientType
-): Promise<CachedData<T>> {
+async function fetchAndCache<T>(key: string, fetcher: () => Promise<T>, ttlSeconds: number, redis: RedisClientType): Promise<CachedData<T>> {
     const freshData = await fetcher();
     const entry: CachedData<T> = {
-        data: freshData,
-        timestamp: Date.now(),
+        data: freshData, timestamp: Date.now(),
     };
 
     // Store in Redis with expiration (TTL + SWR window)
