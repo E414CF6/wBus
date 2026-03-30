@@ -1,6 +1,16 @@
 import {createClient, type RedisClientType} from "redis";
 import type {CachedData} from "./types";
 
+/**
+ * Redis Client for Real-Time Data Caching Only
+ * 
+ * This Redis instance is used EXCLUSIVELY for caching real-time transit data:
+ * - Bus locations (GET /api/bus/[routeId]) - 3s TTL
+ * - Arrival predictions (GET /api/bus-arrival/[busStopId]) - 3s TTL
+ * 
+ * Static data (routes, stops, polylines) bypasses Redis and uses CDN caching only.
+ */
+
 let client: RedisClientType | null = null;
 let connecting: Promise<RedisClientType> | null = null;
 
@@ -40,6 +50,9 @@ const STALE_WHILE_REVALIDATE_SECONDS = 60; // Keep stale data for 1 minute
 
 /**
  * Get data from Redis cache with Stale-While-Revalidate strategy.
+ * 
+ * USAGE: Only for real-time data endpoints (/api/bus, /api/bus-arrival).
+ * Static endpoints should use createStaticApiHandler() instead.
  *
  * 1. If fresh in Redis -> Return immediately.
  * 2. If stale in Redis (but < SWR window) -> Return stale immediately, update in background.

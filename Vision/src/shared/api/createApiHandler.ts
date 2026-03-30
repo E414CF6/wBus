@@ -11,8 +11,17 @@ export interface ApiHandlerConfig<T> {
     loggerPrefix: string;
 }
 
+export interface StaticApiHandlerConfig<T> {
+    paramKey: string;
+    fetcher: (id: string) => Promise<T>;
+    errorMessage: string;
+    cacheControl?: string;
+    loggerPrefix: string;
+}
+
 /**
- * Creates a standard Next.js GET route handler for fetching and caching data.
+ * Creates a Next.js GET route handler for real-time data with Redis caching.
+ * Use for frequently-changing data like bus locations and arrival predictions.
  */
 export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
     return async function GET(
@@ -35,6 +44,49 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
                 () => config.fetcher(id),
                 config.ttl
             );
+
+            const headers: Record<string, string> = {};
+            if (config.cacheControl) {
+                headers["Cache-Control"] = config.cacheControl;
+            }
+
+            return NextResponse.json(result, {headers});
+        } catch (err) {
+            console.error(`[API ${config.loggerPrefix}/${id}]`, err);
+            return NextResponse.json(
+                {error: config.errorMessage},
+                {status: 500}
+            );
+        }
+    };
+}
+
+/**
+ * Creates a Next.js GET route handler for static data without Redis.
+ * Relies purely on CDN edge caching via Cache-Control headers.
+ * Use for rarely-changing data like route stops and polylines.
+ */
+export function createStaticApiHandler<T>(config: StaticApiHandlerConfig<T>) {
+    return async function GET(
+        _request: Request,
+        {params}: { params: Promise<Record<string, string>> }
+    ) {
+        const resolvedParams = await params;
+        const id = resolvedParams[config.paramKey];
+
+        if (!id) {
+            return NextResponse.json(
+                {error: `Missing parameter: ${config.paramKey}`},
+                {status: 400}
+            );
+        }
+
+        try {
+            const data = await config.fetcher(id);
+            const result = {
+                data,
+                timestamp: Date.now(),
+            };
 
             const headers: Record<string, string> = {};
             if (config.cacheControl) {

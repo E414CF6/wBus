@@ -95,26 +95,36 @@ items) and **request deduplication** — concurrent fetches for the same key sha
 Real-time bus positions and arrival info are fetched from the
 [Korea Public Data Portal](https://www.data.go.kr/) (`apis.data.go.kr`), proxied through server-side
 API routes. Next.js API routes are marked with `export const dynamic = "force-dynamic"` to bypass default static caching
-and ensure our Redis layer handles all caching logic.
+and ensure our caching layers handle all logic.
 
-**Server-side caching (Redis):**
+**Two-Tier Caching Strategy:**
+
+**1. Real-Time Data (Redis + CDN):**
 To optimize the API and prevent timeouts from the public portal, the Redis caching layer (`src/shared/redis/client.ts`)
-implements several advanced strategies:
+implements several advanced strategies for frequently-changing data:
 
-1. **Smart Caching (3-600s TTL):** Live bus positions/arrivals are cached for 3 seconds, while bus stop metadata is
-   cached for 10 minutes.
-2. **In-Flight Request Coalescing:** Prevents **Cache Stampedes (Thundering Herd)**. If a cache expires and multiple
-   users request the same data simultaneously, only *one* outgoing request is made to the public API, and all concurrent
-   requests await its resolution.
-3. **Stale Data Fallback:** The public API is occasionally unstable. The Redis cache keeps expired entries for an
-   extended period (e.g., 5x TTL). If the public API fails (with exponential backoff retries), the system catches the
-   error and serves the older "stale" data instead of showing an error to the user, ensuring uninterrupted service.
+- **Smart Caching (3s TTL):** Live bus positions/arrivals are cached for 3 seconds in Redis, with an
+  additional 3 seconds of CDN edge caching via `Cache-Control: public, s-maxage=3, stale-while-revalidate=3`.
+- **In-Flight Request Coalescing:** Prevents **Cache Stampedes (Thundering Herd)**. If a cache expires and multiple
+  users request the same data simultaneously, only *one* outgoing request is made to the public API, and all concurrent
+  requests await its resolution.
+- **Stale Data Fallback:** The public API is occasionally unstable. The Redis cache keeps expired entries for an
+  extended period (e.g., 60 seconds). If the public API fails (with exponential backoff retries), the system catches the
+  error and serves the older "stale" data instead of showing an error to the user, ensuring uninterrupted service.
 
-| API Route                      | Redis Key             | TTL     | Data Source            |
-|--------------------------------|-----------------------|---------|------------------------|
-| `/api/bus/[routeId]`           | `bus:{routeId}`       | 3 sec   | Bus location API       |
-| `/api/bus-arrival/[busStopId]` | `arrival:{busStopId}` | 3 sec   | Arrival prediction API |
-| `/api/bus-stops/[routeId]`     | `stops:{routeId}`     | 600 sec | Route stop list API    |
+**2. Static Data (CDN Only):**
+Rarely-changing data like bus stop coordinates and route stop lists bypass Redis entirely and rely on CDN edge caching:
+
+- **CDN-Only Caching (1h edge):** Static endpoints use `Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400`
+  to cache for 1 hour at the CDN edge, with 24-hour stale tolerance.
+- **No Redis Overhead:** By skipping Redis for static data, we reduce Redis memory usage and latency.
+
+| API Route                      | Caching Strategy     | TTL      | Data Source            |
+|--------------------------------|----------------------|----------|------------------------|
+| `/api/bus/[routeId]`           | Redis + CDN          | 3 sec    | Bus location API       |
+| `/api/bus-arrival/[busStopId]` | Redis + CDN          | 3 sec    | Arrival prediction API |
+| `/api/bus-stops/[routeId]`     | CDN only             | 1 hour   | Route stop list API    |
+| `/api/route-stops/[routeName]` | CDN only             | 1 hour   | Static data files      |
 
 The Redis layer implements a "smart cache" — when one user's request triggers a fetch, the result is
 cached for all later users within the TTL window.
