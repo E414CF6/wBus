@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type {NextConfig} from "next";
 
 /**
  * Derive Vercel Blob store URL from BLOB_READ_WRITE_TOKEN.

@@ -115,16 +115,17 @@ implements several advanced strategies for frequently-changing data:
 **2. Static Data (CDN Only):**
 Rarely-changing data like bus stop coordinates and route stop lists bypass Redis entirely and rely on CDN edge caching:
 
-- **CDN-Only Caching (1h edge):** Static endpoints use `Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400`
+- **CDN-Only Caching (1h edge):** Static endpoints use
+  `Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400`
   to cache for 1 hour at the CDN edge, with 24-hour stale tolerance.
 - **No Redis Overhead:** By skipping Redis for static data, we reduce Redis memory usage and latency.
 
-| API Route                      | Caching Strategy     | TTL      | Data Source            |
-|--------------------------------|----------------------|----------|------------------------|
-| `/api/bus/[routeId]`           | Redis + CDN          | 3 sec    | Bus location API       |
-| `/api/bus-arrival/[busStopId]` | Redis + CDN          | 3 sec    | Arrival prediction API |
-| `/api/bus-stops/[routeId]`     | CDN only             | 1 hour   | Route stop list API    |
-| `/api/route-stops/[routeName]` | CDN only             | 1 hour   | Static data files      |
+| API Route                      | Caching Strategy | TTL    | Data Source            |
+|--------------------------------|------------------|--------|------------------------|
+| `/api/bus/[routeId]`           | Redis + CDN      | 3 sec  | Bus location API       |
+| `/api/bus-arrival/[busStopId]` | Redis + CDN      | 3 sec  | Arrival prediction API |
+| `/api/bus-stops/[routeId]`     | CDN only         | 1 hour | Route stop list API    |
+| `/api/route-stops/[routeName]` | CDN only         | 1 hour | Static data files      |
 
 The Redis layer implements a "smart cache" — when one user's request triggers a fetch, the result is
 cached for all later users within the TTL window.
