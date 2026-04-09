@@ -48,9 +48,7 @@ export default function HomePage() {
         if (!routeMap) return selectedRoute;
         if (routeMap[selectedRoute]) return selectedRoute;
 
-        return routeMap[MAP_SETTINGS.DEFAULT_ROUTE]
-            ? MAP_SETTINGS.DEFAULT_ROUTE
-            : Object.keys(routeMap)[0] ?? selectedRoute;
+        return routeMap[MAP_SETTINGS.DEFAULT_ROUTE] ? MAP_SETTINGS.DEFAULT_ROUTE : Object.keys(routeMap)[0] ?? selectedRoute;
     }, [routeMap, selectedRoute]);
 
     // Persist route selection to localStorage
@@ -85,34 +83,32 @@ export default function HomePage() {
         setIsSplashVisible(false);
     }, []);
 
-    return (
-        <>
-            <Splash isVisible={isSplashVisible}/>
-            <div
-                className="flex flex-col w-full min-h-svh h-dvh pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
-                <NavBar/>
-                <div className="relative flex-1 overflow-hidden">
-                    <MapWrapper
-                        onReady={handleMapReady}
-                    >
-                        <RouteLayer
-                            routeName={activeRoute}
+    return (<>
+        <Splash isVisible={isSplashVisible}/>
+        <div
+            className="flex flex-col w-full min-h-svh h-dvh pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]">
+            <NavBar/>
+            <div className="relative flex-1 overflow-hidden">
+                <MapWrapper
+                    onReady={handleMapReady}
+                >
+                    <RouteLayer
+                        routeName={activeRoute}
+                        onRouteChange={handleRouteChange}
+                    />
+                </MapWrapper>
+                <div
+                    className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] left-0 right-0 flex justify-center z-30 pointer-events-none">
+                    <div className="w-full px-3 sm:px-4 flex justify-center">
+                        <BusList
+                            routeNames={[activeRoute]}
+                            allRoutes={allRoutes}
+                            selectedRoute={activeRoute}
                             onRouteChange={handleRouteChange}
                         />
-                    </MapWrapper>
-                    <div
-                        className="fixed bottom-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] left-0 right-0 flex justify-center z-30 pointer-events-none">
-                        <div className="pointer-events-auto w-full px-3 sm:px-4 flex justify-center">
-                            <BusList
-                                routeNames={[activeRoute]}
-                                allRoutes={allRoutes}
-                                selectedRoute={activeRoute}
-                                onRouteChange={handleRouteChange}
-                            />
-                        </div>
                     </div>
                 </div>
             </div>
-        </>
-    );
+        </div>
+    </>);
 }
