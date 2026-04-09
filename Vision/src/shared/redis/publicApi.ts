@@ -6,10 +6,7 @@
 const PUBLIC_API_BASE = "http://apis.data.go.kr/1613000";
 const CITY_CODE = "32020";
 const DEFAULT_PARAMS = {
-    numOfRows: "1024",
-    pageNo: "1",
-    _type: "json",
-    cityCode: CITY_CODE,
+    numOfRows: "1024", pageNo: "1", _type: "json", cityCode: CITY_CODE,
 };
 
 function getServiceKey(): string {
@@ -32,8 +29,7 @@ function buildUrl(path: string, params: Record<string, string>): string {
 async function fetchPublicApi<T>(path: string, params: Record<string, string>): Promise<T> {
     const url = buildUrl(path, params);
     const res = await fetch(url, {
-        headers: {Client: "wBus"},
-        signal: AbortSignal.timeout(12000),
+        headers: {Client: "wBus"}, signal: AbortSignal.timeout(12000),
     });
 
     if (!res.ok) {
@@ -71,8 +67,7 @@ export async function fetchBusLocations(routeId: string): Promise<RawBusLocation
     }>("/BusLcInfoInqireService/getRouteAcctoBusLcList", {routeId});
 
     return extractItems(data).map((bus) => ({
-        ...bus,
-        routeid: bus.routeid ?? routeId,
+        ...bus, routeid: bus.routeid ?? routeId,
     }));
 }
 

@@ -1,8 +1,7 @@
 import {useEffect, useRef, useState} from "react";
 
 type PopupMarqueeProps = {
-    text: string;
-    maxWidthClass?: string;
+    text: string; maxWidthClass?: string;
 };
 
 /**
@@ -34,25 +33,19 @@ const PopupMarquee = ({text, maxWidthClass = "max-w-full"}: PopupMarqueeProps) =
         return () => observer.disconnect();
     }, [text]);
 
-    return (
-        <div
+    return (<div
             ref={containerRef}
             className={`marquee-container overflow-hidden inline-block align-middle ${maxWidthClass}`}
         >
-            {shouldMarquee ? (
-                <div className="marquee-scroll flex-nowrap">
+            {shouldMarquee ? (<div className="marquee-scroll flex-nowrap">
                     <span ref={textRef} className="pr-2 font-medium whitespace-nowrap shrink-0">
                         {text}
                     </span>
                     <span className="pr-2 font-medium whitespace-nowrap shrink-0" aria-hidden="true">
                         {text}
                     </span>
-                </div>
-            ) : (
-                <span ref={textRef} className="whitespace-nowrap block font-medium">{text}</span>
-            )}
-        </div>
-    );
+                </div>) : (<span ref={textRef} className="whitespace-nowrap block font-medium">{text}</span>)}
+        </div>);
 };
 
 export default PopupMarquee;

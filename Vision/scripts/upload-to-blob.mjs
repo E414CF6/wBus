@@ -22,8 +22,7 @@ const DATA_DIR = join(process.cwd(), "public", "data");
 const PREFIX = ""; // Blob path prefix
 
 const CONTENT_TYPES = {
-    ".json": "application/json",
-    ".geojson": "application/geo+json",
+    ".json": "application/json", ".geojson": "application/geo+json",
 };
 
 function walkDir(dir) {
@@ -76,9 +75,7 @@ async function upload() {
         const contentType = CONTENT_TYPES[ext] || "application/octet-stream";
         const body = readFileSync(file);
         const result = await put(blobPath, body, {
-            access: "public",
-            contentType,
-            addRandomSuffix: false,
+            access: "public", contentType, addRandomSuffix: false,
         });
 
         uploaded++;

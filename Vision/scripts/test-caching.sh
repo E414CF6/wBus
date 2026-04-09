@@ -2,7 +2,7 @@
 # Test script to validate caching refactoring
 # Tests that real-time endpoints use Redis and static endpoints bypass Redis
 
-echo "🧪 Testing Caching Architecture Refactoring"
+echo "Testing Caching Architecture Refactoring"
 echo "==========================================="
 echo ""
 
