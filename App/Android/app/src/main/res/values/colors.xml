@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Brand Colors -->
+    <color name="primary">#1E1B4B</color>
+    <color name="primary_blue">#3B82F6</color>
+    <color name="primary_indigo">#6366F1</color>
+    <color name="primary_indigo_dark">#4F46E5</color>
+
+    <!-- Base Colors -->
+    <color name="black">#020617</color>
+    <color name="white">#FFFFFF</color>
+    <color name="very_dark_gray">#0F172A</color>
+    <color name="light_gray">#F8FAFC</color>
+    <color name="dark_bg">#020617</color>
+
+    <!-- Gray Scale (Slate) -->
+    <color name="gray_300">#CBD5E1</color>
+    <color name="gray_400">#94A3B8</color>
+    <color name="gray_500">#64748B</color>
+    <color name="gray_600">#475569</color>
+    <color name="gray_800">#1E293B</color>
+    <color name="gray_900">#0F172A</color>
+
+    <!-- Status Colors -->
+    <color name="status_urgent">#FF4D4D</color>
+    <color name="status_approaching">#FBBF24</color>
+    <color name="status_coming">#10B981</color>
+    <color name="status_waiting">#60A5FA</color>
+    <color name="status_default">#818CF8</color>
+
+    <!-- Background Colors -->
+    <color name="background_light">#FFFFFF</color>
+    <color name="background_dark">#020617</color>
+    <color name="surface_light">#F8FAFC</color>
+    <color name="surface_dark">#0F172A</color>
+</resources>

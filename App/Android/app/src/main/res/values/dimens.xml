@@ -1,0 +1,69 @@
+<resources>
+    <!-- Legacy Dimensions -->
+    <dimen name="fab_margin">16dp</dimen>
+    <dimen name="fragment_horizontal_margin">16dp</dimen>
+    <dimen name="item_transform_image_length">48dp</dimen>
+    <dimen name="reflow_text_block_max_percent">1</dimen>
+    <dimen name="reflow_text_block_horizontal_gap">8dp</dimen>
+    <dimen name="reflow_text_title_size">22sp</dimen>
+    <dimen name="reflow_text_description_size">13sp</dimen>
+
+    <!-- Port Target Design System Dimensions -->
+
+    <!-- Spacing System (Tailwind-inspired) -->
+    <dimen name="spacing_1">4dp</dimen>
+    <dimen name="spacing_1_5">6dp</dimen>
+    <dimen name="spacing_2">8dp</dimen>
+    <dimen name="spacing_2_5">10dp</dimen>
+    <dimen name="spacing_3">12dp</dimen>
+    <dimen name="spacing_3_5">14dp</dimen>
+    <dimen name="spacing_4">16dp</dimen>
+    <dimen name="spacing_6">24dp</dimen>
+    <dimen name="spacing_8">32dp</dimen>
+
+    <!-- Border Radius -->
+    <dimen name="radius_small">8dp</dimen>
+    <dimen name="radius_medium">12dp</dimen>
+    <dimen name="radius_large">16dp</dimen>
+    <dimen name="radius_xl">20dp</dimen>
+    <dimen name="radius_2xl">28dp</dimen>
+    <dimen name="radius_full">9999dp</dimen>
+
+    <!-- Card & Panel Radii -->
+    <dimen name="card_radius">28dp</dimen>
+    <dimen name="pill_radius">9999dp</dimen>
+    <dimen name="button_radius">20dp</dimen>
+    <dimen name="popup_radius">16dp</dimen>
+
+    <!-- Elevation & Shadow -->
+    <dimen name="elevation_card">8dp</dimen>
+    <dimen name="elevation_popup">16dp</dimen>
+    <dimen name="elevation_navbar">4dp</dimen>
+
+    <!-- Typography Sizes -->
+    <dimen name="text_xs">11sp</dimen>
+    <dimen name="text_sm">13sp</dimen>
+    <dimen name="text_base">14sp</dimen>
+    <dimen name="text_md">16sp</dimen>
+    <dimen name="text_lg">17sp</dimen>
+    <dimen name="text_xl">20sp</dimen>
+    <dimen name="text_2xl">24sp</dimen>
+    <dimen name="text_5xl">48sp</dimen>
+
+    <!-- Component Specific -->
+    <dimen name="navbar_height">56dp</dimen>
+    <dimen name="bus_marker_size">32dp</dimen>
+    <dimen name="bus_stop_marker_size">16dp</dimen>
+    <dimen name="pill_padding_horizontal">14dp</dimen>
+    <dimen name="pill_padding_vertical">6dp</dimen>
+    <dimen name="card_padding">16dp</dimen>
+
+    <!-- Bottom Sheet -->
+    <dimen name="bottom_sheet_peek_height">120dp</dimen>
+    <dimen name="bottom_sheet_max_width">600dp</dimen>
+
+    <!-- Icon Sizes -->
+    <dimen name="icon_small">16dp</dimen>
+    <dimen name="icon_medium">24dp</dimen>
+    <dimen name="icon_large">32dp</dimen>
+</resources>
