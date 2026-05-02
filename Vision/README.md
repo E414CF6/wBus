@@ -97,20 +97,24 @@ Real-time bus positions and arrival info are fetched from the
 API routes. Next.js API routes are marked with `export const dynamic = "force-dynamic"` to bypass default static caching
 and ensure our caching layers handle all logic.
 
-**Two-Tier Caching Strategy:**
+**Layered Caching Strategy:**
 
-**1. Real-Time Data (Redis + CDN):**
+**1. Real-Time Data (L1 Memory + L2 Redis + CDN):**
 To optimize the API and prevent timeouts from the public portal, the Redis caching layer (`src/shared/redis/client.ts`)
 implements several advanced strategies for frequently-changing data:
 
-- **Smart Caching (3s TTL):** Live bus positions/arrivals are cached for 3 seconds in Redis, with an
+- **L1 + L2 Cache:** Hot keys are served from in-process memory first, then Redis, then origin.
+- **Smart Caching (3s TTL):** Live bus positions/arrivals are cached for 3 seconds, with an
   additional 3 seconds of CDN edge caching via `Cache-Control: public, s-maxage=3, stale-while-revalidate=3`.
 - **In-Flight Request Coalescing:** Prevents **Cache Stampedes (Thundering Herd)**. If a cache expires and multiple
   users request the same data simultaneously, only *one* outgoing request is made to the public API, and all concurrent
   requests await its resolution.
 - **Stale Data Fallback:** The public API is occasionally unstable. The Redis cache keeps expired entries for an
-  extended period (e.g., 60 seconds). If the public API fails (with exponential backoff retries), the system catches the
+  extended period. If the public API fails (with retry/backoff), the system catches the
   error and serves the older "stale" data instead of showing an error to the user, ensuring uninterrupted service.
+- **Degraded-Mode Resilience:** If `REDIS_URL` is unavailable or Redis is down, the API continues running with L1 memory
+  cache.
+- **Cache Telemetry Headers:** Real-time API responses include `X-Cache-Status`, `X-Cache-Layer`, and `X-Cache-Age-Ms`.
 
 **2. Static Data (CDN Only):**
 Rarely-changing data like bus stop coordinates and route stop lists bypass Redis entirely and rely on CDN edge caching:
@@ -120,12 +124,12 @@ Rarely-changing data like bus stop coordinates and route stop lists bypass Redis
   to cache for 1 hour at the CDN edge, with 24-hour stale tolerance.
 - **No Redis Overhead:** By skipping Redis for static data, we reduce Redis memory usage and latency.
 
-| API Route                      | Caching Strategy | TTL    | Data Source            |
-|--------------------------------|------------------|--------|------------------------|
-| `/api/bus/[routeId]`           | Redis + CDN      | 3 sec  | Bus location API       |
-| `/api/bus-arrival/[busStopId]` | Redis + CDN      | 3 sec  | Arrival prediction API |
-| `/api/bus-stops/[routeId]`     | CDN only         | 1 hour | Route stop list API    |
-| `/api/route-stops/[routeName]` | CDN only         | 1 hour | Static data files      |
+| API Route                      | Caching Strategy     | TTL    | Data Source            |
+|--------------------------------|----------------------|--------|------------------------|
+| `/api/bus/[routeId]`           | Memory + Redis + CDN | 3 sec  | Bus location API       |
+| `/api/bus-arrival/[busStopId]` | Memory + Redis + CDN | 3 sec  | Arrival prediction API |
+| `/api/bus-stops/[routeId]`     | CDN only             | 1 hour | Route stop list API    |
+| `/api/route-stops/[routeName]` | CDN only             | 1 hour | Static data files      |
 
 The Redis layer implements a "smart cache" — when one user's request triggers a fetch, the result is
 cached for all later users within the TTL window.
@@ -235,7 +239,9 @@ app runs without any configuration in development mode (using local static data)
 |--------------------------|----------|---------------------------------------------------|
 | `DATA_GO_KR_SERVICE_KEY` | Yes      | API key for `apis.data.go.kr` live bus endpoints  |
 | `BLOB_READ_WRITE_TOKEN`  | No       | Vercel Blob token (only for `upload-data` script) |
-| `REDIS_URL`              | Yes      | Redis connection string for API response caching  |
+| `REDIS_URL`              | No*      | Redis connection string for shared API caching    |
+
+\* Without `REDIS_URL`, the server falls back to in-memory cache only (works, but no cross-instance sharing).
 
 ### Client-Side
 

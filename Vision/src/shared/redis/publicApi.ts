@@ -5,6 +5,8 @@
 
 const PUBLIC_API_BASE = "http://apis.data.go.kr/1613000";
 const CITY_CODE = "32020";
+const MAX_RETRY_ATTEMPTS = 3;
+const RETRY_BASE_DELAY_MS = 300;
 const DEFAULT_PARAMS = {
     numOfRows: "1024", pageNo: "1", _type: "json", cityCode: CITY_CODE,
 };
@@ -28,17 +30,39 @@ function buildUrl(path: string, params: Record<string, string>): string {
 
 async function fetchPublicApi<T>(path: string, params: Record<string, string>): Promise<T> {
     const url = buildUrl(path, params);
-    const res = await fetch(url, {
-        headers: {Client: "wBus"}, signal: AbortSignal.timeout(12000),
-    });
 
-    if (!res.ok) {
-        // Sanitize URL to avoid leaking service key in logs
-        const safeUrl = url.replace(/serviceKey=[^&]+/, "serviceKey=***");
-        throw new Error(`[PublicAPI] ${res.status} ${res.statusText} — ${safeUrl}`);
+    for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
+        try {
+            const res = await fetch(url, {
+                headers: {Client: "wBus"}, signal: AbortSignal.timeout(12000), cache: "no-store",
+            });
+
+            if (res.ok) {
+                return res.json() as Promise<T>;
+            }
+
+            if (!isRetryableStatus(res.status) || attempt === MAX_RETRY_ATTEMPTS) {
+                const safeUrl = url.replace(/serviceKey=[^&]+/, "serviceKey=***");
+                throw new Error(`[PublicAPI] ${res.status} ${res.statusText} — ${safeUrl}`);
+            }
+        } catch (err) {
+            if (attempt === MAX_RETRY_ATTEMPTS) throw err;
+        }
+
+        await delay(attempt);
     }
 
-    return res.json() as Promise<T>;
+    throw new Error("[PublicAPI] Unreachable retry state.");
+}
+
+function isRetryableStatus(status: number): boolean {
+    return status === 429 || status >= 500;
+}
+
+function delay(attempt: number): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(resolve, RETRY_BASE_DELAY_MS * attempt);
+    });
 }
 
 // Extracts items from the standard public data API response envelope

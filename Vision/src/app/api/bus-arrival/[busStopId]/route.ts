@@ -1,6 +1,8 @@
 import {createApiHandler} from "@shared/api/createApiHandler";
 import {fetchBusArrivals, type RawBusArrival} from "@shared/redis/publicApi";
 
+export const dynamic = "force-dynamic";
+
 export const GET = createApiHandler<RawBusArrival[]>({
     paramKey: "busStopId",
     cacheKey: (id) => `arrival:${id}`,
