@@ -217,9 +217,9 @@ class MapViewModel(
             val isRestart = prevBus != null && (prevProgress - currentProgress) > 20.0
             val shouldApplyMonotonic = prevBus != null && currentProgress < prevProgress && !isRestart
 
-            if (shouldApplyMonotonic) {
+            if (shouldApplyMonotonic && prevBus != null) {
                 bus.copy(
-                    gpslati = prevBus!!.gpslati,
+                    gpslati = prevBus.gpslati,
                     gpslong = prevBus.gpslong,
                     bearing = prevBus.bearing,
                     direction = snapResult.direction,

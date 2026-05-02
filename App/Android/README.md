@@ -14,6 +14,7 @@ app.vercel.wbus/
 │   └── common/       Result<T> sealed class
 ├── ui/
 │   ├── main/         MainActivity + MapViewModel + Factory
+│   │   └── map/      Map rendering controllers (markers/polyline/style/icons)
 │   └── adapter/      BusListAdapter (RecyclerView)
 └── util/
     ├── geo/          Distance, bearing, polyline snapping
@@ -112,9 +113,15 @@ app/src/main/java/app/vercel/wbus/
 │
 ├── ui/
 │   ├── main/
-│   │   ├── MainActivity.kt     # Map activity
-│   │   ├── MapViewModel.kt     # Bus state management
-│   │   └── MapViewModelFactory.kt
+│   │   ├── MainActivity.kt         # Screen orchestration only
+│   │   ├── MapViewModel.kt         # Bus state management
+│   │   ├── MapViewModelFactory.kt
+│   │   └── map/
+│   │       ├── BusMarkerController.kt
+│   │       ├── StopMarkerController.kt
+│   │       ├── RoutePolylineController.kt
+│   │       ├── MapStyleApplier.kt
+│   │       └── MapMarkerIconFactory.kt
 │   └── adapter/
 │       └── BusListAdapter.kt   # RecyclerView adapter
 │
