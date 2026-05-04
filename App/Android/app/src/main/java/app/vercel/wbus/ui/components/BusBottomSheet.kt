@@ -75,11 +75,12 @@ fun BusBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .clickable { onRouteClick() }
-                    .padding(vertical = 4.dp)) {
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable { onRouteClick() }
+                        .padding(vertical = 4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f),
