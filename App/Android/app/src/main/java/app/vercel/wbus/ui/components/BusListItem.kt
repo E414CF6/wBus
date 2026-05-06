@@ -15,42 +15,45 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import app.vercel.wbus.data.model.Direction
 
 @Composable
 fun BusListItem(
-    plateNumber: String, currentStation: String?, direction: Int?, // 1: 상행, 0: 하행
+    plateNumber: String, currentStation: String?, direction: Int?,
     onClick: () -> Unit = {}, modifier: Modifier = Modifier
 ) {
-    val directionColor = if (direction == 1) Color(0xFFFF5252) else Color(0xFF448AFF)
-    val directionText = if (direction == 1) "상행" else "하행"
+    val isUp = direction == Direction.UP
+    val directionColor = if (isUp) Color(0xFFFF5252) else Color(0xFF448AFF)
+    val directionText = if (isUp) "상행" else "하행"
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(24.dp))
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(24.dp)
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
-                modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Bus Icon Container
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(directionColor.copy(alpha = 0.1f)), contentAlignment = Alignment.Center
+                        .size(50.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(directionColor.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.DirectionsBus,
@@ -60,10 +63,7 @@ fun BusListItem(
                     )
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    // Plate Number as Title
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = plateNumber,
                         style = MaterialTheme.typography.titleMedium,
@@ -72,41 +72,53 @@ fun BusListItem(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    Text(
+                        text = "차량 번호",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)
-                    ) {
-                        Surface(
-                            color = directionColor.copy(alpha = 0.1f), shape = RoundedCornerShape(4.dp)
-                        ) {
-                            Text(
-                                text = directionText,
-                                color = directionColor,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
+                Surface(
+                    color = directionColor.copy(alpha = 0.14f),
+                    shape = RoundedCornerShape(999.dp)
+                ) {
+                    Text(
+                        text = directionText,
+                        color = directionColor,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
-            // Current Station Name as Pill (Right Side)
             Surface(
-                modifier = Modifier
-                    .padding(start = 12.dp)
-                    .clip(RoundedCornerShape(12.dp)),
+                modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                shape = RoundedCornerShape(14.dp),
             ) {
-                Text(
-                    text = currentStation ?: "위치 정보 없음",
-                    color = MaterialTheme.colorScheme.onSecondaryContainer,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "현재 정류장",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = currentStation ?: "위치 정보 없음",
+                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         }
     }

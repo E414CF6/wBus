@@ -29,8 +29,12 @@
             android:id="@+id/composeView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginHorizontal="@dimen/spacing_3"
+            android:layout_marginBottom="@dimen/spacing_3"
+            android:background="@android:color/transparent"
             app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
-            app:behavior_peekHeight="140dp"
+            app:behavior_peekHeight="@dimen/bottom_sheet_peek_height"
+            app:behavior_fitToContents="true"
             app:behavior_hideable="false"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

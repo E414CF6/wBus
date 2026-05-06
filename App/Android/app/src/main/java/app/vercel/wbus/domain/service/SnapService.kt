@@ -2,6 +2,7 @@ package app.vercel.wbus.domain.service
 
 import app.vercel.wbus.data.model.BusItem
 import app.vercel.wbus.data.model.Coordinate
+import app.vercel.wbus.data.model.Direction
 import app.vercel.wbus.util.geo.GeoUtils
 import app.vercel.wbus.util.geo.SnapOptions
 import app.vercel.wbus.util.geo.snapPointToPolyline
@@ -41,7 +42,11 @@ object SnapService {
         }
 
         val defaultResult = BusSnapResult(
-            position = rawPosition, angle = 0.0, direction = apiDirection ?: 0, segmentIndex = null, t = 0.0
+            position = rawPosition,
+            angle = 0.0,
+            direction = apiDirection ?: Direction.DOWN,
+            segmentIndex = null,
+            t = 0.0
         )
 
         fun createCandidate(line: List<Coordinate>, dir: Int): Candidate? {
@@ -72,15 +77,15 @@ object SnapService {
             )
         }
 
-        val candidateUp = createCandidate(upPolyline, 1)
-        val candidateDown = createCandidate(downPolyline, 0)
+        val candidateUp = createCandidate(upPolyline, Direction.UP)
+        val candidateDown = createCandidate(downPolyline, Direction.DOWN)
 
-        if (apiDirection == 1 && candidateUp?.isValid == true) {
+        if (apiDirection == Direction.UP && candidateUp?.isValid == true) {
             return BusSnapResult(
                 candidateUp.position, candidateUp.angle, candidateUp.direction, candidateUp.segmentIndex, candidateUp.t
             )
         }
-        if (apiDirection == 0 && candidateDown?.isValid == true) {
+        if (apiDirection == Direction.DOWN && candidateDown?.isValid == true) {
             return BusSnapResult(
                 candidateDown.position,
                 candidateDown.angle,

@@ -10,19 +10,19 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.livedata.observeAsState
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import app.vercel.wbus.R
 import app.vercel.wbus.data.api.ApiClient
 import app.vercel.wbus.data.common.Result
 import app.vercel.wbus.data.local.PreferencesManager
+import app.vercel.wbus.data.model.Direction
 import app.vercel.wbus.data.model.RouteMapData
 import app.vercel.wbus.data.repository.BusRepository
 import app.vercel.wbus.data.repository.StaticDataRepository
 import app.vercel.wbus.databinding.ActivityMainBinding
 import app.vercel.wbus.ui.main.map.*
+import app.vercel.wbus.ui.widget.WBusHomeWidgetProvider
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
@@ -30,6 +30,7 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import kotlinx.coroutines.CancellationException
 import timber.log.Timber
+import java.net.UnknownHostException
 
 class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     companion object {
@@ -50,6 +51,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     private lateinit var routePolylineController: RoutePolylineController
 
     private var googleMap: GoogleMap? = null
+    private var systemBarsBottomInset: Int = 0
     private val defaultLocation = LatLng(37.2636, 127.0286)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,10 +60,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(systemBars.left, systemBars.top, systemBars.right, 0)
-            googleMap?.setPadding(0, 0, 0, systemBars.bottom + MAP_BOTTOM_PADDING)
+        binding.root.setOnApplyWindowInsetsListener { _, insets ->
+            systemBarsBottomInset = insets.getInsets(android.view.WindowInsets.Type.systemBars()).bottom
+            googleMap?.setPadding(0, 0, 0, systemBarsBottomInset + MAP_BOTTOM_PADDING)
             insets
         }
 
@@ -84,15 +85,18 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val routeId = prefsManager.getSelectedRouteId() ?: prefsManager.getDefaultRouteId()
         val routeName = prefsManager.getSelectedRouteName()
         viewModel.setRoute(routeId, routeName)
+        WBusHomeWidgetProvider.updateAllWidgets(this)
     }
 
     override fun onMapReady(map: GoogleMap) {
         googleMap = map
         map.moveCamera(CameraUpdateFactory.newLatLngZoom(defaultLocation, DEFAULT_ZOOM))
         MapStyleApplier.apply(this, map)
+        map.setPadding(0, 0, 0, systemBarsBottomInset + MAP_BOTTOM_PADDING)
         configureMapUi(map)
         renderExistingData(map)
         setupMapInteractions(map)
+        stopMarkerController.onZoomChanged(map.cameraPosition.zoom)
     }
 
     private fun setupMap() {
@@ -150,7 +154,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                         Timber.d("Bus loading cancelled")
                     } else {
                         Timber.e(result.exception, "Error loading buses")
-                        Toast.makeText(this, R.string.error_loading_buses, Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this, getErrorMessageRes(result.exception, R.string.error_loading_buses), Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
 
@@ -160,7 +166,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
         viewModel.busStops.observe(this) { result ->
             when (result) {
-                is Result.Success -> googleMap?.let { stopMarkerController.render(it, result.data) }
+                is Result.Success -> googleMap?.let {
+                    stopMarkerController.render(it, result.data, it.cameraPosition.zoom)
+                }
+
                 is Result.Error -> Timber.e(result.exception, "Error loading stops")
                 is Result.Loading -> Unit
             }
@@ -178,10 +187,22 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             binding.progressBar.visibility = if (result is Result.Loading) View.VISIBLE else View.GONE
             when (result) {
                 is Result.Success -> showRouteSelectionDialog(result.data)
-                is Result.Error -> Toast.makeText(this, "노선 정보를 불러올 수 없습니다", Toast.LENGTH_SHORT).show()
+                is Result.Error -> Toast.makeText(
+                    this, getErrorMessageRes(result.exception, R.string.error_loading_routes), Toast.LENGTH_SHORT
+                ).show()
+
                 is Result.Loading -> Unit
             }
         }
+    }
+
+    private fun getErrorMessageRes(exception: Throwable, defaultRes: Int): Int {
+        var current: Throwable? = exception
+        while (current != null) {
+            if (current is UnknownHostException) return R.string.error_network_unavailable
+            current = current.cause
+        }
+        return defaultRes
     }
 
     private fun configureMapUi(map: GoogleMap) {
@@ -196,7 +217,11 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
     }
 
     private fun renderExistingData(map: GoogleMap) {
-        viewModel.busStops.value?.let { if (it is Result.Success) stopMarkerController.render(map, it.data) }
+        viewModel.busStops.value?.let {
+            if (it is Result.Success) {
+                stopMarkerController.render(map, it.data, map.cameraPosition.zoom)
+            }
+        }
         viewModel.polyline.value?.let { if (it is Result.Success) routePolylineController.render(map, it.data) }
         viewModel.buses.value?.let { if (it is Result.Success) busMarkerController.render(map, it.data) }
     }
@@ -223,11 +248,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     prefsManager.setSelectedRouteId(arrival.routeid)
                     prefsManager.setSelectedRouteName(arrival.routeno)
                     viewModel.setRoute(arrival.routeid, arrival.routeno)
+                    WBusHomeWidgetProvider.updateAllWidgets(this)
                 }
                 dialog.show(supportFragmentManager, "StopArrivalDialog")
                 return@setOnMarkerClickListener true
             }
             false
+        }
+
+        map.setOnCameraIdleListener {
+            stopMarkerController.onZoomChanged(map.cameraPosition.zoom)
         }
     }
 
@@ -248,8 +278,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             text = "방향: ${directionLabel(direction)}"
             setTextColor(
                 when (direction) {
-                    1 -> Color.parseColor(COLOR_UP)
-                    0 -> Color.parseColor(COLOR_DOWN)
+                    Direction.UP -> Color.parseColor(COLOR_UP)
+                    Direction.DOWN -> Color.parseColor(COLOR_DOWN)
                     else -> Color.DKGRAY
                 }
             )
@@ -286,6 +316,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 prefsManager.setSelectedRouteId(routeId)
                 prefsManager.setSelectedRouteName(routeName)
                 viewModel.setRoute(routeId, routeName, selectedRoute.routeIds)
+                WBusHomeWidgetProvider.updateAllWidgets(this)
             }
         }
         dialog.show(supportFragmentManager, "RouteSelectionDialog")
@@ -293,8 +324,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private fun directionLabel(direction: Int?): String {
         return when (direction) {
-            1 -> "상행"
-            0 -> "하행"
+            Direction.UP -> "상행"
+            Direction.DOWN -> "하행"
             else -> "순환"
         }
     }

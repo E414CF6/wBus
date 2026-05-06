@@ -30,14 +30,30 @@ object PolylineService {
         val turnIndex = feature.properties.turn_idx
         val bbox = feature.bbox
 
-        val (up, down) = if (turnIndex > 0) {
+        val (firstSegment, secondSegment) = if (turnIndex > 0) {
             val idx = min(max(0, turnIndex), coordinates.size - 1)
             coordinates.subList(0, idx + 1) to coordinates.subList(idx, coordinates.size)
         } else {
             coordinates to emptyList()
         }
 
-        return PolylineData(up, down, turnIndex, false, bbox)
+        if (turnIndex > 0) {
+            return PolylineData(
+                upPolyline = secondSegment,
+                downPolyline = firstSegment,
+                turnIndex = turnIndex,
+                isSwapped = true,
+                bbox = bbox
+            )
+        }
+
+        return PolylineData(
+            upPolyline = firstSegment,
+            downPolyline = secondSegment,
+            turnIndex = turnIndex,
+            isSwapped = false,
+            bbox = bbox
+        )
     }
 
     /**

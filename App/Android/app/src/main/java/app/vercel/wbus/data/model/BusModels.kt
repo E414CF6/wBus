@@ -16,7 +16,7 @@ data class BusItem(
     val nodeid: String? = null,
     val nodeord: Int? = null,
     val bearing: Double = 0.0, // Client-side computed or API-provided bearing
-    val direction: Int? = null, // 1: Up, 0: Down
+    val direction: Int? = null, // Direction code (0: 하행, 1: 상행)
     val segmentIndex: Int? = null,
     val progress: Double = 0.0 // (segmentIndex + t) to ensure monotonic movement
 ) {

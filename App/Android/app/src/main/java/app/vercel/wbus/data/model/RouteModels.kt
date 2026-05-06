@@ -22,8 +22,8 @@ data class RouteDetail(
  * Direction constants for bus routes
  */
 object Direction {
-    const val UP = 1
-    const val DOWN = 0
+    const val DOWN = 0 // 하행
+    const val UP = 1   // 상행
 }
 
 /**

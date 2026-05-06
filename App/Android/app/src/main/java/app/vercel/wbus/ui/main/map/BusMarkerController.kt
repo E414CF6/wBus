@@ -9,22 +9,20 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
 
 class BusMarkerController(
-    private val scope: CoroutineScope, private val iconFactory: MapMarkerIconFactory
+    @Suppress("UNUSED_PARAMETER") private val scope: CoroutineScope, private val iconFactory: MapMarkerIconFactory
 ) {
     companion object {
         private const val MARKER_ANIMATION_DURATION = 2800L
         private const val MIN_ANIMATION_DISTANCE_METERS = 10.0
-        private const val MARQUEE_INTERVAL_MS = 250L
+        private const val MAX_ROUTE_TEXT_LENGTH = 3
     }
 
     private val busMarkers = mutableMapOf<String, Marker>()
-    private val busRouteNames = mutableMapOf<String, String>()
-    private val marqueeOffsets = mutableMapOf<String, Int>()
     private val activeAnimators = mutableMapOf<String, ValueAnimator>()
-    private var marqueeJob: Job? = null
+    private val bearingUpdateCounts = mutableMapOf<String, Int>()
 
     fun render(map: GoogleMap, buses: List<BusItem>) {
         val currentBusIds = buses.associateBy { it.vehicleno }
@@ -34,8 +32,7 @@ class BusMarkerController(
             val entry = iterator.next()
             if (entry.key !in currentBusIds) {
                 entry.value.remove()
-                busRouteNames.remove(entry.key)
-                marqueeOffsets.remove(entry.key)
+                bearingUpdateCounts.remove(entry.key)
                 iterator.remove()
             }
         }
@@ -44,13 +41,8 @@ class BusMarkerController(
             val busId = bus.vehicleno
             val newPosition = LatLng(bus.gpslati, bus.gpslong)
             val marker = busMarkers[busId]
-            val previousRoute = busRouteNames[busId]
-            if (previousRoute != bus.routenm) {
-                marqueeOffsets[busId] = 0
-            }
-            busRouteNames[busId] = bus.routenm
 
-            val routeText = getMarqueeText(bus.routenm, busId, advance = false)
+            val routeText = toMarkerRouteText(bus.routenm)
             val icon = iconFactory.getBusMarkerIcon(routeText)
             val markerInfo = BusMarkerInfo(
                 busId = busId, routeName = bus.routenm, plateNumber = bus.vehicleno, direction = bus.direction
@@ -81,19 +73,14 @@ class BusMarkerController(
     fun pause() {
         activeAnimators.values.forEach { it.cancel() }
         activeAnimators.clear()
-        marqueeJob?.cancel()
-        marqueeJob = null
     }
 
-    fun resume() {
-        startMarqueeTicker()
-    }
+    fun resume() = Unit
 
     fun clear() {
         busMarkers.forEach { it.value.remove() }
         busMarkers.clear()
-        busRouteNames.clear()
-        marqueeOffsets.clear()
+        bearingUpdateCounts.clear()
         activeAnimators.values.forEach { it.cancel() }
         activeAnimators.clear()
     }
@@ -114,12 +101,19 @@ class BusMarkerController(
         if (distance < MIN_ANIMATION_DISTANCE_METERS) {
             marker.position = finalPosition
             marker.rotation = finalBearing.toFloat()
+            bearingUpdateCounts[busId] = (bearingUpdateCounts[busId] ?: 0) + 1
             return
         }
 
         activeAnimators[busId]?.cancel()
 
-        val startRotation = marker.rotation.toDouble()
+        val updateCount = bearingUpdateCounts[busId] ?: 0
+        val shouldAnimateRotation = updateCount > 0
+        if (!shouldAnimateRotation) {
+            marker.rotation = finalBearing.toFloat()
+        }
+        bearingUpdateCounts[busId] = updateCount + 1
+        val startRotation = if (shouldAnimateRotation) marker.rotation.toDouble() else finalBearing
         val valueAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = MARKER_ANIMATION_DURATION
             interpolator = LinearInterpolator()
@@ -143,38 +137,8 @@ class BusMarkerController(
         valueAnimator.start()
     }
 
-    private fun startMarqueeTicker() {
-        marqueeJob?.cancel()
-        marqueeJob = scope.launch {
-            while (isActive) {
-                busMarkers.forEach { (busId, marker) ->
-                    val routeName = busRouteNames[busId] ?: return@forEach
-                    if (routeName.length > 3) {
-                        val marqueeText = getMarqueeText(routeName, busId, advance = true)
-                        marker.setIcon(iconFactory.getBusMarkerIcon(marqueeText))
-                    }
-                }
-                delay(MARQUEE_INTERVAL_MS)
-            }
-        }
-    }
-
-    private fun getMarqueeText(routeName: String, busId: String, advance: Boolean): String {
-        if (routeName.length <= 3) return routeName
-
-        val source = "$routeName   "
-        var offset = marqueeOffsets[busId] ?: 0
-        if (advance) {
-            offset = (offset + 1) % source.length
-            marqueeOffsets[busId] = offset
-        } else {
-            marqueeOffsets.putIfAbsent(busId, 0)
-        }
-
-        return buildString(3) {
-            repeat(3) { i ->
-                append(source[(offset + i) % source.length])
-            }
-        }
+    private fun toMarkerRouteText(routeName: String): String {
+        val trimmed = routeName.trim()
+        return if (trimmed.length <= MAX_ROUTE_TEXT_LENGTH) trimmed else trimmed.take(MAX_ROUTE_TEXT_LENGTH)
     }
 }

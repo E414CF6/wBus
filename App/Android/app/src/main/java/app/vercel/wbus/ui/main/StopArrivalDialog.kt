@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -20,7 +21,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.core.view.updateLayoutParams
 import app.vercel.wbus.data.api.ApiClient
 import app.vercel.wbus.data.common.Result
 import app.vercel.wbus.data.model.BusStopArrival
@@ -28,6 +31,8 @@ import app.vercel.wbus.data.repository.BusRepository
 import app.vercel.wbus.ui.theme.WBusTheme
 import app.vercel.wbus.ui.theme.getUrgencyColorFromMinutes
 import app.vercel.wbus.ui.theme.getUrgencyText
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -51,6 +56,28 @@ class StopArrivalDialog(
                         })
                 }
             }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val bottomSheetDialog = dialog as? BottomSheetDialog ?: return
+        val bottomSheet = bottomSheetDialog.findViewById<FrameLayout>(
+            com.google.android.material.R.id.design_bottom_sheet
+        ) ?: return
+
+        bottomSheet.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+        bottomSheet.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+            leftMargin = resources.getDimensionPixelSize(app.vercel.wbus.R.dimen.spacing_3)
+            rightMargin = resources.getDimensionPixelSize(app.vercel.wbus.R.dimen.spacing_3)
+            bottomMargin = resources.getDimensionPixelSize(app.vercel.wbus.R.dimen.spacing_3)
+        }
+        bottomSheet.layoutParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+
+        BottomSheetBehavior.from(bottomSheet).apply {
+            isFitToContents = true
+            skipCollapsed = true
+            state = BottomSheetBehavior.STATE_EXPANDED
         }
     }
 }
@@ -77,75 +104,84 @@ fun StopArrivalContent(
         }
     }
 
-    Surface(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 200.dp),
-        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-        color = MaterialTheme.colorScheme.surface
+            .padding(0.dp), contentAlignment = Alignment.BottomCenter
     ) {
-        Column(
+        Surface(
             modifier = Modifier
-                .padding(24.dp)
                 .fillMaxWidth()
+                .widthIn(max = 600.dp)
+                .heightIn(min = 200.dp),
+            shape = RoundedCornerShape(32.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            shadowElevation = 16.dp
         ) {
-            // Drag handle
-            Box(
+            Column(
                 modifier = Modifier
-                    .width(40.dp)
-                    .height(4.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(2.dp)
-                    )
-                    .align(Alignment.CenterHorizontally)
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = stopName,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (isLoading) {
+                    .padding(horizontal = 20.dp, vertical = 14.dp)
+                    .fillMaxWidth()
+                    .heightIn(min = 220.dp)
+            ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp), contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
-            } else if (isError) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp), contentAlignment = Alignment.Center
-                ) {
-                    Text("도착 정보를 불러올 수 없습니다", color = MaterialTheme.colorScheme.error)
-                }
-            } else if (arrivals.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp), contentAlignment = Alignment.Center
-                ) {
-                    Text("도착 정보가 없습니다", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 400.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 16.dp)
-                ) {
-                    items(arrivals) { arrival ->
-                        ArrivalListItem(arrival = arrival, onClick = { onArrivalClick(arrival) })
+                        .width(52.dp)
+                        .height(6.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f),
+                            shape = RoundedCornerShape(999.dp)
+                        )
+                        .align(Alignment.CenterHorizontally)
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Text(
+                    text = stopName,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp), contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
+                } else if (isError) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp), contentAlignment = Alignment.Center
+                    ) {
+                        Text("도착 정보를 불러올 수 없습니다", color = MaterialTheme.colorScheme.error)
+                    }
+                } else if (arrivals.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp), contentAlignment = Alignment.Center
+                    ) {
+                        Text("도착 정보가 없습니다", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 440.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(top = 2.dp, bottom = 12.dp)
+                    ) {
+                        items(arrivals) { arrival ->
+                            ArrivalListItem(arrival = arrival, onClick = { onArrivalClick(arrival) })
+                        }
                     }
                 }
             }
@@ -163,7 +199,7 @@ fun ArrivalListItem(arrival: BusStopArrival, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable(onClick = onClick), colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        ), shape = RoundedCornerShape(16.dp)
+        ), shape = RoundedCornerShape(22.dp)
     ) {
         Row(
             modifier = Modifier
@@ -176,7 +212,7 @@ fun ArrivalListItem(arrival: BusStopArrival, onClick: () -> Unit) {
                 Box(
                     modifier = Modifier
                         .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(14.dp))
                         .background(urgencyColor.copy(alpha = 0.15f)), contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -187,13 +223,15 @@ fun ArrivalListItem(arrival: BusStopArrival, onClick: () -> Unit) {
                     )
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
                 Column {
                     Text(
                         text = "${arrival.routeno}번",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = "${arrival.arrprevstationcnt}정거장 전",
@@ -203,16 +241,18 @@ fun ArrivalListItem(arrival: BusStopArrival, onClick: () -> Unit) {
                 }
             }
 
-            Surface(
-                color = urgencyColor, shape = RoundedCornerShape(10.dp)
-            ) {
-                Text(
-                    text = getUrgencyText(minutes),
-                    color = Color.White,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.ExtraBold
-                )
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Surface(
+                    color = urgencyColor, shape = RoundedCornerShape(999.dp)
+                ) {
+                    Text(
+                        text = getUrgencyText(minutes),
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
             }
         }
     }

@@ -5,13 +5,12 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.vercel.wbus.data.common.Result
-import app.vercel.wbus.data.model.BusItem
-import app.vercel.wbus.data.model.BusSchedule
-import app.vercel.wbus.data.model.BusStop
-import app.vercel.wbus.data.model.RouteMapData
+import app.vercel.wbus.data.model.*
 import app.vercel.wbus.data.repository.BusRepository
 import app.vercel.wbus.data.repository.StaticDataRepository
+import app.vercel.wbus.domain.service.DirectionService
 import app.vercel.wbus.domain.service.PolylineData
+import app.vercel.wbus.domain.service.RouteSequenceData
 import kotlinx.coroutines.*
 import timber.log.Timber
 
@@ -52,6 +51,7 @@ class MapViewModel(
     private var directionLookup: app.vercel.wbus.domain.service.DirectionLookup? = null
     private var polylineData: PolylineData? = null
     private var activePollingRouteIds: List<String> = emptyList()
+    private var routeSelectionVersion: Long = 0L
 
     private var pollingJob: Job? = null
 
@@ -64,6 +64,7 @@ class MapViewModel(
             _selectedRouteId.value == routeId && _selectedRouteName.value == routeName && activePollingRouteIds == pollingRouteIds
         if (isSameSelection) return
 
+        val selectionVersion = ++routeSelectionVersion
         _selectedRouteId.value = routeId
         _selectedRouteName.value = routeName
         activePollingRouteIds = pollingRouteIds
@@ -79,50 +80,45 @@ class MapViewModel(
         _busSchedule.value = Result.loading() // Reset schedule to loading state
 
         // Load bus stops (cached, only once)
-        loadBusStops(routeId)
+        loadBusStops(routeId, selectionVersion)
+
+        // Build direction lookup for all route IDs to improve up/down resolution.
+        loadDirectionLookup(pollingRouteIds, selectionVersion)
 
         // Load polyline (cached, only once)
-        loadPolyline(routeId)
+        loadPolyline(routeId, selectionVersion)
 
         // Load schedule if routeName is provided
-        routeName?.let { loadSchedule(it) }
+        routeName?.let { loadSchedule(it, selectionVersion) }
 
         // Start polling for bus locations
-        startBusLocationPolling(pollingRouteIds)
+        startBusLocationPolling(pollingRouteIds, selectionVersion)
 
         if (routeIds == null && routeName != null) {
-            resolvePollingRouteIds(routeName, routeId)
+            resolvePollingRouteIds(routeName, routeId, selectionVersion)
         }
     }
 
     /**
      * Load bus stops for the route
      */
-    private fun loadBusStops(routeId: String) {
+    private fun loadBusStops(routeId: String, expectedSelectionVersion: Long) {
         viewModelScope.launch {
             _busStops.value = Result.loading()
             val result = busRepository.getBusStops(routeId)
+            if (expectedSelectionVersion != routeSelectionVersion) return@launch
             _busStops.value = result
-
-            if (result is Result.Success) {
-                // Build direction lookup when stops and sequence are available
-                val sequence = result.data.map {
-                    app.vercel.wbus.data.model.SequenceItem(it.nodeord ?: 0, it.nodeid, it.updowncd ?: 0)
-                }
-                val routeSequence = app.vercel.wbus.domain.service.RouteSequenceData(routeId, sequence)
-                directionLookup =
-                    app.vercel.wbus.domain.service.DirectionService.buildLookup(listOf(routeSequence), listOf(routeId))
-            }
         }
     }
 
     /**
      * Load polyline for the route
      */
-    private fun loadPolyline(routeId: String) {
+    private fun loadPolyline(routeId: String, expectedSelectionVersion: Long) {
         viewModelScope.launch {
             _polyline.value = Result.loading()
             val result = staticDataRepository.getPolyline(routeId)
+            if (expectedSelectionVersion != routeSelectionVersion) return@launch
             if (result is Result.Success) {
                 val processed = app.vercel.wbus.domain.service.PolylineService.processPolyline(result.data)
                 polylineData = processed
@@ -136,18 +132,21 @@ class MapViewModel(
     /**
      * Load schedule for the route
      */
-    private fun loadSchedule(routeName: String) {
+    private fun loadSchedule(routeName: String, expectedSelectionVersion: Long = routeSelectionVersion) {
         viewModelScope.launch {
             // Filter routeName to keep only numbers and hyphens (e.g., "30-1번" -> "30-1")
             val cleanRouteName = routeName.filter { it.isDigit() || it == '-' }
             if (cleanRouteName.isEmpty()) {
+                if (expectedSelectionVersion != routeSelectionVersion) return@launch
                 _busSchedule.value = Result.error(Exception("Invalid route name for schedule"))
                 return@launch
             }
 
             _busSchedule.value = Result.loading()
             Timber.d("Loading schedule for: $cleanRouteName (original: $routeName)")
-            _busSchedule.value = staticDataRepository.getSchedule(cleanRouteName)
+            val result = staticDataRepository.getSchedule(cleanRouteName)
+            if (expectedSelectionVersion != routeSelectionVersion) return@launch
+            _busSchedule.value = result
         }
     }
 
@@ -164,11 +163,13 @@ class MapViewModel(
     /**
      * Start polling for real-time bus locations
      */
-    private fun startBusLocationPolling(routeIds: List<String>) {
+    private fun startBusLocationPolling(routeIds: List<String>, expectedSelectionVersion: Long) {
         pollingJob = viewModelScope.launch {
             while (isActive) {
                 try {
+                    if (expectedSelectionVersion != routeSelectionVersion) return@launch
                     val result = fetchBusLocations(routeIds)
+                    if (expectedSelectionVersion != routeSelectionVersion) return@launch
 
                     if (result is Result.Success) {
                         val snappedBuses = snapBuses(result.data)
@@ -277,15 +278,19 @@ class MapViewModel(
         }
     }
 
-    private fun resolvePollingRouteIds(routeName: String, fallbackRouteId: String) {
+    private fun resolvePollingRouteIds(
+        routeName: String, fallbackRouteId: String, expectedSelectionVersion: Long
+    ) {
         viewModelScope.launch {
             when (val result = staticDataRepository.getRouteIds(routeName)) {
                 is Result.Success -> {
+                    if (expectedSelectionVersion != routeSelectionVersion) return@launch
                     val resolvedIds = normalizeRouteIds(result.data, fallbackRouteId)
                     if (resolvedIds != activePollingRouteIds) {
                         activePollingRouteIds = resolvedIds
                         pollingJob?.cancel()
-                        startBusLocationPolling(resolvedIds)
+                        startBusLocationPolling(resolvedIds, expectedSelectionVersion)
+                        loadDirectionLookup(resolvedIds, expectedSelectionVersion)
                         Timber.d("Updated polling route IDs for $routeName: ${resolvedIds.joinToString()}")
                     }
                 }
@@ -320,6 +325,55 @@ class MapViewModel(
             buses.isNotEmpty() -> Result.success(buses.distinctBy { it.vehicleno })
             errorResult != null -> errorResult
             else -> Result.success(emptyList())
+        }
+    }
+
+    private fun loadDirectionLookup(routeIds: List<String>, expectedSelectionVersion: Long = routeSelectionVersion) {
+        val orderedRouteIds = routeIds.filter { it.isNotBlank() }.distinct()
+        if (orderedRouteIds.isEmpty()) {
+            if (expectedSelectionVersion == routeSelectionVersion) {
+                directionLookup = null
+            }
+            return
+        }
+
+        viewModelScope.launch {
+            val routeSequences = coroutineScope {
+                orderedRouteIds.map { routeId ->
+                    async {
+                        when (val result = busRepository.getBusStops(routeId)) {
+                            is Result.Success -> {
+                                val sequence = result.data.mapNotNull { stop ->
+                                    val nodeOrder = stop.nodeord ?: return@mapNotNull null
+                                    val upDownCode = stop.updowncd ?: return@mapNotNull null
+                                    SequenceItem(
+                                        nodeord = nodeOrder,
+                                        nodeid = stop.nodeid,
+                                        updowncd = upDownCode
+                                    )
+                                }
+                                if (sequence.isNotEmpty()) RouteSequenceData(routeId, sequence) else null
+                            }
+
+                            is Result.Error -> {
+                                Timber.w(result.exception, "Failed to load sequence for route: $routeId")
+                                null
+                            }
+
+                            is Result.Loading -> null
+                        }
+                    }
+                }.awaitAll().filterNotNull()
+            }
+            if (expectedSelectionVersion != routeSelectionVersion) return@launch
+
+            if (routeSequences.isEmpty()) {
+                directionLookup = null
+                Timber.w("Direction lookup unavailable: no route sequence data loaded")
+                return@launch
+            }
+
+            directionLookup = DirectionService.buildLookup(routeSequences, orderedRouteIds)
         }
     }
 }

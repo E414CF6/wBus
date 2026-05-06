@@ -10,12 +10,14 @@ import com.google.android.gms.maps.model.MarkerOptions
 class StopMarkerController(private val iconProvider: () -> BitmapDescriptor?) {
     companion object {
         private const val STOP_MARKER_ALPHA = 0.7f
+        private const val MIN_STOP_VISIBLE_ZOOM = 14f
     }
 
     private val stopMarkers = mutableListOf<Marker>()
     private val stopLookup = mutableMapOf<String, BusStop>()
+    private var currentZoom = 0f
 
-    fun render(map: GoogleMap, stops: List<BusStop>) {
+    fun render(map: GoogleMap, stops: List<BusStop>, zoom: Float = map.cameraPosition.zoom) {
         clear()
         stopLookup.putAll(stops.associateBy { it.nodeid })
         val icon = iconProvider()
@@ -29,6 +31,16 @@ class StopMarkerController(private val iconProvider: () -> BitmapDescriptor?) {
                 it.tag = stop.nodeid
                 stopMarkers.add(it)
             }
+        }
+
+        onZoomChanged(zoom)
+    }
+
+    fun onZoomChanged(zoom: Float) {
+        currentZoom = zoom
+        val isVisible = currentZoom >= MIN_STOP_VISIBLE_ZOOM
+        stopMarkers.forEach { marker ->
+            marker.isVisible = isVisible
         }
     }
 

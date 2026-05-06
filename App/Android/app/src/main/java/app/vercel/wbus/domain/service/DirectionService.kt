@@ -18,6 +18,7 @@ class DirectionLookup(
     val sequenceMap: Map<String, List<SequenceCandidate>>,
     val routeMixedDirMap: Map<String, Boolean>,
     val fallbackDirMap: Map<String, Int>,
+    val routePriorityMap: Map<String, Int>,
     val activeRouteIds: Set<String>
 )
 
@@ -32,6 +33,8 @@ data class SequenceCandidate(
  * Service to resolve bus direction (Up/Down) based on current position and route data
  */
 object DirectionService {
+    private const val API_DOWN_CODE = 0
+    private const val API_UP_CODE = 1
 
     /**
      * Node IDs that should always be treated as UP direction
@@ -55,20 +58,35 @@ object DirectionService {
         }
 
         val routeMixedDirMap = mutableMapOf<String, Boolean>()
+        val resolvedRouteDirMap = mutableMapOf<String, Int>()
         for (rsd in sequences) {
-            val directions = rsd.sequence.map { it.updowncd }.toSet()
+            val directions = rsd.sequence.mapNotNull { mapUpDownCode(it.updowncd) }.toSet()
             routeMixedDirMap[rsd.routeid] = directions.size > 1
+            if (directions.size == 1) {
+                resolvedRouteDirMap[rsd.routeid] = directions.first()
+            }
         }
 
         val fallbackDirMap = mutableMapOf<String, Int>()
         if (routeIdOrder.size == 2) {
-            fallbackDirMap[routeIdOrder[0]] = Direction.UP
-            fallbackDirMap[routeIdOrder[1]] = Direction.DOWN
-        }
+            val firstRouteId = routeIdOrder[0]
+            val secondRouteId = routeIdOrder[1]
+            val firstResolved = resolvedRouteDirMap[firstRouteId]
+            val secondResolved = resolvedRouteDirMap[secondRouteId]
 
+            if (firstResolved == null && secondResolved != null) {
+                resolvedRouteDirMap[firstRouteId] = opposite(secondResolved)
+            }
+            if (secondResolved == null && firstResolved != null) {
+                resolvedRouteDirMap[secondRouteId] = opposite(firstResolved)
+            }
+        }
+        fallbackDirMap.putAll(resolvedRouteDirMap)
+
+        val routePriorityMap = routeIdOrder.withIndex().associate { it.value to it.index }
         val activeRouteIds = sequences.map { it.routeid }.toSet()
 
-        return DirectionLookup(sequenceMap, routeMixedDirMap, fallbackDirMap, activeRouteIds)
+        return DirectionLookup(sequenceMap, routeMixedDirMap, fallbackDirMap, routePriorityMap, activeRouteIds)
     }
 
     /**
@@ -89,13 +107,11 @@ object DirectionService {
         val candidates = lookup.sequenceMap[normalizedNodeId] ?: return null
         if (candidates.isEmpty()) return null
 
-        val scopedCandidates = if (routeid != null) {
-            candidates.filter { it.routeid == routeid }
-        } else {
-            candidates.filter { lookup.activeRouteIds.contains(it.routeid) }
-        }
-
-        val pool = if (scopedCandidates.isNotEmpty()) scopedCandidates else candidates
+        val activeCandidates = candidates.filter { lookup.activeRouteIds.contains(it.routeid) }
+        val scopedCandidates = routeid?.let { currentRouteId ->
+            activeCandidates.filter { it.routeid == currentRouteId }
+        } ?: activeCandidates
+        val pool = if (scopedCandidates.isNotEmpty()) scopedCandidates else activeCandidates.ifEmpty { candidates }
 
         val exactMatch = pool.find { it.nodeord == nodeord }
 
@@ -104,6 +120,12 @@ object DirectionService {
             val bDiff = abs(b.nodeord - nodeord)
             when {
                 aDiff != bDiff -> aDiff.compareTo(bDiff)
+                a.routeid != b.routeid -> {
+                    val aPriority = lookup.routePriorityMap[a.routeid] ?: Int.MAX_VALUE
+                    val bPriority = lookup.routePriorityMap[b.routeid] ?: Int.MAX_VALUE
+                    aPriority.compareTo(bPriority)
+                }
+
                 else -> a.nodeord.compareTo(b.nodeord)
             }
         } ?: return null
@@ -113,7 +135,18 @@ object DirectionService {
 
         if (!isMixed && fallback != null) return fallback
 
-        // TODO: Add direction for circulation
-        return if (bestMatch.updowncd == 0) Direction.UP else if (bestMatch.updowncd == 1) Direction.DOWN else Direction.UP
+        return mapUpDownCode(bestMatch.updowncd) ?: fallback
+    }
+
+    private fun mapUpDownCode(code: Int): Int? {
+        return when (code) {
+            API_DOWN_CODE -> Direction.DOWN
+            API_UP_CODE -> Direction.UP
+            else -> null
+        }
+    }
+
+    private fun opposite(direction: Int): Int {
+        return if (direction == Direction.UP) Direction.DOWN else Direction.UP
     }
 }
