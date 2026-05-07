@@ -30,7 +30,7 @@
         <activity
                 android:name=".ui.main.MainActivity"
                 android:exported="true"
-                android:theme="@style/Theme.Wbus.NoActionBar"
+                android:theme="@style/Theme.Wbus.Splash"
                 android:launchMode="singleTop">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

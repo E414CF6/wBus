@@ -1,0 +1,8 @@
+<resources>
+    <style name="Theme.Wbus.Splash" parent="Theme.Wbus.NoActionBar">
+        <item name="android:windowSplashScreenBackground">@android:color/black</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/black</item>
+        <item name="android:windowBackground">@drawable/bg_launch_splash</item>
+    </style>
+</resources>

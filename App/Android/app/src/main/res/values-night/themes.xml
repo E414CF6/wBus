@@ -24,4 +24,8 @@
         <!-- Window properties for edge-to-edge -->
         <item name="android:windowDrawsSystemBarBackgrounds">true</item>
     </style>
+
+    <style name="Theme.Wbus.Splash" parent="Theme.Wbus.NoActionBar">
+        <item name="android:windowBackground">@drawable/bg_launch_splash</item>
+    </style>
 </resources>
