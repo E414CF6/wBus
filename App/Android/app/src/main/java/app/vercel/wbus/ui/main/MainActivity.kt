@@ -85,7 +85,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         val routeId = prefsManager.getSelectedRouteId() ?: prefsManager.getDefaultRouteId()
         val routeName = prefsManager.getSelectedRouteName()
         viewModel.setRoute(routeId, routeName)
-        WBusHomeWidgetProvider.updateAllWidgets(this)
+        WBusHomeWidgetProvider.requestUpdate(this)
     }
 
     override fun onMapReady(map: GoogleMap) {
@@ -248,7 +248,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                     prefsManager.setSelectedRouteId(arrival.routeid)
                     prefsManager.setSelectedRouteName(arrival.routeno)
                     viewModel.setRoute(arrival.routeid, arrival.routeno)
-                    WBusHomeWidgetProvider.updateAllWidgets(this)
+                    WBusHomeWidgetProvider.requestUpdate(this)
                 }
                 dialog.show(supportFragmentManager, "StopArrivalDialog")
                 return@setOnMarkerClickListener true
@@ -316,7 +316,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
                 prefsManager.setSelectedRouteId(routeId)
                 prefsManager.setSelectedRouteName(routeName)
                 viewModel.setRoute(routeId, routeName, selectedRoute.routeIds)
-                WBusHomeWidgetProvider.updateAllWidgets(this)
+                WBusHomeWidgetProvider.requestUpdate(this)
             }
         }
         dialog.show(supportFragmentManager, "RouteSelectionDialog")

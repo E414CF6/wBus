@@ -95,14 +95,4 @@ class BusRepository(private val apiService: WBusApiService) {
             }
         }
     }
-
-    /**
-     * Fetch route stops by name
-     */
-    suspend fun getRouteStops(routeName: String): Result<RouteDetail> {
-        return safeApiCall(
-            apiCall = { apiService.getRouteStops(routeName) },
-            errorMessage = "Error fetching route stops for $routeName"
-        )
-    }
 }

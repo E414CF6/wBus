@@ -55,18 +55,4 @@ object PolylineService {
             bbox = bbox
         )
     }
-
-    /**
-     * Calculate bearing between two coordinates
-     */
-    fun calculateBearing(from: Coordinate, to: Coordinate): Float {
-        val lat1 = Math.toRadians(from.latitude)
-        val lat2 = Math.toRadians(to.latitude)
-        val dLon = Math.toRadians(to.longitude - from.longitude)
-
-        val y = Math.sin(dLon) * Math.cos(lat2)
-        val x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon)
-
-        return ((Math.toDegrees(Math.atan2(y, x)) + 360) % 360).toFloat()
-    }
 }

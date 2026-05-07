@@ -216,16 +216,16 @@ class MapViewModel(
             // Ensure monotonic movement: if new progress is less than previous, stay at previous position
             // unless it's a large jump (e.g., > 10 segments) suggesting a route restart or major correction
             val isRestart = prevBus != null && (prevProgress - currentProgress) > 20.0
-            val shouldApplyMonotonic = prevBus != null && currentProgress < prevProgress && !isRestart
+            val monotonicBase = prevBus?.takeIf { currentProgress < prevProgress && !isRestart }
 
-            if (shouldApplyMonotonic && prevBus != null) {
+            if (monotonicBase != null) {
                 bus.copy(
-                    gpslati = prevBus.gpslati,
-                    gpslong = prevBus.gpslong,
-                    bearing = prevBus.bearing,
+                    gpslati = monotonicBase.gpslati,
+                    gpslong = monotonicBase.gpslong,
+                    bearing = monotonicBase.bearing,
                     direction = snapResult.direction,
-                    segmentIndex = prevBus.segmentIndex,
-                    progress = prevBus.progress
+                    segmentIndex = monotonicBase.segmentIndex,
+                    progress = monotonicBase.progress
                 )
             } else {
                 bus.copy(

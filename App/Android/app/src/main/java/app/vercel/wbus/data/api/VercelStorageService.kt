@@ -3,7 +3,6 @@ package app.vercel.wbus.data.api
 import app.vercel.wbus.data.model.BusSchedule
 import app.vercel.wbus.data.model.GeoPolyline
 import app.vercel.wbus.data.model.RouteMapData
-import app.vercel.wbus.data.model.StationMapData
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Path
@@ -19,12 +18,6 @@ interface VercelStorageService {
      */
     @GET("routeMap.json")
     suspend fun getRouteMap(): Response<RouteMapData>
-
-    /**
-     * Get station map data (station locations)
-     */
-    @GET("stationMap.json")
-    suspend fun getStationMap(): Response<StationMapData>
 
     /**
      * Get GeoJSON polyline for a specific route

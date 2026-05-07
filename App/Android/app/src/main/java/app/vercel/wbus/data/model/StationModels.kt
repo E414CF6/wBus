@@ -4,19 +4,6 @@ import app.vercel.wbus.data.api.adapter.RouteNo
 import com.squareup.moshi.JsonClass
 
 /**
- * Basic station/stop location information
- */
-@JsonClass(generateAdapter = true)
-data class StationLocation(
-    val gpslati: Double, val gpslong: Double, val nodenm: String, val nodeno: String
-) {
-    /**
-     * Get the coordinate pair [latitude, longitude]
-     */
-    fun coordinate(): Coordinate = Coordinate(gpslati, gpslong)
-}
-
-/**
  * Bus stop with additional route-specific information
  */
 @JsonClass(generateAdapter = true)
@@ -33,13 +20,6 @@ data class BusStop(
      * Get the coordinate pair [latitude, longitude]
      */
     fun coordinate(): Coordinate = Coordinate(gpslati, gpslong)
-
-    /**
-     * Convert to basic station location
-     */
-    fun toStationLocation() = StationLocation(
-        gpslati = gpslati, gpslong = gpslong, nodenm = nodenm, nodeno = nodeno
-    )
 }
 
 /**
@@ -68,12 +48,4 @@ data class BusStopArrival(
 @JsonClass(generateAdapter = true)
 data class BusArrivalsResponse(
     val data: List<BusStopArrival>, val timestamp: Long
-)
-
-/**
- * Map data for stations
- */
-@JsonClass(generateAdapter = true)
-data class StationMapData(
-    val lastUpdated: String, val stations: Map<String, StationLocation>
 )

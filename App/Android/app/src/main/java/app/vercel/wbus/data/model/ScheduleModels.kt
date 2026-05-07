@@ -44,45 +44,6 @@ data class BusSchedule(
     val notes: Map<String, String>? = null
 )
 
-/**
- * Information about the next upcoming bus
- */
-data class NextBusInfo(
-    val hour: String, val minute: String, val timeUntil: TimeUntil? = null
-)
-
-/**
- * Time remaining until bus arrival
- */
-data class TimeUntil(
-    val minutes: Int, val seconds: Int
-) {
-    fun getTotalSeconds(): Int = minutes * 60 + seconds
-    fun format(): String = "${minutes}:${seconds.toString().padStart(2, '0')}"
-
-    fun getUrgency(): UrgencyLevel = when {
-        minutes <= 3 -> UrgencyLevel.RED
-        minutes <= 7 -> UrgencyLevel.AMBER
-        minutes <= 15 -> UrgencyLevel.EMERALD
-        else -> UrgencyLevel.BLUE
-    }
-}
-
-enum class UrgencyLevel {
-    RED, AMBER, EMERALD, BLUE
-}
-
 enum class DayType {
-    WEEKDAY, WEEKEND;
-
-    companion object {
-        fun current(): DayType {
-            val dayOfWeek = java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_WEEK)
-            return if (dayOfWeek == java.util.Calendar.SATURDAY || dayOfWeek == java.util.Calendar.SUNDAY) {
-                WEEKEND
-            } else {
-                WEEKDAY
-            }
-        }
-    }
+    WEEKDAY, WEEKEND
 }

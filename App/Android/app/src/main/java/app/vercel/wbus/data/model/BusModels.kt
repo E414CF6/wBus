@@ -27,26 +27,11 @@ data class BusItem(
 }
 
 /**
- * Error types that can occur when fetching bus data
- */
-enum class BusDataError {
-    NONE_RUNNING,    // No buses currently running on this route
-    NETWORK,         // Network connection error
-    INVALID_ROUTE    // Invalid route ID provided
-}
-
-/**
  * Coordinate pair representing [latitude, longitude]
  */
 data class Coordinate(
     val latitude: Double, val longitude: Double
-) {
-    operator fun get(index: Int): Double = when (index) {
-        0 -> latitude
-        1 -> longitude
-        else -> throw IndexOutOfBoundsException("Coordinate index must be 0 or 1")
-    }
-}
+)
 
 /**
  * API response wrapper containing bus data and timestamp

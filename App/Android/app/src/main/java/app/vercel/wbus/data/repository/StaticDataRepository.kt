@@ -6,7 +6,6 @@ import app.vercel.wbus.data.common.Result
 import app.vercel.wbus.data.model.BusSchedule
 import app.vercel.wbus.data.model.GeoPolyline
 import app.vercel.wbus.data.model.RouteMapData
-import app.vercel.wbus.data.model.StationMapData
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -53,42 +52,6 @@ class StaticDataRepository(
             }
         } catch (e: Exception) {
             Timber.e(e, "Error fetching route map")
-            Result.error(e)
-        }
-    }
-
-    /**
-     * Get station map data (station locations)
-     * Cached for 24 hours
-     */
-    suspend fun getStationMap(): Result<StationMapData> = withContext(Dispatchers.IO) {
-        val cacheKey = "station_map"
-
-        // Check cache first
-        cache.get<StationMapData>(cacheKey)?.let {
-            Timber.d("StationMap loaded from cache")
-            return@withContext Result.success(it)
-        }
-
-        // Fetch from network
-        try {
-            val response = storageService.getStationMap()
-            if (response.isSuccessful) {
-                val data = response.body()
-                if (data != null) {
-                    cache.put(cacheKey, data, CacheManager.TTL_24_HOURS)
-                    Timber.d("StationMap fetched from network")
-                    Result.success(data)
-                } else {
-                    Timber.e("Successful response but null body for station map")
-                    Result.error(Exception("Empty response body"))
-                }
-            } else {
-                Timber.e("Failed to fetch station map: ${response.code()}")
-                Result.error(Exception("HTTP ${response.code()}"))
-            }
-        } catch (e: Exception) {
-            Timber.e(e, "Error fetching station map")
             Result.error(e)
         }
     }

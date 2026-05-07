@@ -3,22 +3,6 @@ package app.vercel.wbus.data.model
 import com.squareup.moshi.JsonClass
 
 /**
- * A stop/station in the route sequence
- */
-@JsonClass(generateAdapter = true)
-data class SequenceItem(
-    val nodeord: Int, val nodeid: String, val updowncd: Int
-)
-
-/**
- * Detailed route information with ordered stops
- */
-@JsonClass(generateAdapter = true)
-data class RouteDetail(
-    val routeno: String? = null, val sequence: List<SequenceItem>
-)
-
-/**
  * Direction constants for bus routes
  */
 object Direction {
@@ -32,4 +16,11 @@ object Direction {
 @JsonClass(generateAdapter = true)
 data class RouteMapData(
     val lastUpdated: String, val route_numbers: Map<String, List<String>>
+)
+
+/**
+ * Node ordering metadata used to resolve vehicle direction on a route sequence.
+ */
+data class SequenceItem(
+    val nodeord: Int, val nodeid: String, val updowncd: Int
 )

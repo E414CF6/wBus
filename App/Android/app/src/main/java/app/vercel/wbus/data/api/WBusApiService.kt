@@ -3,7 +3,6 @@ package app.vercel.wbus.data.api
 import app.vercel.wbus.data.model.BusArrivalsResponse
 import app.vercel.wbus.data.model.BusLocationResponse
 import app.vercel.wbus.data.model.BusStopsResponse
-import app.vercel.wbus.data.model.RouteDetail
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Path
@@ -43,14 +42,4 @@ interface WBusApiService {
     suspend fun getBusStops(
         @Path("routeId") routeId: String
     ): Response<BusStopsResponse>
-
-    /**
-     * Get route stops by route name
-     * @param routeName The route name (e.g., "30")
-     * @return Route detail with stops
-     */
-    @GET("route-stops/{routeName}")
-    suspend fun getRouteStops(
-        @Path("routeName") routeName: String
-    ): Response<RouteDetail>
 }

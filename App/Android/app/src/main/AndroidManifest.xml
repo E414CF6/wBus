@@ -41,15 +41,15 @@
 
         <receiver
                 android:name=".ui.widget.WBusHomeWidgetProvider"
-                android:exported="false">
+                android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
             </intent-filter>
-
             <meta-data
                     android:name="android.appwidget.provider"
                     android:resource="@xml/wbus_home_widget_info"/>
         </receiver>
+
     </application>
 
 </manifest>

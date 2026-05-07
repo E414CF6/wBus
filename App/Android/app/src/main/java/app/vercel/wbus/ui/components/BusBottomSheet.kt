@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import app.vercel.wbus.data.model.BusItem
 import app.vercel.wbus.data.model.BusSchedule
 import app.vercel.wbus.data.model.DayType
+import app.vercel.wbus.util.ScheduleUtils
 
 @Composable
 fun BusBottomSheet(
@@ -44,12 +45,12 @@ fun BusBottomSheet(
     val nextBusSummary = schedule?.let { sched ->
         val directions = sched.directions
         val selectedDirection = directions.firstOrNull() ?: ""
-        val dayType = if (sched.schedule.weekday != null) DayType.current() else DayType.WEEKDAY
+        val dayType = if (sched.schedule.weekday != null) ScheduleUtils.getCurrentDayType() else DayType.WEEKDAY
         val hourlyMap = when (dayType) {
             DayType.WEEKDAY -> sched.schedule.weekday ?: sched.schedule.general
             DayType.WEEKEND -> sched.schedule.weekend ?: sched.schedule.general
         } ?: emptyMap()
-        findNextBus(hourlyMap, selectedDirection)?.let { nextBus ->
+        ScheduleUtils.findNextBus(hourlyMap, selectedDirection)?.let { nextBus ->
             "${selectedDirection.ifBlank { "다음" }} ${nextBus.first}시 ${nextBus.second}분"
         }
     }
@@ -76,7 +77,6 @@ fun BusBottomSheet(
                     .padding(horizontal = 20.dp, vertical = 14.dp)
                     .animateContentSize()
             ) {
-                // Drag handle
                 Box(
                     modifier = Modifier
                         .width(52.dp)
@@ -184,7 +184,6 @@ fun BusBottomSheet(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Tabs
                 TabRow(
                     selectedTabIndex = selectedTab,
                     containerColor = Color.Transparent,
@@ -213,7 +212,6 @@ fun BusBottomSheet(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Tab Content
                 when (selectedTab) {
                     0 -> RealTimeBusList(buses, onBusClick)
                     1 -> {

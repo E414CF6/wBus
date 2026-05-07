@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import app.vercel.wbus.data.model.BusSchedule
 import app.vercel.wbus.data.model.DayType
 import app.vercel.wbus.data.model.HourlyMap
+import app.vercel.wbus.util.ScheduleUtils
 import java.util.*
 
 @Composable
@@ -24,7 +25,7 @@ fun ScheduleView(
     schedule: BusSchedule, modifier: Modifier = Modifier
 ) {
     val hasSpecificSchedules = schedule.schedule.weekday != null || schedule.schedule.weekend != null
-    val initialDayType = if (hasSpecificSchedules) DayType.current() else DayType.WEEKDAY
+    val initialDayType = if (hasSpecificSchedules) ScheduleUtils.getCurrentDayType() else DayType.WEEKDAY
 
     var selectedDayType by remember { mutableStateOf(initialDayType) }
     val directions = schedule.directions
@@ -54,7 +55,6 @@ fun ScheduleView(
                 }
             }
         } else {
-            // If only general exists, show a simple label or nothing
             Surface(
                 color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
                 shape = RoundedCornerShape(8.dp),
@@ -69,7 +69,6 @@ fun ScheduleView(
             }
         }
 
-        // Direction Selector
         if (directions.size > 1) {
             ScrollableTabRow(
                 selectedTabIndex = directions.indexOf(selectedDirection).coerceAtLeast(0),
@@ -114,8 +113,7 @@ fun ScheduleView(
                 Text("시간표 정보가 없습니다", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
-            // Find next bus for highlight
-            val nextBus = findNextBus(hourlyMap, selectedDirection)
+            val nextBus = ScheduleUtils.findNextBus(hourlyMap, selectedDirection)
 
             Column {
                 if (nextBus != null) {
@@ -234,39 +232,4 @@ fun ScheduleList(hourlyMap: HourlyMap, selectedDirection: String) {
             }
         }
     }
-}
-
-fun findNextBus(hourlyMap: HourlyMap, direction: String): Pair<Int, String>? {
-    val now = Calendar.getInstance()
-    val currentHour = now.get(Calendar.HOUR_OF_DAY)
-    val currentMinute = now.get(Calendar.MINUTE)
-
-    // Sort hours and check from current hour onwards
-    val sortedHours = hourlyMap.keys.mapNotNull { it.toIntOrNull() }.sorted()
-
-    for (hour in sortedHours) {
-        if (hour < currentHour) continue
-
-        val hourKey = String.format("%02d", hour)
-        val minutes = hourlyMap[hourKey]?.get(direction) ?: emptyList()
-
-        for (item in minutes) {
-            val minuteVal = item.minute.toIntOrNull() ?: 0
-            if (hour > currentHour || minuteVal > currentMinute) {
-                return Pair(hour, item.minute)
-            }
-        }
-    }
-
-    // If no bus today, check first bus of tomorrow (first sorted hour)
-    if (sortedHours.isNotEmpty()) {
-        val firstHour = sortedHours.first()
-        val firstHourKey = String.format("%02d", firstHour)
-        val firstMinute = hourlyMap[firstHourKey]?.get(direction)?.firstOrNull()?.minute
-        if (firstMinute != null) {
-            return Pair(firstHour, firstMinute)
-        }
-    }
-
-    return null
 }
