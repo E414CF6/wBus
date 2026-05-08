@@ -221,6 +221,7 @@ val routeId = prefsManager.getSelectedRouteId() ?: "232000061"
 
 - **Polling Interval**: 3 seconds (configurable in `MapViewModel.kt`)
 - **Network Timeout**: 30 seconds
+- **Bus Stops Cache**: 24h in-memory cache in `BusRepository` (reduces duplicate stop fetches)
 - **APK Size**: ~8.5 MB (debug)
 - **Min RAM**: Standard Android requirements
 

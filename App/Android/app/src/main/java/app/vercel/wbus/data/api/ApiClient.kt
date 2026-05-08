@@ -15,7 +15,6 @@ import java.util.concurrent.TimeUnit
  */
 object ApiClient {
 
-    private const val WBUS_API_BASE_URL = "https://wbus.vercel.app/api/"
     private const val VERCEL_STORAGE_BASE_URL = "https://gh6egrivvvefdyon.public.blob.vercel-storage.com/"
     private const val TIMEOUT_SECONDS = 30L
 
@@ -48,7 +47,7 @@ object ApiClient {
      * Create Retrofit instance for WBus API
      */
     private val wbusRetrofit: Retrofit by lazy {
-        Retrofit.Builder().baseUrl(WBUS_API_BASE_URL).client(okHttpClient)
+        Retrofit.Builder().baseUrl(BuildConfig.API_BASE_URL).client(okHttpClient)
             .addConverterFactory(MoshiConverterFactory.create(moshi)).build()
     }
 

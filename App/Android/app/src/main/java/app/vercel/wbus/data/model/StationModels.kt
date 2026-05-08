@@ -15,12 +15,7 @@ data class BusStop(
     val nodeid: String,
     val nodeord: Int? = null,
     val updowncd: Int? = null
-) {
-    /**
-     * Get the coordinate pair [latitude, longitude]
-     */
-    fun coordinate(): Coordinate = Coordinate(gpslati, gpslong)
-}
+)
 
 /**
  * API response wrapper containing route bus stops and timestamp

@@ -1,6 +1,7 @@
 package app.vercel.wbus.data.repository
 
 import app.vercel.wbus.data.api.WBusApiService
+import app.vercel.wbus.data.cache.CacheManager
 import app.vercel.wbus.data.common.Result
 import app.vercel.wbus.data.model.*
 import kotlinx.coroutines.Dispatchers
@@ -11,7 +12,13 @@ import timber.log.Timber
 /**
  * Repository for bus-related data operations
  */
-class BusRepository(private val apiService: WBusApiService) {
+class BusRepository(
+    private val apiService: WBusApiService, private val cache: CacheManager = CacheManager()
+) {
+
+    companion object {
+        private const val BUS_STOPS_CACHE_KEY_PREFIX = "bus_stops_"
+    }
 
     /**
      * Helper function to reduce boilerplate error handling
@@ -64,12 +71,19 @@ class BusRepository(private val apiService: WBusApiService) {
      * Fetch bus stops on a route
      */
     suspend fun getBusStops(routeId: String): Result<List<BusStop>> {
+        val cacheKey = "$BUS_STOPS_CACHE_KEY_PREFIX$routeId"
+        cache.get<List<BusStop>>(cacheKey)?.let {
+            Timber.d("Bus stops for route $routeId loaded from cache")
+            return Result.success(it)
+        }
+
         return safeApiCall(
             apiCall = { apiService.getBusStops(routeId) }, errorMessage = "Error fetching bus stops for route $routeId"
         ).let { result: Result<BusStopsResponse> ->
             when (result) {
                 is Result.Success -> {
                     val stops = result.data.data
+                    cache.put(cacheKey, stops, CacheManager.TTL_24_HOURS)
                     Timber.d("Fetched ${stops.size} stops for route $routeId")
                     Result.success(stops)
                 }
