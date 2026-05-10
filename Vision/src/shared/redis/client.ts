@@ -3,13 +3,14 @@ import {createClient, type RedisClientType} from "redis";
 import type {CachedData, CacheMeta, CacheStatus} from "./types";
 
 /**
- * Redis Client for Real-Time Data Caching Only
+ * Redis Client for API Response Caching
  *
- * This Redis instance is used EXCLUSIVELY for caching real-time transit data:
- * - Bus locations (GET /api/bus/[routeId]) - 3s TTL
- * - Arrival predictions (GET /api/bus-arrival/[busStopId]) - 3s TTL
+ * This Redis instance is used for both:
+ * - Live transit data (bus locations, arrivals, SSE snapshots)
+ * - Static/slow-changing API data (route stops, stop lists)
  *
- * Static data (routes, stops, polylines) bypasses Redis and uses CDN caching only.
+ * Static files loaded directly on the client (e.g. polylines/schedules JSON)
+ * still use in-process CacheManager and CDN caching.
  */
 
 const CACHE_TTL_SECONDS = 10;

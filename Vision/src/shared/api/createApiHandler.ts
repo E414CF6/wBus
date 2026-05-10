@@ -20,8 +20,8 @@ export interface StaticApiHandlerConfig<T> {
 }
 
 /**
- * Creates a Next.js GET route handler for real-time data with Redis caching.
- * Use for frequently-changing data like bus locations and arrival predictions.
+ * Creates a Next.js GET route handler with layered caching (memory + Redis + CDN headers).
+ * Use for APIs that benefit from shared cache across instances.
  */
 export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
     return async function GET(_request: Request, {params}: { params: Promise<Record<string, string>> }) {

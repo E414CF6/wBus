@@ -63,15 +63,17 @@ Vision consumes two categories of data through a three-tier caching pipeline:
          │                          │
     ┌────▼──────────────────────────▼──────────────────────────────────┐
     │                         API ROUTES (Server)                      │
-    │  GET /api/bus/[routeId]          → CachedData<BusItem[]>         │
-    │  GET /api/bus-arrival/[busStopId] → CachedData<BusStopArrival[]> │
-    │  GET /api/bus-stops/[routeId]    → CachedData<RawBusStop[]>      │
-    └────────────────────────┬─────────────────────────────────────────┘
-                             │
+│  GET /api/bus/[routeId]           → CachedData<BusItem[]>         │
+│  GET /api/bus/stream?routeIds=... → SSE snapshot stream           │
+│  GET /api/bus-arrival/[busStopId] → CachedData<BusStopArrival[]>  │
+│  GET /api/bus-stops/[routeId]     → CachedData<RawBusStop[]>      │
+└────────────────────────┬─────────────────────────────────────────┘
+                         │
     ┌────────────────────────▼─────────────────────────────────────────┐
-    │                     CLIENT (SWR + Hooks)                         │
-    │  useBusLocationData()  ─── 10s polling ──→ /api/bus/{routeId}    │
-    │  useBusArrivalInfo()   ─── 10s polling ──→ /api/bus-arrival/{id} │
+    │                   CLIENT (SSE + SWR Hooks)                       │
+    │  useBusLocationData()  ── EventSource ──→ /api/bus/stream        │
+    │                      (stream 실패 시 /api/bus/{routeId} 폴백)      │
+    │  useBusArrivalInfo()   ─── polling ──→ /api/bus-arrival/{id}     │
     │  useBusData()          ─── combines live data + static polylines │
     └──────────────────────────────────────────────────────────────────┘
 ```
@@ -99,13 +101,13 @@ and ensure our caching layers handle all logic.
 
 **Layered Caching Strategy:**
 
-**1. Real-Time Data (L1 Memory + L2 Redis + CDN):**
+**1. API Data (L1 Memory + L2 Redis + CDN):**
 To optimize the API and prevent timeouts from the public portal, the Redis caching layer (`src/shared/redis/client.ts`)
-implements several advanced strategies for frequently-changing data:
+implements several advanced strategies:
 
 - **L1 + L2 Cache:** Hot keys are served from in-process memory first, then Redis, then origin.
-- **Smart Caching (3s TTL):** Live bus positions/arrivals are cached for 3 seconds, with an
-  additional 3 seconds of CDN edge caching via `Cache-Control: public, s-maxage=3, stale-while-revalidate=3`.
+- **Smart Caching:** Live bus positions/arrivals are cached with short TTL (3s), while static stop endpoints
+  are cached with long TTL (3600s), plus CDN edge caching via `Cache-Control`.
 - **In-Flight Request Coalescing:** Prevents **Cache Stampedes (Thundering Herd)**. If a cache expires and multiple
   users request the same data simultaneously, only *one* outgoing request is made to the public API, and all concurrent
   requests await its resolution.
@@ -114,31 +116,24 @@ implements several advanced strategies for frequently-changing data:
   error and serves the older "stale" data instead of showing an error to the user, ensuring uninterrupted service.
 - **Degraded-Mode Resilience:** If `REDIS_URL` is unavailable or Redis is down, the API continues running with L1 memory
   cache.
-- **Cache Telemetry Headers:** Real-time API responses include `X-Cache-Status`, `X-Cache-Layer`, and `X-Cache-Age-Ms`.
+- **Cache Telemetry Headers:** API responses include `X-Cache-Status`, `X-Cache-Layer`, and `X-Cache-Age-Ms`.
 
-**2. Static Data (CDN Only):**
-Rarely-changing data like bus stop coordinates and route stop lists bypass Redis entirely and rely on CDN edge caching:
-
-- **CDN-Only Caching (1h edge):** Static endpoints use
-  `Cache-Control: public, s-maxage=3600, stale-while-revalidate=86400`
-  to cache for 1 hour at the CDN edge, with 24-hour stale tolerance.
-- **No Redis Overhead:** By skipping Redis for static data, we reduce Redis memory usage and latency.
-
-| API Route                      | Caching Strategy     | TTL    | Data Source            |
-|--------------------------------|----------------------|--------|------------------------|
-| `/api/bus/[routeId]`           | Memory + Redis + CDN | 3 sec  | Bus location API       |
-| `/api/bus-arrival/[busStopId]` | Memory + Redis + CDN | 3 sec  | Arrival prediction API |
-| `/api/bus-stops/[routeId]`     | CDN only             | 1 hour | Route stop list API    |
-| `/api/route-stops/[routeName]` | CDN only             | 1 hour | Static data files      |
+| API Route                      | Caching Strategy     | TTL    | Data Source             |
+|--------------------------------|----------------------|--------|-------------------------|
+| `/api/bus/[routeId]`           | Memory + Redis + CDN | 3 sec  | Bus location API        |
+| `/api/bus/stream`              | Memory + Redis + CDN | 2 sec  | Aggregated bus snapshot |
+| `/api/bus-arrival/[busStopId]` | Memory + Redis + CDN | 3 sec  | Arrival prediction API  |
+| `/api/bus-stops/[routeId]`     | Memory + Redis + CDN | 1 hour | Route stop list API     |
+| `/api/route-stops/[routeName]` | Memory + Redis + CDN | 1 hour | Static data files       |
 
 The Redis layer implements a "smart cache" — when one user's request triggers a fetch, the result is
 cached for all later users within the TTL window.
 
-**Client-side polling (SWR):**
+**Client-side live updates:**
 
-- Polling interval: 10 seconds
-- Deduplication window: 2 seconds
-- Revalidates on tab focus
+- Bus locations: SSE stream (`/api/bus/stream`) with automatic polling fallback
+- Arrival info: SWR polling
+- Revalidates on tab focus for polling-based hooks
 
 ### Coordinate Systems
 
@@ -151,19 +146,18 @@ MapLibre.
 When a user selects route **"30"**:
 
 1. `routeMap.json` resolves `"30"` → `["WJB251000068", "WJB251000376", ...]`
-2. SWR fetches `/api/bus/{routeId}` for each route ID → server checks Redis → on miss, calls the
-   public API
+2. Client opens `/api/bus/stream?routeIds=...` → server emits Redis-backed snapshots (SSE)
 3. Polyline GeoJSON files are loaded for each route ID, split at `turn_idx` into **up** and **down**
    segments
 4. Bus GPS positions are snapped to the nearest point on the polyline
 5. `BusAnimatedMarker` smoothly animates markers along the polyline path (3-seconds duration)
-6. Every 10 seconds, SWR refetches and markers animate to updated positions
+6. SSE snapshots arrive continuously and markers animate to updated positions
 
 ## Client-Side State
 
 | Mechanism         | Scope         | Data                                                        |
 |-------------------|---------------|-------------------------------------------------------------|
-| **SWR**           | Live data     | Bus locations, arrival info (10s polling)                   |
+| **SSE + SWR**     | Live data     | Bus locations (SSE), arrival info (polling)                 |
 | **CacheManager**  | Static data   | Polylines, route/station maps (in-memory LRU)               |
 | **AppMapContext** | UI state      | Global `MapRef` instance for cross-component map control    |
 | **localStorage**  | Persistence   | Map view state (center, zoom, bearing), selected route      |
@@ -178,7 +172,7 @@ When a user selects route **"30"**:
 | Language     | [TypeScript](https://www.typescriptlang.org/) 5                                                   |
 | Styling      | [Tailwind CSS](https://tailwindcss.com/) 4                                                        |
 | Map Renderer | [MapLibre GL JS](https://maplibre.org/) via [react-map-gl](https://visgl.github.io/react-map-gl/) |
-| Live Data    | [SWR](https://swr.vercel.app/) for stale-while-revalidate polling                                 |
+| Live Data    | SSE (`EventSource`) + [SWR](https://swr.vercel.app/) fallback/polling                             |
 | Server Cache | [Redis](https://redis.io/) for API response caching                                               |
 | Static CDN   | [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) for production assets                  |
 | Linting      | ESLint 9                                                                                          |
