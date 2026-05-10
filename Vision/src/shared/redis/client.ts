@@ -41,7 +41,11 @@ async function getRedisClient(): Promise<RedisClientType | null> {
             return null;
         }
 
-        const newClient = createClient({url});
+        const newClient = createClient({
+            url, socket: {
+                keepAlive: true, reconnectStrategy: (retries) => Math.min(retries * 50, 500),
+            }
+        });
         newClient.on("error", (err) => {
             console.error("[Redis] Connection error:", err);
         });
@@ -64,7 +68,7 @@ async function getRedisClient(): Promise<RedisClientType | null> {
 }
 
 /**
- * Get data from cache with layered Stale-While-Revalidate strategy.
+ * Get data from the cache with a layered Stale-While-Revalidate strategy.
  *
  * 1. Check L1 in-memory cache.
  * 2. Check L2 Redis cache.

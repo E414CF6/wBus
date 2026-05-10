@@ -34,7 +34,9 @@ async function fetchPublicApi<T>(path: string, params: Record<string, string>): 
     for (let attempt = 1; attempt <= MAX_RETRY_ATTEMPTS; attempt++) {
         try {
             const res = await fetch(url, {
-                headers: {Client: "wBus"}, signal: AbortSignal.timeout(12000), cache: "no-store",
+                headers: {
+                    Client: "wBus", "Connection": "keep-alive"
+                }, signal: AbortSignal.timeout(12000), cache: "no-store",
             });
 
             if (res.ok) {

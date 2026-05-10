@@ -10,7 +10,7 @@ const fetchRouteData = async (url: string): Promise<CachedData<BusItem[]>> => {
 };
 
 const EMPTY_BUS_LIST: BusItem[] = [];
-const STREAM_RECONNECT_DELAY_MS = 5000;
+const STREAM_RECONNECT_DELAY_MS = 3000;
 
 interface BusStreamSnapshot {
     routeIds: string[];
@@ -29,16 +29,6 @@ function buildStreamUrl(routeIds: string[]): string {
 
 function mergeRouteEntries(entries: CachedData<BusItem[]>[]): BusItem[] {
     return entries.flatMap((entry) => entry.data);
-}
-
-/**
- * Fetch bus location data for a single routeId.
- */
-export function useBusLocationByRouteId(routeId: string | null): {
-    data: BusItem[]; error: BusDataError; hasFetched: boolean;
-} {
-    const routeIds = useMemo(() => routeId ? [routeId] : [], [routeId]);
-    return useBusLocationData(routeIds);
 }
 
 /**
@@ -68,6 +58,7 @@ export function useBusLocationData(routeIds: string[]): {
         let eventSource: EventSource | null = null;
         let fallbackInterval: ReturnType<typeof setInterval> | null = null;
         let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+        let isConnecting = false;
 
         const applyData = (nextData: BusItem[]) => {
             if (disposed) return;
@@ -103,9 +94,13 @@ export function useBusLocationData(routeIds: string[]): {
             } catch (err) {
                 console.error("[useBusLocationData] Polling fallback failed", err);
                 if (disposed) return;
-                setData(EMPTY_BUS_LIST);
-                setError("ERR:NETWORK");
-                setHasFetched(true);
+
+                // Only set error if we don't have existing data or SSE isn't active
+                if (data.length === 0 && !eventSource) {
+                    setData(EMPTY_BUS_LIST);
+                    setError("ERR:NETWORK");
+                    setHasFetched(true);
+                }
             }
         };
 
@@ -118,7 +113,7 @@ export function useBusLocationData(routeIds: string[]): {
         };
 
         const scheduleReconnect = () => {
-            if (reconnectTimeout || disposed) return;
+            if (reconnectTimeout || disposed || isConnecting) return;
             reconnectTimeout = setTimeout(() => {
                 reconnectTimeout = null;
                 if (disposed) return;
@@ -132,7 +127,7 @@ export function useBusLocationData(routeIds: string[]): {
                 if (!Array.isArray(payload.data)) {
                     throw new Error("Invalid snapshot payload");
                 }
-                clearFallbackPolling();
+                clearFallbackPolling(); // SSE works, stop fallback
                 setError(null);
                 applyData(payload.data);
             } catch (err) {
@@ -141,8 +136,12 @@ export function useBusLocationData(routeIds: string[]): {
         };
 
         const startStream = () => {
-            if (disposed || eventSource || typeof window === "undefined") return;
+            if (disposed || eventSource || isConnecting || typeof window === "undefined") return;
+
+            isConnecting = true;
+
             if (typeof window.EventSource === "undefined") {
+                isConnecting = false;
                 startFallbackPolling();
                 return;
             }
@@ -155,10 +154,25 @@ export function useBusLocationData(routeIds: string[]): {
                 handleSnapshot(event.data);
             });
 
-            source.onerror = () => {
+            source.addEventListener("ping", () => {
+                // Ignore ping, just to keep connection alive
+            });
+
+            source.onerror = (err) => {
+                console.warn("[useBusLocationData] SSE error", err);
+
+                // EventSource auto reconnects, but it might be too slow. We want to close
+                // and start a fast fallback while waiting to reconnect manually.
                 closeStream();
+                isConnecting = false;
                 startFallbackPolling();
                 scheduleReconnect();
+            };
+
+            source.onopen = () => {
+                // Connected successfully, we can stop fallback
+                isConnecting = false;
+                clearFallbackPolling();
             };
         };
 

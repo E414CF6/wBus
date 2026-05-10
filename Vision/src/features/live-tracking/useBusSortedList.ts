@@ -7,11 +7,9 @@ import {useBusDirection} from "./useBusDirection";
 import {useBusLocationData} from "./useBusLocation";
 
 export const useBusSortedList = (routeName: string) => {
-    const {data: routeInfo} = useSWR(
-        routeName ? ["routeInfo", routeName] : null,
-        ([, name]) => getRouteInfo(name),
-        {revalidateOnFocus: false, dedupingInterval: 60000}
-    );
+    const {data: routeInfo} = useSWR(routeName ? ["routeInfo", routeName] : null, ([, name]) => getRouteInfo(name), {
+        revalidateOnFocus: false, dedupingInterval: 60000
+    });
     const routeIds = routeInfo?.vehicleRouteIds ?? [];
     const {data: mapList, error: mapError, hasFetched: locationFetched} = useBusLocationData(routeIds);
 
@@ -24,10 +22,7 @@ export const useBusSortedList = (routeName: string) => {
     // Combine errors
     const error = mapError;
 
-    const stopMap = useMemo(
-        () => new Map(stops.map((s: BusStop) => [s.nodeid, s.nodeord])),
-        [stops]
-    );
+    const stopMap = useMemo(() => new Map(stops.map((s: BusStop) => [s.nodeid, s.nodeord])), [stops]);
 
     // Even if stopMap (stop information) is not yet loaded, show the bus location data (mapList) if available.
     // The previous logic removed buses not in stopMap, causing the "No buses running" issue.
@@ -62,9 +57,6 @@ export const useBusSortedList = (routeName: string) => {
     // Return object Memoization
     // Without this, an infinite loop occurs in BusList's RouteDataCollector.
     return useMemo(() => ({
-        sortedList,
-        getDirection,
-        error,
-        hasFetched
+        sortedList, getDirection, error, hasFetched
     }), [sortedList, getDirection, error, hasFetched]);
 };

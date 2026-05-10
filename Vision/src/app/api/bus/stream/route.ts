@@ -79,12 +79,23 @@ export async function GET(request: Request) {
 
             const loop = async () => {
                 send("ready", {routeIds, intervalMs: STREAM_INTERVAL_MS});
+
+                // Keep-alive mechanism to prevent idle timeout (Next.js/Vercel)
+                let lastKeepAlive = Date.now();
+                const keepAliveInterval = 5000; // Send ping every 5s to keep connection alive strongly
+
                 while (!closed && !request.signal.aborted) {
                     try {
+                        const now = Date.now();
                         const snapshot = await getStreamSnapshot(routeIds);
                         send("snapshot", {
                             routeIds, data: snapshot.data, timestamp: snapshot.timestamp, meta: snapshot.meta,
                         });
+
+                        if (now - lastKeepAlive > keepAliveInterval) {
+                            send("ping", {timestamp: now});
+                            lastKeepAlive = now;
+                        }
                     } catch (err) {
                         console.error("[SSE /api/bus/stream] snapshot fetch failed", err);
                         send("error", {message: "Failed to fetch live bus snapshot"});
