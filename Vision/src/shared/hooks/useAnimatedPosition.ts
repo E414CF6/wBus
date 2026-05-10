@@ -41,6 +41,9 @@ interface UseAnimatedPositionOptions {
 
 // Ignore backward jumps smaller than this (GPS jitter).
 const BACKWARD_JITTER_METERS = 15;
+// If raw data trails behind a predicted marker within this range,
+// treat it as expected API lag and keep marker progress.
+const LAGGING_DATA_HOLD_MAX_METERS = 1200;
 
 // React state update throttle — 20 Hz is plenty for UI consumers.
 const STATE_UPDATE_THROTTLE_MS = 50;
@@ -136,8 +139,7 @@ function scalarToSegT(cumDist: number[], distance: number): { segIdx: number; t:
     let lo = 0, hi = n - 1;
     while (lo < hi) {
         const mid = (lo + hi + 1) >> 1;
-        if (cumDist[mid] <= distance) lo = mid;
-        else hi = mid - 1;
+        if (cumDist[mid] <= distance) lo = mid; else hi = mid - 1;
     }
     const segIdx = Math.min(lo, n - 2);
     const segStart = cumDist[segIdx];
@@ -147,17 +149,12 @@ function scalarToSegT(cumDist: number[], distance: number): { segIdx: number; t:
     return {segIdx, t};
 }
 
-function positionFromSegT(
-    polyline: readonly Coordinate[],
-    segIdx: number,
-    t: number,
-): { position: Coordinate; angle: number } {
+function positionFromSegT(polyline: readonly Coordinate[], segIdx: number, t: number,): {
+    position: Coordinate; angle: number
+} {
     const A = polyline[segIdx];
     const B = polyline[segIdx + 1] ?? A;
-    const pos: Coordinate = [
-        A[0] + (B[0] - A[0]) * t,
-        A[1] + (B[1] - A[1]) * t,
-    ];
+    const pos: Coordinate = [A[0] + (B[0] - A[0]) * t, A[1] + (B[1] - A[1]) * t,];
     let angle = calculateBearing(A, B);
 
     const C = polyline[segIdx + 2];
@@ -174,10 +171,7 @@ function positionFromSegT(
 // ----------------------------------------------------------------------
 
 /** Convert stop coordinate indices to scalar distances on the polyline. */
-function computeStopDistances(
-    stopCoordIndices: number[],
-    cumDist: number[],
-): number[] {
+function computeStopDistances(stopCoordIndices: number[], cumDist: number[],): number[] {
     if (cumDist.length < 2 || stopCoordIndices.length === 0) return [];
     const maxIdx = cumDist.length - 1;
     return stopCoordIndices
@@ -197,10 +191,7 @@ function computeStopDistances(
  * - At a stop → STOP_MIN_SPEED_MULT
  * - Leaving a stop (within STOP_ACCEL_ZONE) → ramps back up
  */
-function getStopSpeedMultiplier(
-    markerDist: number,
-    stopDistances: number[],
-): number {
+function getStopSpeedMultiplier(markerDist: number, stopDistances: number[],): number {
     if (stopDistances.length === 0) return 1.0;
 
     let minMult = 1.0;
@@ -209,8 +200,7 @@ function getStopSpeedMultiplier(
     let lo = 0, hi = stopDistances.length;
     while (lo < hi) {
         const mid = (lo + hi) >> 1;
-        if (stopDistances[mid] < markerDist) lo = mid + 1;
-        else hi = mid;
+        if (stopDistances[mid] < markerDist) lo = mid + 1; else hi = mid;
     }
 
     // Check the stop ahead and the stop just passed
@@ -248,16 +238,8 @@ function getStopSpeedMultiplier(
  * Early on (few samples), lean heavily on the prior.
  * As we collect more measurements, trust them more.
  */
-function blendVelocityWithPrior(
-    measured: number,
-    sampleCount: number,
-): number {
-    const trust = Math.min(
-        VELOCITY_PRIOR_BLEND_MAX,
-        VELOCITY_PRIOR_BLEND_MIN +
-        (VELOCITY_PRIOR_BLEND_MAX - VELOCITY_PRIOR_BLEND_MIN) *
-        (sampleCount / VELOCITY_PRIOR_RAMP_SAMPLES),
-    );
+function blendVelocityWithPrior(measured: number, sampleCount: number,): number {
+    const trust = Math.min(VELOCITY_PRIOR_BLEND_MAX, VELOCITY_PRIOR_BLEND_MIN + (VELOCITY_PRIOR_BLEND_MAX - VELOCITY_PRIOR_BLEND_MIN) * (sampleCount / VELOCITY_PRIOR_RAMP_SAMPLES),);
     return trust * measured + (1 - trust) * CITY_BUS_BASE_VELOCITY;
 }
 
@@ -279,11 +261,7 @@ function blendVelocityWithPrior(
  *  5. On each frame, advances at the blended velocity with stop-aware
  *     speed multiplier, plus exponential catch-up if behind target.
  */
-export function useAnimatedPosition(
-    targetPosition: Coordinate,
-    targetAngle: number,
-    options: UseAnimatedPositionOptions = {},
-): AnimatedPositionState {
+export function useAnimatedPosition(targetPosition: Coordinate, targetAngle: number, options: UseAnimatedPositionOptions = {},): AnimatedPositionState {
     const {
         polyline = [],
         snapToPolyline: shouldSnap = true,
@@ -299,8 +277,7 @@ export function useAnimatedPosition(
     const [state, setState] = useState<AnimatedPositionState>(() => {
         if (shouldSnap && polyline.length >= 2) {
             const snapped = snapPointToPolyline(targetPosition, polyline, {
-                segmentHint: snapIndexHint,
-                searchRadius: snapIndexRange,
+                segmentHint: snapIndexHint, searchRadius: snapIndexRange,
             });
             return {position: snapped.position, angle: targetAngle};
         }
@@ -356,8 +333,7 @@ export function useAnimatedPosition(
     // ----------------------------------------------------------------
     useEffect(() => {
         polylineRef.current = polyline;
-        const cumDist = polyline.length >= 2
-            ? computeCumulativeDistances(polyline) : [];
+        const cumDist = polyline.length >= 2 ? computeCumulativeDistances(polyline) : [];
         cumDistRef.current = cumDist;
         stopDistancesRef.current = computeStopDistances(stopCoordIndices, cumDist);
     }, [polyline, stopCoordIndices]);
@@ -383,8 +359,7 @@ export function useAnimatedPosition(
 
         if (shouldSnap && hasPolyline) {
             const snapped = snapPointToPolyline(targetPosition, polyline, {
-                segmentHint: snapIndexHint,
-                searchRadius: snapIndexRange,
+                segmentHint: snapIndexHint, searchRadius: snapIndexRange,
             });
             nextPos = snapped.position;
             nextAngle = snapped.angle;
@@ -418,8 +393,7 @@ export function useAnimatedPosition(
 
             if (shouldSnap && hasPolyline) {
                 const snapped = snapPointToPolyline(targetPosition, polyline, {
-                    segmentHint: snapIndexHint,
-                    searchRadius: snapIndexRange,
+                    segmentHint: snapIndexHint, searchRadius: snapIndexRange,
                 });
                 const cumDist = cumDistRef.current;
                 const dist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
@@ -460,17 +434,23 @@ export function useAnimatedPosition(
         if (cumDist.length < 2) return;
 
         const snapped = snapPointToPolyline(targetPosition, polyline, {
-            segmentHint: snapIndexHint,
-            searchRadius: snapIndexRange,
+            segmentHint: snapIndexHint, searchRadius: snapIndexRange,
         });
         const rawDist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
         const totalDist = cumDist[cumDist.length - 1];
+        const markerDist = markerDistRef.current;
+        const lagMeters = getApproxDistanceMeters(currentPosRef.current, snapped.position);
 
         // Backward detection
         if (hasDataRef.current && rawDist < prevRawDistRef.current) {
-            const backMeters = getApproxDistanceMeters(
-                currentPosRef.current, snapped.position);
-            if (backMeters <= BACKWARD_JITTER_METERS) {
+            if (markerDist > rawDist && lagMeters <= LAGGING_DATA_HOLD_MAX_METERS) {
+                // Interpolated marker already moved forward and raw feed is stale.
+                // Keep current marker progress; wait for raw data to catch up.
+                targetDistRef.current = Math.max(targetDistRef.current, markerDist);
+                return;
+            }
+
+            if (lagMeters <= BACKWARD_JITTER_METERS) {
                 // Small jitter — ignore
                 prevRawDistRef.current = rawDist;
                 return;
@@ -502,16 +482,10 @@ export function useAnimatedPosition(
             const samples = sampleCountRef.current;
 
             // EMA on measured velocity
-            const measuredEMA = velocityRef.current <= STOP_THRESHOLD
-                ? clampedV
-                : VELOCITY_SMOOTHING * clampedV
-                + (1 - VELOCITY_SMOOTHING) * velocityRef.current;
+            const measuredEMA = velocityRef.current <= STOP_THRESHOLD ? clampedV : VELOCITY_SMOOTHING * clampedV + (1 - VELOCITY_SMOOTHING) * velocityRef.current;
 
             // Blend with city bus base speed prior
-            velocityRef.current = Math.min(
-                blendVelocityWithPrior(measuredEMA, samples),
-                MAX_VELOCITY,
-            );
+            velocityRef.current = Math.min(blendVelocityWithPrior(measuredEMA, samples), MAX_VELOCITY,);
         }
 
         prevRawDistRef.current = rawDist;
@@ -539,25 +513,26 @@ export function useAnimatedPosition(
                 }
                 // Reduce projection by dwell time equivalent distance per stop
                 const dwellDistPerStop = v * STOP_DWELL_MS;
-                projDist = Math.max(
-                    projDist * 0.3,
-                    projDist - stopsInProjection * dwellDistPerStop,
-                );
+                projDist = Math.max(projDist * 0.3, projDist - stopsInProjection * dwellDistPerStop,);
             }
         }
-        const newTarget = Math.min(rawDist + projDist, totalDist);
+        let newTarget = Math.min(rawDist + projDist, totalDist);
+
+        if (markerDist > rawDist && lagMeters <= LAGGING_DATA_HOLD_MAX_METERS) {
+            // Raw feed is still behind prediction: do not pull marker backward.
+            newTarget = Math.max(newTarget, markerDist);
+        }
 
         // Reconcile target vs marker 
         targetDistRef.current = newTarget;
-        const marker = markerDistRef.current;
+        const marker = markerDist;
 
         if (newTarget >= marker) {
             // Normal — data target is ahead of or at marker.
             const gap = newTarget - marker;
             const nominalStep = v * 3000;
             if (nominalStep > 0 && gap > nominalStep * CATCHUP_GAP_FACTOR) {
-                velocityRef.current = Math.min(
-                    velocityRef.current * CATCHUP_BOOST, MAX_VELOCITY);
+                velocityRef.current = Math.min(velocityRef.current * CATCHUP_BOOST, MAX_VELOCITY);
             }
         } else {
             // Overshoot — marker ran ahead. Gently slow down.
@@ -596,8 +571,7 @@ export function useAnimatedPosition(
                 const gap = target - dist;
 
                 // Stop-aware speed multiplier
-                const stopMult = getStopSpeedMultiplier(
-                    dist, stopDistancesRef.current);
+                const stopMult = getStopSpeedMultiplier(dist, stopDistancesRef.current);
 
                 let advance: number;
                 if (gap > 0) {
@@ -628,8 +602,7 @@ export function useAnimatedPosition(
             // Convert scalar → world position
             const {segIdx, t} = scalarToSegT(cumDist, dist);
             const {position: pos, angle: pathAngle} = positionFromSegT(pl, segIdx, t);
-            const angle = interpolateAngle(
-                currentAngleRef.current, pathAngle, ANGULAR_SMOOTHING_FACTOR);
+            const angle = interpolateAngle(currentAngleRef.current, pathAngle, ANGULAR_SMOOTHING_FACTOR);
 
             currentPosRef.current = pos;
             currentAngleRef.current = angle;
