@@ -40,3 +40,11 @@ data class Coordinate(
 data class BusLocationResponse(
     val data: List<BusItem>, val timestamp: Long
 )
+
+/**
+ * SSE snapshot payload for /api/bus/stream.
+ */
+@JsonClass(generateAdapter = true)
+data class BusStreamSnapshot(
+    val routeIds: List<String>, val data: List<BusItem>, val timestamp: Long
+)

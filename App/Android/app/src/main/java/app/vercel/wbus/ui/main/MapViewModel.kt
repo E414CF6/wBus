@@ -4,6 +4,8 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import app.vercel.wbus.BuildConfig
+import app.vercel.wbus.data.api.ApiClient
 import app.vercel.wbus.data.common.Result
 import app.vercel.wbus.data.model.*
 import app.vercel.wbus.data.repository.BusRepository
@@ -11,8 +13,14 @@ import app.vercel.wbus.data.repository.StaticDataRepository
 import app.vercel.wbus.domain.service.DirectionService
 import app.vercel.wbus.domain.service.PolylineData
 import app.vercel.wbus.domain.service.RouteSequenceData
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.*
+import okhttp3.Call
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Request
 import timber.log.Timber
+import java.io.IOException
 
 /**
  * ViewModel for the main map screen
@@ -22,8 +30,9 @@ class MapViewModel(
 ) : ViewModel() {
 
     companion object {
-        // Polling configuration
-        private const val BUS_POLL_INTERVAL_MS = 3000L
+        private const val SSE_MAX_RUNTIME_MS = 60000L
+        private const val SSE_RECONNECT_BUFFER_MS = 5000L
+        private const val SSE_RECONNECT_DELAY_MS = 3000L
         private const val ERROR_RETRY_DELAY_MS = 5000L
     }
 
@@ -54,9 +63,18 @@ class MapViewModel(
     private var routeSelectionVersion: Long = 0L
 
     private var pollingJob: Job? = null
+    private var streamCall: Call? = null
+
+    private val streamSnapshotAdapter by lazy {
+        Moshi.Builder().add(KotlinJsonAdapterFactory()).build().adapter(BusStreamSnapshot::class.java)
+    }
+
+    private enum class StreamEndReason {
+        PROACTIVE_RECONNECT, REMOTE_CLOSED
+    }
 
     /**
-     * Set the active route and start polling for bus data
+     * Set the active route and start SSE stream for bus data
      */
     fun setRoute(routeId: String, routeName: String? = null, routeIds: List<String>? = null) {
         val pollingRouteIds = normalizeRouteIds(routeIds, routeId)
@@ -70,8 +88,10 @@ class MapViewModel(
         activePollingRouteIds = pollingRouteIds
         Timber.d("Route changed to: $routeId ($routeName)")
 
-        // Cancel existing polling
+        // Cancel existing stream job
         pollingJob?.cancel()
+        streamCall?.cancel()
+        streamCall = null
         directionLookup = null
         polylineData = null
 
@@ -91,8 +111,8 @@ class MapViewModel(
         // Load schedule if routeName is provided
         routeName?.let { loadSchedule(it, selectionVersion) }
 
-        // Start polling for bus locations
-        startBusLocationPolling(pollingRouteIds, selectionVersion)
+        // Start SSE stream for bus locations
+        startBusLocationStreaming(pollingRouteIds, selectionVersion)
 
         if (routeIds == null && routeName != null) {
             resolvePollingRouteIds(routeName, routeId, selectionVersion)
@@ -161,33 +181,142 @@ class MapViewModel(
     }
 
     /**
-     * Start polling for real-time bus locations
+     * Start SSE stream for real-time bus locations.
+     * Falls back to one-shot polling when stream errors.
      */
-    private fun startBusLocationPolling(routeIds: List<String>, expectedSelectionVersion: Long) {
+    private fun startBusLocationStreaming(routeIds: List<String>, expectedSelectionVersion: Long) {
         pollingJob = viewModelScope.launch {
             while (isActive) {
                 try {
                     if (expectedSelectionVersion != routeSelectionVersion) return@launch
-                    val result = fetchBusLocations(routeIds)
-                    if (expectedSelectionVersion != routeSelectionVersion) return@launch
+                    when (val streamResult = consumeBusStream(routeIds, expectedSelectionVersion)) {
+                        is Result.Success -> {
+                            if (streamResult.data == StreamEndReason.REMOTE_CLOSED) {
+                                delay(SSE_RECONNECT_DELAY_MS)
+                            }
+                        }
 
-                    if (result is Result.Success) {
-                        val snappedBuses = snapBuses(result.data)
-                        _buses.value = Result.success(snappedBuses)
-                    } else {
-                        _buses.value = result
+                        is Result.Error -> {
+                            Timber.w(streamResult.exception, "SSE stream failed, switching to polling fallback")
+                            val fallbackResult = fetchBusLocations(routeIds)
+                            if (expectedSelectionVersion != routeSelectionVersion) return@launch
+                            _buses.value = if (fallbackResult is Result.Success) {
+                                Result.success(snapBuses(fallbackResult.data))
+                            } else {
+                                fallbackResult
+                            }
+                            delay(ERROR_RETRY_DELAY_MS)
+                        }
+
+                        is Result.Loading -> Unit
                     }
-
-                    // Poll every 3 seconds
-                    delay(BUS_POLL_INTERVAL_MS)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    Timber.e(e, "Error in polling loop")
+                    Timber.e(e, "Error in bus stream loop")
                     _buses.value = Result.error(e)
                     delay(ERROR_RETRY_DELAY_MS)  // Wait longer on error
                 }
             }
+        }
+    }
+
+    private suspend fun consumeBusStream(
+        routeIds: List<String>, expectedSelectionVersion: Long
+    ): Result<StreamEndReason> = withContext(Dispatchers.IO) {
+        val streamRequest = buildStreamRequest(routeIds)
+            ?: return@withContext Result.error(IllegalStateException("Invalid API base URL"))
+        val reconnectDeadline = System.currentTimeMillis() + (SSE_MAX_RUNTIME_MS - SSE_RECONNECT_BUFFER_MS)
+
+        val stream = ApiClient.sseHttpClient.newCall(streamRequest)
+        streamCall = stream
+
+        try {
+            stream.execute().use { response ->
+                if (!response.isSuccessful) {
+                    return@withContext Result.error(
+                        IOException("SSE HTTP ${response.code}: ${response.message}")
+                    )
+                }
+                val body = response.body ?: return@withContext Result.error(IOException("SSE response body is empty"))
+                val source = body.source()
+                var eventName = "message"
+                val dataBuffer = StringBuilder()
+
+                while (currentCoroutineContext().isActive && expectedSelectionVersion == routeSelectionVersion) {
+                    if (System.currentTimeMillis() >= reconnectDeadline) {
+                        dispatchSseEvent(eventName, dataBuffer, expectedSelectionVersion)
+                        return@withContext Result.success(StreamEndReason.PROACTIVE_RECONNECT)
+                    }
+
+                    val line = source.readUtf8Line() ?: break
+                    if (line.isEmpty()) {
+                        dispatchSseEvent(eventName, dataBuffer, expectedSelectionVersion)
+                        eventName = "message"
+                        dataBuffer.setLength(0)
+                        continue
+                    }
+
+                    when {
+                        line.startsWith("event:") -> {
+                            eventName = line.substringAfter("event:").trim()
+                        }
+
+                        line.startsWith("data:") -> {
+                            if (dataBuffer.isNotEmpty()) {
+                                dataBuffer.append('\n')
+                            }
+                            dataBuffer.append(line.substringAfter("data:").trimStart())
+                        }
+                    }
+                }
+
+                dispatchSseEvent(eventName, dataBuffer, expectedSelectionVersion)
+                Result.success(StreamEndReason.REMOTE_CLOSED)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Result.error(e)
+        } finally {
+            streamCall = null
+        }
+    }
+
+    private fun buildStreamRequest(routeIds: List<String>): Request? {
+        val baseUrl = BuildConfig.API_BASE_URL.toHttpUrlOrNull() ?: return null
+        val streamUrl = baseUrl.newBuilder().addPathSegment("bus").addPathSegment("stream")
+            .addQueryParameter("routeIds", routeIds.joinToString(",")).build()
+        return Request.Builder().url(streamUrl).header("Accept", "text/event-stream").get().build()
+    }
+
+    private fun dispatchSseEvent(
+        eventName: String, dataBuffer: StringBuilder, expectedSelectionVersion: Long
+    ) {
+        if (dataBuffer.isEmpty() || expectedSelectionVersion != routeSelectionVersion) {
+            return
+        }
+
+        when (eventName) {
+            "snapshot" -> {
+                try {
+                    val snapshot = streamSnapshotAdapter.fromJson(dataBuffer.toString())
+                    if (snapshot == null) {
+                        Timber.w("Received empty SSE snapshot payload")
+                        return
+                    }
+                    val snappedBuses = snapBuses(snapshot.data)
+                    _buses.postValue(Result.success(snappedBuses))
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to parse SSE snapshot")
+                }
+            }
+
+            "error" -> {
+                Timber.w("SSE stream reported error event: ${dataBuffer.toString()}")
+            }
+
+            else -> Unit // ready, ping, etc.
         }
     }
 
@@ -246,7 +375,9 @@ class MapViewModel(
     override fun onCleared() {
         super.onCleared()
         pollingJob?.cancel()
-        Timber.d("MapViewModel cleared, polling stopped")
+        streamCall?.cancel()
+        streamCall = null
+        Timber.d("MapViewModel cleared, bus stream stopped")
     }
 
     /**
@@ -289,9 +420,11 @@ class MapViewModel(
                     if (resolvedIds != activePollingRouteIds) {
                         activePollingRouteIds = resolvedIds
                         pollingJob?.cancel()
-                        startBusLocationPolling(resolvedIds, expectedSelectionVersion)
+                        streamCall?.cancel()
+                        streamCall = null
+                        startBusLocationStreaming(resolvedIds, expectedSelectionVersion)
                         loadDirectionLookup(resolvedIds, expectedSelectionVersion)
-                        Timber.d("Updated polling route IDs for $routeName: ${resolvedIds.joinToString()}")
+                        Timber.d("Updated streaming route IDs for $routeName: ${resolvedIds.joinToString()}")
                     }
                 }
 
@@ -347,9 +480,7 @@ class MapViewModel(
                                     val nodeOrder = stop.nodeord ?: return@mapNotNull null
                                     val upDownCode = stop.updowncd ?: return@mapNotNull null
                                     SequenceItem(
-                                        nodeord = nodeOrder,
-                                        nodeid = stop.nodeid,
-                                        updowncd = upDownCode
+                                        nodeord = nodeOrder, nodeid = stop.nodeid, updowncd = upDownCode
                                     )
                                 }
                                 if (sequence.isNotEmpty()) RouteSequenceData(routeId, sequence) else null

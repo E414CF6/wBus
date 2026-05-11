@@ -44,6 +44,24 @@ object ApiClient {
     }
 
     /**
+     * Dedicated HTTP client for SSE streams.
+     * Keep read timeout disabled because stream lifetime is controlled by server/client reconnect logic.
+     */
+    val sseHttpClient: OkHttpClient by lazy {
+        val builder = OkHttpClient.Builder().connectTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(0, TimeUnit.MILLISECONDS).writeTimeout(TIMEOUT_SECONDS, TimeUnit.SECONDS)
+
+        if (BuildConfig.DEBUG) {
+            val logging = HttpLoggingInterceptor().apply {
+                level = HttpLoggingInterceptor.Level.BASIC
+            }
+            builder.addInterceptor(logging)
+        }
+
+        builder.build()
+    }
+
+    /**
      * Create Retrofit instance for WBus API
      */
     private val wbusRetrofit: Retrofit by lazy {
