@@ -1,7 +1,7 @@
 import type {BusDataError, BusItem} from "@entities/bus/types";
 import {API_CONFIG} from "@shared/config/env";
 import type {CachedData} from "@shared/redis/types";
-import {useEffect, useMemo, useState} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 
 const fetchRouteData = async (url: string): Promise<CachedData<BusItem[]>> => {
     const res = await fetch(url);
@@ -11,6 +11,8 @@ const fetchRouteData = async (url: string): Promise<CachedData<BusItem[]>> => {
 
 const EMPTY_BUS_LIST: BusItem[] = [];
 const STREAM_RECONNECT_DELAY_MS = 3000;
+const SSE_MAX_RUNTIME_MS = 60000;
+const SSE_RECONNECT_BUFFER_MS = 5000;
 
 interface BusStreamSnapshot {
     routeIds: string[];
@@ -43,6 +45,7 @@ export function useBusLocationData(routeIds: string[]): {
     const [data, setData] = useState<BusItem[]>(EMPTY_BUS_LIST);
     const [error, setError] = useState<BusDataError>(null);
     const [hasFetched, setHasFetched] = useState(false);
+    const dataLengthRef = useRef(0);
 
     useEffect(() => {
         const activeRouteIds = routeIdsKey ? routeIdsKey.split(",") : [];
@@ -58,10 +61,12 @@ export function useBusLocationData(routeIds: string[]): {
         let eventSource: EventSource | null = null;
         let fallbackInterval: ReturnType<typeof setInterval> | null = null;
         let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+        let proactiveReconnectTimeout: ReturnType<typeof setTimeout> | null = null;
         let isConnecting = false;
 
         const applyData = (nextData: BusItem[]) => {
             if (disposed) return;
+            dataLengthRef.current = nextData.length;
             setData(nextData);
             setHasFetched(true);
             setError(nextData.length === 0 ? "ERR:NONE_RUNNING" : null);
@@ -81,7 +86,15 @@ export function useBusLocationData(routeIds: string[]): {
             }
         };
 
+        const clearProactiveReconnectTimer = () => {
+            if (proactiveReconnectTimeout) {
+                clearTimeout(proactiveReconnectTimeout);
+                proactiveReconnectTimeout = null;
+            }
+        };
+
         const closeStream = () => {
+            clearProactiveReconnectTimer();
             if (!eventSource) return;
             eventSource.close();
             eventSource = null;
@@ -96,7 +109,7 @@ export function useBusLocationData(routeIds: string[]): {
                 if (disposed) return;
 
                 // Only set error if we don't have existing data or SSE isn't active
-                if (data.length === 0 && !eventSource) {
+                if (dataLengthRef.current === 0 && !eventSource) {
                     setData(EMPTY_BUS_LIST);
                     setError("ERR:NETWORK");
                     setHasFetched(true);
@@ -121,11 +134,27 @@ export function useBusLocationData(routeIds: string[]): {
             }, STREAM_RECONNECT_DELAY_MS);
         };
 
+        const scheduleProactiveReconnect = (connectedAt: number) => {
+            if (disposed || !eventSource) return;
+            clearProactiveReconnectTimer();
+
+            const elapsedMs = Date.now() - connectedAt;
+            const remainingMs = Math.max(0, SSE_MAX_RUNTIME_MS - SSE_RECONNECT_BUFFER_MS - elapsedMs);
+
+            proactiveReconnectTimeout = setTimeout(() => {
+                proactiveReconnectTimeout = null;
+                if (disposed || isConnecting) return;
+                closeStream();
+                startStream();
+            }, remainingMs);
+        };
+
         const handleSnapshot = (rawPayload: string) => {
             try {
                 const payload = JSON.parse(rawPayload) as BusStreamSnapshot;
                 if (!Array.isArray(payload.data)) {
-                    throw new Error("Invalid snapshot payload");
+                    console.error("[useBusLocationData] Invalid snapshot payload", payload);
+                    return;
                 }
                 clearFallbackPolling(); // SSE works, stop fallback
                 setError(null);
@@ -173,6 +202,7 @@ export function useBusLocationData(routeIds: string[]): {
                 // Connected successfully, we can stop fallback
                 isConnecting = false;
                 clearFallbackPolling();
+                scheduleProactiveReconnect(Date.now());
             };
         };
 
@@ -186,6 +216,7 @@ export function useBusLocationData(routeIds: string[]): {
             closeStream();
             clearFallbackPolling();
             clearReconnectTimer();
+            clearProactiveReconnectTimer();
         };
     }, [routeIdsKey]);
 
