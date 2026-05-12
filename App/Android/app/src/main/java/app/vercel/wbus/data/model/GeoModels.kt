@@ -33,7 +33,7 @@ data class BusRouteGeometry(
      * Convert coordinates to Coordinate objects
      */
     fun toCoordinates(): List<Coordinate> = coordinates.map {
-        Coordinate(it[1], it[0]) // GeoJSON is [lng, lat], we use [lat, lng]
+        Coordinate(it[1], it[0]) // GeoJSON is [lng, lat]; we use [lat, lng]
     }
 }
 

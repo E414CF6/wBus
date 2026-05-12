@@ -16,7 +16,7 @@ interface WBusApiService {
     /**
      * Get real-time bus locations for a specific route
      * @param routeId The vehicle route ID
-     * @return Response wrapper containing list of buses with GPS locations
+     * @return Response wrapper containing a list of buses with GPS locations
      */
     @GET("bus/{routeId}")
     suspend fun getBusLocations(

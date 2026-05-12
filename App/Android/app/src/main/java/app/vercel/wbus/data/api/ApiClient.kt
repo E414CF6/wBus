@@ -62,7 +62,7 @@ object ApiClient {
     }
 
     /**
-     * Create Retrofit instance for WBus API
+     * Create a Retrofit instance for WBus API
      */
     private val wbusRetrofit: Retrofit by lazy {
         Retrofit.Builder().baseUrl(BuildConfig.API_BASE_URL).client(okHttpClient)
@@ -70,7 +70,7 @@ object ApiClient {
     }
 
     /**
-     * Create Retrofit instance for Vercel Storage (static data)
+     * Create a Retrofit instance for Vercel Storage (static data)
      */
     private val storageRetrofit: Retrofit by lazy {
         Retrofit.Builder().baseUrl(VERCEL_STORAGE_BASE_URL).client(okHttpClient)

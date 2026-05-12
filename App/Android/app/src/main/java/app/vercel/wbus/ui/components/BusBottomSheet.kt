@@ -32,15 +32,15 @@ import app.vercel.wbus.util.ScheduleUtils
 
 @Composable
 fun BusBottomSheet(
+    modifier: Modifier = Modifier,
     routeName: String,
     buses: List<BusItem>,
     schedule: BusSchedule? = null,
     onBusClick: (BusItem) -> Unit,
     onRouteClick: () -> Unit = {},
-    onRefresh: () -> Unit = {},
-    modifier: Modifier = Modifier
+    onRefresh: () -> Unit = {}
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
     val isDark = isSystemInDarkTheme()
     val nextBusSummary = schedule?.let { sched ->
         val directions = sched.directions

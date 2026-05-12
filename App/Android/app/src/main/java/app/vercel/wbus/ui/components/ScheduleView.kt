@@ -173,7 +173,7 @@ fun ScheduleList(hourlyMap: HourlyMap, selectedDirection: String) {
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         items(sortedHours) { hour ->
-            val hourKey = String.format("%02d", hour)
+            val hourKey = "%02d".format(hour)
             val directionMap = hourlyMap[hourKey] ?: emptyMap()
             val minutes = directionMap[selectedDirection] ?: emptyList()
 

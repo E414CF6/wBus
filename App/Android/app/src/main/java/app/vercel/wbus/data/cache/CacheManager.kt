@@ -30,7 +30,7 @@ class CacheManager {
     }
 
     /**
-     * Get data from cache
+     * Get data from a cache
      * @param key Cache key
      * @return Cached data or null if not found or expired
      */
@@ -47,7 +47,7 @@ class CacheManager {
     }
 
     /**
-     * Check if cache contains valid (non-expired) data for key
+     * Check if a cache contains valid (non-expired) data for a key
      */
     fun contains(key: String): Boolean {
         val entry = cache[key] ?: return false
@@ -55,7 +55,7 @@ class CacheManager {
     }
 
     /**
-     * Remove data from cache
+     * Remove data from the cache
      */
     fun remove(key: String) {
         cache.remove(key)
@@ -69,7 +69,7 @@ class CacheManager {
     }
 
     /**
-     * Remove expired entries from cache
+     * Remove expired entries from the cache
      */
     fun cleanExpired() {
         val expiredKeys = cache.entries.filter { it.value.isExpired() }.map { it.key }

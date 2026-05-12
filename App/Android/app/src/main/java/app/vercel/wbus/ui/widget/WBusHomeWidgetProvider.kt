@@ -25,9 +25,7 @@ import java.util.*
 class WBusHomeWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(
-        context: Context,
-        appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray
+        context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray
     ) {
         val pendingResult = goAsync()
         widgetScope.launch {
@@ -38,8 +36,7 @@ class WBusHomeWidgetProvider : AppWidgetProvider() {
                 val launchPendingIntent = createLaunchPendingIntent(context.applicationContext)
                 appWidgetIds.forEach { widgetId ->
                     appWidgetManager.updateAppWidget(
-                        widgetId,
-                        buildRemoteViews(
+                        widgetId, buildRemoteViews(
                             context = context.applicationContext,
                             routeLabel = null,
                             firstRowText = empty,
@@ -75,9 +72,7 @@ class WBusHomeWidgetProvider : AppWidgetProvider() {
     }
 
     private suspend fun updateWidgets(
-        context: Context,
-        appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray
+        context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray
     ) {
         if (appWidgetIds.isEmpty()) return
         val appContext = context.applicationContext
@@ -101,8 +96,7 @@ class WBusHomeWidgetProvider : AppWidgetProvider() {
     }
 
     private suspend fun loadClosestRows(
-        context: Context,
-        routeName: String?
+        context: Context, routeName: String?
     ): Pair<String, String> {
         if (routeName == null) {
             val empty = context.getString(R.string.widget_next_departure_none)
@@ -145,31 +139,25 @@ class WBusHomeWidgetProvider : AppWidgetProvider() {
         return firstText to secondText
     }
 
-    private fun resolveHourlyMap(schedule: BusSchedule) = when (
-        if (schedule.schedule.weekday != null || schedule.schedule.weekend != null) {
+    private fun resolveHourlyMap(schedule: BusSchedule) =
+        when (if (schedule.schedule.weekday != null || schedule.schedule.weekend != null) {
             ScheduleUtils.getCurrentDayType()
         } else {
             DayType.WEEKDAY
-        }
-    ) {
-        DayType.WEEKDAY -> schedule.schedule.weekday ?: schedule.schedule.general
-        DayType.WEEKEND -> schedule.schedule.weekend ?: schedule.schedule.general
-    } ?: emptyMap()
+        }) {
+            DayType.WEEKDAY -> schedule.schedule.weekday ?: schedule.schedule.general
+            DayType.WEEKEND -> schedule.schedule.weekend ?: schedule.schedule.general
+        } ?: emptyMap()
 
     private fun formatScheduleRow(
-        context: Context,
-        direction: String,
-        row: ScheduleUtils.ClosestHourRow?
+        context: Context, direction: String, row: ScheduleUtils.ClosestHourRow?
     ): String {
         if (row == null || row.minutes.isEmpty()) {
             return context.getString(R.string.widget_direction_no_departure_format, direction)
         }
         val minutesText = row.minutes.joinToString(" ")
         return context.getString(
-            R.string.widget_schedule_row_format,
-            direction,
-            row.hour.toString(),
-            minutesText
+            R.string.widget_schedule_row_format, direction, row.hour.toString(), minutesText
         )
     }
 
@@ -184,8 +172,7 @@ class WBusHomeWidgetProvider : AppWidgetProvider() {
             setTextViewText(
                 R.id.widget_route_name,
                 routeLabel?.let { context.getString(R.string.widget_route_format, it) }
-                    ?: context.getString(R.string.widget_no_route)
-            )
+                    ?: context.getString(R.string.widget_no_route))
             setTextViewText(R.id.widget_departure_times, firstRowText)
             setTextViewText(R.id.widget_location, secondRowText)
             setTextViewText(R.id.widget_route_id, routeLabel ?: "")
@@ -199,10 +186,7 @@ class WBusHomeWidgetProvider : AppWidgetProvider() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
         return PendingIntent.getActivity(
-            context,
-            0,
-            launchIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            context, 0, launchIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
     }
 
@@ -220,8 +204,7 @@ class WBusHomeWidgetProvider : AppWidgetProvider() {
             context.sendBroadcast(
                 Intent(context, WBusHomeWidgetProvider::class.java).apply {
                     action = ACTION_WIDGET_REFRESH
-                }
-            )
+                })
         }
     }
 }

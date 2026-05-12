@@ -23,7 +23,7 @@ import timber.log.Timber
 import java.io.IOException
 
 /**
- * ViewModel for the main map screen
+ * ViewModel from the main map screen
  */
 class MapViewModel(
     private val busRepository: BusRepository, private val staticDataRepository: StaticDataRepository
@@ -74,7 +74,7 @@ class MapViewModel(
     }
 
     /**
-     * Set the active route and start SSE stream for bus data
+     * Set the active route and start the SSE stream for bus data
      */
     fun setRoute(routeId: String, routeName: String? = null, routeIds: List<String>? = null) {
         val pollingRouteIds = normalizeRouteIds(routeIds, routeId)

@@ -21,7 +21,7 @@ typealias DirectionMap = Map<String, List<ScheduleItem>>
 typealias HourlyMap = Map<String, DirectionMap>
 
 /**
- * Schedule data container with day-type specific schedules
+ * Schedule data container with day-type-specific schedules
  */
 @JsonClass(generateAdapter = true)
 data class ScheduleData(
