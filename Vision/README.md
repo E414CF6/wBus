@@ -131,7 +131,8 @@ cached for all later users within the TTL window.
 
 **Client-side live updates:**
 
-- Bus locations: SSE stream (`/api/bus/stream`) with automatic polling fallback
+- Bus locations: SSE stream (`/api/bus/stream`) with pre-timeout handoff (before Vercel 60s limit), stale-stream
+  detection, and automatic polling fallback
 - Arrival info: SWR polling
 - Revalidates on tab focus for polling-based hooks
 
@@ -151,7 +152,8 @@ When a user selects route **"30"**:
    segments
 4. Bus GPS positions are snapped to the nearest point on the polyline
 5. `BusAnimatedMarker` smoothly animates markers along the polyline path (3-seconds duration)
-6. SSE snapshots arrive continuously and markers animate to updated positions
+6. SSE snapshots arrive continuously; the stream performs graceful handoff/reconnect before server timeout and markers
+   animate to updated positions
 
 ## Client-Side State
 

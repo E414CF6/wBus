@@ -10,14 +10,30 @@ const fetchRouteData = async (url: string): Promise<CachedData<BusItem[]>> => {
 };
 
 const EMPTY_BUS_LIST: BusItem[] = [];
-const STREAM_RECONNECT_DELAY_MS = 3000;
+const STREAM_RECONNECT_BASE_DELAY_MS = 1000;
+const STREAM_RECONNECT_MAX_DELAY_MS = 10000;
+const STREAM_IMMEDIATE_RECONNECT_DELAY_MS = 150;
+const STREAM_CONNECT_TIMEOUT_MS = 8000;
 const SSE_MAX_RUNTIME_MS = 60000;
 const SSE_RECONNECT_BUFFER_MS = 5000;
+const SSE_STALE_TIMEOUT_MS = Math.max(15000, API_CONFIG.LIVE.POLLING_INTERVAL_MS * 4);
 
 interface BusStreamSnapshot {
     routeIds: string[];
     data: BusItem[];
     timestamp: number;
+}
+
+interface BusStreamReady {
+    routeIds: string[];
+    intervalMs: number;
+    reconnectHintMs?: number;
+    retryMs?: number;
+}
+
+interface BusStreamHandoff {
+    reason?: string;
+    reconnectAfterMs?: number;
 }
 
 function normalizeRouteIds(routeIds: string[]): string[] {
@@ -31,6 +47,13 @@ function buildStreamUrl(routeIds: string[]): string {
 
 function mergeRouteEntries(entries: CachedData<BusItem[]>[]): BusItem[] {
     return entries.flatMap((entry) => entry.data);
+}
+
+function getPositiveNumber(value: unknown): number | null {
+    if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+        return null;
+    }
+    return value;
 }
 
 /**
@@ -62,7 +85,11 @@ export function useBusLocationData(routeIds: string[]): {
         let fallbackInterval: ReturnType<typeof setInterval> | null = null;
         let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
         let proactiveReconnectTimeout: ReturnType<typeof setTimeout> | null = null;
+        let staleTimeout: ReturnType<typeof setTimeout> | null = null;
+        let connectTimeout: ReturnType<typeof setTimeout> | null = null;
         let isConnecting = false;
+        let reconnectAttempt = 0;
+        let preferredRetryDelayMs = STREAM_RECONNECT_BASE_DELAY_MS;
 
         const applyData = (nextData: BusItem[]) => {
             if (disposed) return;
@@ -93,8 +120,24 @@ export function useBusLocationData(routeIds: string[]): {
             }
         };
 
+        const clearStaleTimer = () => {
+            if (staleTimeout) {
+                clearTimeout(staleTimeout);
+                staleTimeout = null;
+            }
+        };
+
+        const clearConnectTimer = () => {
+            if (connectTimeout) {
+                clearTimeout(connectTimeout);
+                connectTimeout = null;
+            }
+        };
+
         const closeStream = () => {
             clearProactiveReconnectTimer();
+            clearStaleTimer();
+            clearConnectTimer();
             if (!eventSource) return;
             eventSource.close();
             eventSource = null;
@@ -125,28 +168,48 @@ export function useBusLocationData(routeIds: string[]): {
             }, API_CONFIG.LIVE.POLLING_INTERVAL_MS);
         };
 
-        const scheduleReconnect = () => {
-            if (reconnectTimeout || disposed || isConnecting) return;
+        const scheduleReconnect = (delayOverrideMs?: number) => {
+            if (reconnectTimeout || disposed) return;
+
+            const expBackoffMs = Math.min(STREAM_RECONNECT_MAX_DELAY_MS, preferredRetryDelayMs * (2 ** reconnectAttempt));
+            const delayMs = Math.max(STREAM_IMMEDIATE_RECONNECT_DELAY_MS, delayOverrideMs ?? expBackoffMs);
+
             reconnectTimeout = setTimeout(() => {
                 reconnectTimeout = null;
                 if (disposed) return;
+                reconnectAttempt = Math.min(reconnectAttempt + 1, 6);
                 startStream();
-            }, STREAM_RECONNECT_DELAY_MS);
+            }, delayMs);
         };
 
-        const scheduleProactiveReconnect = (connectedAt: number) => {
+        const scheduleProactiveReconnect = (runtimeHintMs?: number) => {
             if (disposed || !eventSource) return;
             clearProactiveReconnectTimer();
 
-            const elapsedMs = Date.now() - connectedAt;
-            const remainingMs = Math.max(0, SSE_MAX_RUNTIME_MS - SSE_RECONNECT_BUFFER_MS - elapsedMs);
+            const maxRuntimeMs = getPositiveNumber(runtimeHintMs) ?? SSE_MAX_RUNTIME_MS;
+            const remainingMs = Math.max(STREAM_IMMEDIATE_RECONNECT_DELAY_MS, maxRuntimeMs - SSE_RECONNECT_BUFFER_MS);
 
             proactiveReconnectTimeout = setTimeout(() => {
                 proactiveReconnectTimeout = null;
                 if (disposed || isConnecting) return;
                 closeStream();
-                startStream();
+                isConnecting = false;
+                startFallbackPolling();
+                scheduleReconnect(STREAM_IMMEDIATE_RECONNECT_DELAY_MS);
             }, remainingMs);
+        };
+
+        const refreshStaleTimer = () => {
+            clearStaleTimer();
+            staleTimeout = setTimeout(() => {
+                staleTimeout = null;
+                if (disposed || !eventSource || isConnecting) return;
+                console.warn("[useBusLocationData] SSE stream became stale");
+                closeStream();
+                isConnecting = false;
+                startFallbackPolling();
+                scheduleReconnect(STREAM_IMMEDIATE_RECONNECT_DELAY_MS);
+            }, SSE_STALE_TIMEOUT_MS);
         };
 
         const handleSnapshot = (rawPayload: string) => {
@@ -164,10 +227,40 @@ export function useBusLocationData(routeIds: string[]): {
             }
         };
 
+        const handleReady = (rawPayload: string) => {
+            try {
+                const payload = JSON.parse(rawPayload) as BusStreamReady;
+                const retryMs = getPositiveNumber(payload.retryMs);
+                if (retryMs) {
+                    preferredRetryDelayMs = Math.min(STREAM_RECONNECT_MAX_DELAY_MS, retryMs);
+                }
+                const runtimeHintMs = getPositiveNumber(payload.reconnectHintMs);
+                scheduleProactiveReconnect(runtimeHintMs ?? undefined);
+            } catch (err) {
+                console.error("[useBusLocationData] Failed to parse SSE ready payload", err);
+            }
+        };
+
+        const handleHandoff = (rawPayload: string) => {
+            let reconnectAfterMs: number | null = null;
+            try {
+                const payload = JSON.parse(rawPayload) as BusStreamHandoff;
+                reconnectAfterMs = getPositiveNumber(payload.reconnectAfterMs);
+            } catch (err) {
+                console.error("[useBusLocationData] Failed to parse SSE handoff payload", err);
+            }
+
+            closeStream();
+            isConnecting = false;
+            startFallbackPolling();
+            scheduleReconnect(reconnectAfterMs ?? STREAM_IMMEDIATE_RECONNECT_DELAY_MS);
+        };
+
         const startStream = () => {
             if (disposed || eventSource || isConnecting || typeof window === "undefined") return;
 
             isConnecting = true;
+            clearReconnectTimer();
 
             if (typeof window.EventSource === "undefined") {
                 isConnecting = false;
@@ -178,13 +271,32 @@ export function useBusLocationData(routeIds: string[]): {
             const streamUrl = buildStreamUrl(activeRouteIds);
             const source = new window.EventSource(streamUrl);
             eventSource = source;
+            connectTimeout = setTimeout(() => {
+                connectTimeout = null;
+                if (disposed || !eventSource) return;
+                console.warn("[useBusLocationData] SSE connection timeout");
+                closeStream();
+                isConnecting = false;
+                startFallbackPolling();
+                scheduleReconnect();
+            }, STREAM_CONNECT_TIMEOUT_MS);
 
             source.addEventListener("snapshot", (event: MessageEvent<string>) => {
+                refreshStaleTimer();
                 handleSnapshot(event.data);
             });
 
+            source.addEventListener("ready", (event: MessageEvent<string>) => {
+                refreshStaleTimer();
+                handleReady(event.data);
+            });
+
             source.addEventListener("ping", () => {
-                // Ignore ping, just to keep connection alive
+                refreshStaleTimer();
+            });
+
+            source.addEventListener("handoff", (event: MessageEvent<string>) => {
+                handleHandoff(event.data);
             });
 
             source.onerror = (err) => {
@@ -201,8 +313,11 @@ export function useBusLocationData(routeIds: string[]): {
             source.onopen = () => {
                 // Connected successfully, we can stop fallback
                 isConnecting = false;
+                reconnectAttempt = 0;
+                clearConnectTimer();
                 clearFallbackPolling();
-                scheduleProactiveReconnect(Date.now());
+                refreshStaleTimer();
+                scheduleProactiveReconnect();
             };
         };
 
@@ -217,6 +332,8 @@ export function useBusLocationData(routeIds: string[]): {
             clearFallbackPolling();
             clearReconnectTimer();
             clearProactiveReconnectTimer();
+            clearStaleTimer();
+            clearConnectTimer();
         };
     }, [routeIdsKey]);
 
