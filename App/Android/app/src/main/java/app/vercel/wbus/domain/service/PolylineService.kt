@@ -6,7 +6,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Split polyline data into Up and Down segments with bounding box
+ * Split polyline data into Up and Down segments with a bounding box
  */
 data class PolylineData(
     val upPolyline: List<Coordinate>,

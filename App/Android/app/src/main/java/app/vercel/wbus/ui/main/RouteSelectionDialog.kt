@@ -127,8 +127,7 @@ fun RouteSelectionItem(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(
-                modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = route.displayName,
@@ -155,8 +154,7 @@ fun RouteSelectionItem(
 
             if (isSelected) {
                 Surface(
-                    color = MaterialTheme.colorScheme.primary,
-                    shape = RoundedCornerShape(999.dp)
+                    color = MaterialTheme.colorScheme.primary, shape = RoundedCornerShape(999.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Check,

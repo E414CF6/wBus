@@ -30,7 +30,7 @@ data class SequenceCandidate(
 )
 
 /**
- * Service to resolve bus direction (Up/Down) based on current position and route data
+ * Service to resolve a bus direction (Up/Down) based on current position and route data
  */
 object DirectionService {
     private const val API_DOWN_CODE = 0

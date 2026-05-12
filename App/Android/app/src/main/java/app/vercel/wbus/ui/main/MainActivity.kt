@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.core.graphics.toColorInt
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import app.vercel.wbus.R
@@ -61,7 +62,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         setContentView(binding.root)
 
         binding.root.setOnApplyWindowInsetsListener { _, insets ->
-            systemBarsBottomInset = insets.getInsets(android.view.WindowInsets.Type.systemBars()).bottom
             googleMap?.setPadding(0, 0, 0, systemBarsBottomInset + MAP_BOTTOM_PADDING)
             insets
         }
@@ -278,8 +278,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             text = "방향: ${directionLabel(direction)}"
             setTextColor(
                 when (direction) {
-                    Direction.UP -> Color.parseColor(COLOR_UP)
-                    Direction.DOWN -> Color.parseColor(COLOR_DOWN)
+                    Direction.UP -> COLOR_UP.toColorInt()
+                    Direction.DOWN -> COLOR_DOWN.toColorInt()
                     else -> Color.DKGRAY
                 }
             )

@@ -19,8 +19,11 @@ import app.vercel.wbus.data.model.Direction
 
 @Composable
 fun BusListItem(
-    plateNumber: String, currentStation: String?, direction: Int?,
-    onClick: () -> Unit = {}, modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    plateNumber: String,
+    currentStation: String?,
+    direction: Int?,
+    onClick: () -> Unit = {},
 ) {
     val isUp = direction == Direction.UP
     val directionColor = if (isUp) Color(0xFFFF5252) else Color(0xFF448AFF)
@@ -40,8 +43,7 @@ fun BusListItem(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -52,8 +54,7 @@ fun BusListItem(
                     modifier = Modifier
                         .size(50.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(directionColor.copy(alpha = 0.14f)),
-                    contentAlignment = Alignment.Center
+                        .background(directionColor.copy(alpha = 0.14f)), contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.DirectionsBus,
@@ -80,8 +81,7 @@ fun BusListItem(
                 }
 
                 Surface(
-                    color = directionColor.copy(alpha = 0.14f),
-                    shape = RoundedCornerShape(999.dp)
+                    color = directionColor.copy(alpha = 0.14f), shape = RoundedCornerShape(999.dp)
                 ) {
                     Text(
                         text = directionText,

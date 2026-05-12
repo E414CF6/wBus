@@ -313,7 +313,7 @@ class MapViewModel(
             }
 
             "error" -> {
-                Timber.w("SSE stream reported error event: ${dataBuffer.toString()}")
+                Timber.w("SSE stream reported error event: $dataBuffer")
             }
 
             else -> Unit // ready, ping, etc.

@@ -16,7 +16,7 @@ class CacheManager {
     private val cache = ConcurrentHashMap<String, CacheEntry<*>>()
 
     /**
-     * Store data in cache with TTL
+     * Store data in a cache with TTL
      * @param key Cache key
      * @param data Data to cache
      * @param ttlMillis Time to live in milliseconds

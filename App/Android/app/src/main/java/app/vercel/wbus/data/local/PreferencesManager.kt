@@ -2,6 +2,7 @@ package app.vercel.wbus.data.local
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 
 /**
  * Manager for local preferences storage
@@ -23,7 +24,7 @@ class PreferencesManager(context: Context) {
      * Save the selected route ID
      */
     fun setSelectedRouteId(routeId: String?) {
-        prefs.edit().putString(KEY_SELECTED_ROUTE_ID, routeId).apply()
+        prefs.edit { putString(KEY_SELECTED_ROUTE_ID, routeId) }
     }
 
     /**
@@ -37,7 +38,7 @@ class PreferencesManager(context: Context) {
      * Save the selected route name
      */
     fun setSelectedRouteName(routeName: String?) {
-        prefs.edit().putString(KEY_SELECTED_ROUTE_NAME, routeName).apply()
+        prefs.edit { putString(KEY_SELECTED_ROUTE_NAME, routeName) }
     }
 
     /**
@@ -51,7 +52,7 @@ class PreferencesManager(context: Context) {
      * Mark that the app has been launched
      */
     fun setFirstLaunchComplete() {
-        prefs.edit().putBoolean(KEY_FIRST_LAUNCH, false).apply()
+        prefs.edit { putBoolean(KEY_FIRST_LAUNCH, false) }
     }
 
     companion object {
@@ -64,7 +65,7 @@ class PreferencesManager(context: Context) {
     }
 
     /**
-     * Get default route ID with prefix
+     * Get the default route ID with a prefix
      */
     fun getDefaultRouteId(): String = DEFAULT_ROUTE_ID
 }

@@ -1,6 +1,6 @@
 package app.vercel.wbus.ui.main.map
 
-import android.graphics.Color
+import androidx.core.graphics.toColorInt
 import app.vercel.wbus.domain.service.PolylineData
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -26,14 +26,14 @@ class RoutePolylineController {
 
         if (upLatLngs.isNotEmpty()) {
             upRoutePolyline = map.addPolyline(
-                PolylineOptions().addAll(upLatLngs).width(POLYLINE_WIDTH).color(Color.parseColor(COLOR_UP))
+                PolylineOptions().addAll(upLatLngs).width(POLYLINE_WIDTH).color(COLOR_UP.toColorInt())
                     .jointType(JointType.ROUND).startCap(RoundCap()).endCap(RoundCap())
             )
         }
 
         if (downLatLngs.isNotEmpty()) {
             downRoutePolyline = map.addPolyline(
-                PolylineOptions().addAll(downLatLngs).width(POLYLINE_WIDTH).color(Color.parseColor(COLOR_DOWN))
+                PolylineOptions().addAll(downLatLngs).width(POLYLINE_WIDTH).color(COLOR_DOWN.toColorInt())
                     .jointType(JointType.ROUND).startCap(RoundCap()).endCap(RoundCap())
             )
         }

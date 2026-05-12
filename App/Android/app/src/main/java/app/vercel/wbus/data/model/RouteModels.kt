@@ -19,7 +19,7 @@ data class RouteMapData(
 )
 
 /**
- * Node ordering metadata used to resolve vehicle direction on a route sequence.
+ * Node ordering metadata used to resolve a vehicle direction on a route sequence.
  */
 data class SequenceItem(
     val nodeord: Int, val nodeid: String, val updowncd: Int
