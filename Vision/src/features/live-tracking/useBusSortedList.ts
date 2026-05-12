@@ -1,16 +1,12 @@
-import {getRouteInfo} from "@entities/route/api";
+import {useRouteIds} from "@entities/route/hooks";
 import {useBusStop, useClosestStopOrd} from "@entities/station/hooks";
 import type {BusStop} from "@entities/station/types";
 import {useMemo} from "react";
-import useSWR from "swr";
 import {useBusDirection} from "./useBusDirection";
 import {useBusLocationData} from "./useBusLocation";
 
 export const useBusSortedList = (routeName: string) => {
-    const {data: routeInfo} = useSWR(routeName ? ["routeInfo", routeName] : null, ([, name]) => getRouteInfo(name), {
-        revalidateOnFocus: false, dedupingInterval: 60000
-    });
-    const routeIds = routeInfo?.vehicleRouteIds ?? [];
+    const routeIds = useRouteIds(routeName);
     const {data: mapList, error: mapError, hasFetched: locationFetched} = useBusLocationData(routeIds);
 
     // Get bus stop data for the route

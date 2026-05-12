@@ -17,30 +17,21 @@ export interface FetchApiOptions extends RequestInit {
     retryDelay?: number;
 }
 
-export async function fetchAPI<T = unknown>(
-    url: string,
-    options: FetchApiOptions = {}
-): Promise<T> {
+export async function fetchAPI<T = unknown>(url: string, options: FetchApiOptions = {}): Promise<T> {
     const {retries = 3, retryDelay = 1000, ...init} = options;
 
     for (let i = 0; i < retries; i++) {
         try {
             const isExternal = url.startsWith("http");
             const response = await fetch(url, {
-                ...init,
-                method: init.method ?? "GET",
-                headers: {
-                    ...(isExternal ? {} : {Client: APP_CONFIG.NAME}),
-                    ...(init.headers ?? {}),
+                ...init, method: init.method ?? "GET", headers: {
+                    ...(isExternal ? {} : {Client: APP_CONFIG.NAME}), ...(init.headers ?? {}),
                 },
             });
 
             if (!response.ok) {
                 const errorText = await response.text().catch(() => "");
-                throw new HttpError(
-                    `[fetchAPI] Fetch failed for ${url} with status ${response.status}: ${errorText}`,
-                    response.status
-                );
+                throw new HttpError(`[fetchAPI] Fetch failed for ${url} with status ${response.status}: ${errorText}`, response.status);
             }
 
             return (await response.json()) as T;

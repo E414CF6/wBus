@@ -1,12 +1,13 @@
 import type {BusItem} from "@entities/bus/types";
-import {getRouteInfo} from "@entities/route/api";
+import {useRouteInfo} from "@entities/route/hooks";
 import type {RouteInfo} from "@entities/route/types";
-import {useMemo} from "react";
-import useSWR from "swr";
+
 import {useBusDirection} from "./useBusDirection";
 import {useBusLocationData} from "./useBusLocation";
 
 import {type BusPolylineSet, getFallbackPolylines, useBusPolylineMap} from "./usePolyline";
+
+import {useMemo} from "react";
 
 interface UseBusData {
     routeInfo: RouteInfo | null;
@@ -24,20 +25,8 @@ interface UseBusData {
  * @returns An object containing all bus data for the route
  */
 export function useBusData(routeName: string): UseBusData {
-    // Use SWR for route info to gain caching and deduplication
-    const {data: routeInfo} = useSWR(
-        routeName ? ["routeInfo", routeName] : null,
-        ([, name]) => getRouteInfo(name),
-        {
-            revalidateOnFocus: false, // Route info is static
-            dedupingInterval: 60000,
-        }
-    );
-
-    const routeIds = useMemo(
-        () => routeInfo?.vehicleRouteIds ?? [],
-        [routeInfo]
-    );
+    const routeInfo = useRouteInfo(routeName);
+    const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
     const {data: busList} = useBusLocationData(routeIds);
     const directionFn = useBusDirection(routeName);
 
@@ -48,17 +37,9 @@ export function useBusData(routeName: string): UseBusData {
 
     const polylineMap = useBusPolylineMap(routeIds);
 
-    const fallbackPolylines = useMemo(() =>
-            getFallbackPolylines(polylineMap, activeRouteId),
-        [polylineMap, activeRouteId]
-    );
+    const fallbackPolylines = useMemo(() => getFallbackPolylines(polylineMap, activeRouteId), [polylineMap, activeRouteId]);
 
     return {
-        routeInfo: routeInfo ?? null,
-        busList,
-        getDirection: directionFn,
-        polylineMap,
-        fallbackPolylines,
-        activeRouteId,
+        routeInfo: routeInfo ?? null, busList, getDirection: directionFn, polylineMap, fallbackPolylines, activeRouteId,
     };
 }

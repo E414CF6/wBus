@@ -13,7 +13,9 @@ import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 
 import Pill from "@shared/ui/Pill";
+
 import React, {useCallback, useEffect, useMemo, useState} from "react";
+
 import {BusListItem} from "./BusListItem";
 
 import ScheduleView from "./BusScheduleView";
@@ -66,11 +68,9 @@ const STYLES = {
 //-------------------------------------------------------------------
 
 const RouteDataCollector = React.memo(({
-                                           routeName,
-                                           onDataUpdate
+                                           routeName, onDataUpdate
                                        }: {
-    routeName: string;
-    onDataUpdate: (name: string, data: RouteData) => void
+    routeName: string; onDataUpdate: (name: string, data: RouteData) => void
 }) => {
     const data = useBusSortedList(routeName);
 
@@ -119,48 +119,43 @@ const SchedulePreview = ({data, loading, isOpen, onToggle}: SchedulePreviewProps
         return hour && minute ? formatTime(hour, minute) : nearestBus.time;
     }, [nearestBus]);
 
-    return (
-        <div className="flex flex-nowrap items-center justify-between gap-3 mt-4 min-h-[32px] overflow-hidden">
-            <div className="flex items-center gap-2.5 shrink-0 pl-1">
-                <div className={`h-1.5 w-1.5 rounded-full ${dotClass} shadow-[0_0_8px_currentColor] opacity-80`}/>
-                <span
-                    className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 whitespace-nowrap uppercase tracking-widest`}>
+    return (<div className="flex flex-nowrap items-center justify-between gap-3 mt-4 min-h-8 overflow-hidden">
+        <div className="flex items-center gap-2.5 shrink-0 pl-1">
+            <div className={`h-1.5 w-1.5 rounded-full ${dotClass} shadow-[0_0_8px_currentColor] opacity-80`}/>
+            <span
+                className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 whitespace-nowrap uppercase tracking-widest`}>
                     {UI_TEXT.SCHEDULE.NEXT_BUS}
                 </span>
+        </div>
+
+        {nearestBus ? (<div className="flex items-center gap-1.5 overflow-hidden">
+            <div className="shrink-0">
+                <Pill tone="soft" size="sm">
+                    {UI_TEXT.TIME.FORMAT_REMAINING(nearestBus.minutesUntil)}
+                </Pill>
             </div>
 
-            {nearestBus ? (
-                <div className="flex items-center gap-1.5 overflow-hidden">
-                    <div className="shrink-0">
-                        <Pill tone="soft" size="sm">
-                            {UI_TEXT.TIME.FORMAT_REMAINING(nearestBus.minutesUntil)}
-                        </Pill>
+            <button
+                onClick={onToggle}
+                className="transition-transform active:scale-95 focus:outline-none shrink min-w-0"
+                aria-label={UI_TEXT.ACCESSIBILITY.TOGGLE_SCHEDULE}
+            >
+                <Pill tone={isOpen ? "solid" : "soft"} size="sm">
+                    <div className="flex items-center truncate">
+                        <span className="font-bold truncate">{nearestBus.destination}</span>
+                        <span className="ml-1 opacity-90 whitespace-nowrap">{displayTime}</span>
+                        <svg
+                            className={`w-3 h-3 ml-1.5 opacity-70 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                        </svg>
                     </div>
-
-                    <button
-                        onClick={onToggle}
-                        className="transition-transform active:scale-95 focus:outline-none shrink min-w-0"
-                        aria-label={UI_TEXT.ACCESSIBILITY.TOGGLE_SCHEDULE}
-                    >
-                        <Pill tone={isOpen ? "solid" : "soft"} size="sm">
-                            <div className="flex items-center truncate">
-                                <span className="font-bold truncate">{nearestBus.destination}</span>
-                                <span className="ml-1 opacity-90 whitespace-nowrap">{displayTime}</span>
-                                <svg
-                                    className={`w-3 h-3 ml-1.5 opacity-70 transition-transform duration-200 shrink-0 ${isOpen ? "rotate-180" : ""}`}
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
-                                </svg>
-                            </div>
-                        </Pill>
-                    </button>
-                </div>
-            ) : (
-                <span className={`${STYLES.INFO_TEXT} text-gray-400 dark:text-gray-500 truncate`}>{statusMessage}</span>
-            )}
-        </div>
-    );
+                </Pill>
+            </button>
+        </div>) : (<span
+            className={`${STYLES.INFO_TEXT} text-gray-400 dark:text-gray-500 truncate`}>{statusMessage}</span>)}
+    </div>);
 };
 
 //-------------------------------------------------------------------
@@ -177,9 +172,7 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
     const isBusExpanded = expandedPanel === "bus";
     const isScheduleExpanded = expandedPanel === "schedule";
     const schedulePayload = scheduleData?.schedule;
-    const hasScheduleData = Boolean(
-        schedulePayload && (schedulePayload.general || schedulePayload.weekday || schedulePayload.weekend)
-    );
+    const hasScheduleData = Boolean(schedulePayload && (schedulePayload.general || schedulePayload.weekday || schedulePayload.weekend));
     const showSchedule = !scheduleMissing && (scheduleLoading || hasScheduleData);
 
     useEffect(() => {
@@ -201,12 +194,7 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
     const handleDataUpdate = useCallback((name: string, data: RouteData) => {
         setRoutesData((prev) => {
             const current = prev[name];
-            if (
-                current &&
-                current.sortedList === data.sortedList &&
-                current.error === data.error &&
-                current.hasFetched === data.hasFetched
-            ) {
+            if (current && current.sortedList === data.sortedList && current.error === data.error && current.hasFetched === data.hasFetched) {
                 return prev;
             }
             return {...prev, [name]: data};
@@ -215,9 +203,7 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
 
     const handleBusClick = useCallback((lat: number, lng: number) => {
         map?.flyTo({
-            center: [lng, lat],
-            zoom: map.getZoom(),
-            duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
+            center: [lng, lat], zoom: map.getZoom(), duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
         });
     }, [map]);
 
@@ -235,9 +221,9 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
         return routeNames
             .map(name => routesData[name] ? {routeName: name, ...routesData[name]} : null)
             .filter((item): item is { routeName: string } & RouteData => item !== null)
-            .flatMap(({routeName, sortedList, getDirection}) =>
-                sortedList.map(bus => ({bus, routeName, getDirection}))
-            );
+            .flatMap(({routeName, sortedList, getDirection}) => sortedList.map(bus => ({
+                bus, routeName, getDirection
+            })));
     }, [routeNames, routesData]);
 
     const uiState = useMemo(() => {
@@ -252,105 +238,89 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
         };
     }, [routeNames, routesData, allBuses.length]);
 
-    return (
-        <>
-            {routeNames.map((name) => (
-                <RouteDataCollector key={name} routeName={name} onDataUpdate={handleDataUpdate}/>
-            ))}
+    return (<>
+        {routeNames.map((name) => (<RouteDataCollector key={name} routeName={name} onDataUpdate={handleDataUpdate}/>))}
 
-            <div
-                className={STYLES.CONTAINER}
-                onWheel={(e) => e.stopPropagation()}
-                onMouseEnter={() => setMapScroll(false)}
-                onMouseLeave={() => setMapScroll(true)}
-            >
-                <div className={STYLES.HEADER}>
-                    {/* Combined Title & Selector */}
-                    <div>
-                        <div className={STYLES.SELECT_WRAPPER}>
-                            <select
-                                value={selectedRoute}
-                                onChange={(e) => handleRouteChange(e.target.value)}
-                                className={STYLES.SELECT_ELEMENT}
-                            >
-                                {allRoutes.filter(Boolean).map((route) => (
-                                    <option key={route} value={route}
-                                            className="text-black dark:text-white bg-white dark:bg-gray-900 font-sans">
-                                        {UI_TEXT.BUS_LIST.TITLE_ROUTE(route)}
-                                    </option>
-                                ))}
-                            </select>
-                            <div className={STYLES.SELECT_ICON}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
-                                     strokeLinejoin="round">
-                                    <path d="m6 9 6 6 6-6"/>
-                                </svg>
-                            </div>
+        <div
+            className={STYLES.CONTAINER}
+            onWheel={(e) => e.stopPropagation()}
+            onMouseEnter={() => setMapScroll(false)}
+            onMouseLeave={() => setMapScroll(true)}
+        >
+            <div className={STYLES.HEADER}>
+                {/* Combined Title & Selector */}
+                <div>
+                    <div className={STYLES.SELECT_WRAPPER}>
+                        <select
+                            value={selectedRoute}
+                            onChange={(e) => handleRouteChange(e.target.value)}
+                            className={STYLES.SELECT_ELEMENT}
+                        >
+                            {allRoutes.filter(Boolean).map((route) => (<option key={route} value={route}
+                                                                               className="text-black dark:text-white bg-white dark:bg-gray-900 font-sans">
+                                {UI_TEXT.BUS_LIST.TITLE_ROUTE(route)}
+                            </option>))}
+                        </select>
+                        <div className={STYLES.SELECT_ICON}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                 fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
+                                 strokeLinejoin="round">
+                                <path d="m6 9 6 6 6-6"/>
+                            </svg>
                         </div>
-                    </div>
-
-                    {/* Schedule Preview */}
-                    {showSchedule && (
-                        <SchedulePreview
-                            data={scheduleData}
-                            loading={scheduleLoading}
-                            isOpen={isScheduleExpanded}
-                            onToggle={() => togglePanel("schedule")}
-                        />
-                    )}
-
-                    {/* Action Row */}
-                    <div className="flex items-center justify-between mt-5 pt-1">
-                        <div className="flex items-center gap-2.5 px-1.5">
-                            <div
-                                className={`h-1.5 w-1.5 rounded-full animate-pulse ${uiState.dotClass} shadow-[0_0_8px_currentColor] opacity-80`}/>
-                            <p className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 uppercase tracking-widest`}>{uiState.statusText}</p>
-                        </div>
-                        <button onClick={() => togglePanel("bus")}
-                                className="focus:outline-none active:scale-95 transition-transform">
-                            <Pill tone={isBusExpanded ? "solid" : "soft"} size="sm" className="font-bold shadow-sm">
-                                <div className="flex items-center">
-                                    <span>{UI_TEXT.NAV.BUS_LIST_LABEL}</span>
-                                    <svg
-                                        className={`w-3 h-3 ml-1.5 opacity-70 transition-transform duration-200 shrink-0 ${isBusExpanded ? "rotate-180" : ""}`}
-                                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
-                                    </svg>
-                                </div>
-                            </Pill>
-                        </button>
                     </div>
                 </div>
 
-                {/* Expandable Content */}
-                {isScheduleExpanded && showSchedule && hasScheduleData && scheduleData && (
-                    <div className={STYLES.SCHEDULE_CONTAINER}>
-                        <ScheduleView data={scheduleData} mode="full"/>
-                    </div>
-                )}
+                {/* Schedule Preview */}
+                {showSchedule && (<SchedulePreview
+                    data={scheduleData}
+                    loading={scheduleLoading}
+                    isOpen={isScheduleExpanded}
+                    onToggle={() => togglePanel("schedule")}
+                />)}
 
-                {isBusExpanded && (
-                    <ul className={STYLES.LIST_CONTAINER}>
-                        {uiState.isNoData ? (
-                            <li className="text-center py-6 text-gray-400 dark:text-gray-500 text-xs font-medium italic">
-                                {UI_TEXT.BUS_LIST.NO_RUNNING_DESC}
-                            </li>
-                        ) : (
-                            allBuses.map(({bus, routeName, getDirection}) => (
-                                <BusListItem
-                                    key={`${routeName}-${bus.vehicleno}`}
-                                    bus={bus}
-                                    routeName={routeName}
-                                    getDirection={getDirection}
-                                    onClick={handleBusClick}
-                                />
-                            ))
-                        )}
-                    </ul>
-                )}
+                {/* Action Row */}
+                <div className="flex items-center justify-between mt-5 pt-1">
+                    <div className="flex items-center gap-2.5 px-1.5">
+                        <div
+                            className={`h-1.5 w-1.5 rounded-full animate-pulse ${uiState.dotClass} shadow-[0_0_8px_currentColor] opacity-80`}/>
+                        <p className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 uppercase tracking-widest`}>{uiState.statusText}</p>
+                    </div>
+                    <button onClick={() => togglePanel("bus")}
+                            className="focus:outline-none active:scale-95 transition-transform">
+                        <Pill tone={isBusExpanded ? "solid" : "soft"} size="sm" className="font-bold shadow-sm">
+                            <div className="flex items-center">
+                                <span>{UI_TEXT.NAV.BUS_LIST_LABEL}</span>
+                                <svg
+                                    className={`w-3 h-3 ml-1.5 opacity-70 transition-transform duration-200 shrink-0 ${isBusExpanded ? "rotate-180" : ""}`}
+                                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </Pill>
+                    </button>
+                </div>
             </div>
-        </>
-    );
+
+            {/* Expandable Content */}
+            {isScheduleExpanded && showSchedule && hasScheduleData && scheduleData && (
+                <div className={STYLES.SCHEDULE_CONTAINER}>
+                    <ScheduleView data={scheduleData} mode="full"/>
+                </div>)}
+
+            {isBusExpanded && (<ul className={STYLES.LIST_CONTAINER}>
+                {uiState.isNoData ? (
+                    <li className="text-center py-6 text-gray-400 dark:text-gray-500 text-xs font-medium italic">
+                        {UI_TEXT.BUS_LIST.NO_RUNNING_DESC}
+                    </li>) : (allBuses.map(({bus, routeName, getDirection}) => (<BusListItem
+                    key={`${routeName}-${bus.vehicleno}`}
+                    bus={bus}
+                    routeName={routeName}
+                    getDirection={getDirection}
+                    onClick={handleBusClick}
+                />)))}
+            </ul>)}
+        </div>
+    </>);
 }

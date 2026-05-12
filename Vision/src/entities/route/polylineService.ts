@@ -2,6 +2,7 @@ import {getPolyline, getRouteDetails} from "@entities/route/api";
 import type {Coordinate, GeoPolyline, RouteDetail} from "@entities/route/types";
 import {getStationMap} from "@entities/station/api";
 import type {StationLocation} from "@entities/station/types";
+
 import {CacheManager} from "@shared/cache/CacheManager";
 import {isFiniteNumber} from "@shared/utils/geo";
 
@@ -82,10 +83,7 @@ function transformPolyline(data: GeoPolyline): { up: Coordinate[]; down: Coordin
     return {up: coords, down: []};
 }
 
-function shouldSwapPolylines(
-    routeDetail: RouteDetail | null, stationMap: Record<string, StationLocation> | null,
-    upPolyline: Coordinate[], downPolyline: Coordinate[]
-): boolean {
+function shouldSwapPolylines(routeDetail: RouteDetail | null, stationMap: Record<string, StationLocation> | null, upPolyline: Coordinate[], downPolyline: Coordinate[]): boolean {
     if (!routeDetail || !stationMap) return false;
     if (upPolyline.length < 2 || downPolyline.length < 2) return false;
     const upStops: Coordinate[] = [];
@@ -94,8 +92,7 @@ function shouldSwapPolylines(
         const station = stationMap[stop.nodeid];
         if (!station) continue;
         const coord: Coordinate = [station.gpslati, station.gpslong];
-        if (stop.updowncd === 1) upStops.push(coord);
-        else downStops.push(coord);
+        if (stop.updowncd === 1) upStops.push(coord); else downStops.push(coord);
     }
     if (upStops.length < 3 || downStops.length < 3) return false;
     const sample = (arr: Coordinate[], max: number) => {
@@ -153,9 +150,7 @@ function extractBBox(data: GeoPolyline): [[number, number], [number, number]] | 
 async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
     const cached = processedCache.get(routeId);
     if (cached) return cached;
-    const [rawData, routeDetail, stationMap] = await Promise.all([
-        getPolyline(routeId), getRouteDetails(routeId), getStationMap(),
-    ]);
+    const [rawData, routeDetail, stationMap] = await Promise.all([getPolyline(routeId), getRouteDetails(routeId), getStationMap(),]);
     if (!rawData) {
         const empty: PolylineData = {upPolyline: [], downPolyline: []};
         processedCache.set(routeId, empty);
@@ -176,17 +171,13 @@ async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
 }
 
 export async function fetchRoutePolylines(routeIds: string[]): Promise<Map<string, PolylineData>> {
-    const results = await Promise.all(
-        routeIds.map(async (id) => ({id, data: await fetchRoutePolyline(id)}))
-    );
+    const results = await Promise.all(routeIds.map(async (id) => ({id, data: await fetchRoutePolyline(id)})));
     const map = new Map<string, PolylineData>();
     for (const {id, data} of results) map.set(id, data);
     return map;
 }
 
-export function createMultiPolylineData(
-    polylineMap: Map<string, PolylineData>, activeRouteIds?: string[]
-): MultiPolylineData {
+export function createMultiPolylineData(polylineMap: Map<string, PolylineData>, activeRouteIds?: string[]): MultiPolylineData {
     const segmentMap = new Map<string, PolylineSegment>();
     const activeSet = new Set(activeRouteIds ?? []);
     const generateKey = (coords: Coordinate[]) => {
@@ -230,10 +221,7 @@ export function createMultiPolylineData(
             if (!bounds) {
                 bounds = data.bbox;
             } else {
-                bounds = [
-                    [Math.min(bounds[0][0], data.bbox[0][0]), Math.min(bounds[0][1], data.bbox[0][1])],
-                    [Math.max(bounds[1][0], data.bbox[1][0]), Math.max(bounds[1][1], data.bbox[1][1])],
-                ];
+                bounds = [[Math.min(bounds[0][0], data.bbox[0][0]), Math.min(bounds[0][1], data.bbox[0][1])], [Math.max(bounds[1][0], data.bbox[1][0]), Math.max(bounds[1][1], data.bbox[1][1])],];
             }
         }
     }

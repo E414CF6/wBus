@@ -1,21 +1,19 @@
 "use client";
 
-import type {BusSchedule} from "@entities/route/types";
+import type {BusSchedule, RouteInfo} from "@entities/route/types";
+import {getRouteInfo} from "@entities/route/api";
+
 import {HttpError} from "@shared/api/fetchAPI";
 import {API_CONFIG, APP_CONFIG} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {loadStaticData} from "@shared/utils/dataLoader";
-import {useEffect, useState} from "react";
 
-// ----------------------------------------------------------------------
-// Caching & Helpers
-// ----------------------------------------------------------------------
+import {useMemo} from "react";
+import useSWR from "swr";
 
-/**
- * Global in-memory cache to store fetched schedules.
- * Persists across component re-renders and unmounts within the same session.
- */
-const GlobalScheduleCache = new Map<string, BusSchedule | null>();
+const ROUTE_INFO_SWR_OPTIONS = {
+    revalidateOnFocus: false, revalidateOnReconnect: false, dedupingInterval: 60000, errorRetryCount: 2,
+} as const;
 
 /**
  * Fetches the schedule data from the network.
@@ -33,79 +31,50 @@ async function fetchScheduleData(routeId: string): Promise<BusSchedule | null> {
     }
 }
 
-// ----------------------------------------------------------------------
-// Hook Definition
-// ----------------------------------------------------------------------
+export function useRouteInfo(routeName: string): RouteInfo | null {
+    const {
+        data, error
+    } = useSWR<RouteInfo | null>(routeName ? ["routeInfo", routeName] : null, ([, name]: [string, string]) => getRouteInfo(name), ROUTE_INFO_SWR_OPTIONS);
+
+    if (error && APP_CONFIG.IS_DEV) {
+        console.error(`[useRouteInfo] Failed to fetch route info: ${routeName}`, error);
+    }
+
+    return data ?? null;
+}
+
+export function useRouteIds(routeName: string): string[] {
+    const routeInfo = useRouteInfo(routeName);
+    return useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
+}
 
 /**
  * Custom hook to fetch and manage bus schedule data.
- * Includes caching, loading states, and error handling.
+ * Uses SWR in-memory cache while preserving missing/error semantics.
  *
  * @param routeId - The ID of the route to fetch (e.g., "34-1"). Pass null to reset.
  */
 export function useScheduleData(routeId: string | null) {
-    const [snapshot, setSnapshot] = useState<{
-        routeId: string;
-        data: BusSchedule | null;
-        error: string | null;
-        missing: boolean;
-    } | null>(null);
+    const normalizedRouteId = routeId?.trim() ?? "";
+    const shouldFetch = normalizedRouteId !== "";
 
-    const cachedData = routeId ? GlobalScheduleCache.get(routeId) : undefined;
-    const hasCache = routeId ? GlobalScheduleCache.has(routeId) : false;
-    const activeSnapshot = snapshot?.routeId === routeId ? snapshot : null;
+    const {
+        data, error, isLoading
+    } = useSWR<BusSchedule | null>(shouldFetch ? ["scheduleData", normalizedRouteId] : null, ([, id]: [string, string]) => fetchScheduleData(id), {
+        revalidateOnFocus: false,
+        revalidateOnReconnect: false,
+        revalidateIfStale: false,
+        dedupingInterval: 60000,
+        shouldRetryOnError: false,
+    });
 
-    const data = hasCache ? (cachedData ?? null) : activeSnapshot?.data ?? null;
-    const error = hasCache ? null : activeSnapshot?.error ?? null;
-    const missing = hasCache ? cachedData === null : activeSnapshot?.missing ?? false;
-    const loading = Boolean(routeId && !hasCache && !activeSnapshot);
+    if (error && APP_CONFIG.IS_DEV) {
+        console.error(UI_TEXT.ERROR.FETCH_FAILED(UI_TEXT.DATA_LABELS.SCHEDULE_DATA, 500), error);
+    }
 
-    useEffect(() => {
-        // Flag to prevent state updates if the component unmounts or routeId changes
-        let isActive = true;
+    const loading = shouldFetch && isLoading && data === undefined;
+    const missing = shouldFetch && !loading && !error && data === null;
+    const errorMessage = error ? UI_TEXT.ERROR.UNKNOWN(error instanceof Error ? error.message : String(error)) : null;
 
-        // Reset state if no routeId is provided
-        if (!routeId) return;
-
-        // Check Cache First
-        if (GlobalScheduleCache.has(routeId)) return;
-
-        fetchScheduleData(routeId)
-            .then((result) => {
-                if (!isActive) return;
-
-                // Update Cache
-                GlobalScheduleCache.set(routeId, result);
-
-                // Update State
-                setSnapshot({
-                    routeId,
-                    data: result,
-                    error: null,
-                    missing: result === null,
-                });
-            })
-            .catch((err) => {
-                if (!isActive) return;
-
-                // Log error in Dev mode
-                if (APP_CONFIG.IS_DEV) {
-                    console.error(UI_TEXT.ERROR.FETCH_FAILED(UI_TEXT.DATA_LABELS.SCHEDULE_DATA, 500), err);
-                }
-
-                setSnapshot({
-                    routeId,
-                    data: null,
-                    error: UI_TEXT.ERROR.UNKNOWN(err instanceof Error ? err.message : String(err)),
-                    missing: false, // It's an error, not necessarily "missing"
-                });
-            });
-
-        // Cleanup function
-        return () => {
-            isActive = false;
-        };
-    }, [routeId]);
-
-    return {data, loading, error, missing};
+    return {data: data ?? null, loading, error: errorMessage, missing};
 }

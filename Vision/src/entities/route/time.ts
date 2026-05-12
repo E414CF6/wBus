@@ -50,16 +50,12 @@ export function getNearestBusTime(busData: BusSchedule): NearestBusInfo | null {
         for (const [destination, busTimes] of Object.entries(hourlySchedule)) {
             for (const {minute} of busTimes) {
                 const busTotalMinutes = baseHourMinutes + parseInt(minute, 10);
-                const difference = busTotalMinutes >= currentTotalMinutes
-                    ? busTotalMinutes - currentTotalMinutes
-                    : MINUTES_IN_DAY + busTotalMinutes - currentTotalMinutes;
+                const difference = busTotalMinutes >= currentTotalMinutes ? busTotalMinutes - currentTotalMinutes : MINUTES_IN_DAY + busTotalMinutes - currentTotalMinutes;
 
                 if (difference < minDifference) {
                     minDifference = difference;
                     nearestBus = {
-                        time: `${hourStr}:${minute}`,
-                        minutesUntil: difference,
-                        destination
+                        time: `${hourStr}:${minute}`, minutesUntil: difference, destination
                     };
                 }
             }
@@ -69,12 +65,7 @@ export function getNearestBusTime(busData: BusSchedule): NearestBusInfo | null {
     return nearestBus;
 }
 
-export function findNextBus(
-    schedule: Record<string, Record<string, RowItem[]>>,
-    hours: string[],
-    direction: string,
-    now: Date
-): NextBusInfo | null {
+export function findNextBus(schedule: Record<string, Record<string, RowItem[]>>, hours: string[], direction: string, now: Date): NextBusInfo | null {
     const currentHour = now.getHours().toString().padStart(2, "0");
     const currentMinute = now.getMinutes();
 
@@ -98,11 +89,8 @@ export function findNextBus(
             if (diff < 0) continue;
 
             return {
-                hour,
-                minute: bus.minute,
-                timeUntil: {
-                    minutes: Math.floor(diff / 60000),
-                    seconds: Math.floor((diff % 60000) / 1000),
+                hour, minute: bus.minute, timeUntil: {
+                    minutes: Math.floor(diff / 60000), seconds: Math.floor((diff % 60000) / 1000),
                 },
             };
         }

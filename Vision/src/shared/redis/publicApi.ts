@@ -3,8 +3,8 @@
  * Replaces the CloudFront → API Gateway proxy chain.
  */
 
-const PUBLIC_API_BASE = "http://apis.data.go.kr/1613000";
-const CITY_CODE = "32020";
+const PUBLIC_API_BASE = "https://apis.data.go.kr/1613000";
+const CITY_CODE = "32020"; // Wonju
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 300;
 const DEFAULT_PARAMS = {
@@ -40,7 +40,7 @@ async function fetchPublicApi<T>(path: string, params: Record<string, string>): 
             });
 
             if (res.ok) {
-                return res.json() as Promise<T>;
+                return await res.json() as Promise<T>;
             }
 
             if (!isRetryableStatus(res.status) || attempt === MAX_RETRY_ATTEMPTS) {

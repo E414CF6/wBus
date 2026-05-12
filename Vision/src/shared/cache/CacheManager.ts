@@ -92,10 +92,7 @@ export class CacheManager<T> {
      * If a request is pending, return the pending promise
      * Otherwise, execute the fetch function and cache the result
      */
-    async getOrFetch(
-        key: string,
-        fetchFn: () => Promise<T>
-    ): Promise<T> {
+    async getOrFetch(key: string, fetchFn: () => Promise<T>): Promise<T> {
         // Return cached data if available
         if (this.cache.has(key)) {
             this.accessTimes.set(key, Date.now());
@@ -145,10 +142,7 @@ export class CacheManager<T> {
      */
     // noinspection JSUnusedGlobalSymbols
     getStats(): {
-        size: number;
-        maxSize: number;
-        pendingRequests: number;
-        utilizationPercent: number;
+        size: number; maxSize: number; pendingRequests: number; utilizationPercent: number;
     } {
         return {
             size: this.cache.size,

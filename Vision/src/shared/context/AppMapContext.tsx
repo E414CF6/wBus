@@ -39,9 +39,7 @@ const AppMapContext = createContext<AppMapContextType | undefined>(undefined);
 export function useAppMapContext(): AppMapContextType {
     const context = useContext(AppMapContext);
     if (!context) {
-        throw new Error(
-            "[useAppMapContext] Context is missing. Ensure this component is wrapped within a <AppMapContextProvider>."
-        );
+        throw new Error("[useAppMapContext] Context is missing. Ensure this component is wrapped within a <AppMapContextProvider>.");
     }
     return context;
 }
@@ -62,8 +60,7 @@ export function AppMapContextProvider({children}: AppMapContextProviderProps) {
     const [map, setMap] = useState<MapRef | null>(null);
 
     const value = useMemo(() => ({
-        map,
-        setMap,
+        map, setMap,
     }), [map]);
 
     return <AppMapContext.Provider value={value}>{children}</AppMapContext.Provider>;

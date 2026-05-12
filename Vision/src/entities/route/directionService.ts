@@ -1,7 +1,6 @@
 import {Direction, type DirectionCode} from "@entities/route/types";
 import {MAP_SETTINGS} from "@shared/config/env";
 
-
 export interface RouteSequenceData {
     routeid: string;
     sequence: { nodeid: string; nodeord: number; updowncd: number }[];
@@ -56,12 +55,7 @@ export function buildDirectionLookup(state: DirectionResolverState): DirectionLo
     return {sequenceMap, routeMixedDirMap, fallbackDirMap, activeRouteIds};
 }
 
-export function resolveDirection(
-    lookup: DirectionLookup,
-    nodeid: string | null | undefined,
-    nodeord: number,
-    routeid?: string | null
-): DirectionCode {
+export function resolveDirection(lookup: DirectionLookup, nodeid: string | null | undefined, nodeord: number, routeid?: string | null): DirectionCode {
     if (!nodeid) return null;
 
     const normalizedNodeId = nodeid.trim();
@@ -75,9 +69,7 @@ export function resolveDirection(
     const candidates = lookup.sequenceMap.get(normalizedNodeId);
     if (!candidates || candidates.length === 0) return null;
 
-    const scopedCandidates = routeid
-        ? candidates.filter((c) => c.routeid === routeid)
-        : candidates.filter((c) => lookup.activeRouteIds.has(c.routeid));
+    const scopedCandidates = routeid ? candidates.filter((c) => c.routeid === routeid) : candidates.filter((c) => lookup.activeRouteIds.has(c.routeid));
 
     const pool = scopedCandidates.length > 0 ? scopedCandidates : candidates;
 

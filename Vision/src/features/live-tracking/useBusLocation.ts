@@ -1,6 +1,7 @@
 import type {BusDataError, BusItem} from "@entities/bus/types";
 import {API_CONFIG} from "@shared/config/env";
 import type {CachedData} from "@shared/redis/types";
+import {buildRouteIdsKey} from "@shared/utils/routeIds";
 import {useEffect, useMemo, useRef, useState} from "react";
 
 const fetchRouteData = async (url: string): Promise<CachedData<BusItem[]>> => {
@@ -36,10 +37,6 @@ interface BusStreamHandoff {
     reconnectAfterMs?: number;
 }
 
-function normalizeRouteIds(routeIds: string[]): string[] {
-    return Array.from(new Set(routeIds.filter((id) => id.trim() !== ""))).sort();
-}
-
 function buildStreamUrl(routeIds: string[]): string {
     const query = new URLSearchParams({routeIds: routeIds.join(",")});
     return `/api/bus/stream?${query.toString()}`;
@@ -64,7 +61,7 @@ function getPositiveNumber(value: unknown): number | null {
 export function useBusLocationData(routeIds: string[]): {
     data: BusItem[]; error: BusDataError; hasFetched: boolean;
 } {
-    const routeIdsKey = useMemo(() => normalizeRouteIds(routeIds).join(","), [routeIds]);
+    const routeIdsKey = useMemo(() => buildRouteIdsKey(routeIds), [routeIds]);
     const [data, setData] = useState<BusItem[]>(EMPTY_BUS_LIST);
     const [error, setError] = useState<BusDataError>(null);
     const [hasFetched, setHasFetched] = useState(false);

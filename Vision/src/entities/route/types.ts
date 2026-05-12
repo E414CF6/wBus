@@ -4,19 +4,15 @@ export type Coordinate = [number, number];
 // Route Info
 
 export type RouteInfo = {
-    routeName: string;
-    vehicleRouteIds: string[];
+    routeName: string; vehicleRouteIds: string[];
 };
 
 export type SequenceItem = {
-    nodeord: number;
-    nodeid: string;
-    updowncd: number;
+    nodeord: number; nodeid: string; updowncd: number;
 };
 
 export type RouteDetail = {
-    routeno?: string;
-    sequence: SequenceItem[];
+    routeno?: string; sequence: SequenceItem[];
 };
 
 // GeoJSON
@@ -31,8 +27,7 @@ interface BusRouteFeature {
     id: string;
     bbox: [number, number, number, number];
     geometry: {
-        type: "LineString";
-        coordinates: Array<[number, number]>;
+        type: "LineString"; coordinates: Array<[number, number]>;
     };
     properties: BusRouteProperties;
 }
@@ -41,10 +36,7 @@ interface BusRouteProperties {
     route_id: string;
     route_no: string;
     stops: Array<{
-        id: string;
-        name: string;
-        ord: number;
-        ud: number;
+        id: string; name: string; ord: number; ud: number;
     }>;
     turn_idx: number;
     stop_to_coord: number[];
@@ -84,8 +76,7 @@ export interface BusSchedule {
 // Direction
 
 export const Direction = {
-    UP: 1,
-    DOWN: 0,
+    UP: 1, DOWN: 0,
 } as const;
 
 export type DirectionCode = (typeof Direction)[keyof typeof Direction] | null;
@@ -93,8 +84,7 @@ export type DirectionCode = (typeof Direction)[keyof typeof Direction] | null;
 // Day Types
 
 export const DAY_TYPES = {
-    WEEKDAY: 'weekday',
-    WEEKEND: 'weekend',
+    WEEKDAY: 'weekday', WEEKEND: 'weekend',
 } as const;
 
 export type DayType = (typeof DAY_TYPES)[keyof typeof DAY_TYPES];

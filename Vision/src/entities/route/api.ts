@@ -1,4 +1,5 @@
 import type {GeoPolyline, RouteDetail, RouteInfo, RouteMapData} from "@entities/route/types";
+
 import {HttpError} from "@shared/api/fetchAPI";
 import {CacheManager} from "@shared/cache/CacheManager";
 import {API_CONFIG, APP_CONFIG} from "@shared/config/env";
@@ -21,9 +22,7 @@ export async function getRouteMapData(): Promise<RouteMapData> {
 
 export async function getRouteMap(): Promise<Record<string, string[]>> {
     const data = await getRouteMapData();
-    return Object.fromEntries(
-        Object.entries(data.route_numbers).filter(([, ids]) => ids.length > 0)
-    );
+    return Object.fromEntries(Object.entries(data.route_numbers).filter(([, ids]) => ids.length > 0));
 }
 
 export async function getPolyline(routeKey: string): Promise<GeoPolyline | null> {

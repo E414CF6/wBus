@@ -2,16 +2,12 @@ export type Coordinate = [number, number];
 
 type CoordinateLike = { readonly 0: number; readonly 1: number; readonly length: number };
 
-export function getHaversineDistance(
-    lat1: number, lon1: number, lat2: number, lon2: number
-): number {
+export function getHaversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const R = 6371;
     const toRad = (deg: number) => (deg * Math.PI) / 180;
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -73,9 +69,7 @@ interface SnapOptions {
 }
 
 
-export function snapPointToPolyline<T extends CoordinateLike>(
-    point: CoordinateLike, polyline: T[], options?: SnapOptions
-): SnapResult {
+export function snapPointToPolyline<T extends CoordinateLike>(point: CoordinateLike, polyline: T[], options?: SnapOptions): SnapResult {
     const defaultResult: SnapResult = {
         position: [point[0], point[1]], angle: 0, segmentIndex: 0, t: 0,
     };
@@ -124,10 +118,7 @@ export function snapPointToPolyline<T extends CoordinateLike>(
     }
 
     return {
-        position: bestPos,
-        angle: calculateBearing(bestSegment.A, bestSegment.B),
-        segmentIndex: bestIdx,
-        t: bestT,
+        position: bestPos, angle: calculateBearing(bestSegment.A, bestSegment.B), segmentIndex: bestIdx, t: bestT,
     };
 }
 

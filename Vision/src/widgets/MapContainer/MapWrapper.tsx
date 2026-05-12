@@ -9,8 +9,7 @@ import Map from "./Map";
 
 type MapWrapperProps = {
     /** Callback fired when the map is fully initialized */
-    onReady?: () => void;
-    /** Feature-specific layers passed as children (e.g. RouteLayer) */
+    onReady?: () => void; /** Feature-specific layers passed as children (e.g., RouteLayer) */
     children?: React.ReactNode;
 };
 
@@ -24,11 +23,9 @@ type MapWrapperProps = {
  * to avoid cross-feature imports.
  */
 const MapWrapper: React.FC<MapWrapperProps> = ({onReady, children}) => {
-    return (
-        <Map onReady={onReady}>
-            {children}
-        </Map>
-    );
+    return (<Map onReady={onReady}>
+        {children}
+    </Map>);
 };
 
 export default MapWrapper;

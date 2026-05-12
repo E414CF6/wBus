@@ -5,7 +5,7 @@
 [![Rust](https://img.shields.io/badge/Backend-Rust-orange?logo=rust)](./Polly)
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue?logo=typescript)](./Vision)
 
-**wBus** is a full-stack, real-time bus tracking application for Wonju, South Korea. It combines a powerful Rust-based
+**wBus** is a full-stack, real-time bus tracking application for Wŏnju, South Korea. It combines a powerful Rust-based
 data pipeline with a modern, interactive Next.js frontend to deliver live bus locations and schedules.
 
 ## Project Architecture
@@ -17,8 +17,8 @@ The wBus project is built on a decoupled, two-part architecture: a data pipeline
 2. **Vision (Frontend)**: A Next.js application that provides the user interface. It consumes the static files generated
    by Polly and fetches real-time bus location data from a live API to display on an interactive map.
 
-This separation of concerns allows for a robust and scalable system. The heavy data processing is handled offline by
-Polly, while Vision remains lightweight and fast for the end-user.
+This separation of concerns allows for a robust and scalable system. Polly handles the heavy data processing offline,
+while Vision remains lightweight and fast for the end-user.
 
 ### Data Flow
 

@@ -10,7 +10,7 @@ import {
 } from "@shared/utils/geo";
 
 import type {Marker} from "maplibre-gl";
-import {useCallback, useEffect, useRef, useState} from "react";
+import React, {useCallback, useEffect, useRef, useState} from "react";
 
 // ----------------------------------------------------------------------
 // Types & Options
@@ -88,7 +88,7 @@ const OVERSHOOT_DAMPEN = 0.7;
 const CATCHUP_GAP_FACTOR = 1.2;
 const CATCHUP_BOOST = 1.6;
 
-// How much of the measured velocity to trust vs the prior.
+// How much of the measured velocity to trust vs. the prior.
 // Starts at 0 (all prior), ramps up as we get more data.
 const VELOCITY_PRIOR_BLEND_MIN = 0.3;  // minimum trust in measurement
 const VELOCITY_PRIOR_BLEND_MAX = 0.85; // maximum trust after many samples
@@ -250,12 +250,12 @@ function blendVelocityWithPrior(measured: number, sampleCount: number,): number 
 /**
  * Animates a bus marker along a polyline with aggressive predictive motion.
  *
- * Designed for ~60 second data delay:
+ * Designed for ~60-second data delay:
  *  1. Uses city bus base speed (~30 km/h) as a prior, blended with
  *     measured velocity as more samples arrive.
  *  2. Forward-projects the bus position by the full data delay.
  *  3. Modulates speed near bus stops — decelerates on approach,
- *     brief dwell, then accelerates away.
+ *      briefly dwells, then speeds up away.
  *  4. Allows generous overshoot (up to ~2 polling periods) so the
  *     marker never freezes between updates.
  *  5. On each frame, advances at the blended velocity with stop-aware
@@ -406,7 +406,7 @@ export function useAnimatedPosition(targetPosition: Coordinate, targetAngle: num
 
                 // Start with gentle crawl — don't project far on the
                 // very first data point since we have zero velocity info.
-                // Let the tick loop advance frame-by-frame; real projection
+                // Let the tick loop advance frame-by-frame; the real projection
                 // kicks in once the second data point arrives.
                 velocityRef.current = INITIAL_CRAWL_VELOCITY;
                 targetDistRef.current = dist;
@@ -523,7 +523,7 @@ export function useAnimatedPosition(targetPosition: Coordinate, targetAngle: num
             newTarget = Math.max(newTarget, markerDist);
         }
 
-        // Reconcile target vs marker 
+        // Reconcile target vs. marker
         targetDistRef.current = newTarget;
         const marker = markerDist;
 

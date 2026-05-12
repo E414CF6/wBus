@@ -2,11 +2,13 @@
 
 import {MAP_SETTINGS} from "@shared/config/env";
 
-import {useAnimatedPosition} from "@shared/hooks/useAnimatedPosition";
 import {type Coordinate, normalizeAngle} from "@shared/utils/geo";
-import type {Marker as MapLibreMarker} from "maplibre-gl";
-import {memo, useRef} from "react";
+
+import {useAnimatedPosition} from "@shared/hooks/useAnimatedPosition";
+
+import React, {memo, useRef} from "react";
 import {Marker} from "react-map-gl/maplibre";
+import type {Marker as MapLibreMarker} from "maplibre-gl";
 
 // ----------------------------------------------------------------------
 // Types
@@ -18,15 +20,15 @@ interface BusAnimatedMarkerProps {
     polyline?: Coordinate[];
     snapIndexHint?: number | null;
     snapIndexRange?: number;
-    /** Animation duration in ms. Longer = smoother but more lag behind real-time data */
+    /** Animation duration in milliseconds. Longer = smoother but more lag behind real-time data */
     animationDuration?: number;
-    /** Polling interval in ms. Used for velocity-based forward projection. */
+    /** Polling interval in milliseconds. Used for velocity-based forward projection. */
     pollingIntervalMs?: number;
-    /** Estimated data delay in ms. How old the API data is when received. */
+    /** Estimated data delay in milliseconds. How old the API data is when received. */
     dataDelayMs?: number;
     /** Polyline coordinate indices where bus stops are located. */
     stopCoordIndices?: number[];
-    /** Force a re-sync when external state (like route) changes. */
+    /** Force a re-sync when the external state (like route) changes. */
     refreshKey?: string | number;
     onClick?: () => void;
     children?: React.ReactNode;
@@ -60,27 +62,14 @@ function BusAnimatedMarker({
 
     // Hook handles the interpolation loop (requestAnimationFrame)
     // Now with direct marker updates for smoother animation
-    const {position: animatedPosition, angle: animatedAngle} = useAnimatedPosition(
-        position,
-        rotationAngle,
-        {
-            duration: animationDuration,
-            polyline,
-            // Only attempt to snap if we have a valid line segment
-            snapToPolyline: polyline.length >= 2,
-            resetKey: refreshKey,
-            snapIndexHint,
-            snapIndexRange,
-            // Pass marker ref for direct DOM updates during animation
-            markerRef,
-            // Pass polling interval for velocity-based forward projection
-            pollingIntervalMs,
-            // Pass data delay for accurate projection distance
-            dataDelayMs,
-            // Pass stop coordinate indices for speed modulation
-            stopCoordIndices,
-        }
-    );
+    const {position: animatedPosition, angle: animatedAngle} = useAnimatedPosition(position, rotationAngle, {
+        duration: animationDuration, polyline, // Only attempt to snap if we have a valid line segment
+        snapToPolyline: polyline.length >= 2, resetKey: refreshKey, snapIndexHint, snapIndexRange, // Pass marker ref for direct DOM updates during animation
+        markerRef, // Pass polling interval for velocity-based forward projection
+        pollingIntervalMs, // Pass data delay for accurate projection distance
+        dataDelayMs, // Pass stop coordinate indices for speed modulation
+        stopCoordIndices,
+    });
 
     const handleMarkerClick = (e: any) => {
         if (e.originalEvent) {
@@ -89,22 +78,20 @@ function BusAnimatedMarker({
         onClick?.();
     };
 
-    return (
-        <Marker
-            ref={markerRef}
-            longitude={animatedPosition[1]}
-            latitude={animatedPosition[0]}
-            rotation={normalizeAngle(animatedAngle)}
-            rotationAlignment="map"
-            onClick={handleMarkerClick}
-            anchor="center"
-            style={{pointerEvents: 'auto'}}
-        >
-            {children}
-        </Marker>
-    );
+    return (<Marker
+        ref={markerRef}
+        longitude={animatedPosition[1]}
+        latitude={animatedPosition[0]}
+        rotation={normalizeAngle(animatedAngle)}
+        rotationAlignment="map"
+        onClick={handleMarkerClick}
+        anchor="center"
+        style={{pointerEvents: 'auto'}}
+    >
+        {children}
+    </Marker>);
 }
 
-// Memoize to prevent re-setup of animation hook if parent re-renders 
-// without actual data changes (e.g. map zoom/pan events passing through context)
+// Memoize to prevent re-setup of an animation hook if the parent re-renders
+// without actual data changes (e.g., map zoom/pan events passing through context)
 export default memo(BusAnimatedMarker);

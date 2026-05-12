@@ -6,14 +6,11 @@
 "use client";
 
 import {
-    createMultiPolylineData,
-    fetchRoutePolylines,
-    type MultiPolylineData,
-    type PolylineData,
-    type PolylineSegment,
+    createMultiPolylineData, fetchRoutePolylines, type MultiPolylineData, type PolylineData, type PolylineSegment,
 } from "@entities/route/polylineService";
 
 import type {Coordinate} from "@entities/route/types";
+import {buildRouteIdsKey} from "@shared/utils/routeIds";
 import {useEffect, useMemo, useState} from "react";
 
 // ============================================================================
@@ -30,33 +27,19 @@ export interface BusPolylineSet {
     isSwapped?: boolean;
 }
 
-// ============================================================================
-// Hook: useBusPolyline (Single Route)
-// ============================================================================
+const EMPTY_POLYLINE_MAP = new Map<string, PolylineData>();
 
-// ============================================================================
-// Hook: useBusPolylineMap (Multiple Routes)
-// ============================================================================
-
-/**
- * Fetches polyline data for multiple routes.
- * Returns a Map<routeId, PolylineData> for O(1) lookups.
- * Replaces the old useBusPolylineMap hook.
- */
-export function useBusPolylineMap(routeIds: string[]): Map<string, BusPolylineSet> {
+function usePolylineSnapshot(routeIds: string[]): Map<string, PolylineData> {
     const [snapshot, setSnapshot] = useState<{
-        key: string;
-        map: Map<string, PolylineData>;
-    }>({key: "", map: new Map()});
-
-    // Stable key to prevent unnecessary refetches
-    const routeKey = useMemo(
-        () => routeIds.slice().sort().join("|"),
-        [routeIds]
-    );
+        key: string; map: Map<string, PolylineData>;
+    }>({key: "", map: EMPTY_POLYLINE_MAP});
+    const routeKey = useMemo(() => buildRouteIdsKey(routeIds, "|"), [routeIds]);
 
     useEffect(() => {
-        if (!routeKey) return;
+        if (!routeKey) {
+            setSnapshot({key: "", map: EMPTY_POLYLINE_MAP});
+            return;
+        }
 
         let mounted = true;
         const ids = routeKey.split("|").filter(Boolean);
@@ -70,12 +53,21 @@ export function useBusPolylineMap(routeIds: string[]): Map<string, BusPolylineSe
         };
     }, [routeKey]);
 
+    return useMemo(() => (snapshot.key === routeKey ? snapshot.map : EMPTY_POLYLINE_MAP), [snapshot, routeKey]);
+}
+
+/**
+ * Fetches polyline data for multiple routes.
+ * Returns a Map<routeId, PolylineData> for O(1) lookups.
+ * Replaces the old useBusPolylineMap hook.
+ */
+export function useBusPolylineMap(routeIds: string[]): Map<string, BusPolylineSet> {
+    const polylineMap = usePolylineSnapshot(routeIds);
+
     // Return typed map compatible with existing code
     return useMemo(() => {
-        if (snapshot.key !== routeKey) return new Map();
-
         const result = new Map<string, BusPolylineSet>();
-        for (const [id, data] of snapshot.map) {
+        for (const [id, data] of polylineMap) {
             result.set(id, {
                 upPolyline: data.upPolyline,
                 downPolyline: data.downPolyline,
@@ -85,7 +77,7 @@ export function useBusPolylineMap(routeIds: string[]): Map<string, BusPolylineSe
             });
         }
         return result;
-    }, [snapshot, routeKey]);
+    }, [polylineMap]);
 }
 
 // ============================================================================
@@ -93,11 +85,7 @@ export function useBusPolylineMap(routeIds: string[]): Map<string, BusPolylineSe
 // ============================================================================
 
 const EMPTY_MULTI: MultiPolylineData = {
-    activeUpSegments: [],
-    activeDownSegments: [],
-    inactiveUpSegments: [],
-    inactiveDownSegments: [],
-    bounds: null,
+    activeUpSegments: [], activeDownSegments: [], inactiveUpSegments: [], inactiveDownSegments: [], bounds: null,
 };
 
 /**
@@ -105,41 +93,15 @@ const EMPTY_MULTI: MultiPolylineData = {
  * Useful for rendering overlapping routes with different colors.
  * Replaces the old useMultiPolyline hook.
  */
-export function useMultiPolyline(
-    routeIds: string[],
-    activeRouteIds?: string[]
-): MultiPolylineData {
-    const [snapshot, setSnapshot] = useState<{
-        key: string;
-        map: Map<string, PolylineData>;
-    }>({key: "", map: new Map()});
-
-    const routeKey = useMemo(
-        () => routeIds.slice().sort().join("|"),
-        [routeIds]
-    );
-
-    useEffect(() => {
-        if (!routeKey) return;
-
-        let mounted = true;
-        const ids = routeKey.split("|").filter(Boolean);
-
-        fetchRoutePolylines(ids).then((map) => {
-            if (mounted) setSnapshot({key: routeKey, map});
-        });
-
-        return () => {
-            mounted = false;
-        };
-    }, [routeKey]);
+export function useMultiPolyline(routeIds: string[], activeRouteIds?: string[]): MultiPolylineData {
+    const polylineMap = usePolylineSnapshot(routeIds);
 
     return useMemo(() => {
-        if (snapshot.key !== routeKey || snapshot.map.size === 0) {
+        if (polylineMap.size === 0) {
             return EMPTY_MULTI;
         }
-        return createMultiPolylineData(snapshot.map, activeRouteIds);
-    }, [snapshot, routeKey, activeRouteIds]);
+        return createMultiPolylineData(polylineMap, activeRouteIds);
+    }, [polylineMap, activeRouteIds]);
 }
 
 // ============================================================================
@@ -148,12 +110,9 @@ export function useMultiPolyline(
 
 /**
  * Selects the best available polyline set from a map.
- * Prioritizes activeRouteId, then falls back to first available.
+ * Prioritizes activeRouteId, then falls back to the first available.
  */
-export function getFallbackPolylines(
-    polylineMap: Map<string, BusPolylineSet>,
-    activeRouteId?: string | null
-): BusPolylineSet {
+export function getFallbackPolylines(polylineMap: Map<string, BusPolylineSet>, activeRouteId?: string | null): BusPolylineSet {
     if (activeRouteId && polylineMap.has(activeRouteId)) {
         return polylineMap.get(activeRouteId)!;
     }

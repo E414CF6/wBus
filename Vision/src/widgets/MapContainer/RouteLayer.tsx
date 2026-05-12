@@ -23,18 +23,13 @@ interface RouteLayerProps {
  * Memoized to prevent re-rendering ALL routes when only one route's data updates.
  */
 const RouteLayer = memo(({routeName, onRouteChange}: RouteLayerProps) => {
-    return (
-        <>
+    return (<>
             <BusMarker routeName={routeName}/>
             <BusStopMarker routeName={routeName} onRouteChange={onRouteChange}/>
             <BusRoutePolyline routeName={routeName}/>
-        </>
-    );
+        </>);
 }, (prev, next) => {
-    return (
-        prev.routeName === next.routeName &&
-        prev.onRouteChange === next.onRouteChange
-    );
+    return (prev.routeName === next.routeName && prev.onRouteChange === next.onRouteChange);
 });
 
 RouteLayer.displayName = "RouteLayer";

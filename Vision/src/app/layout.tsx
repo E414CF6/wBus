@@ -17,13 +17,11 @@ import React from "react";
 
 // Google Fonts (Geist Sans, Geist Mono)
 const geistSans = Geist({
-    variable: "--font-geist-sans",
-    subsets: ["latin"],
+    variable: "--font-geist-sans", subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
-    variable: "--font-geist-mono",
-    subsets: ["latin"],
+    variable: "--font-geist-mono", subsets: ["latin"],
 });
 
 // Page Metadata
@@ -31,10 +29,8 @@ export const metadata: Metadata = {
     metadataBase: new URL(SITE_CONFIG.METADATA.BASE_URL),
 
     title: {
-        default: APP_CONFIG.NAME,
-        template: `${APP_CONFIG.NAME} · %s`,
-    },
-    description: SITE_CONFIG.METADATA.DESCRIPTION,
+        default: APP_CONFIG.NAME, template: `${APP_CONFIG.NAME} · %s`,
+    }, description: SITE_CONFIG.METADATA.DESCRIPTION,
 
     alternates: {
         canonical: "/",
@@ -46,14 +42,9 @@ export const metadata: Metadata = {
         siteName: APP_CONFIG.NAME,
         title: APP_CONFIG.NAME,
         description: SITE_CONFIG.METADATA.DESCRIPTION,
-        images: [
-            {
-                url: SITE_CONFIG.METADATA.SOCIAL_IMAGE,
-                width: 1200,
-                height: 630,
-                alt: APP_CONFIG.NAME,
-            },
-        ],
+        images: [{
+            url: SITE_CONFIG.METADATA.SOCIAL_IMAGE, width: 1200, height: 630, alt: APP_CONFIG.NAME,
+        },],
     },
 
     twitter: {
@@ -64,8 +55,7 @@ export const metadata: Metadata = {
     },
 
     icons: {
-        icon: "/favicon.ico",
-        apple: "/apple-touch-icon.png",
+        icon: "/favicon.ico", apple: "/apple-touch-icon.png",
     },
 };
 
@@ -86,19 +76,17 @@ export default function RootLayout({
                                    }: {
     children: React.ReactNode;
 }) {
-    return (
-        <html lang="ko" suppressHydrationWarning>
-        <body
-            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            {/* Provides global map context via AppMapContextProvider */}
-            <AppMapContextProvider>{children}</AppMapContextProvider>
-        </ThemeProvider>
-        {/* Vercel SpeedInsights and Analytics components */}
-        <SpeedInsights/>
-        <Analytics/>
-        </body>
-        </html>
-    );
+    return (<html lang="ko" suppressHydrationWarning>
+    <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+    >
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        {/* Provides global map context via AppMapContextProvider */}
+        <AppMapContextProvider>{children}</AppMapContextProvider>
+    </ThemeProvider>
+    {/* Vercel SpeedInsights and Analytics components */}
+    <SpeedInsights/>
+    <Analytics/>
+    </body>
+    </html>);
 }

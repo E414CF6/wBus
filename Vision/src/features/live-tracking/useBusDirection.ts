@@ -1,14 +1,13 @@
-import {getRouteDetails, getRouteInfo} from "@entities/route/api";
+import {getRouteDetails} from "@entities/route/api";
+import {useRouteInfo} from "@entities/route/hooks";
 
 import {
-    buildDirectionLookup,
-    type DirectionResolverState,
-    resolveDirection,
-    type RouteSequenceData,
+    buildDirectionLookup, type DirectionResolverState, resolveDirection, type RouteSequenceData,
 } from "@entities/route/directionService";
 import type {DirectionCode} from "@entities/route/types";
 
 import {APP_CONFIG} from "@shared/config/env";
+
 import {useCallback, useEffect, useMemo, useState} from "react";
 
 // ----------------------------------------------------------------------
@@ -24,9 +23,9 @@ import {useCallback, useEffect, useMemo, useState} from "react";
 export function useBusDirection(routeName: string) {
     const [isReady, setIsReady] = useState(false);
     const [routeState, setRouteState] = useState<DirectionResolverState>({
-        sequences: [],
-        routeIdOrder: [],
+        sequences: [], routeIdOrder: [],
     });
+    const routeInfo = useRouteInfo(routeName);
 
     // Load Route Data
     useEffect(() => {
@@ -36,25 +35,20 @@ export function useBusDirection(routeName: string) {
             setIsReady(false);
             setRouteState({sequences: [], routeIdOrder: []});
 
-            try {
-                const info = await getRouteInfo(routeName);
-                if (!info) {
-                    if (isMounted) setRouteState({sequences: [], routeIdOrder: []});
-                    return;
-                }
+            if (!routeInfo) {
+                return;
+            }
 
-                const details = await Promise.all(
-                    info.vehicleRouteIds.map(async (id) => {
-                        const d = await getRouteDetails(id);
-                        return d ? {routeid: id, sequence: d.sequence} : null;
-                    })
-                );
+            try {
+                const details = await Promise.all(routeInfo.vehicleRouteIds.map(async (id) => {
+                    const d = await getRouteDetails(id);
+                    return d ? {routeid: id, sequence: d.sequence} : null;
+                }));
 
                 if (isMounted) {
                     const validDetails = details.filter(Boolean) as RouteSequenceData[];
                     setRouteState({
-                        sequences: validDetails,
-                        routeIdOrder: validDetails.map((d) => d.routeid),
+                        sequences: validDetails, routeIdOrder: validDetails.map((d) => d.routeid),
                     });
                     setIsReady(true);
                 }
@@ -66,25 +60,19 @@ export function useBusDirection(routeName: string) {
             }
         };
 
-        loadData();
+        loadData().then(r => r);
+
         return () => {
             isMounted = false;
         };
-    }, [routeName]);
+    }, [routeName, routeInfo]);
 
     // Build lookup indexes (pure computation, memoized)
-    const lookup = useMemo(
-        () => (isReady ? buildDirectionLookup(routeState) : null),
-        [routeState, isReady]
-    );
+    const lookup = useMemo(() => (isReady ? buildDirectionLookup(routeState) : null), [routeState, isReady]);
 
     // Stable resolver callback
-    return useCallback(
-        (nodeid: string | null | undefined, nodeord: number, routeid?: string | null): DirectionCode => {
-            if (!lookup) return null;
-            return resolveDirection(lookup, nodeid, nodeord, routeid);
-        },
-        [lookup]
-    );
+    return useCallback((nodeid: string | null | undefined, nodeord: number, routeid?: string | null): DirectionCode => {
+        if (!lookup) return null;
+        return resolveDirection(lookup, nodeid, nodeord, routeid);
+    }, [lookup]);
 }
-

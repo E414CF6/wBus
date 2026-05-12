@@ -9,8 +9,4 @@ export type BusItem = {
     nodeord?: number;
 };
 
-export type BusDataError =
-    | "ERR:NONE_RUNNING"
-    | "ERR:NETWORK"
-    | "ERR:INVALID_ROUTE"
-    | null;
+export type BusDataError = | "ERR:NONE_RUNNING" | "ERR:NETWORK" | "ERR:INVALID_ROUTE" | null;

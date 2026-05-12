@@ -9,16 +9,12 @@ import useSWR from "swr";
  * Uses SWR for caching and revalidation.
  */
 export function useBusRouteMap(): Record<string, string[]> | null {
-    const {data, error} = useSWR(
-        "busRouteMap", // specific key for this resource
-        getRouteMap,
-        {
+    const {data, error} = useSWR("busRouteMap", // specific key for this resource
+        getRouteMap, {
             revalidateOnFocus: false, // Static data rarely changes
-            revalidateOnReconnect: false,
-            dedupingInterval: 60000, // Dedup for 1 minute
+            revalidateOnReconnect: false, dedupingInterval: 60000, // Dedup for 1 minute
             errorRetryCount: 3,
-        }
-    );
+        });
 
     if (error && APP_CONFIG.IS_DEV) {
         console.error("[useBusRouteMap] Error fetching route map", error);

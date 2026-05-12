@@ -24,8 +24,7 @@ const toneStyles: Record<PillTone, string> = {
 };
 
 const sizeStyles: Record<PillSize, string> = {
-    sm: "px-2.5 py-1 text-[11px]",
-    md: "px-3.5 py-1.5 text-[13px]",
+    sm: "px-2.5 py-1 text-[11px]", md: "px-3.5 py-1.5 text-[13px]",
 };
 
 /**
@@ -34,14 +33,10 @@ const sizeStyles: Record<PillSize, string> = {
  */
 type PillProps<T extends ElementType> = {
     /** The HTML element or React component to render (default: "span") */
-    as?: T;
-    /** The content to display inside the pill */
-    children: ReactNode;
-    /** Additional CSS classes to merge */
-    className?: string;
-    /** The visual color theme of the pill */
-    tone?: PillTone;
-    /** The size dimension of the pill */
+    as?: T; /** The content to display inside the pill */
+    children: ReactNode; /** Additional CSS classes to merge */
+    className?: string; /** The visual color theme of the pill */
+    tone?: PillTone; /** The size dimension of the pill */
     size?: PillSize;
 } & ComponentPropsWithoutRef<T>; // Inherit props from the underlying element (e.g., onClick, href)
 
@@ -67,8 +62,7 @@ export default function Pill<T extends ElementType = "span">({
                                                              }: PillProps<T>) {
     const Component = as || "span";
 
-    return (
-        <Component
+    return (<Component
             className={`
         inline-flex items-center gap-1.5 rounded-full
         font-semibold leading-none whitespace-nowrap
@@ -80,6 +74,5 @@ export default function Pill<T extends ElementType = "span">({
             {...props}
         >
             {children}
-        </Component>
-    );
+        </Component>);
 }

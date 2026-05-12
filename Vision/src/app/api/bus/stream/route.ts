@@ -1,6 +1,7 @@
 import {API_CONFIG} from "@shared/config/env";
 import {getCachedOrFetch} from "@shared/redis/client";
 import {fetchBusLocations, type RawBusLocation} from "@shared/redis/publicApi";
+import {parseRouteIdsParam} from "@shared/utils/routeIds";
 import {NextResponse} from "next/server";
 
 export const runtime = "nodejs";
@@ -29,13 +30,8 @@ function sleep(ms: number): Promise<void> {
 }
 
 function parseRouteIds(request: Request): string[] {
-    const routeIdsParam = new URL(request.url).searchParams.get("routeIds") ?? "";
-    const routeIds = routeIdsParam
-        .split(",")
-        .map((id) => id.trim())
-        .filter(Boolean);
-
-    return Array.from(new Set(routeIds)).slice(0, 20);
+    const routeIdsParam = new URL(request.url).searchParams.get("routeIds");
+    return parseRouteIdsParam(routeIdsParam, 20);
 }
 
 async function getStreamSnapshot(routeIds: string[]) {

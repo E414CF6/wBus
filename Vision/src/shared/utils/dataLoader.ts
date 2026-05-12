@@ -4,7 +4,7 @@ import {API_CONFIG} from "@shared/config/env";
 /**
  * Loads static JSON/GeoJSON data.
  * @param fileName The name or relative path inside the `public/data/` directory.
- *                 For example: "routeMap.json" or "polylines/route1.geojson"
+ *                 For example, "routeMap.json" or "polylines/route1.geojson"
  */
 export async function loadStaticData<T>(fileName: string): Promise<T> {
     const isServer = typeof window === "undefined";
