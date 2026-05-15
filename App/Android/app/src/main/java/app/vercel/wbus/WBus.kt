@@ -13,6 +13,6 @@ class WBus : Application() {
             Timber.plant(Timber.DebugTree())
         }
 
-        Timber.d("WBus Application started")
+        Timber.d("Application Started")
     }
 }

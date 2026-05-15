@@ -10,10 +10,6 @@ data class RouteItem(
     val primaryRouteId: String
         get() = routeIds.firstOrNull() ?: ""
 
-    // For display in dialog/spinner
-    val label: String
-        get() = displayName
-
     companion object {
         fun fromRouteMap(routeNumber: String, routeIds: List<String>): RouteItem {
             return RouteItem(

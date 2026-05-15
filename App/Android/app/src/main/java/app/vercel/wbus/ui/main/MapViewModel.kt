@@ -21,6 +21,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Request
 import timber.log.Timber
 import java.io.IOException
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * ViewModel from the main map screen
@@ -192,12 +193,13 @@ class MapViewModel(
                     when (val streamResult = consumeBusStream(routeIds, expectedSelectionVersion)) {
                         is Result.Success -> {
                             if (streamResult.data == StreamEndReason.REMOTE_CLOSED) {
-                                delay(SSE_RECONNECT_DELAY_MS)
+                                delay(SSE_RECONNECT_DELAY_MS.milliseconds)
                             }
                         }
 
                         is Result.Error -> {
                             Timber.w(streamResult.exception, "SSE stream failed, switching to polling fallback")
+
                             val fallbackResult = fetchBusLocations(routeIds)
                             if (expectedSelectionVersion != routeSelectionVersion) return@launch
                             _buses.value = if (fallbackResult is Result.Success) {
@@ -205,7 +207,8 @@ class MapViewModel(
                             } else {
                                 fallbackResult
                             }
-                            delay(ERROR_RETRY_DELAY_MS)
+
+                            delay(ERROR_RETRY_DELAY_MS.milliseconds)
                         }
 
                         is Result.Loading -> Unit
@@ -215,7 +218,7 @@ class MapViewModel(
                 } catch (e: Exception) {
                     Timber.e(e, "Error in bus stream loop")
                     _buses.value = Result.error(e)
-                    delay(ERROR_RETRY_DELAY_MS)  // Wait longer on error
+                    delay(ERROR_RETRY_DELAY_MS.milliseconds)  // Wait longer on error
                 }
             }
         }
@@ -238,7 +241,8 @@ class MapViewModel(
                         IOException("SSE HTTP ${response.code}: ${response.message}")
                     )
                 }
-                val body = response.body ?: return@withContext Result.error(IOException("SSE response body is empty"))
+
+                val body = response.body
                 val source = body.source()
                 var eventName = "message"
                 val dataBuffer = StringBuilder()
@@ -334,8 +338,6 @@ class MapViewModel(
                 directionLookup,
                 poly.upPolyline,
                 poly.downPolyline,
-                poly.turnIndex,
-                poly.isSwapped,
                 previousSegmentIndex = prevBus?.segmentIndex
             )
 
@@ -384,9 +386,7 @@ class MapViewModel(
      * Manually refresh bus data
      */
     fun refresh() {
-        val routeIds = if (activePollingRouteIds.isNotEmpty()) {
-            activePollingRouteIds
-        } else {
+        val routeIds = activePollingRouteIds.ifEmpty {
             _selectedRouteId.value?.let { listOf(it) } ?: emptyList()
         }
         if (routeIds.isNotEmpty()) {

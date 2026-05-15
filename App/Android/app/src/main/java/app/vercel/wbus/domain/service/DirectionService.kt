@@ -111,7 +111,7 @@ object DirectionService {
         val scopedCandidates = routeid?.let { currentRouteId ->
             activeCandidates.filter { it.routeid == currentRouteId }
         } ?: activeCandidates
-        val pool = if (scopedCandidates.isNotEmpty()) scopedCandidates else activeCandidates.ifEmpty { candidates }
+        val pool = scopedCandidates.ifEmpty { activeCandidates.ifEmpty { candidates } }
 
         val exactMatch = pool.find { it.nodeord == nodeord }
 

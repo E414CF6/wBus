@@ -7,14 +7,11 @@ import java.util.*
 object ScheduleUtils {
 
     data class ClosestHourRow(
-        val hour: Int,
-        val minutes: List<String>
+        val hour: Int, val minutes: List<String>
     )
 
     fun findClosestHourRow(
-        hourlyMap: HourlyMap,
-        direction: String,
-        now: Calendar = Calendar.getInstance()
+        hourlyMap: HourlyMap, direction: String, now: Calendar = Calendar.getInstance()
     ): ClosestHourRow? {
         val currentHour = now.get(Calendar.HOUR_OF_DAY)
         val currentMinute = now.get(Calendar.MINUTE)
@@ -24,19 +21,15 @@ object ScheduleUtils {
         var firstRow: ClosestHourRow? = null
         for (hour in sortedHours) {
             val hourKey = hour.toString().padStart(2, '0')
-            val departures = hourlyMap[hourKey]?.get(direction).orEmpty()
-                .mapNotNull { item ->
-                    val minute = item.minute.toIntOrNull() ?: return@mapNotNull null
-                    minute to item.minute
-                }
-                .sortedBy { it.first }
+            val departures = hourlyMap[hourKey]?.get(direction).orEmpty().mapNotNull { item ->
+                val minute = item.minute.toIntOrNull() ?: return@mapNotNull null
+                minute to item.minute
+            }.sortedBy { it.first }
 
             if (departures.isEmpty()) continue
 
             val row = ClosestHourRow(
-                hour = hour,
-                minutes = departures.map { it.second }
-            )
+                hour = hour, minutes = departures.map { it.second })
             if (firstRow == null) firstRow = row
 
             if (hour > currentHour || (hour == currentHour && departures.any { it.first > currentMinute })) {
@@ -54,13 +47,10 @@ object ScheduleUtils {
         val currentMinute = now.get(Calendar.MINUTE)
 
         if (row.hour == currentHour) {
-            val nextCurrentHourMinute = row.minutes
-                .mapNotNull { minuteText ->
-                    val minuteValue = minuteText.toIntOrNull() ?: return@mapNotNull null
-                    minuteValue to minuteText
-                }
-                .firstOrNull { it.first > currentMinute }
-                ?.second
+            val nextCurrentHourMinute = row.minutes.mapNotNull { minuteText ->
+                val minuteValue = minuteText.toIntOrNull() ?: return@mapNotNull null
+                minuteValue to minuteText
+            }.firstOrNull { it.first > currentMinute }?.second
             if (nextCurrentHourMinute != null) {
                 return row.hour to nextCurrentHourMinute
             }

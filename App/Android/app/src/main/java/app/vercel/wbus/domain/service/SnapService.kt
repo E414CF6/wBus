@@ -29,16 +29,13 @@ object SnapService {
         directionLookup: DirectionLookup?,
         upPolyline: List<Coordinate>,
         downPolyline: List<Coordinate>,
-        turnIndex: Int? = null,
-        isSwapped: Boolean = false,
         snapIndexRange: Int = DEFAULT_SNAP_INDEX_RANGE,
         previousSegmentIndex: Int? = null
     ): BusSnapResult {
         val rawPosition = bus.coordinate()
-        val nodeord = bus.nodeord ?: 0
-
+        val nodeOrder = bus.nodeord ?: 0
         val apiDirection = directionLookup?.let {
-            DirectionService.resolveDirection(it, bus.nodeid, nodeord, bus.routeid)
+            DirectionService.resolveDirection(it, bus.nodeid, nodeOrder, bus.routeid)
         }
 
         val defaultResult = BusSnapResult(

@@ -9,7 +9,6 @@ import kotlin.math.*
 object GeoUtils {
 
     private const val EARTH_RADIUS_KM = 6371.0
-    private const val METERS_PER_DEGREE = 111_000.0
 
     /**
      * Calculate the Haversine distance between two points in kilometers
@@ -31,30 +30,6 @@ object GeoUtils {
      */
     fun getHaversineDistanceMeters(p1: Coordinate, p2: Coordinate): Double {
         return getHaversineDistance(p1.latitude, p1.longitude, p2.latitude, p2.longitude) * 1000
-    }
-
-    /**
-     * Calculate approximate distance between two points in meters
-     * Fast approximation suitable for short distances (< 10km)
-     */
-    fun getApproxDistanceMeters(p1: Coordinate, p2: Coordinate): Double {
-        val latRad = Math.toRadians((p1.latitude + p2.latitude) * 0.5)
-        val lngScale = cos(latRad)
-
-        val dLat = p2.latitude - p1.latitude
-        val dLng = (p2.longitude - p1.longitude) * lngScale
-
-        return sqrt(dLat * dLat + dLng * dLng) * METERS_PER_DEGREE
-    }
-
-    /**
-     * Calculate Euclidean distance (simple straight-line distance)
-     * Useful for comparing relative distances without worrying about accuracy
-     */
-    fun getEuclideanDistance(p1: Coordinate, p2: Coordinate): Double {
-        val dx = p1.latitude - p2.latitude
-        val dy = p1.longitude - p2.longitude
-        return sqrt(dx * dx + dy * dy)
     }
 
     /**
