@@ -86,7 +86,7 @@ export default function HomePage() {
     return (<>
         <Splash isVisible={isSplashVisible}/>
         <div
-            className="flex flex-col w-full h-screen min-h-screen overflow-hidden">
+            className="fixed inset-0 flex flex-col w-full h-[100dvh] overflow-hidden">
             <NavBar/>
             <div className="relative flex-1 overflow-hidden">
                 <MapWrapper
