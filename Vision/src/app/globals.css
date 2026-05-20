@@ -23,6 +23,7 @@ body {
     height: 100%;
     width: 100%;
     overflow: hidden;
+    overscroll-behavior: none;
     background: var(--background);
     color: var(--foreground);
     /* Use --font-sans first, then fall back to system fonts */
