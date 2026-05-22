@@ -17,6 +17,8 @@ const CACHE_TTL_SECONDS = 10;
 const STALE_WHILE_REVALIDATE_SECONDS = 60;
 const STALE_IF_ERROR_SECONDS = 300;
 const MEMORY_CACHE_MAX_KEYS = 500;
+const REVALIDATE_COOLDOWN_MS = 1000;
+const REVALIDATE_MAX_BACKOFF_MS = 15000;
 
 let client: RedisClientType | null = null;
 let connecting: Promise<RedisClientType | null> | null = null;
@@ -24,6 +26,7 @@ let hasLoggedMissingRedisUrl = false;
 
 const pendingRequests = new Map<string, Promise<CachedData<unknown>>>();
 const memoryCache = new CacheManager<CachedData<unknown>>(MEMORY_CACHE_MAX_KEYS);
+const revalidateState = new Map<string, { nextAllowedAt: number; failureCount: number }>();
 
 async function getRedisClient(): Promise<RedisClientType | null> {
     if (client?.isOpen) return client;
@@ -163,9 +166,32 @@ async function fetchAndCache<T>(key: string, fetcher: () => Promise<T>, ttlSecon
 }
 
 function triggerBackgroundRevalidation<T>(key: string, fetcher: () => Promise<T>, ttlSeconds: number, redis: RedisClientType | null): void {
-    getOrFetchDeduplicated<T>(key, fetcher, ttlSeconds, redis).catch((err) => {
-        console.error(`[Cache] Background revalidation failed for key=${key}:`, err);
+    const now = Date.now();
+    const currentState = revalidateState.get(key);
+    if (currentState && now < currentState.nextAllowedAt) {
+        return;
+    }
+
+    const cooldownMs = getRevalidateCooldownMs(ttlSeconds);
+    revalidateState.set(key, {
+        nextAllowedAt: now + cooldownMs, failureCount: currentState?.failureCount ?? 0,
     });
+
+    getOrFetchDeduplicated<T>(key, fetcher, ttlSeconds, redis)
+        .then(() => {
+            revalidateState.set(key, {
+                nextAllowedAt: Date.now() + cooldownMs, failureCount: 0,
+            });
+        })
+        .catch((err) => {
+            const previousFailures = revalidateState.get(key)?.failureCount ?? 0;
+            const nextFailures = Math.min(previousFailures + 1, 6);
+            const backoffMs = getRevalidateBackoffMs(ttlSeconds, nextFailures);
+            revalidateState.set(key, {
+                nextAllowedAt: Date.now() + backoffMs, failureCount: nextFailures,
+            });
+            console.error(`[Cache] Background revalidation failed for key=${key}:`, err);
+        });
 }
 
 function withMeta<T>(entry: CachedData<T>, status: CacheStatus, layer: CacheMeta["layer"], now: number, degraded = false): CachedData<T> {
@@ -211,4 +237,14 @@ function selectBestFallback<T>(memoryEntry: CachedData<T> | null, redisEntry: Ca
 
 function getAgeSeconds(entry: CachedData<unknown>, now: number): number {
     return (now - entry.timestamp) / 1000;
+}
+
+function getRevalidateCooldownMs(ttlSeconds: number): number {
+    return Math.min(3000, Math.max(REVALIDATE_COOLDOWN_MS, ttlSeconds * 250));
+}
+
+function getRevalidateBackoffMs(ttlSeconds: number, failureCount: number): number {
+    const baseMs = Math.max(1500, ttlSeconds * 1000);
+    const backoffMs = baseMs * (2 ** Math.max(0, failureCount - 1));
+    return Math.min(REVALIDATE_MAX_BACKOFF_MS, backoffMs);
 }

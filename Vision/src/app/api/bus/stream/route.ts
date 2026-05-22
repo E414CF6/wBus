@@ -1,6 +1,7 @@
 import {API_CONFIG} from "@shared/config/env";
 import {getCachedOrFetch} from "@shared/redis/client";
 import {fetchBusLocations, type RawBusLocation} from "@shared/redis/publicApi";
+import type {CacheMeta} from "@shared/redis/types";
 import {parseRouteIdsParam} from "@shared/utils/routeIds";
 import {NextResponse} from "next/server";
 
@@ -9,13 +10,14 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const STREAM_INTERVAL_MS = Math.max(1000, API_CONFIG.LIVE.POLLING_INTERVAL_MS);
-const ROUTE_TTL_SECONDS = 3;
-const STREAM_SNAPSHOT_TTL_SECONDS = 2;
+const ROUTE_TTL_SECONDS = Math.max(3, Math.ceil(STREAM_INTERVAL_MS / 1000));
+const STREAM_SNAPSHOT_TTL_SECONDS = Math.max(1, Math.ceil(STREAM_INTERVAL_MS / 1000) - 1);
 const VERCEL_MAX_DURATION_MS = 60000;
 const STREAM_SHUTDOWN_BUFFER_MS = 5000;
 const STREAM_LIFETIME_MS = Math.max(10000, VERCEL_MAX_DURATION_MS - STREAM_SHUTDOWN_BUFFER_MS);
 const KEEP_ALIVE_INTERVAL_MS = 10000;
 const CLIENT_RETRY_MS = 1000;
+const SNAPSHOT_FORCE_INTERVAL_MS = Math.max(8000, STREAM_INTERVAL_MS * 2);
 const SSE_HEADERS = {
     "Content-Type": "text/event-stream; charset=utf-8",
     "Cache-Control": "no-cache, no-transform",
@@ -34,12 +36,92 @@ function parseRouteIds(request: Request): string[] {
     return parseRouteIdsParam(routeIdsParam, 20);
 }
 
-async function getStreamSnapshot(routeIds: string[]) {
+interface StreamSnapshotPartial {
+    failed: number;
+    total: number;
+}
+
+interface StreamSnapshotData {
+    items: RawBusLocation[];
+    partial?: StreamSnapshotPartial;
+}
+
+interface StreamSnapshotPayload {
+    routeIds: string[];
+    data: RawBusLocation[];
+    timestamp: number;
+    meta?: CacheMeta;
+    partial?: StreamSnapshotPartial;
+}
+
+async function fetchStreamSnapshot(routeIds: string[]): Promise<StreamSnapshotData> {
+    const results = await Promise.allSettled(routeIds.map(async (routeId) => {
+        const entry = await getCachedOrFetch<RawBusLocation[]>(`bus:${routeId}`, () => fetchBusLocations(routeId), ROUTE_TTL_SECONDS);
+        return {routeId, entry};
+    }));
+
+    const items: RawBusLocation[] = [];
+    let failedCount = 0;
+
+    results.forEach((result, index) => {
+        const routeId = routeIds[index];
+        if (result.status === "fulfilled") {
+            items.push(...result.value.entry.data);
+        } else {
+            failedCount += 1;
+            console.warn(`[SSE /api/bus/stream] Failed to fetch route snapshot for ${routeId}`, result.reason);
+        }
+    });
+
+    if (items.length === 0 && failedCount > 0) {
+        throw new Error("[SSE /api/bus/stream] All route snapshots failed");
+    }
+
+    return {
+        items, partial: failedCount > 0 ? {failed: failedCount, total: routeIds.length} : undefined,
+    };
+}
+
+async function getStreamSnapshot(routeIds: string[]): Promise<StreamSnapshotPayload> {
     const batchKey = `bus:stream:${routeIds.join(",")}`;
-    return getCachedOrFetch<RawBusLocation[]>(batchKey, async () => {
-        const entries = await Promise.all(routeIds.map((routeId) => getCachedOrFetch<RawBusLocation[]>(`bus:${routeId}`, () => fetchBusLocations(routeId), ROUTE_TTL_SECONDS,)));
-        return entries.flatMap((entry) => entry.data);
-    }, STREAM_SNAPSHOT_TTL_SECONDS,);
+    const snapshot = await getCachedOrFetch<StreamSnapshotData>(batchKey, () => fetchStreamSnapshot(routeIds), STREAM_SNAPSHOT_TTL_SECONDS);
+    const meta = snapshot.meta ? {
+        ...snapshot.meta, degraded: snapshot.meta.degraded || Boolean(snapshot.data.partial),
+    } : undefined;
+
+    return {
+        routeIds, data: snapshot.data.items, timestamp: snapshot.timestamp, meta, partial: snapshot.data.partial,
+    };
+}
+
+function hashBusLocations(locations: RawBusLocation[]): string {
+    if (locations.length === 0) return "empty";
+    const sorted = [...locations].sort((a, b) => {
+        const routeA = a.routeid ?? a.routenm;
+        const routeB = b.routeid ?? b.routenm;
+        if (routeA !== routeB) return routeA.localeCompare(routeB);
+        return a.vehicleno.localeCompare(b.vehicleno);
+    });
+
+    let hash = 2166136261;
+    const update = (value: string) => {
+        for (let i = 0; i < value.length; i += 1) {
+            hash ^= value.charCodeAt(i);
+            hash = Math.imul(hash, 16777619);
+        }
+    };
+
+    for (const bus of sorted) {
+        update(bus.routeid ?? bus.routenm);
+        update(bus.vehicleno);
+        update(String(Math.round(bus.gpslati * 1e5)));
+        update(String(Math.round(bus.gpslong * 1e5)));
+        if (typeof bus.nodeord === "number") {
+            update(String(bus.nodeord));
+        }
+    }
+
+    return `${(hash >>> 0).toString(36)}:${sorted.length}`;
 }
 
 function encodeSseEvent(event: string, payload: unknown): Uint8Array {
@@ -62,6 +144,8 @@ export async function GET(request: Request) {
             let eventSequence = 0;
             let keepAliveTimer: ReturnType<typeof setInterval> | null = null;
             let streamLifetimeTimer: ReturnType<typeof setTimeout> | null = null;
+            let lastSnapshotHash: string | null = null;
+            let lastSnapshotSentAt = 0;
 
             const handleAbort = () => close();
 
@@ -124,9 +208,21 @@ export async function GET(request: Request) {
                 while (!closed && !request.signal.aborted) {
                     try {
                         const snapshot = await getStreamSnapshot(routeIds);
-                        send("snapshot", {
-                            routeIds, data: snapshot.data, timestamp: snapshot.timestamp, meta: snapshot.meta,
-                        });
+                        const now = Date.now();
+                        const nextHash = hashBusLocations(snapshot.data);
+                        const shouldSend = !lastSnapshotHash || nextHash !== lastSnapshotHash || (now - lastSnapshotSentAt) >= SNAPSHOT_FORCE_INTERVAL_MS;
+
+                        if (shouldSend) {
+                            lastSnapshotHash = nextHash;
+                            lastSnapshotSentAt = now;
+                            send("snapshot", {
+                                routeIds,
+                                data: snapshot.data,
+                                timestamp: snapshot.timestamp,
+                                meta: snapshot.meta,
+                                partial: snapshot.partial,
+                            });
+                        }
                     } catch (err) {
                         console.error("[SSE /api/bus/stream] snapshot fetch failed", err);
                         send("error", {message: "Failed to fetch live bus snapshot"});
