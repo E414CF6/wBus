@@ -1,6 +1,6 @@
 import type {BusDataError, BusItem} from "@entities/bus/types";
 import {API_CONFIG} from "@shared/config/env";
-import type {CachedData} from "@shared/redis/types";
+import type {CachedData, CacheMeta} from "@shared/redis/types";
 import {buildRouteIdsKey} from "@shared/utils/routeIds";
 import {useMemo, useSyncExternalStore} from "react";
 
@@ -23,6 +23,10 @@ interface BusStreamSnapshot {
     routeIds: string[];
     data: BusItem[];
     timestamp: number;
+    meta?: CacheMeta;
+    partial?: {
+        failed: number; total: number;
+    };
 }
 
 interface BusStreamReady {
@@ -117,10 +121,13 @@ class BusLocationStore {
         });
     }
 
-    private applyData(nextData: BusItem[]) {
+    private applyData(nextData: BusItem[], options?: { degraded?: boolean }) {
         this.dataLength = nextData.length;
+        const degraded = options?.degraded ?? false;
         this.setState({
-            data: nextData, error: nextData.length === 0 ? "ERR:NONE_RUNNING" : null, hasFetched: true,
+            data: nextData,
+            error: nextData.length === 0 ? (degraded ? "ERR:NETWORK" : "ERR:NONE_RUNNING") : null,
+            hasFetched: true,
         });
     }
 
@@ -240,8 +247,9 @@ class BusLocationStore {
                 console.error("[useBusLocationData] Invalid snapshot payload", payload);
                 return;
             }
+            const degraded = Boolean(payload.meta?.degraded || payload.partial);
             this.clearFallbackPolling();
-            this.applyData(payload.data);
+            this.applyData(payload.data, {degraded});
         } catch (err) {
             console.error("[useBusLocationData] Failed to parse SSE snapshot", err);
         }

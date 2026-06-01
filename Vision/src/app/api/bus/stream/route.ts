@@ -12,6 +12,12 @@ export const maxDuration = 60;
 const STREAM_INTERVAL_MS = Math.max(1000, API_CONFIG.LIVE.POLLING_INTERVAL_MS);
 const ROUTE_TTL_SECONDS = Math.max(3, Math.ceil(STREAM_INTERVAL_MS / 1000));
 const STREAM_SNAPSHOT_TTL_SECONDS = Math.max(1, Math.ceil(STREAM_INTERVAL_MS / 1000) - 1);
+const LIVE_CACHE_OPTIONS = {
+    staleWhileRevalidateSeconds: 0, staleIfErrorSeconds: 10,
+};
+const STREAM_CACHE_OPTIONS = {
+    staleWhileRevalidateSeconds: 0, staleIfErrorSeconds: 5,
+};
 const VERCEL_MAX_DURATION_MS = 60000;
 const STREAM_SHUTDOWN_BUFFER_MS = 5000;
 const STREAM_LIFETIME_MS = Math.max(10000, VERCEL_MAX_DURATION_MS - STREAM_SHUTDOWN_BUFFER_MS);
@@ -20,7 +26,7 @@ const CLIENT_RETRY_MS = 1000;
 const SNAPSHOT_FORCE_INTERVAL_MS = Math.max(8000, STREAM_INTERVAL_MS * 2);
 const SSE_HEADERS = {
     "Content-Type": "text/event-stream; charset=utf-8",
-    "Cache-Control": "no-cache, no-transform",
+    "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, no-transform",
     "Connection": "keep-alive",
     "X-Accel-Buffering": "no",
 };
@@ -52,7 +58,9 @@ interface StreamSnapshotPayload {
 
 async function fetchStreamSnapshot(routeIds: string[]): Promise<StreamSnapshotData> {
     const results = await Promise.allSettled(routeIds.map(async (routeId) => {
-        const entry = await getCachedOrFetch<RawBusLocation[]>(`bus:${routeId}`, () => fetchBusLocations(routeId), ROUTE_TTL_SECONDS);
+        const entry = await getCachedOrFetch<RawBusLocation[]>(`bus:${routeId}`, () => fetchBusLocations(routeId), {
+            ttlSeconds: ROUTE_TTL_SECONDS, ...LIVE_CACHE_OPTIONS,
+        });
         return {routeId, entry};
     }));
 
@@ -80,7 +88,9 @@ async function fetchStreamSnapshot(routeIds: string[]): Promise<StreamSnapshotDa
 
 async function getStreamSnapshot(routeIds: string[]): Promise<StreamSnapshotPayload> {
     const batchKey = `bus:stream:${routeIds.join(",")}`;
-    const snapshot = await getCachedOrFetch<StreamSnapshotData>(batchKey, () => fetchStreamSnapshot(routeIds), STREAM_SNAPSHOT_TTL_SECONDS);
+    const snapshot = await getCachedOrFetch<StreamSnapshotData>(batchKey, () => fetchStreamSnapshot(routeIds), {
+        ttlSeconds: STREAM_SNAPSHOT_TTL_SECONDS, ...STREAM_CACHE_OPTIONS,
+    });
     const meta = snapshot.meta ? {
         ...snapshot.meta, degraded: snapshot.meta.degraded || Boolean(snapshot.data.partial),
     } : undefined;
@@ -120,16 +130,18 @@ function hashBusLocations(locations: RawBusLocation[]): string {
     return `${(hash >>> 0).toString(36)}:${sorted.length}`;
 }
 
-function encodeSseEvent(event: string, payload: unknown): Uint8Array {
-    return encoder.encode(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+function encodeSseEvent(event: string, payload: unknown, id?: number | string): Uint8Array {
+    const idLine = id !== undefined ? `id: ${id}\n` : "";
+    return encoder.encode(`${idLine}event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
 }
 
-function encodeSseEventWithRetry(event: string, payload: unknown, retryMs: number): Uint8Array {
-    return encoder.encode(`retry: ${retryMs}\nevent: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+function encodeSseEventWithRetry(event: string, payload: unknown, retryMs: number, id?: number | string): Uint8Array {
+    const idLine = id !== undefined ? `id: ${id}\n` : "";
+    return encoder.encode(`retry: ${retryMs}\n${idLine}event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
 }
 
 interface StreamClient {
-    send: (event: string, payload: unknown) => void;
+    send: (event: string, payload: unknown, id?: number | string) => void;
     close: () => void;
 }
 
@@ -169,9 +181,9 @@ function getStreamGroup(routeIds: string[]): StreamGroup {
     return group;
 }
 
-function broadcast(group: StreamGroup, event: string, payload: unknown): void {
+function broadcast(group: StreamGroup, event: string, payload: unknown, id?: number | string): void {
     for (const client of Array.from(group.clients)) {
-        client.send(event, payload);
+        client.send(event, payload, id);
     }
 }
 
@@ -219,7 +231,7 @@ async function pollStreamGroup(group: StreamGroup): Promise<void> {
                 timestamp: snapshot.timestamp,
                 meta: snapshot.meta,
                 partial: snapshot.partial,
-            });
+            }, snapshot.timestamp);
         }
     } catch (err) {
         console.error("[SSE /api/bus/stream] snapshot fetch failed", err);
@@ -246,6 +258,10 @@ export async function GET(request: Request) {
         return NextResponse.json({error: "Missing query parameter: routeIds"}, {status: 400});
     }
 
+    const lastEventId = request.headers.get("last-event-id");
+    let abortHandler: (() => void) | null = null;
+    let closeHandler: (() => void) | null = null;
+
     const stream = new ReadableStream<Uint8Array>({
         start(controller) {
             let closed = false;
@@ -255,6 +271,7 @@ export async function GET(request: Request) {
             let client: StreamClient | null = null;
 
             const handleAbort = () => close();
+            abortHandler = handleAbort;
 
             const clearTimers = () => {
                 if (streamLifetimeTimer) {
@@ -280,12 +297,13 @@ export async function GET(request: Request) {
                     console.warn("[SSE /api/bus/stream] controller.close failed", err);
                 }
             };
+            closeHandler = close;
 
-            const send = (event: string, payload: unknown) => {
+            const send = (event: string, payload: unknown, id?: number | string) => {
                 if (closed) return;
                 try {
                     eventSequence += 1;
-                    const encoded = eventSequence === 1 ? encodeSseEventWithRetry(event, payload, CLIENT_RETRY_MS) : encodeSseEvent(event, payload);
+                    const encoded = eventSequence === 1 ? encodeSseEventWithRetry(event, payload, CLIENT_RETRY_MS, id) : encodeSseEvent(event, payload, id);
                     controller.enqueue(encoded);
                 } catch (err) {
                     console.warn("[SSE /api/bus/stream] enqueue failed", err);
@@ -303,14 +321,14 @@ export async function GET(request: Request) {
                 routeIds, intervalMs: STREAM_INTERVAL_MS, reconnectHintMs: STREAM_LIFETIME_MS, retryMs: CLIENT_RETRY_MS,
             });
 
-            if (group.lastSnapshot) {
+            if (group.lastSnapshot && String(group.lastSnapshot.timestamp) !== lastEventId) {
                 send("snapshot", {
                     routeIds: group.lastSnapshot.routeIds,
                     data: group.lastSnapshot.data,
                     timestamp: group.lastSnapshot.timestamp,
                     meta: group.lastSnapshot.meta,
                     partial: group.lastSnapshot.partial,
-                });
+                }, group.lastSnapshot.timestamp);
             }
 
             streamLifetimeTimer = setTimeout(() => {
@@ -319,6 +337,13 @@ export async function GET(request: Request) {
                 });
                 close();
             }, STREAM_LIFETIME_MS);
+        }, cancel() {
+            if (abortHandler) {
+                request.signal.removeEventListener("abort", abortHandler);
+            }
+            if (closeHandler) {
+                closeHandler();
+            }
         },
     });
 

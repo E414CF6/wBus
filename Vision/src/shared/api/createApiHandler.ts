@@ -1,4 +1,5 @@
-import {getCachedOrFetch} from "@shared/redis/client";
+import {buildCacheControl} from "@shared/cache/cachePolicy";
+import {type CacheOptions, getCachedOrFetch} from "@shared/redis/client";
 import {NextResponse} from "next/server";
 
 export interface ApiHandlerConfig<T> {
@@ -8,6 +9,7 @@ export interface ApiHandlerConfig<T> {
     ttl: number;
     errorMessage: string;
     cacheControl?: string;
+    cacheOptions?: Omit<CacheOptions, "ttlSeconds">;
     loggerPrefix: string;
 }
 
@@ -25,12 +27,17 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
         }
 
         try {
-            const result = await getCachedOrFetch<T>(config.cacheKey(id), () => config.fetcher(id), config.ttl);
+            const cacheOptions: CacheOptions = {
+                ttlSeconds: config.ttl, ...config.cacheOptions,
+            };
+            const result = await getCachedOrFetch<T>(config.cacheKey(id), () => config.fetcher(id), cacheOptions);
 
             const headers: Record<string, string> = {};
-            if (config.cacheControl) {
-                headers["Cache-Control"] = config.cacheControl;
-            }
+            headers["Cache-Control"] = config.cacheControl ?? buildCacheControl({
+                ttlSeconds: cacheOptions.ttlSeconds ?? config.ttl,
+                staleWhileRevalidateSeconds: cacheOptions.staleWhileRevalidateSeconds,
+                staleIfErrorSeconds: cacheOptions.staleIfErrorSeconds,
+            });
             if (result.meta) {
                 headers["X-Cache-Status"] = result.meta.status;
                 headers["X-Cache-Layer"] = result.meta.layer;
