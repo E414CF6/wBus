@@ -41,5 +41,8 @@
     "tailwindcss": "^4.2.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.33.1"
+  },
+  "allowScripts": {
+    "sharp@0.34.5": true
   }
 }
