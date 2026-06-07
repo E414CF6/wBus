@@ -147,106 +147,14 @@ function encodeSseEventWithRetry(event: string, payload: unknown, retryMs: numbe
     return encoder.encode(`retry: ${retryMs}\n${idLine}event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
 }
 
-interface StreamClient {
-    send: (event: string, payload: unknown, id?: number | string) => void;
-    sendRaw: (encoded: Uint8Array) => void;
-    close: () => void;
-}
-
-interface StreamGroup {
-    key: string;
-    routeIds: string[];
-    clients: Set<StreamClient>;
-    poller: ReturnType<typeof setInterval> | null;
-    keepAliveTimer: ReturnType<typeof setInterval> | null;
-    inFlight: boolean;
-    lastSnapshot: StreamSnapshotPayload | null;
-    lastSnapshotEventId: string | null;
-    lastSnapshotSentAt: number;
-}
-
-const streamGroups = new Map<string, StreamGroup>();
-
-function getStreamGroup(routeIds: string[]): StreamGroup {
-    const key = routeIds.join(",");
-    const existing = streamGroups.get(key);
-    if (existing) return existing;
-
-    const group: StreamGroup = {
-        key,
-        routeIds,
-        clients: new Set(),
-        poller: null,
-        keepAliveTimer: null,
-        inFlight: false,
-        lastSnapshot: null,
-        lastSnapshotEventId: null,
-        lastSnapshotSentAt: 0,
-    };
-    streamGroups.set(key, group);
-    return group;
-}
-
-function broadcast(group: StreamGroup, event: string, payload: unknown, id?: number | string): void {
-    const encoded = encodeSseEvent(event, payload, id);
-    for (const client of Array.from(group.clients)) {
-        client.sendRaw(encoded);
-    }
-}
-
-function stopStreamGroup(group: StreamGroup): void {
-    if (group.keepAliveTimer) {
-        clearInterval(group.keepAliveTimer);
-        group.keepAliveTimer = null;
-    }
-    if (group.poller) {
-        clearInterval(group.poller);
-        group.poller = null;
-    }
-    streamGroups.delete(group.key);
-}
-
-async function pollStreamGroup(group: StreamGroup): Promise<void> {
-    if (group.inFlight || group.clients.size === 0) return;
-    group.inFlight = true;
-    try {
-        const snapshot = await getStreamSnapshot(group.routeIds);
-        const now = Date.now();
-        const nextEventId = buildSnapshotEventId(snapshot);
-        const isNewSnapshot = nextEventId !== group.lastSnapshotEventId;
-        const shouldForce = (now - group.lastSnapshotSentAt) >= SNAPSHOT_FORCE_INTERVAL_MS;
-
-        group.lastSnapshot = snapshot;
-        group.lastSnapshotEventId = nextEventId;
-
-        if (shouldForce || isNewSnapshot) {
-            group.lastSnapshotSentAt = now;
-            broadcast(group, "snapshot", {
-                routeIds: snapshot.routeIds,
-                data: snapshot.data,
-                timestamp: snapshot.timestamp,
-                meta: snapshot.meta,
-                partial: snapshot.partial,
-            }, nextEventId);
-        }
-    } catch (err) {
-        console.error("[SSE /api/bus/stream] snapshot fetch failed", err);
-        broadcast(group, "error", {message: "Failed to fetch live bus snapshot"});
-    } finally {
-        group.inFlight = false;
-    }
-}
-
-function startStreamGroup(group: StreamGroup): void {
-    if (group.poller || group.clients.size === 0) return;
-    group.keepAliveTimer = setInterval(() => {
-        broadcast(group, "ping", {timestamp: Date.now()});
-    }, KEEP_ALIVE_INTERVAL_MS);
-    group.poller = setInterval(() => {
-        void pollStreamGroup(group);
-    }, STREAM_INTERVAL_MS);
-    void pollStreamGroup(group);
-}
+const delay = (ms: number, signal: AbortSignal) => new Promise<void>((resolve, reject) => {
+    if (signal.aborted) return reject(new Error("aborted"));
+    const timer = setTimeout(resolve, ms);
+    signal.addEventListener("abort", () => {
+        clearTimeout(timer);
+        reject(new Error("aborted"));
+    });
+});
 
 export async function GET(request: Request) {
     const routeIds = parseRouteIds(request);
@@ -255,110 +163,92 @@ export async function GET(request: Request) {
     }
 
     const lastEventId = request.headers.get("last-event-id");
-    let abortHandler: (() => void) | null = null;
-    let closeHandler: (() => void) | null = null;
+    const ac = new AbortController();
+    const signal = ac.signal;
+    request.signal.addEventListener("abort", () => ac.abort());
 
     const stream = new ReadableStream<Uint8Array>({
-        start(controller) {
-            let closed = false;
+        async start(controller) {
             let eventSequence = 0;
+            let lastSnapshotEventId: string | null = lastEventId;
+            let lastSnapshotSentAt = 0;
             let streamLifetimeTimer: ReturnType<typeof setTimeout> | null = null;
-            const group = getStreamGroup(routeIds);
-            let client: StreamClient | null = null;
+            let keepAliveTimer: ReturnType<typeof setInterval> | null = null;
 
-            const handleAbort = () => close();
-            abortHandler = handleAbort;
-
-            const clearTimers = () => {
-                if (streamLifetimeTimer) {
-                    clearTimeout(streamLifetimeTimer);
-                    streamLifetimeTimer = null;
-                }
-            };
-
-            const close = () => {
-                if (closed) return;
-                closed = true;
-                clearTimers();
-                request.signal.removeEventListener("abort", handleAbort);
-                if (client) {
-                    group.clients.delete(client);
-                    if (group.clients.size === 0) {
-                        stopStreamGroup(group);
-                    }
-                }
+            const closeStream = () => {
+                ac.abort();
+                if (streamLifetimeTimer) clearTimeout(streamLifetimeTimer);
+                if (keepAliveTimer) clearInterval(keepAliveTimer);
                 try {
                     controller.close();
-                } catch (err) {
-                    console.warn("[SSE /api/bus/stream] controller.close failed", err);
+                } catch {
+                    // Ignore errors if already closed
                 }
             };
-            closeHandler = close;
 
             const send = (event: string, payload: unknown, id?: number | string) => {
-                if (closed) return;
-                if (request.signal.aborted) {
-                    close();
-                    return;
-                }
+                if (signal.aborted) return;
                 try {
                     eventSequence += 1;
                     const encoded = eventSequence === 1 ? encodeSseEventWithRetry(event, payload, CLIENT_RETRY_MS, id) : encodeSseEvent(event, payload, id);
                     controller.enqueue(encoded);
                 } catch (err) {
                     console.warn("[SSE /api/bus/stream] enqueue failed", err);
-                    close();
+                    closeStream();
                 }
             };
 
-            const sendRaw = (encoded: Uint8Array) => {
-                if (closed) return;
-                if (request.signal.aborted) {
-                    close();
-                    return;
-                }
-                try {
-                    eventSequence += 1;
-                    controller.enqueue(encoded);
-                } catch (err) {
-                    console.warn("[SSE /api/bus/stream] enqueue failed", err);
-                    close();
-                }
-            };
+            streamLifetimeTimer = setTimeout(() => {
+                send("handoff", {reason: "max_duration", reconnectAfterMs: CLIENT_RETRY_MS});
+                closeStream();
+            }, STREAM_LIFETIME_MS);
 
-            request.signal.addEventListener("abort", handleAbort);
-
-            client = {send, sendRaw, close};
-            group.clients.add(client);
-            startStreamGroup(group);
+            keepAliveTimer = setInterval(() => {
+                send("ping", {timestamp: Date.now()});
+            }, KEEP_ALIVE_INTERVAL_MS);
 
             send("ready", {
                 routeIds, intervalMs: STREAM_INTERVAL_MS, reconnectHintMs: STREAM_LIFETIME_MS, retryMs: CLIENT_RETRY_MS,
             });
 
-            if (group.lastSnapshot && group.lastSnapshotEventId !== lastEventId) {
-                send("snapshot", {
-                    routeIds: group.lastSnapshot.routeIds,
-                    data: group.lastSnapshot.data,
-                    timestamp: group.lastSnapshot.timestamp,
-                    meta: group.lastSnapshot.meta,
-                    partial: group.lastSnapshot.partial,
-                }, group.lastSnapshotEventId ?? undefined);
-            }
+            // Polling Loop
+            try {
+                while (!signal.aborted) {
+                    try {
+                        const snapshot = await getStreamSnapshot(routeIds);
+                        const now = Date.now();
+                        const nextEventId = buildSnapshotEventId(snapshot);
+                        const isNewSnapshot = nextEventId !== lastSnapshotEventId;
+                        const shouldForce = (now - lastSnapshotSentAt) >= SNAPSHOT_FORCE_INTERVAL_MS;
 
-            streamLifetimeTimer = setTimeout(() => {
-                send("handoff", {
-                    reason: "max_duration", reconnectAfterMs: CLIENT_RETRY_MS,
-                });
-                close();
-            }, STREAM_LIFETIME_MS);
+                        if (shouldForce || isNewSnapshot) {
+                            lastSnapshotSentAt = now;
+                            lastSnapshotEventId = nextEventId;
+                            send("snapshot", {
+                                routeIds: snapshot.routeIds,
+                                data: snapshot.data,
+                                timestamp: snapshot.timestamp,
+                                meta: snapshot.meta,
+                                partial: snapshot.partial,
+                            }, nextEventId);
+                        }
+                    } catch (err) {
+                        console.error("[SSE /api/bus/stream] snapshot fetch failed", err);
+                        send("error", {message: "Failed to fetch live bus snapshot"});
+                    }
+
+                    await delay(STREAM_INTERVAL_MS, signal);
+                }
+            } catch (err) {
+                // abort error expected when stream closes
+                if (err instanceof Error && err.message !== "aborted") {
+                    console.error("[SSE /api/bus/stream] loop error:", err);
+                }
+            } finally {
+                closeStream();
+            }
         }, cancel() {
-            if (abortHandler) {
-                request.signal.removeEventListener("abort", abortHandler);
-            }
-            if (closeHandler) {
-                closeHandler();
-            }
+            ac.abort();
         },
     });
 

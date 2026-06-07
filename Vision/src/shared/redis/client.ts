@@ -46,11 +46,22 @@ async function getRedisClient(): Promise<RedisClientType | null> {
 
         const newClient = createClient({
             url, socket: {
-                keepAlive: true, reconnectStrategy: (retries) => Math.min(retries * 50, 500),
+                keepAlive: true, connectTimeout: 5000, // Important for serverless
+                reconnectStrategy: (retries) => {
+                    if (retries > 10) {
+                        return new Error("Max Redis retries reached");
+                    }
+                    return Math.min(retries * 50, 500);
+                },
             }
         });
+
         newClient.on("error", (err) => {
             console.error("[Redis] Connection error:", err);
+            // If the socket dies, we want the next request to attempt a fresh connection
+            if (!newClient.isOpen && client === newClient) {
+                client = null;
+            }
         });
 
         try {
