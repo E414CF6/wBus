@@ -130,6 +130,13 @@ function hashBusLocations(locations: RawBusLocation[]): string {
     return `${(hash >>> 0).toString(36)}:${sorted.length}`;
 }
 
+function buildSnapshotEventId(snapshot: StreamSnapshotPayload): string {
+    const dataHash = hashBusLocations(snapshot.data);
+    const partialHash = snapshot.partial ? `${snapshot.partial.failed}/${snapshot.partial.total}` : "none";
+    const degradedHash = snapshot.meta?.degraded ? "degraded" : "fresh";
+    return `${dataHash}:${partialHash}:${degradedHash}`;
+}
+
 function encodeSseEvent(event: string, payload: unknown, id?: number | string): Uint8Array {
     const idLine = id !== undefined ? `id: ${id}\n` : "";
     return encoder.encode(`${idLine}event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
@@ -142,6 +149,7 @@ function encodeSseEventWithRetry(event: string, payload: unknown, retryMs: numbe
 
 interface StreamClient {
     send: (event: string, payload: unknown, id?: number | string) => void;
+    sendRaw: (encoded: Uint8Array) => void;
     close: () => void;
 }
 
@@ -153,8 +161,7 @@ interface StreamGroup {
     keepAliveTimer: ReturnType<typeof setInterval> | null;
     inFlight: boolean;
     lastSnapshot: StreamSnapshotPayload | null;
-    lastSnapshotTimestamp: number | null;
-    lastSnapshotHash: string | null;
+    lastSnapshotEventId: string | null;
     lastSnapshotSentAt: number;
 }
 
@@ -173,8 +180,7 @@ function getStreamGroup(routeIds: string[]): StreamGroup {
         keepAliveTimer: null,
         inFlight: false,
         lastSnapshot: null,
-        lastSnapshotTimestamp: null,
-        lastSnapshotHash: null,
+        lastSnapshotEventId: null,
         lastSnapshotSentAt: 0,
     };
     streamGroups.set(key, group);
@@ -182,8 +188,9 @@ function getStreamGroup(routeIds: string[]): StreamGroup {
 }
 
 function broadcast(group: StreamGroup, event: string, payload: unknown, id?: number | string): void {
+    const encoded = encodeSseEvent(event, payload, id);
     for (const client of Array.from(group.clients)) {
-        client.send(event, payload, id);
+        client.sendRaw(encoded);
     }
 }
 
@@ -205,25 +212,14 @@ async function pollStreamGroup(group: StreamGroup): Promise<void> {
     try {
         const snapshot = await getStreamSnapshot(group.routeIds);
         const now = Date.now();
-        const isNewSnapshot = snapshot.timestamp !== group.lastSnapshotTimestamp;
+        const nextEventId = buildSnapshotEventId(snapshot);
+        const isNewSnapshot = nextEventId !== group.lastSnapshotEventId;
         const shouldForce = (now - group.lastSnapshotSentAt) >= SNAPSHOT_FORCE_INTERVAL_MS;
 
         group.lastSnapshot = snapshot;
-        group.lastSnapshotTimestamp = snapshot.timestamp;
+        group.lastSnapshotEventId = nextEventId;
 
-        let shouldSend = shouldForce;
-
-        if (isNewSnapshot) {
-            const nextHash = hashBusLocations(snapshot.data);
-            if (nextHash !== group.lastSnapshotHash || shouldForce) {
-                group.lastSnapshotHash = nextHash;
-                shouldSend = true;
-            }
-        } else if (shouldForce && group.lastSnapshotHash === null) {
-            group.lastSnapshotHash = hashBusLocations(snapshot.data);
-        }
-
-        if (shouldSend) {
+        if (shouldForce || isNewSnapshot) {
             group.lastSnapshotSentAt = now;
             broadcast(group, "snapshot", {
                 routeIds: snapshot.routeIds,
@@ -231,7 +227,7 @@ async function pollStreamGroup(group: StreamGroup): Promise<void> {
                 timestamp: snapshot.timestamp,
                 meta: snapshot.meta,
                 partial: snapshot.partial,
-            }, snapshot.timestamp);
+            }, nextEventId);
         }
     } catch (err) {
         console.error("[SSE /api/bus/stream] snapshot fetch failed", err);
@@ -301,6 +297,10 @@ export async function GET(request: Request) {
 
             const send = (event: string, payload: unknown, id?: number | string) => {
                 if (closed) return;
+                if (request.signal.aborted) {
+                    close();
+                    return;
+                }
                 try {
                     eventSequence += 1;
                     const encoded = eventSequence === 1 ? encodeSseEventWithRetry(event, payload, CLIENT_RETRY_MS, id) : encodeSseEvent(event, payload, id);
@@ -311,9 +311,24 @@ export async function GET(request: Request) {
                 }
             };
 
+            const sendRaw = (encoded: Uint8Array) => {
+                if (closed) return;
+                if (request.signal.aborted) {
+                    close();
+                    return;
+                }
+                try {
+                    eventSequence += 1;
+                    controller.enqueue(encoded);
+                } catch (err) {
+                    console.warn("[SSE /api/bus/stream] enqueue failed", err);
+                    close();
+                }
+            };
+
             request.signal.addEventListener("abort", handleAbort);
 
-            client = {send, close};
+            client = {send, sendRaw, close};
             group.clients.add(client);
             startStreamGroup(group);
 
@@ -321,14 +336,14 @@ export async function GET(request: Request) {
                 routeIds, intervalMs: STREAM_INTERVAL_MS, reconnectHintMs: STREAM_LIFETIME_MS, retryMs: CLIENT_RETRY_MS,
             });
 
-            if (group.lastSnapshot && String(group.lastSnapshot.timestamp) !== lastEventId) {
+            if (group.lastSnapshot && group.lastSnapshotEventId !== lastEventId) {
                 send("snapshot", {
                     routeIds: group.lastSnapshot.routeIds,
                     data: group.lastSnapshot.data,
                     timestamp: group.lastSnapshot.timestamp,
                     meta: group.lastSnapshot.meta,
                     partial: group.lastSnapshot.partial,
-                }, group.lastSnapshot.timestamp);
+                }, group.lastSnapshotEventId ?? undefined);
             }
 
             streamLifetimeTimer = setTimeout(() => {
