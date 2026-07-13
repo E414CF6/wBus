@@ -28,13 +28,13 @@ export const BusListItem = React.memo(({bus, routeName, getDirection, onClick}: 
     return (<li>
         <button
             type="button"
-            className="flex w-full justify-between items-center py-3.5 px-4 cursor-pointer bg-transparent hover:bg-gray-50/80 dark:hover:bg-white/4 transition-all duration-200 rounded-[20px] group active:scale-[0.98] text-left border border-transparent hover:border-black/4 dark:hover:border-white/4"
+            className="flex w-full justify-between items-center py-3.5 px-4 cursor-pointer bg-transparent hover:bg-black/[0.02] dark:hover:bg-white/[0.04] transition-all duration-200 rounded-[20px] group active:scale-[0.98] text-left border border-transparent hover:border-black/[0.04] dark:hover:border-white/[0.06]"
             onClick={() => onClick(bus.gpslati, bus.gpslong)}
             aria-label={`${bus.vehicleno} ${UI_TEXT.BUS_ITEM.CURRENT_LOC} ${stopName}`}
         >
             <div className="flex flex-col gap-1.5 shrink-0 min-w-fit mr-4">
                     <span
-                        className="font-extrabold text-[17px] text-gray-900 dark:text-gray-100 transition-colors whitespace-nowrap leading-none tracking-tight">
+                        className="font-extrabold text-[17px] text-gray-900 dark:text-gray-100 group-hover:text-black dark:group-hover:text-white transition-colors whitespace-nowrap leading-none tracking-tight">
                         {bus.vehicleno}
                     </span>
                 <Pill tone="soft" size="sm" className="w-fit text-[10px]! px-1.5! py-0!">
@@ -43,7 +43,7 @@ export const BusListItem = React.memo(({bus, routeName, getDirection, onClick}: 
             </div>
 
             <div
-                className="flex items-center gap-2 text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-100 text-right min-w-0 flex-1 justify-end transition-colors">
+                className="flex items-center gap-2 text-gray-500 dark:text-gray-400 group-hover:text-black dark:group-hover:text-white text-right min-w-0 flex-1 justify-end transition-colors">
                     <span className="text-[13px] font-medium truncate min-w-0" title={stopName}>
                         {stopName}
                     </span>
