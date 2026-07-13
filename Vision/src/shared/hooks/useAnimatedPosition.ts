@@ -302,6 +302,7 @@ export function useAnimatedPosition(targetPosition: Coordinate, targetAngle: num
     const markerDistRef = useRef(0);    // where the marker is (scalar)
     const targetDistRef = useRef(0);    // where we think the bus is (scalar)
     const velocityRef = useRef(0);      // coord-units / ms
+    const currentVelocityRef = useRef(0); // smooth velocity with inertia
     const lastFrameRef = useRef(0);
 
     // ---- Velocity estimation ----
@@ -346,6 +347,7 @@ export function useAnimatedPosition(targetPosition: Coordinate, targetAngle: num
         resetKeyRef.current = resetKey;
 
         velocityRef.current = 0;
+        currentVelocityRef.current = 0;
         prevDataTimeRef.current = 0;
         prevRawDistRef.current = 0;
         hasDataRef.current = false;
@@ -409,6 +411,7 @@ export function useAnimatedPosition(targetPosition: Coordinate, targetAngle: num
                 // Let the tick loop advance frame-by-frame; the real projection
                 // kicks in once the second data point arrives.
                 velocityRef.current = INITIAL_CRAWL_VELOCITY;
+                currentVelocityRef.current = INITIAL_CRAWL_VELOCITY;
                 targetDistRef.current = dist;
 
                 currentPosRef.current = snapped.position;
@@ -562,35 +565,48 @@ export function useAnimatedPosition(targetPosition: Coordinate, targetAngle: num
             lastFrameRef.current = now;
             const clampedDt = Math.min(dt, MAX_DT_MS);
 
-            const v = velocityRef.current;
+            // Smooth velocity transition (simulate physical inertia)
+            const targetV = velocityRef.current;
+            const currentV = currentVelocityRef.current;
+            const velocityTau = 800; // 800ms easing for heavy bus acceleration/deceleration
+            const activeV = currentV + (targetV - currentV) * Math.min(clampedDt / velocityTau, 1);
+            currentVelocityRef.current = activeV;
+
             const totalDist = cumDist[cumDist.length - 1];
             let dist = markerDistRef.current;
 
-            if (v > 0) {
-                const target = targetDistRef.current;
-                const gap = target - dist;
+            const target = targetDistRef.current;
+            const gap = target - dist;
 
+            if (activeV > 0 || gap > 0) {
                 // Stop-aware speed multiplier
                 const stopMult = getStopSpeedMultiplier(dist, stopDistancesRef.current);
 
                 let advance: number;
                 if (gap > 0) {
                     // Behind target — advance at modulated velocity + catch-up.
-                    const baseAdvance = v * stopMult * clampedDt;
-                    const catchup = gap * Math.min(clampedDt / CATCHUP_TAU_MS, 1);
+                    const baseAdvance = activeV * stopMult * clampedDt;
+                    const tau = activeV > 0 ? CATCHUP_TAU_MS : 1000;
+
+                    // Cap catch-up speed to prevent teleport-like warp speeds on big jumps
+                    const maxCatchupSpeed = MAX_VELOCITY * 1.2;
+                    const catchup = Math.min(gap * Math.min(clampedDt / tau, 1), maxCatchupSpeed * clampedDt);
+
                     advance = baseAdvance + catchup;
-                } else {
+                } else if (activeV > 0) {
                     // At or ahead of target — coast forward with stop modulation.
                     // Allow generous overshoot (2 polling periods worth)
                     // since our 60s projection will often undershoot reality.
-                    const maxOvershoot = v * 6000;
+                    const maxOvershoot = activeV * 6000;
                     const overshootRoom = maxOvershoot - (-gap);
                     if (overshootRoom > 0) {
                         const coastFactor = Math.min(overshootRoom / maxOvershoot, 1);
-                        advance = v * stopMult * clampedDt * coastFactor;
+                        advance = activeV * stopMult * clampedDt * coastFactor;
                     } else {
                         advance = 0;
                     }
+                } else {
+                    advance = 0;
                 }
 
                 if (advance > 0) {
