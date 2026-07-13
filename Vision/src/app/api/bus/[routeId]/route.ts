@@ -24,4 +24,5 @@ export const GET = createApiHandler<RawBusLocation[]>({
         ttlSeconds: 3, ...LIVE_CACHE_OPTIONS,
     }),
     loggerPrefix: "/bus",
+    validate: (id) => /^[a-zA-Z0-9_-]+$/.test(id) && id.length <= 50,
 });

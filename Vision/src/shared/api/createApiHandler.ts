@@ -11,6 +11,7 @@ export interface ApiHandlerConfig<T> {
     cacheControl?: string;
     cacheOptions?: Omit<CacheOptions, "ttlSeconds">;
     loggerPrefix: string;
+    validate?: (id: string) => boolean;
 }
 
 /**
@@ -24,6 +25,11 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
 
         if (!id) {
             return NextResponse.json({error: `Missing parameter: ${config.paramKey}`}, {status: 400});
+        }
+
+        if (config.validate && !config.validate(id)) {
+            console.warn(`[API ${config.loggerPrefix}] Invalid parameter value: "${id}"`);
+            return NextResponse.json({error: `Invalid parameter: ${config.paramKey}`}, {status: 400});
         }
 
         try {
@@ -45,11 +51,23 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
                 if (result.meta.degraded) {
                     headers["X-Cache-Degraded"] = "true";
                 }
+                
+                // Server logging for request tracing
+                console.log(`[API ${config.loggerPrefix}/${id}] ${result.meta.status.toUpperCase()} (${result.meta.layer}) - Age: ${result.meta.ageMs}ms`);
             }
 
             return NextResponse.json(result, {headers});
         } catch (err) {
             console.error(`[API ${config.loggerPrefix}/${id}]`, err);
+
+            // Propagate HTTP status if the error has a status property (e.g. PublicApiError or HttpError)
+            if (err && typeof err === "object" && "status" in err && typeof err.status === "number") {
+                const status = err.status;
+                if (status >= 400 && status < 500) {
+                    return NextResponse.json({error: config.errorMessage}, {status});
+                }
+            }
+
             return NextResponse.json({error: config.errorMessage}, {status: 500});
         }
     };

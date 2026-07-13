@@ -19,4 +19,5 @@ export const GET = createApiHandler<RawBusStop[]>({
         ttlSeconds: 3600, ...STATIC_CACHE_OPTIONS,
     }),
     loggerPrefix: "/bus-stops",
+    validate: (id) => /^[a-zA-Z0-9_-]+$/.test(id) && id.length <= 50,
 });

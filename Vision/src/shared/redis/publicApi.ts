@@ -28,6 +28,18 @@ function buildUrl(path: string, params: Record<string, string>): string {
     return url.toString();
 }
 
+export class PublicApiError extends Error {
+    status: number;
+    url: string;
+
+    constructor(message: string, status: number, url: string) {
+        super(message);
+        this.name = "PublicApiError";
+        this.status = status;
+        this.url = url;
+    }
+}
+
 async function fetchPublicApi<T>(path: string, params: Record<string, string>): Promise<T> {
     const url = buildUrl(path, params);
 
@@ -45,16 +57,21 @@ async function fetchPublicApi<T>(path: string, params: Record<string, string>): 
 
             if (!isRetryableStatus(res.status) || attempt === MAX_RETRY_ATTEMPTS) {
                 const safeUrl = url.replace(/serviceKey=[^&]+/, "serviceKey=***");
-                throw new Error(`[PublicAPI] ${res.status} ${res.statusText} — ${safeUrl}`);
+                throw new PublicApiError(`[PublicAPI] ${res.status} ${res.statusText}`, res.status, safeUrl);
             }
         } catch (err) {
-            if (attempt === MAX_RETRY_ATTEMPTS) throw err;
+            if (attempt === MAX_RETRY_ATTEMPTS) {
+                if (err instanceof PublicApiError) throw err;
+                const message = err instanceof Error ? err.message : String(err);
+                const safeUrl = url.replace(/serviceKey=[^&]+/, "serviceKey=***");
+                throw new PublicApiError(`[PublicAPI] Network/Timeout error: ${message}`, 502, safeUrl);
+            }
         }
 
         await delay(attempt);
     }
 
-    throw new Error("[PublicAPI] Unreachable retry state.");
+    throw new PublicApiError("[PublicAPI] Unreachable retry state", 500, url.replace(/serviceKey=[^&]+/, "serviceKey=***"));
 }
 
 function isRetryableStatus(status: number): boolean {

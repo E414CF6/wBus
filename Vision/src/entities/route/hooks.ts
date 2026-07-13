@@ -1,7 +1,7 @@
 "use client";
 
 import type {BusSchedule, RouteInfo} from "@entities/route/types";
-import {getRouteInfo} from "@entities/route/api";
+import {getRouteInfo, getRouteMap} from "@entities/route/api";
 
 import {HttpError} from "@shared/api/fetchAPI";
 import {API_CONFIG, APP_CONFIG} from "@shared/config/env";
@@ -46,6 +46,27 @@ export function useRouteInfo(routeName: string): RouteInfo | null {
 export function useRouteIds(routeName: string): string[] {
     const routeInfo = useRouteInfo(routeName);
     return useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
+}
+
+/**
+ * Get (routeName) -> routeIds[] mapping for bus routes.
+ * Example: { "30": ["30100123", "30100124"] }
+ *
+ * Uses SWR for caching and revalidation.
+ */
+export function useBusRouteMap(): Record<string, string[]> | null {
+    const {data, error} = useSWR("busRouteMap", // specific key for this resource
+        getRouteMap, {
+            revalidateOnFocus: false, // Static data rarely changes
+            revalidateOnReconnect: false, dedupingInterval: 60000, // Dedup for 1 minute
+            errorRetryCount: 3,
+        });
+
+    if (error && APP_CONFIG.IS_DEV) {
+        console.error("[useBusRouteMap] Error fetching route map", error);
+    }
+
+    return data ?? null;
 }
 
 /**

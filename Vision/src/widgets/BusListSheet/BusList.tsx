@@ -230,10 +230,39 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
         const activeData = routeNames.map(n => routesData[n]).filter(Boolean);
         const anyError = activeData.find(d => d.error !== null)?.error || null;
         const isLoading = activeData.length === 0 || activeData.some(d => !d.hasFetched);
+        const connectionStatus = activeData[0]?.connectionStatus || "connecting";
+
+        let statusText = "";
+        let dotClass = "text-blue-400 bg-blue-400 animate-pulse";
+
+        if (anyError) {
+            statusText = getBusErrorMessage(anyError);
+            dotClass = "text-red-500 bg-red-500 animate-pulse";
+        } else if (isLoading) {
+            statusText = UI_TEXT.COMMON.LOADING;
+            dotClass = "text-blue-400 bg-blue-400 animate-pulse";
+        } else {
+            const countText = UI_TEXT.BUS_LIST.COUNT_RUNNING(allBuses.length);
+            let connLabel = "";
+            if (connectionStatus === "connected") {
+                connLabel = UI_TEXT.CONNECTION.CONNECTED;
+                dotClass = "text-emerald-500 bg-emerald-500";
+            } else if (connectionStatus === "connecting") {
+                connLabel = UI_TEXT.CONNECTION.CONNECTING;
+                dotClass = "text-amber-500 bg-amber-500 animate-pulse";
+            } else if (connectionStatus === "fallback") {
+                connLabel = UI_TEXT.CONNECTION.FALLBACK;
+                dotClass = "text-blue-500 bg-blue-500";
+            } else if (connectionStatus === "suspended") {
+                connLabel = UI_TEXT.CONNECTION.SUSPENDED;
+                dotClass = "text-gray-400 bg-gray-400";
+            }
+            statusText = `${countText} • ${connLabel}`;
+        }
 
         return {
-            statusText: anyError ? getBusErrorMessage(anyError) : (isLoading ? UI_TEXT.COMMON.LOADING : UI_TEXT.BUS_LIST.COUNT_RUNNING(allBuses.length)),
-            dotClass: anyError ? "bg-red-500" : (isLoading ? "bg-blue-400" : "bg-green-500"),
+            statusText,
+            dotClass,
             isNoData: allBuses.length === 0
         };
     }, [routeNames, routesData, allBuses.length]);
@@ -283,7 +312,7 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
                 <div className="flex items-center justify-between mt-5 pt-1">
                     <div className="flex items-center gap-2.5 px-1.5">
                         <div
-                            className={`h-1.5 w-1.5 rounded-full animate-pulse ${uiState.dotClass} shadow-[0_0_8px_currentColor] opacity-80`}/>
+                            className={`h-1.5 w-1.5 rounded-full ${uiState.dotClass} shadow-[0_0_8px_currentColor] opacity-90`}/>
                         <p className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 uppercase tracking-widest`}>{uiState.statusText}</p>
                     </div>
                     <button onClick={() => togglePanel("bus")}

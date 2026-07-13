@@ -1,6 +1,6 @@
 "use client";
 
-import {useBusRouteMap} from "@entities/bus/hooks";
+import {useBusRouteMap} from "@entities/route/hooks";
 
 import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 

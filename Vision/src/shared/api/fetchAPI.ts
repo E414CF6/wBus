@@ -17,6 +17,10 @@ export interface FetchApiOptions extends RequestInit {
     retryDelay?: number;
 }
 
+function isRetryableStatus(status: number): boolean {
+    return status === 429 || status >= 500;
+}
+
 export async function fetchAPI<T = unknown>(url: string, options: FetchApiOptions = {}): Promise<T> {
     const {retries = 3, retryDelay = 1000, ...init} = options;
 
@@ -36,14 +40,11 @@ export async function fetchAPI<T = unknown>(url: string, options: FetchApiOption
 
             return (await response.json()) as T;
         } catch (error) {
+            const isNonRetryableHttpError = error instanceof HttpError && !isRetryableStatus(error.status);
             const isLast = i === retries - 1;
 
-            if (isLast) {
-                if (error instanceof HttpError) {
-                    throw error;
-                }
-                const message = error instanceof Error ? error.message : String(error);
-                throw new Error(`[fetchAPI] Fetch failed for ${url}: ${message}`);
+            if (isLast || isNonRetryableHttpError) {
+                throw error;
             }
 
             await delay(retryDelay);

@@ -18,6 +18,13 @@ export const UI_TEXT = {
         COLLAPSE: '접기',
     },
 
+    CONNECTION: {
+        CONNECTING: "연결 중...",
+        CONNECTED: "실시간 연결됨",
+        FALLBACK: "업데이트 중",
+        SUSPENDED: "대기 상태",
+    },
+
     TIME: {
         MINUTE_SUFFIX: '분', HOUR_SUFFIX: '시간', FORMAT_REMAINING: (min: number) => `${min}분`,
     },

@@ -149,11 +149,15 @@ function encodeSseEventWithRetry(event: string, payload: unknown, retryMs: numbe
 
 const delay = (ms: number, signal: AbortSignal) => new Promise<void>((resolve, reject) => {
     if (signal.aborted) return reject(new Error("aborted"));
-    const timer = setTimeout(resolve, ms);
-    signal.addEventListener("abort", () => {
+    const onAbort = () => {
         clearTimeout(timer);
         reject(new Error("aborted"));
-    });
+    };
+    const timer = setTimeout(() => {
+        signal.removeEventListener("abort", onAbort);
+        resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort);
 });
 
 export async function GET(request: Request) {

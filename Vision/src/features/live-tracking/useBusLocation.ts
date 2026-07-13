@@ -41,14 +41,17 @@ interface BusStreamHandoff {
     reconnectAfterMs?: number;
 }
 
+export type SSEConnectionStatus = "connecting" | "connected" | "fallback" | "suspended";
+
 interface BusLocationState {
     data: BusItem[];
     error: BusDataError;
     hasFetched: boolean;
+    connectionStatus: SSEConnectionStatus;
 }
 
 const EMPTY_STATE: BusLocationState = {
-    data: EMPTY_BUS_LIST, error: null, hasFetched: false,
+    data: EMPTY_BUS_LIST, error: null, hasFetched: false, connectionStatus: "connecting",
 };
 
 type Listener = () => void;
@@ -84,6 +87,7 @@ class BusLocationStore {
     private reconnectAttempt = 0;
     private preferredRetryDelayMs = STREAM_RECONNECT_BASE_DELAY_MS;
     private dataLength = 0;
+    private isSuspended = false;
 
     constructor(routeIds: string[]) {
         this.routeIds = routeIds;
@@ -94,11 +98,13 @@ class BusLocationStore {
     subscribe = (listener: Listener) => {
         this.listeners.add(listener);
         if (this.listeners.size === 1) {
+            this.registerEventListeners();
             this.start();
         }
         return () => {
             this.listeners.delete(listener);
             if (this.listeners.size === 0) {
+                this.unregisterEventListeners();
                 this.stop();
             }
         };
@@ -125,6 +131,7 @@ class BusLocationStore {
         this.dataLength = nextData.length;
         const degraded = options?.degraded ?? false;
         this.setState({
+            ...this.state,
             data: nextData,
             error: nextData.length === 0 ? (degraded ? "ERR:NETWORK" : "ERR:NONE_RUNNING") : null,
             hasFetched: true,
@@ -183,6 +190,7 @@ class BusLocationStore {
             console.error("[useBusLocationData] Polling fallback failed", err);
             if (this.dataLength === 0 && !this.eventSource) {
                 this.setState({
+                    ...this.state,
                     data: EMPTY_BUS_LIST, error: "ERR:NETWORK", hasFetched: true,
                 });
             }
@@ -195,6 +203,7 @@ class BusLocationStore {
         this.fallbackInterval = setInterval(() => {
             void this.fetchFallback();
         }, API_CONFIG.LIVE.POLLING_INTERVAL_MS);
+        this.updateState({ connectionStatus: "fallback" });
     }
 
     private scheduleReconnect(delayOverrideMs?: number) {
@@ -296,6 +305,8 @@ class BusLocationStore {
             return;
         }
 
+        this.updateState({ connectionStatus: "connecting" });
+
         const streamUrl = buildStreamUrl(this.routeIds);
         const source = new window.EventSource(streamUrl);
         this.eventSource = source;
@@ -342,7 +353,56 @@ class BusLocationStore {
             this.clearFallbackPolling();
             this.refreshStaleTimer();
             this.scheduleProactiveReconnect();
+            this.updateState({ connectionStatus: "connected" });
         };
+    }
+
+    private handleActivityChange = () => {
+        if (typeof document === "undefined") return;
+        const isVisible = document.visibilityState === "visible";
+        const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
+
+        if (isVisible && isOnline) {
+            if (this.isSuspended) {
+                console.log("[useBusLocationData] Tab visible & online: Resuming SSE stream");
+                this.isSuspended = false;
+                this.start();
+            }
+        } else {
+            if (!this.isSuspended) {
+                console.log(`[useBusLocationData] Suspending SSE stream (visible: ${isVisible}, online: ${isOnline})`);
+                this.isSuspended = true;
+                this.suspend();
+            }
+        }
+    };
+
+    private suspend() {
+        this.closeStream();
+        this.clearFallbackPolling();
+        this.clearReconnectTimer();
+        this.isConnecting = false;
+        this.updateState({ connectionStatus: "suspended" });
+    }
+
+    private registerEventListeners() {
+        if (typeof document !== "undefined") {
+            document.addEventListener("visibilitychange", this.handleActivityChange);
+        }
+        if (typeof window !== "undefined") {
+            window.addEventListener("online", this.handleActivityChange);
+            window.addEventListener("offline", this.handleActivityChange);
+        }
+    }
+
+    private unregisterEventListeners() {
+        if (typeof document !== "undefined") {
+            document.removeEventListener("visibilitychange", this.handleActivityChange);
+        }
+        if (typeof window !== "undefined") {
+            window.removeEventListener("online", this.handleActivityChange);
+            window.removeEventListener("offline", this.handleActivityChange);
+        }
     }
 
     private start() {
@@ -350,6 +410,17 @@ class BusLocationStore {
             this.setState(EMPTY_STATE);
             return;
         }
+
+        const isVisible = typeof document !== "undefined" ? document.visibilityState === "visible" : true;
+        const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
+
+        if (!isVisible || !isOnline) {
+            this.isSuspended = true;
+            this.updateState({ connectionStatus: "suspended" });
+            return;
+        }
+
+        this.isSuspended = false;
         this.startStream();
     }
 
@@ -362,6 +433,8 @@ class BusLocationStore {
         this.clearConnectTimer();
         this.isConnecting = false;
         this.reconnectAttempt = 0;
+        this.isSuspended = false;
+        this.state = EMPTY_STATE;
     }
 }
 

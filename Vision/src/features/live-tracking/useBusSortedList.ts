@@ -1,58 +1,23 @@
+import type {BusItem} from "@entities/bus/types";
 import {useRouteIds} from "@entities/route/hooks";
-import {useBusStop, useClosestStopOrd} from "@entities/station/hooks";
-import type {BusStop} from "@entities/station/types";
 import {useMemo} from "react";
 import {useBusDirection} from "./useBusDirection";
 import {useBusLocationData} from "./useBusLocation";
 
+const EMPTY_BUS_LIST: BusItem[] = [];
+
 export const useBusSortedList = (routeName: string) => {
     const routeIds = useRouteIds(routeName);
-    const {data: mapList, error: mapError, hasFetched: locationFetched} = useBusLocationData(routeIds);
-
-    // Get bus stop data for the route
-    const stops = useBusStop(routeName);
+    const {data: mapList, error: mapError, hasFetched: locationFetched, connectionStatus} = useBusLocationData(routeIds);
 
     const getDirection = useBusDirection(routeName);
-    const closestOrd = useClosestStopOrd(routeName);
-
-    // Combine errors
     const error = mapError;
-
-    const stopMap = useMemo(() => new Map(stops.map((s: BusStop) => [s.nodeid, s.nodeord])), [stops]);
-
-    // Even if stopMap (stop information) is not yet loaded, show the bus location data (mapList) if available.
-    // The previous logic removed buses not in stopMap, causing the "No buses running" issue.
-    const sortedList = useMemo(() => {
-        // Return an empty array if no data
-        if (!mapList || mapList.length === 0) return [];
-
-        // Sorting logic
-        return [...mapList].sort((a, b) => {
-            // If no stop information, send order to the end (Infinity)
-            // Important: Do not remove with filter, just push order to the end to prevent data disappearance
-            const ordA = a.nodeid ? (stopMap.get(a.nodeid) ?? Infinity) : Infinity;
-            const ordB = b.nodeid ? (stopMap.get(b.nodeid) ?? Infinity) : Infinity;
-
-            // 1st priority: If both have stop information, sort by proximity
-            if (ordA !== Infinity && ordB !== Infinity && closestOrd) {
-                return Math.abs((ordA as number) - closestOrd) - Math.abs((ordB as number) - closestOrd);
-            }
-
-            // 2nd priority: Move those with stop information forward
-            if (ordA !== Infinity) return -1;
-            if (ordB !== Infinity) return 1;
-
-            // 3rd priority: If both have no information, keep as is (or add sorting by vehicle number, etc.)
-            return 0;
-        });
-    }, [mapList, stopMap, closestOrd]);
-
-    // If bus location data has finished loading (true), display data regardless of stop information loading status
     const hasFetched = locationFetched;
 
-    // Return object Memoization
-    // Without this, an infinite loop occurs in BusList's RouteDataCollector.
+    // Maintain static order directly from the API response
+    const sortedList = mapList || EMPTY_BUS_LIST;
+
     return useMemo(() => ({
-        sortedList, getDirection, error, hasFetched
-    }), [sortedList, getDirection, error, hasFetched]);
+        sortedList, getDirection, error, hasFetched, connectionStatus
+    }), [sortedList, getDirection, error, hasFetched, connectionStatus]);
 };
