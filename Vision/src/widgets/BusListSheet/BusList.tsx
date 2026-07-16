@@ -53,7 +53,7 @@ const getUrgencyClass = (minutesUntil: number): string => {
 };
 
 const STYLES = {
-    CONTAINER: "bg-white/85 dark:bg-[#111111]/85 backdrop-blur-3xl rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] w-full max-w-sm border border-black/[0.04] dark:border-white/[0.06] overflow-hidden transition-all duration-300 pointer-events-auto mx-auto",
+    CONTAINER: "bg-white/85 dark:bg-[#111111]/85 backdrop-blur-3xl rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] w-full max-w-sm border border-black/[0.04] dark:border-white/[0.06] overflow-hidden transition-all duration-300 pointer-events-auto ml-0",
     HEADER: "px-5 pt-5 pb-4 bg-transparent",
     SELECT_WRAPPER: "relative flex items-center group transition-all duration-200 bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.05] dark:hover:bg-white/[0.08] rounded-[20px] px-4 py-2.5",
     SELECT_ELEMENT: "appearance-none bg-transparent text-xl font-extrabold text-black dark:text-white pr-8 cursor-pointer focus:outline-none z-10 w-full tracking-tight",
@@ -123,7 +123,7 @@ const SchedulePreview = ({data, loading, isOpen, onToggle}: SchedulePreviewProps
         <div className="flex items-center gap-2.5 shrink-0 pl-1">
             <div className={`h-1.5 w-1.5 rounded-full ${dotClass} shadow-[0_0_8px_currentColor] opacity-80`}/>
             <span
-                className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 whitespace-nowrap uppercase tracking-widest`}>
+                className={`${STYLES.INFO_TEXT} text-gray-500 whitespace-nowrap uppercase tracking-widest`}>
                     {UI_TEXT.SCHEDULE.NEXT_BUS}
                 </span>
         </div>
@@ -154,7 +154,7 @@ const SchedulePreview = ({data, loading, isOpen, onToggle}: SchedulePreviewProps
                 </Pill>
             </button>
         </div>) : (<span
-            className={`${STYLES.INFO_TEXT} text-gray-400 dark:text-gray-500 truncate`}>{statusMessage}</span>)}
+            className={`${STYLES.INFO_TEXT} text-gray-400 truncate`}>{statusMessage}</span>)}
     </div>);
 };
 
@@ -232,7 +232,7 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
         const isLoading = activeData.length === 0 || activeData.some(d => !d.hasFetched);
         const connectionStatus = activeData[0]?.connectionStatus || "connecting";
 
-        let statusText = "";
+        let statusText: string;
         let dotClass = "text-blue-400 bg-blue-400 animate-pulse";
 
         if (anyError) {
@@ -261,9 +261,7 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
         }
 
         return {
-            statusText,
-            dotClass,
-            isNoData: allBuses.length === 0
+            statusText, dotClass, isNoData: allBuses.length === 0
         };
     }, [routeNames, routesData, allBuses.length]);
 
@@ -286,7 +284,7 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
                             className={STYLES.SELECT_ELEMENT}
                         >
                             {allRoutes.filter(Boolean).map((route) => (<option key={route} value={route}
-                                                                               className="text-black dark:text-white bg-white dark:bg-gray-900 font-sans">
+                                                                               className="text-black bg-white font-sans">
                                 {UI_TEXT.BUS_LIST.TITLE_ROUTE(route)}
                             </option>))}
                         </select>
@@ -313,7 +311,7 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
                     <div className="flex items-center gap-2.5 px-1.5">
                         <div
                             className={`h-1.5 w-1.5 rounded-full ${uiState.dotClass} shadow-[0_0_8px_currentColor] opacity-90`}/>
-                        <p className={`${STYLES.INFO_TEXT} text-gray-500 dark:text-gray-400 uppercase tracking-widest`}>{uiState.statusText}</p>
+                        <p className={`${STYLES.INFO_TEXT} text-gray-500 uppercase tracking-widest`}>{uiState.statusText}</p>
                     </div>
                     <button onClick={() => togglePanel("bus")}
                             className="focus:outline-none active:scale-95 transition-transform">
@@ -339,10 +337,9 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
                 </div>)}
 
             {isBusExpanded && (<ul className={STYLES.LIST_CONTAINER}>
-                {uiState.isNoData ? (
-                    <li className="text-center py-6 text-gray-400 dark:text-gray-500 text-xs font-medium italic">
-                        {UI_TEXT.BUS_LIST.NO_RUNNING_DESC}
-                    </li>) : (allBuses.map(({bus, routeName, getDirection}) => (<BusListItem
+                {uiState.isNoData ? (<li className="text-center py-6 text-gray-400 text-xs font-medium italic">
+                    {UI_TEXT.BUS_LIST.NO_RUNNING_DESC}
+                </li>) : (allBuses.map(({bus, routeName, getDirection}) => (<BusListItem
                     key={`${routeName}-${bus.vehicleno}`}
                     bus={bus}
                     routeName={routeName}

@@ -98,8 +98,8 @@ export default function HomePage() {
                     />
                 </MapWrapper>
                 <div
-                    className="fixed bottom-[calc(env(safe-area-inset-bottom,0)+0.75rem)] left-0 right-0 flex justify-center z-30 pointer-events-none">
-                    <div className="w-full px-3 sm:px-4 flex justify-center">
+                    className="fixed bottom-[calc(env(safe-area-inset-bottom,0)+0.75rem)] left-0 right-0 flex justify-start z-30 pointer-events-none">
+                    <div className="w-full px-3 sm:px-4 flex justify-start">
                         <BusList
                             routeNames={[activeRoute]}
                             allRoutes={allRoutes}
