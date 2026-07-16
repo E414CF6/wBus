@@ -147,6 +147,14 @@ impl BusRouteProcessor {
             stop_to_coord.push(full_coordinates.len().saturating_sub(1));
         }
 
+        // [CRITICAL FIX] Enforce monotonically increasing stop_to_coord
+        // This prevents backward jumps when slicing segments which cause straight lines in the frontend
+        for i in 1..stop_to_coord.len() {
+            if stop_to_coord[i] < stop_to_coord[i - 1] {
+                stop_to_coord[i] = stop_to_coord[i - 1];
+            }
+        }
+
         // [OPTIMIZATION] Round coordinates to 6 decimal places to reduce file size
         // This is important for web performance
         for pt in &mut full_coordinates {
