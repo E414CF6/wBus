@@ -16,8 +16,7 @@ export interface PolylineData {
     upPolyline: Coordinate[];
     downPolyline: Coordinate[];
     stopIndexMap?: StopIndexMap;
-    turnIndex?: number;
-    isSwapped?: boolean;
+    turnIndex: number;
     bbox?: [[number, number], [number, number]];
 }
 
@@ -44,23 +43,29 @@ function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordinate[],
 
     const map: StopIndexMap = {byId: {}, byIdDir: {}, byOrd: {}, byOrdDir: {}};
 
-    // We cannot map exactly to coordinate index without stop_to_coord, but we don't strictly need precise coordinate indices if we rely on snap point radius.
-    // However, if we know segment lengths, we can reconstruct stop_to_coord!
-    // Since each segment starts at stop i and ends at stop i+1:
-    let currentUpIdx = 0;
-    let currentDownIdx = 0;
+    // Group stops by direction
+    const upStops = stops.filter(s => Number(s.ud) === 1);
+    const downStops = stops.filter(s => Number(s.ud) === 0);
 
-    // A more robust way is to just let snapService use geographical snapping.
-    // But to keep existing logic, we assign rough indices:
+    let upCount = 0;
+    let downCount = 0;
+    
     stops.forEach((stop) => {
         const rawId = typeof stop.id === "string" ? stop.id.trim() : "";
         const ord = Number(stop.ord);
         const dir = Number(stop.ud);
-
-        const isUp = dir === 1;
-        const polylineLen = isUp ? upPolyline.length : downPolyline.length;
-        const roughIndex = Math.floor((ord / stops.length) * polylineLen);
-
+        
+        let roughIndex = 0;
+        if (dir === 1) {
+            const ratio = upStops.length > 1 ? upCount / (upStops.length - 1) : 0;
+            roughIndex = Math.floor(ratio * (upPolyline.length - 1));
+            upCount++;
+        } else {
+            const ratio = downStops.length > 1 ? downCount / (downStops.length - 1) : 0;
+            roughIndex = Math.floor(ratio * (downPolyline.length - 1));
+            downCount++;
+        }
+        
         if (rawId) {
             map.byId[rawId] = roughIndex;
             if (Number.isFinite(dir)) map.byIdDir[`${rawId}-${dir}`] = roughIndex;
@@ -95,7 +100,7 @@ async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
     if (cached) return cached;
     const rawData = await getPolyline(routeId);
     if (!rawData || !rawData.stops) {
-        const empty: PolylineData = {upPolyline: [], downPolyline: []};
+        const empty: PolylineData = {upPolyline: [], downPolyline: [], turnIndex: 0};
         processedCache.set(routeId, empty);
         return empty;
     }
@@ -137,7 +142,6 @@ async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
         downPolyline,
         stopIndexMap: buildStopIndexMap(upPolyline, downPolyline, rawData),
         turnIndex: upPolyline.length > 0 ? upPolyline.length - 1 : 0,
-        isSwapped: false, // Segments are already strictly ordered
         bbox: extractBBox(rawData, [...upCoords, ...downCoords]),
     };
     processedCache.set(routeId, result);

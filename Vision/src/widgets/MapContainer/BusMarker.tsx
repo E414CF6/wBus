@@ -137,7 +137,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
         const map = new Map();
         for (const id of routeInfo.vehicleRouteIds) {
             const polylineSet = polylineMap.get(id) ?? fallbackPolylines;
-            const {stopIndexMap, turnIndex, isSwapped, upPolyline, downPolyline} = polylineSet;
+            const {stopIndexMap, turnIndex, upPolyline, downPolyline} = polylineSet;
 
             let upIndices: number[] = [];
             let downIndices: number[] = [];
@@ -155,11 +155,8 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                     return Array.from(allIndices);
                 };
 
-                const effectiveUp = isSwapped ? 0 : 1;
-                const effectiveDown = isSwapped ? 1 : 0;
-
-                const rawUp = getIndicesForDir(effectiveUp);
-                const rawDown = getIndicesForDir(effectiveDown);
+                const rawUp = getIndicesForDir(1);
+                const rawDown = getIndicesForDir(0);
 
                 upIndices = rawUp.filter(i => i >= 0 && i < upPolyline.length).sort((a, b) => a - b);
 
@@ -185,12 +182,12 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
         return busList.map((bus) => {
             const targetRouteId = bus.routeid ?? activeRouteId ?? routeInfo.vehicleRouteIds[0] ?? null;
             const polylineSet = targetRouteId ? polylineMap.get(targetRouteId) : null;
-            const {upPolyline, downPolyline, stopIndexMap, turnIndex, isSwapped} = polylineSet ?? fallbackPolylines;
+            const {upPolyline, downPolyline, stopIndexMap, turnIndex} = polylineSet ?? fallbackPolylines;
             const markerRouteContext = targetRouteId ?? "none";
             const markerKey = `${routeName}-${markerRouteContext}-${bus.vehicleno}`;
 
             const snapped = getSnappedPosition(bus, getDirection, upPolyline, downPolyline, {
-                stopIndexMap, turnIndex, isSwapped, snapIndexRange: SNAP_INDEX_RANGE,
+                stopIndexMap, turnIndex, snapIndexRange: SNAP_INDEX_RANGE,
             });
             const activePolyline = snapped.direction === 1 ? upPolyline : downPolyline;
 

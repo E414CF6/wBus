@@ -27,8 +27,7 @@ export interface BusPolylineSet {
     upPolyline: Coordinate[];
     downPolyline: Coordinate[];
     stopIndexMap?: PolylineData["stopIndexMap"];
-    turnIndex?: number;
-    isSwapped?: boolean;
+    turnIndex: number;
     bbox?: PolylineData["bbox"];
 }
 
@@ -78,7 +77,6 @@ export function useBusPolylineMap(routeIds: string[]): Map<string, BusPolylineSe
                 downPolyline: data.downPolyline,
                 stopIndexMap: data.stopIndexMap,
                 turnIndex: data.turnIndex,
-                isSwapped: data.isSwapped,
                 bbox: data.bbox,
             });
         }
@@ -123,5 +121,5 @@ export function getFallbackPolylines(polylineMap: Map<string, BusPolylineSet>, a
         return polylineMap.get(activeRouteId)!;
     }
 
-    return {upPolyline: [], downPolyline: []};
+    return {upPolyline: [], downPolyline: [], turnIndex: 0};
 }

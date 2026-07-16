@@ -25,7 +25,6 @@ interface SnapCandidate extends SnappedResult {
 interface GetSnappedOptions {
     stopIndexMap?: StopIndexMap | null;
     turnIndex?: number;
-    isSwapped?: boolean;
     snapIndexRange?: number;
 }
 
@@ -37,12 +36,7 @@ function clampIndex(value: number, max: number): number {
     return Math.max(0, Math.min(value, max));
 }
 
-function getStopCoordIndex(
-    stopIndexMap: StopIndexMap | null | undefined,
-    nodeid: string | null | undefined,
-    nodeord: number,
-    direction: number | null
-): number | null {
+function getStopCoordIndex(stopIndexMap: StopIndexMap | null | undefined, nodeid: string | null | undefined, nodeord: number, direction: number | null): number | null {
     if (!stopIndexMap) return null;
 
     const cleanedId = typeof nodeid === "string" ? nodeid.trim() : "";
@@ -75,85 +69,34 @@ function getStopCoordIndex(
 
 function getSegmentHint(
     coordIndex: number | null,
-    direction: number,
-    lineLength: number,
-    turnIndex: number | undefined,
-    isSwapped: boolean | undefined
+    lineLength: number
 ): number | null {
     if (!isFiniteNumber(coordIndex) || lineLength < 2) return null;
-
-    const lastSegment = lineLength - 2;
-    const effectiveDirection = isSwapped ? (direction === 1 ? 0 : 1) : direction;
-
-    if (!isFiniteNumber(turnIndex)) {
-        return clampIndex(coordIndex - 1, lastSegment);
-    }
-
-    const safeTurnIndex = Math.round(turnIndex);
-
-    if (effectiveDirection === 1) {
-        if (coordIndex > safeTurnIndex) return null;
-        return clampIndex(coordIndex - 1, lastSegment);
-    }
-
-    if (coordIndex < safeTurnIndex) return null;
-
-    const localIndex = coordIndex - safeTurnIndex;
-    return clampIndex(localIndex - 1, lastSegment);
+    return clampIndex(coordIndex - 1, lineLength - 2);
 }
 
-function getMinSegmentIndex(
-    coordIndex: number | null,
-    direction: number,
-    lineLength: number,
-    turnIndex: number | undefined,
-    isSwapped: boolean | undefined
-): number | null {
-    if (!isFiniteNumber(coordIndex) || lineLength < 2) return null;
-
-    const lastSegment = lineLength - 2;
-    const effectiveDirection = isSwapped ? (direction === 1 ? 0 : 1) : direction;
-
-    if (!isFiniteNumber(turnIndex) || effectiveDirection === 1) {
-        return clampIndex(coordIndex - 2, lastSegment);
-    }
-
-    const safeTurnIndex = Math.round(turnIndex);
-
-    if (coordIndex < safeTurnIndex) return null;
-
-    const localIndex = coordIndex - safeTurnIndex;
-    return clampIndex(localIndex - 2, lastSegment);
+function getMinSegmentIndex(): number | null {
+    // Disabling minSegmentIndex for the same reason. 
+    // Geographic proximity is the ultimate source of truth.
+    return null;
 }
 
 // ----------------------------------------------------------------------
 // Main Logic
 // ----------------------------------------------------------------------
 
-export function getSnappedPosition(
-    bus: BusItem,
-    getDirection: (nodeid: string | null | undefined, nodeord: number, routeid?: string | null) => number | null,
-    upPolyline: Coordinate[],
-    downPolyline: Coordinate[],
-    options?: GetSnappedOptions
-): SnappedResult {
+export function getSnappedPosition(bus: BusItem, getDirection: (nodeid: string | null | undefined, nodeord: number, routeid?: string | null) => number | null, upPolyline: Coordinate[], downPolyline: Coordinate[], options?: GetSnappedOptions): SnappedResult {
     const {gpslati, gpslong, nodeid} = bus;
     const nodeord = Number(bus.nodeord);
     const rawPosition: Coordinate = [gpslati, gpslong];
     const {
-        stopIndexMap,
-        turnIndex,
-        isSwapped,
-        snapIndexRange = DEFAULT_SNAP_INDEX_RANGE,
+        stopIndexMap, turnIndex, snapIndexRange = DEFAULT_SNAP_INDEX_RANGE,
     } = options ?? {};
 
     const apiDirection = getDirection(nodeid, nodeord, bus.routeid);
 
     const defaultResult: SnappedResult = {
-        position: rawPosition,
-        angle: 0,
-        direction: apiDirection ?? 0,
-        segmentIndex: null,
+        position: rawPosition, angle: 0, direction: apiDirection ?? 0, segmentIndex: null,
     };
 
     const stopIndexUp = getStopCoordIndex(stopIndexMap, nodeid, nodeord, 1);
@@ -164,13 +107,11 @@ export function getSnappedPosition(
         if (!line || line.length < 2) return null;
 
         const coordIndex = dir === 1 ? (stopIndexUp ?? stopIndexAny) : (stopIndexDown ?? stopIndexAny);
-        const segmentHint = getSegmentHint(coordIndex, dir, line.length, turnIndex, isSwapped);
-        const minSegmentIndex = getMinSegmentIndex(coordIndex, dir, line.length, turnIndex, isSwapped);
+        const segmentHint = getSegmentHint(coordIndex, line.length);
+        const minSegmentIndex = null;
 
         const snapped = snapPointToPolyline(rawPosition, line, {
-            segmentHint,
-            searchRadius: snapIndexRange,
-            minSegmentIndex,
+            segmentHint, searchRadius: snapIndexRange, minSegmentIndex,
         });
         const distance = getHaversineDistanceMeters(rawPosition, snapped.position);
 
