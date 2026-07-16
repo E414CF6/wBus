@@ -8,7 +8,12 @@ const EMPTY_BUS_LIST: BusItem[] = [];
 
 export const useBusSortedList = (routeName: string) => {
     const routeIds = useRouteIds(routeName);
-    const {data: mapList, error: mapError, hasFetched: locationFetched, connectionStatus} = useBusLocationData(routeIds);
+    const {
+        data: mapList,
+        error: mapError,
+        hasFetched: locationFetched,
+        connectionStatus
+    } = useBusLocationData(routeIds);
 
     const getDirection = useBusDirection(routeName);
     const error = mapError;

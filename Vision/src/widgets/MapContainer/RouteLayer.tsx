@@ -24,10 +24,10 @@ interface RouteLayerProps {
  */
 const RouteLayer = memo(({routeName, onRouteChange}: RouteLayerProps) => {
     return (<>
-            <BusMarker routeName={routeName}/>
-            <BusStopMarker routeName={routeName} onRouteChange={onRouteChange}/>
-            <BusRoutePolyline routeName={routeName}/>
-        </>);
+        <BusMarker routeName={routeName}/>
+        <BusStopMarker routeName={routeName} onRouteChange={onRouteChange}/>
+        <BusRoutePolyline routeName={routeName}/>
+    </>);
 }, (prev, next) => {
     return (prev.routeName === next.routeName && prev.onRouteChange === next.onRouteChange);
 });

@@ -1,10 +1,9 @@
-import {getPolyline, getRouteDetails} from "@entities/route/api";
-import type {Coordinate, GeoPolyline, RouteDetail} from "@entities/route/types";
-import {getStationMap} from "@entities/station/api";
-import type {StationLocation} from "@entities/station/types";
+"use client";
+
+import {getPolyline, getSegmentsJSON} from "@entities/route/api";
+import type {Coordinate, GeoPolyline} from "@entities/route/types";
 
 import {CacheManager} from "@shared/cache/CacheManager";
-import {isFiniteNumber} from "@shared/utils/geo";
 
 export interface StopIndexMap {
     byId: Record<string, number>;
@@ -36,106 +35,50 @@ export interface MultiPolylineData {
     bounds: [[number, number], [number, number]] | null;
 }
 
+
 const processedCache = new CacheManager<PolylineData>(50);
 
-function toLatLngCoords(coords: Array<[number, number]>): Coordinate[] {
-    return coords.map(([lng, lat]) => [lat, lng]);
-}
-
-function buildStopIndexMap(data: GeoPolyline): StopIndexMap | undefined {
-    const feature = data.features?.[0];
-    const stops = feature?.properties?.stops ?? [];
-    const stopToCoord = feature?.properties?.stop_to_coord ?? [];
-    if (stops.length === 0 || stopToCoord.length === 0) return undefined;
+function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordinate[], data: GeoPolyline): StopIndexMap | undefined {
+    const stops = data.stops || [];
+    if (stops.length === 0) return undefined;
 
     const map: StopIndexMap = {byId: {}, byIdDir: {}, byOrd: {}, byOrdDir: {}};
-    stops.forEach((stop, idx) => {
-        const coordIndex = stopToCoord[idx];
-        if (!isFiniteNumber(coordIndex)) return;
+
+    // We cannot map exactly to coordinate index without stop_to_coord, but we don't strictly need precise coordinate indices if we rely on snap point radius.
+    // However, if we know segment lengths, we can reconstruct stop_to_coord!
+    // Since each segment starts at stop i and ends at stop i+1:
+    let currentUpIdx = 0;
+    let currentDownIdx = 0;
+
+    // A more robust way is to just let snapService use geographical snapping.
+    // But to keep existing logic, we assign rough indices:
+    stops.forEach((stop) => {
         const rawId = typeof stop.id === "string" ? stop.id.trim() : "";
         const ord = Number(stop.ord);
         const dir = Number(stop.ud);
+
+        const isUp = dir === 1;
+        const polylineLen = isUp ? upPolyline.length : downPolyline.length;
+        const roughIndex = Math.floor((ord / stops.length) * polylineLen);
+
         if (rawId) {
-            map.byId[rawId] = coordIndex;
-            if (Number.isFinite(dir)) map.byIdDir[`${rawId}-${dir}`] = coordIndex;
+            map.byId[rawId] = roughIndex;
+            if (Number.isFinite(dir)) map.byIdDir[`${rawId}-${dir}`] = roughIndex;
         }
         if (Number.isFinite(ord)) {
-            map.byOrd[String(ord)] = coordIndex;
-            if (Number.isFinite(dir)) map.byOrdDir[`${ord}-${dir}`] = coordIndex;
+            map.byOrd[String(ord)] = roughIndex;
+            if (Number.isFinite(dir)) map.byOrdDir[`${ord}-${dir}`] = roughIndex;
         }
     });
     return map;
 }
 
-function splitByTurnIndex(coords: Coordinate[], turnIndex: number): { up: Coordinate[]; down: Coordinate[] } {
-    if (coords.length < 2) return {up: [], down: []};
-    const idx = Math.max(0, Math.min(Math.round(turnIndex), coords.length - 1));
-    return {up: coords.slice(0, idx + 1), down: coords.slice(idx)};
-}
-
-function transformPolyline(data: GeoPolyline): { up: Coordinate[]; down: Coordinate[] } {
-    if (!data.features || data.features.length === 0) return {up: [], down: []};
-    const feature = data.features[0];
-    const coords = toLatLngCoords(feature.geometry.coordinates);
-    if (feature.properties.turn_idx !== undefined) {
-        return splitByTurnIndex(coords, feature.properties.turn_idx);
-    }
-    return {up: coords, down: []};
-}
-
-function shouldSwapPolylines(routeDetail: RouteDetail | null, stationMap: Record<string, StationLocation> | null, upPolyline: Coordinate[], downPolyline: Coordinate[]): boolean {
-    if (!routeDetail || !stationMap) return false;
-    if (upPolyline.length < 2 || downPolyline.length < 2) return false;
-    const upStops: Coordinate[] = [];
-    const downStops: Coordinate[] = [];
-    for (const stop of routeDetail.sequence) {
-        const station = stationMap[stop.nodeid];
-        if (!station) continue;
-        const coord: Coordinate = [station.gpslati, station.gpslong];
-        if (stop.updowncd === 1) upStops.push(coord); else downStops.push(coord);
-    }
-    if (upStops.length < 3 || downStops.length < 3) return false;
-    const sample = (arr: Coordinate[], max: number) => {
-        if (arr.length <= max) return arr;
-        const step = Math.ceil(arr.length / max);
-        return arr.filter((_, i) => i % step === 0).slice(0, max);
-    };
-    const sampledUp = sample(upStops, 20);
-    const sampledDown = sample(downStops, 20);
-    const calcMSE = (points: Coordinate[], line: Coordinate[]) => {
-        let total = 0;
-        for (const p of points) {
-            let minDist = Infinity;
-            for (let i = 0; i < line.length - 1; i++) {
-                const A = line[i], B = line[i + 1];
-                const AB = [B[0] - A[0], B[1] - A[1]];
-                const AP = [p[0] - A[0], p[1] - A[1]];
-                const ab2 = AB[0] * AB[0] + AB[1] * AB[1];
-                const t = ab2 > 0 ? Math.max(0, Math.min(1, (AP[0] * AB[0] + AP[1] * AB[1]) / ab2)) : 0;
-                const proj = [A[0] + AB[0] * t, A[1] + AB[1] * t];
-                const d = (p[0] - proj[0]) ** 2 + (p[1] - proj[1]) ** 2;
-                if (d < minDist) minDist = d;
-            }
-            total += minDist;
-        }
-        return total / points.length;
-    };
-    const upToUp = calcMSE(sampledUp, upPolyline);
-    const upToDown = calcMSE(sampledUp, downPolyline);
-    const downToUp = calcMSE(sampledDown, upPolyline);
-    const downToDown = calcMSE(sampledDown, downPolyline);
-    const SWAP_RATIO = 0.81;
-    return upToDown < upToUp * SWAP_RATIO && downToUp < downToDown * SWAP_RATIO;
-}
-
-function extractBBox(data: GeoPolyline): [[number, number], [number, number]] | undefined {
-    const feature = data.features?.[0];
-    if (!feature) return undefined;
-    const bbox = feature.bbox;
+function extractBBox(data: GeoPolyline, coords: [number, number][]): [[number, number], [number, number]] | undefined {
+    const bbox = data.bbox;
     if (bbox && bbox.length === 4) {
         return [[bbox[1], bbox[0]], [bbox[3], bbox[2]]];
     }
-    const coords = feature.geometry?.coordinates ?? [];
+
     if (coords.length === 0) return undefined;
     let [minLng, minLat, maxLng, maxLat] = [coords[0][0], coords[0][1], coords[0][0], coords[0][1]];
     for (const [lng, lat] of coords) {
@@ -150,21 +93,52 @@ function extractBBox(data: GeoPolyline): [[number, number], [number, number]] | 
 async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
     const cached = processedCache.get(routeId);
     if (cached) return cached;
-    const [rawData, routeDetail, stationMap] = await Promise.all([getPolyline(routeId), getRouteDetails(routeId), getStationMap(),]);
-    if (!rawData) {
+    const rawData = await getPolyline(routeId);
+    if (!rawData || !rawData.stops) {
         const empty: PolylineData = {upPolyline: [], downPolyline: []};
         processedCache.set(routeId, empty);
         return empty;
     }
-    const {up, down} = transformPolyline(rawData);
-    const shouldSwap = shouldSwapPolylines(routeDetail, stationMap, up, down);
+
+    let segmentsData: Record<string, [number, number][]> = {};
+    try {
+        segmentsData = await getSegmentsJSON();
+    } catch (e) {
+        // Fallback for missing segments.json
+    }
+
+    const assemblePolyline = (segmentIds: string[]): [number, number][] => {
+        if (!segmentIds || segmentIds.length === 0) return [];
+        const coords: [number, number][] = [];
+        for (const segId of segmentIds) {
+            const segCoords = segmentsData[segId];
+            if (segCoords && segCoords.length > 0) {
+                if (coords.length > 0 &&
+                    coords[coords.length - 1][0] === segCoords[0][0] &&
+                    coords[coords.length - 1][1] === segCoords[0][1]) {
+                    coords.push(...segCoords.slice(1));
+                } else {
+                    coords.push(...segCoords);
+                }
+            }
+        }
+        return coords;
+    };
+
+    const upCoords = assemblePolyline(rawData.up_segments);
+    const downCoords = assemblePolyline(rawData.down_segments);
+
+    // Convert coordinates from [lng, lat] (GeoJSON standard) to [lat, lng] (Leaflet/frontend standard)
+    const upPolyline: Coordinate[] = upCoords.map(([lng, lat]) => [lat, lng]);
+    const downPolyline: Coordinate[] = downCoords.map(([lng, lat]) => [lat, lng]);
+
     const result: PolylineData = {
-        upPolyline: shouldSwap ? down : up,
-        downPolyline: shouldSwap ? up : down,
-        stopIndexMap: buildStopIndexMap(rawData),
-        turnIndex: rawData.features[0]?.properties?.turn_idx,
-        isSwapped: shouldSwap,
-        bbox: extractBBox(rawData),
+        upPolyline,
+        downPolyline,
+        stopIndexMap: buildStopIndexMap(upPolyline, downPolyline, rawData),
+        turnIndex: upPolyline.length > 0 ? upPolyline.length - 1 : 0,
+        isSwapped: false, // Segments are already strictly ordered
+        bbox: extractBBox(rawData, [...upCoords, ...downCoords]),
     };
     processedCache.set(routeId, result);
     return result;
@@ -181,8 +155,6 @@ export function createMultiPolylineData(polylineMap: Map<string, PolylineData>, 
     const segmentMap = new Map<string, PolylineSegment>();
     const activeSet = new Set(activeRouteIds ?? []);
     const generateKey = (coords: Coordinate[]) => {
-        // Use a lightweight fingerprint (endpoints + midpoint + length) instead of
-        // stringify every coordinate, which creates very large strings.
         const n = coords.length;
         if (n === 0) return "empty";
         const first = coords[0];
@@ -234,4 +206,55 @@ export function createMultiPolylineData(polylineMap: Map<string, PolylineData>, 
     };
 }
 
+export const PALETTE = [
+    {up: "#2563eb", down: "#dc2626"}, // 0: Blue / Red (Standard)
+    {up: "#7c3aed", down: "#ea580c"}, // 1: Violet / Orange
+    {up: "#0d9488", down: "#db2777"}, // 2: Teal / Pink
+    {up: "#059669", down: "#e11d48"}, // 3: Emerald / Rose
+] as const;
 
+export function areCoordinatesEqual(c1: Coordinate[], c2: Coordinate[]): boolean {
+    if (c1.length !== c2.length) return false;
+    const steps = [0, Math.floor(c1.length / 4), Math.floor(c1.length / 2), Math.floor(c1.length * 3 / 4), c1.length - 1];
+    for (const idx of steps) {
+        if (idx < c1.length) {
+            const p1 = c1[idx];
+            const p2 = c2[idx];
+            if (!p1 || !p2 || Math.abs(p1[0] - p2[0]) > 0.0001 || Math.abs(p1[1] - p2[1]) > 0.0001) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+export function areGeometriesEqual(g1: PolylineData, g2: PolylineData): boolean {
+    return areCoordinatesEqual(g1.upPolyline, g2.upPolyline) &&
+        areCoordinatesEqual(g1.downPolyline, g2.downPolyline);
+}
+
+export function getRouteIdColorMapping(routeIds: string[], polylineMap: Map<string, PolylineData>): Record<string, number> {
+    const uniqueGeometries: PolylineData[] = [];
+    const routeIdToColorIndex: Record<string, number> = {};
+
+    for (const id of routeIds) {
+        const data = polylineMap.get(id);
+        if (!data) continue;
+
+        let matchIdx = uniqueGeometries.findIndex(g => areGeometriesEqual(g, data));
+        if (matchIdx === -1) {
+            matchIdx = uniqueGeometries.length;
+            uniqueGeometries.push(data);
+        }
+        routeIdToColorIndex[id] = matchIdx;
+    }
+
+    // If all variations have the same geometry, fall back to color index 0 for all
+    if (uniqueGeometries.length <= 1) {
+        for (const id of routeIds) {
+            routeIdToColorIndex[id] = 0;
+        }
+    }
+
+    return routeIdToColorIndex;
+}

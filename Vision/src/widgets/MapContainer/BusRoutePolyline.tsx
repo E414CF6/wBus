@@ -1,167 +1,128 @@
 "use client";
 
 import {useRouteIds} from "@entities/route/hooks";
-
-import {useBusLocationData} from "@features/live-tracking/useBusLocation";
-import {type PolylineSegment, useMultiPolyline} from "@features/live-tracking/usePolyline";
-
+import {useBusPolylineMap} from "@features/live-tracking/usePolyline";
+import {getRouteIdColorMapping, PALETTE} from "@entities/route/polylineService";
 import {MAP_SETTINGS} from "@shared/config/env";
-
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {buildRouteIdsKey} from "@shared/utils/routeIds";
-
-import type {FeatureCollection, LineString} from "geojson";
-
 import {useEffect, useMemo, useRef} from "react";
 import {Layer, Source} from "react-map-gl/maplibre";
 
-// ----------------------------------------------------------------------
-// Constants
-// ----------------------------------------------------------------------
-
-const COLORS = {
-    // Active route colors (vibrant)
-    ACTIVE_UP: "#2563eb",       // Blue-600
-    ACTIVE_DOWN: "#dc2626",     // Red-600
-    // Inactive route colors (muted)
-    INACTIVE_UP: "#bfdbfe",     // Blue-200
-    INACTIVE_DOWN: "#fecaca",   // Red-200
-    // Glow effect colors
-    GLOW_UP: "rgba(37, 99, 235, 0.35)", GLOW_DOWN: "rgba(220, 38, 38, 0.35)",
-} as const;
-
-// ----------------------------------------------------------------------
-// MapLibre Layer Generators
-// ----------------------------------------------------------------------
-
-function createGeoJSON(segments: PolylineSegment[]): FeatureCollection<LineString> {
-    return {
-        type: "FeatureCollection", features: segments.map((segment) => ({
-            type: "Feature", geometry: {
-                type: "LineString", // Convert [lat, lng] to [lng, lat] for GeoJSON
-                coordinates: segment.coords.map(([lat, lng]) => [lng, lat]),
-            }, properties: {
-                direction: segment.direction, routeIds: segment.routeIds.join("_"),
-            },
-        })),
-    };
-}
-
-// ----------------------------------------------------------------------
-// Main Component
-// ----------------------------------------------------------------------
-
 export default function BusRoutePolyline({routeName}: { routeName: string }) {
-    // Data Fetching
     const {map} = useAppMapContext();
     const routeIds = useRouteIds(routeName);
-    const {data: busList, hasFetched} = useBusLocationData(routeIds);
+    const polylineMap = useBusPolylineMap(routeIds);
     const lastBoundsKeyRef = useRef<string | null>(null);
 
-    // Determine active route IDs (routes with running buses)
-    // We stringify the IDs to use as a stable dependency and prevent expensive polyline recalculations
-    const activeRouteIdsStr = useMemo(() => {
-        const validRouteIdSet = new Set(routeIds);
-        const busRouteIds = busList
-            .map((bus) => bus.routeid)
-            .filter((id): id is string => typeof id === "string" && validRouteIdSet.has(id));
+    const routeIdColorMapping = useMemo(() => {
+        return getRouteIdColorMapping(routeIds, polylineMap);
+    }, [routeIds, polylineMap]);
 
-        return buildRouteIdsKey(busRouteIds);
-    }, [busList, routeIds]);
+    const bbox = useMemo(() => {
+        let minLat = Infinity, minLng = Infinity, maxLat = -Infinity, maxLng = -Infinity;
+        let hasBounds = false;
+        for (const data of polylineMap.values()) {
+            if (data.bbox) {
+                const [[s, w], [n, e]] = data.bbox;
+                minLat = Math.min(minLat, s);
+                minLng = Math.min(minLng, w);
+                maxLat = Math.max(maxLat, n);
+                maxLng = Math.max(maxLng, e);
+                hasBounds = true;
+            }
+        }
+        return hasBounds ? [[minLat, minLng], [maxLat, maxLng]] as [[number, number], [number, number]] : null;
+    }, [polylineMap]);
 
-    const activeRouteIds = useMemo(() => {
-        return activeRouteIdsStr ? activeRouteIdsStr.split(",") : [];
-    }, [activeRouteIdsStr]);
+    // Build maplibre match expression for colors
+    const colorExpression = useMemo(() => {
+        if (routeIds.length === 0) return "#2563eb"; // fallback
+        const expr: any[] = ["match", ["get", "route_id"]];
+        for (const id of routeIds) {
+            const colorIndex = routeIdColorMapping[id] ?? 0;
+            const colors = PALETTE[colorIndex % PALETTE.length];
 
-    const {
-        activeUpSegments, inactiveUpSegments, activeDownSegments, inactiveDownSegments, bounds,
-    } = useMultiPolyline(routeIds, activeRouteIds);
+            const directionExpr = [
+                "match",
+                ["get", "direction"],
+                "up", colors.up,
+                "down", colors.down,
+                colors.up
+            ];
 
-    // Styling Logic
-    const hasActiveSegments = activeUpSegments.length > 0 || activeDownSegments.length > 0;
-    const isNoBusRunning = hasFetched && busList.length === 0;
+            expr.push(id, directionExpr);
+        }
+        expr.push("#2563eb"); // default fallback
+        return expr;
+    }, [routeIds, routeIdColorMapping]);
 
-    const displayActiveUpSegments = hasActiveSegments ? activeUpSegments : inactiveUpSegments;
-    const displayActiveDownSegments = hasActiveSegments ? activeDownSegments : inactiveDownSegments;
+    const activeGeoJson = useMemo(() => {
+        if (routeIds.length === 0) return null;
+        const features: any[] = [];
 
-    // Convert to GeoJSON
-    const activeUpGeoJSON = useMemo(() => createGeoJSON(displayActiveUpSegments), [displayActiveUpSegments]);
-    const activeDownGeoJSON = useMemo(() => createGeoJSON(displayActiveDownSegments), [displayActiveDownSegments]);
+        for (const id of routeIds) {
+            const data = polylineMap.get(id);
+            if (!data) continue;
+
+            if (data.upPolyline.length > 0) {
+                features.push({
+                    type: "Feature",
+                    geometry: {
+                        type: "LineString",
+                        coordinates: data.upPolyline.map(c => [c[1], c[0]]) // MapLibre expects [lng, lat]
+                    },
+                    properties: {route_id: id, direction: "up"}
+                });
+            }
+            if (data.downPolyline.length > 0) {
+                features.push({
+                    type: "Feature",
+                    geometry: {
+                        type: "LineString",
+                        coordinates: data.downPolyline.map(c => [c[1], c[0]])
+                    },
+                    properties: {route_id: id, direction: "down"}
+                });
+            }
+        }
+
+        return {type: "FeatureCollection" as const, features};
+    }, [routeIds, polylineMap]);
 
     // Fit map to bounds
     useEffect(() => {
-        if (!map || !bounds) return;
+        if (!map || !bbox) return;
 
-        const key = bounds.flat().join(",");
+        const key = bbox.flat().join(",");
         if (lastBoundsKeyRef.current === key) return;
         lastBoundsKeyRef.current = key;
 
-        // Leaflet bounds format: [[south, west], [north, east]]
-        // maplibre-gl fitBounds expects [ [west, south], [east, north] ]
-        const [[s, w], [n, e]] = bounds;
-
+        const [[s, w], [n, e]] = bbox;
         map.fitBounds([[w, s], [e, n]], {
-            padding: 32, duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
+            padding: 32,
+            duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
         });
-    }, [map, bounds]);
+    }, [map, bbox]);
 
-    return (<>
-        <Source id="polyline-up" type="geojson" data={activeUpGeoJSON}/>
-        {isNoBusRunning ? (<>
+    if (routeIds.length === 0 || !activeGeoJson) return null;
+
+    return (
+        <Source id="active-routes-polyline" type="geojson" data={activeGeoJson}>
             <Layer
-                id="polyline-up-layer"
-                source="polyline-up"
+                id="polyline-active-layer"
                 type="line"
                 paint={{
-                    "line-color": COLORS.ACTIVE_UP, "line-width": 4, "line-opacity": 0.7, "line-dasharray": [1.5, 2]
+                    "line-color": colorExpression as any,
+                    "line-width": 4,
+                    "line-opacity": 1,
                 }}
-                layout={{"line-cap": "round", "line-join": "round"}}
-            />
-            <Layer
-                id="polyline-up-arrows-inactive"
-                source="polyline-up"
-                type="symbol"
                 layout={{
-                    "symbol-placement": "line",
-                    "symbol-spacing": 80,
-                    "text-field": "▶",
-                    "text-font": ["Noto Sans Regular"],
-                    "text-size": ["interpolate", ["linear"], ["zoom"], 10, 6, 14, 12, 18, 18],
-                    "text-keep-upright": false,
-                    "text-rotation-alignment": "auto",
-                    "symbol-avoid-edges": false,
-                    "text-allow-overlap": true,
-                    "text-ignore-placement": true,
-                }}
-                paint={{
-                    "text-color": COLORS.ACTIVE_UP,
-                    "text-halo-color": "white",
-                    "text-halo-width": 2,
-                    "text-opacity": 0.6,
+                    "line-cap": "round",
+                    "line-join": "round",
                 }}
             />
-        </>) : (<>
             <Layer
-                id="polyline-up-glow"
-                source="polyline-up"
-                type="line"
-                paint={{
-                    "line-color": COLORS.GLOW_UP, "line-width": 10, "line-opacity": 1,
-                }}
-                layout={{"line-cap": "round", "line-join": "round"}}
-            />
-            <Layer
-                id="polyline-up-main"
-                source="polyline-up"
-                type="line"
-                paint={{
-                    "line-color": COLORS.ACTIVE_UP, "line-width": 4, "line-opacity": 1,
-                }}
-                layout={{"line-cap": "round", "line-join": "round"}}
-            />
-            <Layer
-                id="polyline-up-arrows-active"
-                source="polyline-up"
+                id="polyline-active-arrows"
                 type="symbol"
                 layout={{
                     "symbol-placement": "line",
@@ -176,90 +137,18 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
                     "text-ignore-placement": true,
                 }}
                 paint={{
-                    "text-color": COLORS.ACTIVE_UP,
+                    "text-color": [
+                        "match",
+                        ["get", "direction"],
+                        "up", "#2563eb",
+                        "down", "#dc2626",
+                        "#2563eb"
+                    ],
                     "text-halo-color": "white",
                     "text-halo-width": 2,
                     "text-opacity": 0.9,
                 }}
             />
-        </>)}
-
-        <Source id="polyline-down" type="geojson" data={activeDownGeoJSON}/>
-        {isNoBusRunning ? (<>
-            <Layer
-                id="polyline-down-layer"
-                source="polyline-down"
-                type="line"
-                paint={{
-                    "line-color": COLORS.ACTIVE_DOWN, "line-width": 4, "line-opacity": 0.7, "line-dasharray": [1.5, 2]
-                }}
-                layout={{"line-cap": "round", "line-join": "round"}}
-            />
-            <Layer
-                id="polyline-down-arrows-inactive"
-                source="polyline-down"
-                type="symbol"
-                layout={{
-                    "symbol-placement": "line",
-                    "symbol-spacing": 80,
-                    "text-field": "▶",
-                    "text-font": ["Noto Sans Regular"],
-                    "text-size": ["interpolate", ["linear"], ["zoom"], 10, 6, 14, 12, 18, 18],
-                    "text-keep-upright": false,
-                    "text-rotation-alignment": "auto",
-                    "symbol-avoid-edges": false,
-                    "text-allow-overlap": true,
-                    "text-ignore-placement": true,
-                }}
-                paint={{
-                    "text-color": COLORS.ACTIVE_DOWN,
-                    "text-halo-color": "white",
-                    "text-halo-width": 2,
-                    "text-opacity": 0.6,
-                }}
-            />
-        </>) : (<>
-            <Layer
-                id="polyline-down-glow"
-                source="polyline-down"
-                type="line"
-                paint={{
-                    "line-color": COLORS.GLOW_DOWN, "line-width": 10, "line-opacity": 1,
-                }}
-                layout={{"line-cap": "round", "line-join": "round"}}
-            />
-            <Layer
-                id="polyline-down-main"
-                source="polyline-down"
-                type="line"
-                paint={{
-                    "line-color": COLORS.ACTIVE_DOWN, "line-width": 4, "line-opacity": 1,
-                }}
-                layout={{"line-cap": "round", "line-join": "round"}}
-            />
-            <Layer
-                id="polyline-down-arrows-active"
-                source="polyline-down"
-                type="symbol"
-                layout={{
-                    "symbol-placement": "line",
-                    "symbol-spacing": 100,
-                    "text-field": "▶",
-                    "text-font": ["Noto Sans Regular"],
-                    "text-size": ["interpolate", ["linear"], ["zoom"], 10, 6, 14, 12, 18, 18],
-                    "text-keep-upright": false,
-                    "text-rotation-alignment": "auto",
-                    "symbol-avoid-edges": false,
-                    "text-allow-overlap": true,
-                    "text-ignore-placement": true,
-                }}
-                paint={{
-                    "text-color": COLORS.ACTIVE_DOWN,
-                    "text-halo-color": "white",
-                    "text-halo-width": 2,
-                    "text-opacity": 0.9,
-                }}
-            />
-        </>)}
-    </>);
+        </Source>
+    );
 }

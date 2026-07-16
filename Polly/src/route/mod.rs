@@ -200,23 +200,39 @@ pub async fn run(args: RouteArgs) -> Result<()> {
                         && !fname.starts_with(target)
                         && !fname.contains(target)
                     {
-                        return Ok(());
+                        return Ok(HashMap::new());
                     }
 
                     info!("Processing {}...", fname);
 
                     proc.process_raw_to_derived(&path, &smap).await
                 } else {
-                    Ok(())
+                    Ok(HashMap::new())
                 }
             }
         })
         .buffer_unordered(CONCURRENCY_SNAP);
 
+    let mut all_segments = HashMap::new();
+
     while let Some(res) = snap_stream.next().await {
-        if let Err(e) = res {
-            error!("Processing failed: {:?}", e);
+        match res {
+            Ok(segments) => all_segments.extend(segments),
+            Err(e) => error!("Processing failed: {:?}", e),
         }
+    }
+
+    info!("Generating segments.json containing all shared segments...");
+    let segments_path = derived_dir.join("segments.json");
+    if let Err(e) = tokio::fs::write(
+        &segments_path,
+        serde_json::to_string(&all_segments).unwrap(),
+    )
+    .await
+    {
+        error!("Failed to write segments.json: {:?}", e);
+    } else {
+        info!("Saved segments.json to {:?}", segments_path);
     }
 
     info!("Pipeline Complete.");

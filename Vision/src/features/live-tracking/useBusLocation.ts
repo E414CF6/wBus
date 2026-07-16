@@ -203,7 +203,7 @@ class BusLocationStore {
         this.fallbackInterval = setInterval(() => {
             void this.fetchFallback();
         }, API_CONFIG.LIVE.POLLING_INTERVAL_MS);
-        this.updateState({ connectionStatus: "fallback" });
+        this.updateState({connectionStatus: "fallback"});
     }
 
     private scheduleReconnect(delayOverrideMs?: number) {
@@ -305,7 +305,7 @@ class BusLocationStore {
             return;
         }
 
-        this.updateState({ connectionStatus: "connecting" });
+        this.updateState({connectionStatus: "connecting"});
 
         const streamUrl = buildStreamUrl(this.routeIds);
         const source = new window.EventSource(streamUrl);
@@ -353,7 +353,7 @@ class BusLocationStore {
             this.clearFallbackPolling();
             this.refreshStaleTimer();
             this.scheduleProactiveReconnect();
-            this.updateState({ connectionStatus: "connected" });
+            this.updateState({connectionStatus: "connected"});
         };
     }
 
@@ -382,7 +382,7 @@ class BusLocationStore {
         this.clearFallbackPolling();
         this.clearReconnectTimer();
         this.isConnecting = false;
-        this.updateState({ connectionStatus: "suspended" });
+        this.updateState({connectionStatus: "suspended"});
     }
 
     private registerEventListeners() {
@@ -416,7 +416,7 @@ class BusLocationStore {
 
         if (!isVisible || !isOnline) {
             this.isSuspended = true;
-            this.updateState({ connectionStatus: "suspended" });
+            this.updateState({connectionStatus: "suspended"});
             return;
         }
 

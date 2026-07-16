@@ -1,6 +1,8 @@
 import {CacheManager} from "@shared/cache/CacheManager";
 import {
-    DEFAULT_CACHE_TTL_SECONDS, DEFAULT_STALE_IF_ERROR_SECONDS, DEFAULT_STALE_WHILE_REVALIDATE_SECONDS
+    DEFAULT_CACHE_TTL_SECONDS,
+    DEFAULT_STALE_IF_ERROR_SECONDS,
+    DEFAULT_STALE_WHILE_REVALIDATE_SECONDS
 } from "@shared/cache/cachePolicy";
 import {createClient, type RedisClientType} from "redis";
 import type {CachedData, CacheMeta, CacheStatus} from "./types";

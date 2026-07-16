@@ -51,7 +51,7 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
                 if (result.meta.degraded) {
                     headers["X-Cache-Degraded"] = "true";
                 }
-                
+
                 // Server logging for request tracing
                 console.log(`[API ${config.loggerPrefix}/${id}] ${result.meta.status.toUpperCase()} (${result.meta.layer}) - Age: ${result.meta.ageMs}ms`);
             }

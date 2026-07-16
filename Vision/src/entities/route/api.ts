@@ -1,4 +1,4 @@
-import type {GeoPolyline, RouteDetail, RouteInfo, RouteMapData} from "@entities/route/types";
+import type {GeoPolyline, RouteDetail, RouteInfo, RouteMapData, SegmentsJSON} from "@entities/route/types";
 
 import {HttpError} from "@shared/api/fetchAPI";
 import {CacheManager} from "@shared/cache/CacheManager";
@@ -9,6 +9,7 @@ import {loadStaticData} from "@shared/utils/dataLoader";
 
 const routeMapCache = new CacheManager<RouteMapData>();
 const polylineCache = new CacheManager<GeoPolyline | null>();
+const segmentsCache = new CacheManager<SegmentsJSON>();
 
 // Internal Helpers
 
@@ -25,10 +26,16 @@ export async function getRouteMap(): Promise<Record<string, string[]>> {
     return Object.fromEntries(Object.entries(data.route_numbers).filter(([, ids]) => ids.length > 0));
 }
 
+export async function getSegmentsJSON(): Promise<SegmentsJSON> {
+    return segmentsCache.getOrFetch("segments.json", async () => {
+        return loadStaticData<SegmentsJSON>(`${API_CONFIG.STATIC.PATHS.POLYLINES}/segments.json`);
+    });
+}
+
 export async function getPolyline(routeKey: string): Promise<GeoPolyline | null> {
     return polylineCache.getOrFetch(routeKey, async () => {
         try {
-            return await loadStaticData<GeoPolyline>(`${API_CONFIG.STATIC.PATHS.POLYLINES}/${routeKey}.geojson`);
+            return await loadStaticData<GeoPolyline>(`${API_CONFIG.STATIC.PATHS.POLYLINES}/${routeKey}.json`);
         } catch (error) {
             if (error instanceof HttpError && error.status === 404) {
                 if (APP_CONFIG.IS_DEV) {
@@ -62,11 +69,9 @@ export async function getRouteInfo(routeName: string): Promise<RouteInfo | null>
 
 export async function getRouteDetails(routeId: string): Promise<RouteDetail | null> {
     const polyline = await getPolyline(routeId);
-    if (!polyline || !polyline.features || polyline.features.length === 0) return null;
-    const props = polyline.features[0].properties;
-    if (!props || !props.stops) return null;
-    const sequence = props.stops.map((s) => ({
+    if (!polyline || !polyline.stops) return null;
+    const sequence = polyline.stops.map((s) => ({
         nodeid: s.id, nodeord: s.ord, updowncd: s.ud
     }));
-    return {routeno: props.route_no, sequence};
+    return {routeno: polyline.route_no, sequence};
 }

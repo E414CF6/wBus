@@ -38,43 +38,18 @@ pub struct RawRouteFile {
 // Derived Data Models (Saved to derived_routes/)
 // ============================================================================
 
-/// GeoJSON FeatureCollection
+/// Single lightweight metadata file for marker snapping and UI (saved as .json)
 #[derive(Serialize)]
-pub struct RouteFeatureCollection {
-    #[serde(rename = "type")]
-    pub type_: String, // "FeatureCollection"
-    pub features: Vec<RouteFeature>,
-}
-
-#[derive(Serialize)]
-pub struct RouteFeature {
-    #[serde(rename = "type")]
-    pub type_: String, // "Feature"
-    pub id: String, // Root ID (e.g., Route ID)
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bbox: Option<Vec<f64>>,
-
-    pub properties: RouteProperties,
-    pub geometry: RouteGeometry,
-}
-
-#[derive(Serialize)]
-pub struct RouteGeometry {
-    #[serde(rename = "type")]
-    pub type_: String, // "LineString"
-    pub coordinates: Vec<Vec<f64>>,
-}
-
-#[derive(Serialize)]
-pub struct RouteProperties {
+pub struct RouteSnapData {
     pub route_id: String,
     pub route_no: String,
     pub stops: Vec<FrontendStop>,
-    #[serde(flatten)]
-    pub indices: RouteIndices,
+    pub up_segments: Vec<String>,
+    pub down_segments: Vec<String>,
     #[serde(flatten)]
     pub meta: FrontendMeta,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bbox: Option<Vec<f64>>,
 }
 
 #[derive(Serialize)]
@@ -84,12 +59,6 @@ pub struct FrontendStop {
     pub ord: i64,
     #[serde(rename = "ud")]
     pub up_down: i64,
-}
-
-#[derive(Serialize)]
-pub struct RouteIndices {
-    pub turn_idx: usize,
-    pub stop_to_coord: Vec<usize>,
 }
 
 #[derive(Serialize)]

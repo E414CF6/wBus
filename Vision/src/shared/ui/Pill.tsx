@@ -63,7 +63,7 @@ export default function Pill<T extends ElementType = "span">({
     const Component = as || "span";
 
     return (<Component
-            className={`
+        className={`
         inline-flex items-center gap-1.5 rounded-full
         font-semibold leading-none whitespace-nowrap
         transition-colors duration-200
@@ -71,8 +71,8 @@ export default function Pill<T extends ElementType = "span">({
         ${sizeStyles[size]}
         ${className}
       `}
-            {...props}
-        >
-            {children}
-        </Component>);
+        {...props}
+    >
+        {children}
+    </Component>);
 }

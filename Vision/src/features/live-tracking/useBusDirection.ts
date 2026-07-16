@@ -2,7 +2,10 @@ import {getRouteDetails} from "@entities/route/api";
 import {useRouteInfo} from "@entities/route/hooks";
 
 import {
-    buildDirectionLookup, type DirectionResolverState, resolveDirection, type RouteSequenceData,
+    buildDirectionLookup,
+    type DirectionResolverState,
+    resolveDirection,
+    type RouteSequenceData,
 } from "@entities/route/directionService";
 import type {DirectionCode} from "@entities/route/types";
 

@@ -73,7 +73,7 @@ export default function NavBar({className = ""}: NavBarProps) {
             </h1>
 
             {/* Divider */}
-            <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-1" />
+            <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-1"/>
 
             {/* Theme Toggle Button */}
             <button
@@ -83,11 +83,11 @@ export default function NavBar({className = ""}: NavBarProps) {
                 aria-label="Toggle theme"
             >
                 {!mounted ? (
-                    <div className="w-4.5 h-4.5 rounded-full border border-gray-300 animate-pulse" />
+                    <div className="w-4.5 h-4.5 rounded-full border border-gray-300 animate-pulse"/>
                 ) : localIsDark ? (
-                    <Sun className="w-4.5 h-4.5" strokeWidth={2.5} />
+                    <Sun className="w-4.5 h-4.5" strokeWidth={2.5}/>
                 ) : (
-                    <Moon className="w-4.5 h-4.5" strokeWidth={2.5} />
+                    <Moon className="w-4.5 h-4.5" strokeWidth={2.5}/>
                 )}
             </button>
         </div>

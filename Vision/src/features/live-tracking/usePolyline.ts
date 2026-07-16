@@ -6,7 +6,11 @@
 "use client";
 
 import {
-    createMultiPolylineData, fetchRoutePolylines, type MultiPolylineData, type PolylineData, type PolylineSegment,
+    createMultiPolylineData,
+    fetchRoutePolylines,
+    type MultiPolylineData,
+    type PolylineData,
+    type PolylineSegment,
 } from "@entities/route/polylineService";
 
 import type {Coordinate} from "@entities/route/types";
@@ -25,6 +29,7 @@ export interface BusPolylineSet {
     stopIndexMap?: PolylineData["stopIndexMap"];
     turnIndex?: number;
     isSwapped?: boolean;
+    bbox?: PolylineData["bbox"];
 }
 
 const EMPTY_POLYLINE_MAP = new Map<string, PolylineData>();
@@ -74,6 +79,7 @@ export function useBusPolylineMap(routeIds: string[]): Map<string, BusPolylineSe
                 stopIndexMap: data.stopIndexMap,
                 turnIndex: data.turnIndex,
                 isSwapped: data.isSwapped,
+                bbox: data.bbox,
             });
         }
         return result;

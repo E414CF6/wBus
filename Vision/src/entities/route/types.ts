@@ -17,34 +17,24 @@ export type RouteDetail = {
 
 // GeoJSON
 
-interface BusRouteFeatureCollection {
-    type: "FeatureCollection";
-    features: BusRouteFeature[];
-}
-
-interface BusRouteFeature {
-    type: "Feature";
-    id: string;
-    bbox: [number, number, number, number];
-    geometry: {
-        type: "LineString"; coordinates: Array<[number, number]>;
-    };
-    properties: BusRouteProperties;
-}
-
-interface BusRouteProperties {
+export interface GeoPolyline {
     route_id: string;
     route_no: string;
-    stops: Array<{
-        id: string; name: string; ord: number; ud: number;
-    }>;
-    turn_idx: number;
-    stop_to_coord: number[];
+    stops: {
+        id: string;
+        name: string;
+        ord: number;
+        ud: number;
+    }[];
+    up_segments: string[];
+    down_segments: string[];
     total_dist: number;
-    source_ver: string;
+    total_time?: number;
+    source_ver?: string;
+    bbox?: [number, number, number, number];
 }
 
-export type GeoPolyline = BusRouteFeatureCollection;
+export type SegmentsJSON = Record<string, [number, number][]>;
 
 // Schedule Items
 

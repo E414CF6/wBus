@@ -1,6 +1,7 @@
 "use client";
 
 import {getDirectionIcon} from "@entities/bus/directionIcons";
+import {getRouteIdColorMapping, PALETTE} from "@entities/route/polylineService";
 
 import {getSnappedPosition} from "@entities/route/snapService";
 
@@ -31,8 +32,9 @@ const SNAP_INDEX_RANGE = 80;
 /**
  * Minimal 3D top-down bus marker
  */
-const BusIconDOM = memo(({routeNumber}: { routeNumber: string }) => {
+const BusIconDOM = memo(({routeNumber, color}: { routeNumber: string; color?: string }) => {
     const [w, h] = SETTINGS.ICON_SIZE;
+    const themeColor = color || "#4f46e5";
 
     return (<div
         className="bus-marker-with-label relative"
@@ -47,10 +49,12 @@ const BusIconDOM = memo(({routeNumber}: { routeNumber: string }) => {
             aria-label={UI_TEXT.ACCESSIBILITY.BUS_ICON_ALT}
             role="img"
         >
-            <rect x="4" y="2" width="32" height="50" rx="10" fill="#4f46e5"/>
+            <rect x="4" y="2" width="32" height="50" rx="10" fill={themeColor}/>
         </svg>
         <div
-            className="bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 bg-[#4f46e5] text-white text-[11px] font-extrabold px-1 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] min-w-7 max-w-7 flex items-center justify-center">
+            className="bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 text-white text-[11px] font-extrabold px-1 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] min-w-7 max-w-7 flex items-center justify-center"
+            style={{backgroundColor: themeColor}}
+        >
             <PopupMarquee text={routeNumber} maxWidthClass="max-w-7"/>
         </div>
     </div>);
@@ -122,6 +126,11 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
 
     const [selectedBusKey, setSelectedBusKey] = useState<string | null>(null);
 
+    const routeIdColorMapping = useMemo(() => {
+        if (!routeInfo) return {};
+        return getRouteIdColorMapping(routeInfo.vehicleRouteIds, polylineMap);
+    }, [routeInfo, polylineMap]);
+
     const routeIndicesMap = useMemo(() => {
         if (!routeInfo) return new Map();
 
@@ -191,6 +200,10 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 stopCoordIndices = snapped.direction === 1 ? routeIndices.upIndices : routeIndices.downIndices;
             }
 
+            const colorIndex = targetRouteId ? (routeIdColorMapping[targetRouteId] ?? 0) : 0;
+            const routeColors = PALETTE[colorIndex % PALETTE.length];
+            const markerColor = snapped.direction === 1 ? routeColors.up : routeColors.down;
+
             return {
                 key: markerKey,
                 bus,
@@ -201,16 +214,27 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 snapIndexHint: snapped.segmentIndex ?? null,
                 stopCoordIndices,
                 refreshKey: markerKey,
+                markerColor,
             };
         });
-    }, [routeInfo, busList, getDirection, polylineMap, fallbackPolylines, activeRouteId, routeName, routeIndicesMap]);
+    }, [routeInfo, busList, getDirection, polylineMap, fallbackPolylines, activeRouteId, routeName, routeIndicesMap, routeIdColorMapping]);
 
     if (!routeInfo || markers.length === 0) return null;
 
     const selectedMarker = selectedBusKey ? markers.find(m => m.key === selectedBusKey) : null;
 
     return (<>
-        {markers.map(({key, bus, position, angle, polyline, snapIndexHint, stopCoordIndices, refreshKey}) => {
+        {markers.map(({
+                          key,
+                          bus,
+                          position,
+                          angle,
+                          polyline,
+                          snapIndexHint,
+                          stopCoordIndices,
+                          refreshKey,
+                          markerColor
+                      }) => {
             return (<BusAnimatedMarker
                 key={key}
                 position={position}
@@ -228,7 +252,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                     onPopupOpen?.(routeName);
                 }}
             >
-                <BusIconDOM routeNumber={bus.routenm}/>
+                <BusIconDOM routeNumber={bus.routenm} color={markerColor}/>
             </BusAnimatedMarker>);
         })}
 
