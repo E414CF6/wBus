@@ -5,7 +5,10 @@ import {Layer, Source} from "react-map-gl/maplibre";
 import {getSegmentsJSON} from "@entities/route/api";
 
 export default function BaseRoutePolyline() {
-    const [geoJson, setGeoJson] = useState<any>(null);
+    const [geoJson, setGeoJson] = useState<any>({
+        type: "FeatureCollection",
+        features: []
+    });
 
     useEffect(() => {
         getSegmentsJSON().then(data => {
@@ -24,8 +27,6 @@ export default function BaseRoutePolyline() {
             });
         }).catch(console.error);
     }, []);
-
-    if (!geoJson) return null;
 
     return (
         <Source id="base-polyline" type="geojson" data={geoJson}>
