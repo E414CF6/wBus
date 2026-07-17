@@ -49,12 +49,12 @@ function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordinate[],
 
     let upCount = 0;
     let downCount = 0;
-    
+
     stops.forEach((stop) => {
         const rawId = typeof stop.id === "string" ? stop.id.trim() : "";
         const ord = Number(stop.ord);
         const dir = Number(stop.ud);
-        
+
         let roughIndex = 0;
         if (dir === 1) {
             const ratio = upStops.length > 1 ? upCount / (upStops.length - 1) : 0;
@@ -65,7 +65,7 @@ function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordinate[],
             roughIndex = Math.floor(ratio * (downPolyline.length - 1));
             downCount++;
         }
-        
+
         if (rawId) {
             map.byId[rawId] = roughIndex;
             if (Number.isFinite(dir)) map.byIdDir[`${rawId}-${dir}`] = roughIndex;
@@ -115,16 +115,36 @@ async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
     const assemblePolyline = (segmentIds: string[]): [number, number][] => {
         if (!segmentIds || segmentIds.length === 0) return [];
         const coords: [number, number][] = [];
+        let segmentsAdded = 0;
+
         for (const segId of segmentIds) {
             const segCoords = segmentsData[segId];
             if (segCoords && segCoords.length > 0) {
-                if (coords.length > 0 &&
-                    coords[coords.length - 1][0] === segCoords[0][0] &&
-                    coords[coords.length - 1][1] === segCoords[0][1]) {
-                    coords.push(...segCoords.slice(1));
+                if (coords.length > 0) {
+                    const cFirst = coords[0];
+                    const cLast = coords[coords.length - 1];
+                    const sFirst = segCoords[0];
+                    const sLast = segCoords[segCoords.length - 1];
+
+                    if (cLast[0] === sFirst[0] && cLast[1] === sFirst[1]) {
+                        coords.push(...segCoords.slice(1));
+                    } else if (cLast[0] === sLast[0] && cLast[1] === sLast[1]) {
+                        const reversedSeg = [...segCoords].reverse();
+                        coords.push(...reversedSeg.slice(1));
+                    } else if (segmentsAdded === 1 && cFirst[0] === sFirst[0] && cFirst[1] === sFirst[1]) {
+                        coords.reverse();
+                        coords.push(...segCoords.slice(1));
+                    } else if (segmentsAdded === 1 && cFirst[0] === sLast[0] && cFirst[1] === sLast[1]) {
+                        coords.reverse();
+                        const reversedSeg = [...segCoords].reverse();
+                        coords.push(...reversedSeg.slice(1));
+                    } else {
+                        coords.push(...segCoords);
+                    }
                 } else {
                     coords.push(...segCoords);
                 }
+                segmentsAdded++;
             }
         }
         return coords;

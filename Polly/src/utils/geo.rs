@@ -54,22 +54,23 @@ pub fn closest_point_on_polyline(
     best
 }
 
-/// Find the index of the coordinate in `line` closest to `point`
-///
-/// Uses a fast squared Euclidean approximation instead of full haversine,
-/// which is valid since we only need the relative ordering of distances
-/// (not absolute values) and the coordinates span a small geographic area.
-pub fn find_nearest_coord_index(point: (f64, f64), line: &[Vec<f64>]) -> Option<usize> {
-    if line.is_empty() {
+pub fn find_nearest_coord_index(
+    point: (f64, f64),
+    line: &[Vec<f64>],
+    start_idx: usize,
+) -> Option<usize> {
+    if line.is_empty() || start_idx >= line.len() {
         return None;
     }
 
     let (px, py) = point;
 
-    let mut best_idx = 0;
+    let mut best_idx = start_idx;
     let mut min_dist_sq = f64::MAX;
+    let mut increases = 0;
 
-    for (i, coord) in line.iter().enumerate() {
+    for i in start_idx..line.len() {
+        let coord = &line[i];
         let dx = px - coord[0];
         let dy = py - coord[1];
         let dist_sq = dx * dx + dy * dy;
@@ -77,6 +78,14 @@ pub fn find_nearest_coord_index(point: (f64, f64), line: &[Vec<f64>]) -> Option<
         if dist_sq < min_dist_sq {
             min_dist_sq = dist_sq;
             best_idx = i;
+            increases = 0;
+        } else {
+            increases += 1;
+            // If distance has been increasing for 150 consecutive points, we are past the local minimum.
+            // This prevents matching against the return trip.
+            if increases > 150 {
+                break;
+            }
         }
     }
 

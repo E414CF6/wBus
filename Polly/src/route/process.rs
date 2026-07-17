@@ -6,7 +6,7 @@ use serde_json::Value;
 
 use crate::config::OSRM_CHUNK_SIZE;
 use crate::route::model::{
-    BusRouteProcessor, FrontendMeta, FrontendStop, RawRouteFile, RawStop, RouteSnapData,
+    BusRouteProcessor, FrontendMeta, FrontendStop, RawRouteFile, RouteSnapData,
 };
 use crate::utils::geo::{calculate_metrics, find_nearest_coord_index};
 
@@ -45,12 +45,75 @@ impl BusRouteProcessor {
         let route_no = raw_data.route_no;
 
         // Identify Turning Point
-        let mut turn_idx = stops.len() - 1;
-        for i in 0..stops.len() - 1 {
-            if stops[i].up_down_cd != stops[i + 1].up_down_cd {
-                turn_idx = i;
-                break;
+        // Find the physically farthest stop from the start terminal.
+        let mut max_dist = 0.0;
+        let start_stop = &stops[0];
+        let mut farthest_idx = stops.len().saturating_sub(1);
+        if stops.len() > 2 {
+            for i in 1..stops.len() - 1 {
+                let dist = (stops[i].gps_long - start_stop.gps_long).powi(2)
+                    + (stops[i].gps_lat - start_stop.gps_lat).powi(2);
+                if dist > max_dist {
+                    max_dist = dist;
+                    farthest_idx = i;
+                }
             }
+        }
+
+        let mut transitions = 0;
+        let mut first_transition_idx = 0;
+        if stops.len() > 1 {
+            let mut last_cd = stops[0].up_down_cd;
+            for i in 1..stops.len() {
+                if stops[i].up_down_cd != last_cd {
+                    transitions += 1;
+                    if transitions == 1 {
+                        first_transition_idx = i - 1;
+                    }
+                    last_cd = stops[i].up_down_cd;
+                }
+            }
+        }
+
+        let mut turn_idx = farthest_idx;
+
+        if transitions == 1 {
+            let dist_at_transition = (stops[first_transition_idx].gps_long - start_stop.gps_long)
+                .powi(2)
+                + (stops[first_transition_idx].gps_lat - start_stop.gps_lat).powi(2);
+
+            // If the administrative transition point is at least ~70% as far as the absolute farthest point,
+            // we trust it (0.7^2 ≈ 0.5). Otherwise, it's a premature turnaround anomaly!
+            if dist_at_transition >= max_dist * 0.4 {
+                turn_idx = first_transition_idx;
+            } else {
+                log::warn!(
+                    "Premature turnaround detected in route {}. Admin transition at {}, but farthest is {}. Using farthest.",
+                    route_no,
+                    first_transition_idx,
+                    farthest_idx
+                );
+            }
+        } else {
+            if transitions > 1 {
+                log::warn!(
+                    "Noisy up_down_cd data ({} transitions) in route {}. Using farthest point at {}.",
+                    transitions,
+                    route_no,
+                    farthest_idx
+                );
+            }
+        }
+
+        // [CRITICAL NORMALIZATION]
+        // Force the first half of the route (outbound from terminal) to always be ud = 0 (Downbound/Red).
+        // Force the second half of the route (inbound to terminal) to always be ud = 1 (Upbound/Blue).
+        // This permanently fixes buggy provider data where ud is swapped or constant!
+        for i in 0..=turn_idx {
+            stops[i].up_down_cd = 0;
+        }
+        for i in turn_idx + 1..stops.len() {
+            stops[i].up_down_cd = 1;
         }
 
         // OSRM Logic (Merging)
@@ -74,34 +137,25 @@ impl BusRouteProcessor {
                 total_osrm_duration += chunk_dur;
 
                 // Merge Geometry
-                let (to_append, _offset) = if current_total > 0 {
-                    (&coords[1..], 0)
-                } else {
-                    (&coords[..], 0)
-                };
+                let to_append = &coords[..];
 
                 // Map Stops to Geometry
+                let mut prev_local_idx = 0;
                 for (i, stop) in chunk.iter().enumerate() {
                     let global_stop_idx = start_idx + i;
                     if global_stop_idx < stop_to_coord.len() {
                         continue;
                     }
 
-                    if let Some(local_idx) =
-                        find_nearest_coord_index((stop.gps_long, stop.gps_lat), &coords)
-                    {
-                        let global_coord_idx = if current_total > 0 {
-                            if local_idx == 0 {
-                                current_total - 1
-                            } else {
-                                current_total + local_idx - 1
-                            }
-                        } else {
-                            local_idx
-                        };
-                        stop_to_coord.push(global_coord_idx);
+                    if let Some(local_idx) = find_nearest_coord_index(
+                        (stop.gps_long, stop.gps_lat),
+                        &coords,
+                        prev_local_idx,
+                    ) {
+                        stop_to_coord.push(current_total + local_idx);
+                        prev_local_idx = local_idx;
                     } else {
-                        stop_to_coord.push(current_total);
+                        stop_to_coord.push(current_total + prev_local_idx);
                     }
                 }
 
@@ -164,12 +218,6 @@ impl BusRouteProcessor {
         }
         let optimized_coordinates = full_coordinates;
 
-        // Derive Indices & Metrics
-        let turn_coord_idx = stop_to_coord
-            .get(turn_idx)
-            .cloned()
-            .unwrap_or(optimized_coordinates.len() / 2);
-
         // Calculate BBox & Distance
         // We use OSRM reported distance if available, otherwise fallback to polyline calculation
         let (bbox, geom_dist) = calculate_metrics(&optimized_coordinates);
@@ -187,15 +235,28 @@ impl BusRouteProcessor {
         use std::hash::{Hash, Hasher};
 
         for i in 0..stops.len().saturating_sub(1) {
-            let start_idx = stop_to_coord[i];
-            let end_idx = stop_to_coord[i + 1];
-            if start_idx >= end_idx
-                || start_idx >= optimized_coordinates.len()
-                || end_idx >= optimized_coordinates.len()
-            {
-                continue;
+            let mut start_idx = stop_to_coord[i];
+            let mut end_idx = stop_to_coord[i + 1];
+
+            // Ensure bounds
+            start_idx = start_idx.min(optimized_coordinates.len().saturating_sub(1));
+            end_idx = end_idx.min(optimized_coordinates.len().saturating_sub(1));
+
+            // Fix inverted or equal indices to prevent skipping segments.
+            // Skipping segments causes array desynchronization in the frontend!
+            if start_idx >= end_idx {
+                end_idx = start_idx;
             }
-            let seg_coords = optimized_coordinates[start_idx..=end_idx].to_vec();
+
+            let mut seg_coords = optimized_coordinates[start_idx..=end_idx].to_vec();
+            if seg_coords.len() < 2 {
+                if !seg_coords.is_empty() {
+                    seg_coords.push(seg_coords[0].clone());
+                } else {
+                    seg_coords.push(vec![0.0, 0.0]);
+                    seg_coords.push(vec![0.0, 0.0]);
+                }
+            }
 
             let mut hasher = DefaultHasher::new();
             for p in &seg_coords {
@@ -208,40 +269,26 @@ impl BusRouteProcessor {
 
             local_segments.insert(seg_id.clone(), seg_coords);
 
-            // If the segment starts before the turn index, it's 'up'
-            if start_idx < turn_coord_idx {
-                up_segments.push(seg_id);
-            } else {
+            // Sync down_segments and up_segments precisely with the stops array index.
+            if i < turn_idx {
                 down_segments.push(seg_id);
+            } else {
+                up_segments.push(seg_id);
             }
         }
-
-        let up_polyline = optimized_coordinates
-            [..=turn_coord_idx.min(optimized_coordinates.len().saturating_sub(1))]
-            .to_vec();
-        let down_polyline = optimized_coordinates
-            [turn_coord_idx.min(optimized_coordinates.len().saturating_sub(1))..]
-            .to_vec();
-        let is_swapped = should_swap_polylines(&stops, &up_polyline, &down_polyline);
-
-        if is_swapped {
-            std::mem::swap(&mut up_segments, &mut down_segments);
-        }
-
-        let frontend_stops: Vec<FrontendStop> = stops
-            .into_iter()
-            .map(|s| FrontendStop {
-                id: s.node_id,
-                name: s.node_nm,
-                ord: s.node_ord,
-                up_down: s.up_down_cd,
-            })
-            .collect();
 
         let snap_data = RouteSnapData {
             route_id: route_id.clone(),
             route_no: route_no.clone(),
-            stops: frontend_stops,
+            stops: stops
+                .into_iter()
+                .map(|s| FrontendStop {
+                    id: s.node_id,
+                    name: s.node_nm,
+                    ord: s.node_ord,
+                    up_down: s.up_down_cd,
+                })
+                .collect(),
             up_segments,
             down_segments,
             meta: FrontendMeta {
@@ -258,81 +305,4 @@ impl BusRouteProcessor {
 
         Ok(local_segments)
     }
-}
-
-fn should_swap_polylines(
-    stops: &[RawStop],
-    up_polyline: &[Vec<f64>],
-    down_polyline: &[Vec<f64>],
-) -> bool {
-    if up_polyline.len() < 2 || down_polyline.len() < 2 {
-        return false;
-    }
-
-    let mut up_stops = Vec::new();
-    let mut down_stops = Vec::new();
-
-    for stop in stops {
-        let coord = vec![stop.gps_long, stop.gps_lat];
-        if stop.up_down_cd == 1 {
-            up_stops.push(coord);
-        } else {
-            down_stops.push(coord);
-        }
-    }
-
-    if up_stops.len() < 3 || down_stops.len() < 3 {
-        return false;
-    }
-
-    let sample = |arr: &Vec<Vec<f64>>, max: usize| -> Vec<Vec<f64>> {
-        if arr.len() <= max {
-            return arr.clone();
-        }
-        let step = (arr.len() as f64 / max as f64).ceil() as usize;
-        arr.iter()
-            .enumerate()
-            .filter(|(i, _)| i % step == 0)
-            .map(|(_, v)| v.clone())
-            .take(max)
-            .collect()
-    };
-
-    let sampled_up = sample(&up_stops, 20);
-    let sampled_down = sample(&down_stops, 20);
-
-    let calc_mse = |points: &[Vec<f64>], line: &[Vec<f64>]| -> f64 {
-        let mut total = 0.0;
-        for p in points {
-            let mut min_dist = f64::INFINITY;
-            for i in 0..line.len() - 1 {
-                let a = &line[i];
-                let b = &line[i + 1];
-                let ab = vec![b[0] - a[0], b[1] - a[1]];
-                let ap = vec![p[0] - a[0], p[1] - a[1]];
-                let ab2 = ab[0] * ab[0] + ab[1] * ab[1];
-                let t = if ab2 > 0.0 {
-                    (ap[0] * ab[0] + ap[1] * ab[1]) / ab2
-                } else {
-                    0.0
-                };
-                let t = t.clamp(0.0, 1.0);
-                let proj = vec![a[0] + ab[0] * t, a[1] + ab[1] * t];
-                let d = (p[0] - proj[0]).powi(2) + (p[1] - proj[1]).powi(2);
-                if d < min_dist {
-                    min_dist = d;
-                }
-            }
-            total += min_dist;
-        }
-        total / (points.len() as f64)
-    };
-
-    let up_to_up = calc_mse(&sampled_up, up_polyline);
-    let up_to_down = calc_mse(&sampled_up, down_polyline);
-    let down_to_up = calc_mse(&sampled_down, up_polyline);
-    let down_to_down = calc_mse(&sampled_down, down_polyline);
-
-    let swap_ratio = 0.81;
-    up_to_down < up_to_up * swap_ratio && down_to_up < down_to_down * swap_ratio
 }
