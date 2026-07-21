@@ -4,6 +4,8 @@ import {getPolyline, getSegmentsJSON} from "@entities/route/api";
 import type {Coordinate, GeoPolyline} from "@entities/route/types";
 
 import {CacheManager} from "@shared/cache/CacheManager";
+import {getStationMap} from "@entities/station/api";
+import {snapPointToPolyline} from "@shared/utils/geo";
 
 export interface StopIndexMap {
     byId: Record<string, number>;
@@ -37,44 +39,68 @@ export interface MultiPolylineData {
 
 const processedCache = new CacheManager<PolylineData>(50);
 
-function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordinate[], data: GeoPolyline): StopIndexMap | undefined {
+async function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordinate[], data: GeoPolyline): Promise<StopIndexMap | undefined> {
     const stops = data.stops || [];
     if (stops.length === 0) return undefined;
 
     const map: StopIndexMap = {byId: {}, byIdDir: {}, byOrd: {}, byOrdDir: {}};
 
-    // Group stops by direction
-    const upStops = stops.filter(s => Number(s.ud) === 1);
-    const downStops = stops.filter(s => Number(s.ud) === 0);
+    let stationMap: Record<string, any> = {};
+    try {
+        stationMap = await getStationMap();
+    } catch (e) {
+        console.warn("Failed to get station map for exact stop indexing", e);
+    }
 
-    let upCount = 0;
-    let downCount = 0;
+    // Group stops by direction and strictly sort by order
+    const upStops = stops.filter(s => Number(s.ud) === 1).sort((a, b) => a.ord - b.ord);
+    const downStops = stops.filter(s => Number(s.ud) === 0).sort((a, b) => a.ord - b.ord);
 
-    stops.forEach((stop) => {
-        const rawId = typeof stop.id === "string" ? stop.id.trim() : "";
-        const ord = Number(stop.ord);
-        const dir = Number(stop.ud);
+    const processStops = (dirStops: typeof stops, polyline: Coordinate[], dir: number) => {
+        let lastIdx = 0;
+        dirStops.forEach((stop, i) => {
+            const rawId = typeof stop.id === "string" ? stop.id.trim() : "";
+            const ord = Number(stop.ord);
+            let exactIndex = lastIdx;
 
-        let roughIndex = 0;
-        if (dir === 1) {
-            const ratio = upStops.length > 1 ? upCount / (upStops.length - 1) : 0;
-            roughIndex = Math.floor(ratio * (upPolyline.length - 1));
-            upCount++;
-        } else {
-            const ratio = downStops.length > 1 ? downCount / (downStops.length - 1) : 0;
-            roughIndex = Math.floor(ratio * (downPolyline.length - 1));
-            downCount++;
-        }
+            const station = rawId ? stationMap[rawId] : null;
+            if (station && polyline.length >= 2) {
+                // We enforce monotonicity by forcing minSegmentIndex to lastIdx
+                const searchRadius = Math.max(100, Math.floor(polyline.length / dirStops.length) * 3);
+                const snapped = snapPointToPolyline([station.gpslati, station.gpslong], polyline, {
+                    minSegmentIndex: lastIdx,
+                    searchRadius: searchRadius,
+                    segmentHint: lastIdx
+                });
 
-        if (rawId) {
-            map.byId[rawId] = roughIndex;
-            if (Number.isFinite(dir)) map.byIdDir[`${rawId}-${dir}`] = roughIndex;
-        }
-        if (Number.isFinite(ord)) {
-            map.byOrd[String(ord)] = roughIndex;
-            if (Number.isFinite(dir)) map.byOrdDir[`${ord}-${dir}`] = roughIndex;
-        }
-    });
+                if (snapped && snapped.segmentIndex >= lastIdx) {
+                    exactIndex = snapped.segmentIndex;
+                }
+            } else {
+                // Fallback ratio calculation
+                const remainingNodes = dirStops.length - i;
+                const remainingSegments = (polyline.length - 1) - lastIdx;
+                if (remainingNodes > 0) {
+                    exactIndex = lastIdx + Math.floor(remainingSegments / remainingNodes);
+                }
+            }
+
+            lastIdx = exactIndex;
+
+            if (rawId) {
+                map.byId[rawId] = exactIndex;
+                if (Number.isFinite(dir)) map.byIdDir[`${rawId}-${dir}`] = exactIndex;
+            }
+            if (Number.isFinite(ord)) {
+                map.byOrd[String(ord)] = exactIndex;
+                if (Number.isFinite(dir)) map.byOrdDir[`${ord}-${dir}`] = exactIndex;
+            }
+        });
+    };
+
+    processStops(upStops, upPolyline, 1);
+    processStops(downStops, downPolyline, 0);
+
     return map;
 }
 
@@ -160,7 +186,7 @@ async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
     const result: PolylineData = {
         upPolyline,
         downPolyline,
-        stopIndexMap: buildStopIndexMap(upPolyline, downPolyline, rawData),
+        stopIndexMap: await buildStopIndexMap(upPolyline, downPolyline, rawData),
         turnIndex: upPolyline.length > 0 ? upPolyline.length - 1 : 0,
         bbox: extractBBox(rawData, [...upCoords, ...downCoords]),
     };

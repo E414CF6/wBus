@@ -209,6 +209,15 @@ impl BusRouteProcessor {
             }
         }
 
+        // [UP/DOWN PERFECT SEPARATION]
+        // To perfectly align the segment lengths with the stop arrays in the frontend,
+        // we must duplicate the turnaround stop so it acts as BOTH the final Down stop
+        // and the first Up stop.
+        let mut turn_stop_up = stops[turn_idx].clone();
+        turn_stop_up.up_down_cd = 1; // Mark as Up
+        stops.insert(turn_idx + 1, turn_stop_up);
+        stop_to_coord.insert(turn_idx + 1, stop_to_coord[turn_idx]);
+
         // [OPTIMIZATION] Round coordinates to 6 decimal places to reduce file size
         // This is important for web performance
         for pt in &mut full_coordinates {

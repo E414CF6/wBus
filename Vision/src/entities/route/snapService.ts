@@ -7,7 +7,7 @@ import {getHaversineDistanceMeters, isFiniteNumber, snapPointToPolyline} from "@
 // Constants & Types
 // ----------------------------------------------------------------------
 
-const MAX_SNAP_DISTANCE_METERS = 50;
+const MAX_SNAP_DISTANCE_METERS = 100; // Increased to allow snapping even with GPS drift when constrained to segments
 const DEFAULT_SNAP_INDEX_RANGE = 80;
 
 interface SnappedResult {
@@ -67,18 +67,40 @@ function getStopCoordIndex(stopIndexMap: StopIndexMap | null | undefined, nodeid
     return null;
 }
 
-function getSegmentHint(
-    coordIndex: number | null,
-    lineLength: number
-): number | null {
+function getSegmentHint(coordIndex: number | null, lineLength: number): number | null {
     if (!isFiniteNumber(coordIndex) || lineLength < 2) return null;
-    return clampIndex(coordIndex - 1, lineLength - 2);
+    return clampIndex(coordIndex, lineLength - 2);
 }
 
-function getMinSegmentIndex(): number | null {
-    // Disabling minSegmentIndex for the same reason. 
-    // Geographic proximity is the ultimate source of truth.
-    return null;
+function getSegmentBounds(stopIndexMap: StopIndexMap | null | undefined, nodeord: number, dir: number | null, lineLength: number): {
+    minIdx: number | null, maxIdx: number | null
+} {
+    if (!stopIndexMap) return {minIdx: null, maxIdx: null};
+
+    // We try to find a bounding window of segments based on adjacent stops.
+    // Assuming nodeord points to the current/approaching stop.
+    // We look at nodeord - 2 to nodeord + 2 to give a safe buffer for GPS drift and API delays.
+    let minIdx: number | null = null;
+    let maxIdx: number | null = null;
+
+    for (let i = nodeord - 2; i <= nodeord; i++) {
+        const idx = getStopCoordIndex(stopIndexMap, null, i, dir);
+        if (idx !== null) {
+            minIdx = minIdx === null ? idx : Math.min(minIdx, idx);
+        }
+    }
+
+    for (let i = nodeord; i <= nodeord + 2; i++) {
+        const idx = getStopCoordIndex(stopIndexMap, null, i, dir);
+        if (idx !== null) {
+            maxIdx = maxIdx === null ? idx : Math.max(maxIdx, idx);
+        }
+    }
+
+    if (minIdx !== null) minIdx = Math.max(0, minIdx - 5); // 5 segments buffer
+    if (maxIdx !== null) maxIdx = Math.min(lineLength - 2, maxIdx + 5);
+
+    return {minIdx, maxIdx};
 }
 
 // ----------------------------------------------------------------------
@@ -108,10 +130,20 @@ export function getSnappedPosition(bus: BusItem, getDirection: (nodeid: string |
 
         const coordIndex = dir === 1 ? (stopIndexUp ?? stopIndexAny) : (stopIndexDown ?? stopIndexAny);
         const segmentHint = getSegmentHint(coordIndex, line.length);
-        const minSegmentIndex = null;
+        const bounds = getSegmentBounds(stopIndexMap, nodeord, dir, line.length);
+
+        // If we have strict bounds from stops, use them to calculate a dynamic search radius
+        // ensuring we only search within the segments between the bus stops.
+        let searchRadius = snapIndexRange;
+        const minSegmentIndex = bounds.minIdx;
+
+        if (bounds.minIdx !== null && bounds.maxIdx !== null && segmentHint !== null) {
+            const dynamicRadius = Math.max(Math.abs(segmentHint - bounds.minIdx), Math.abs(bounds.maxIdx - segmentHint));
+            searchRadius = Math.max(10, Math.min(dynamicRadius, snapIndexRange));
+        }
 
         const snapped = snapPointToPolyline(rawPosition, line, {
-            segmentHint, searchRadius: snapIndexRange, minSegmentIndex,
+            segmentHint, searchRadius, minSegmentIndex,
         });
         const distance = getHaversineDistanceMeters(rawPosition, snapped.position);
 
