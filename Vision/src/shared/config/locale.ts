@@ -19,10 +19,7 @@ export const UI_TEXT = {
     },
 
     CONNECTION: {
-        CONNECTING: "연결 중...",
-        CONNECTED: "실시간 연결됨",
-        FALLBACK: "업데이트 중",
-        SUSPENDED: "대기 상태",
+        CONNECTING: "연결 중...", CONNECTED: "실시간 연결됨", FALLBACK: "업데이트 중", SUSPENDED: "대기 상태",
     },
 
     TIME: {
@@ -89,7 +86,19 @@ export const UI_TEXT = {
     },
 
     NOTICE: {
-        SECTION_TITLE: '공지사항', NO_NOTICES: '공지사항이 없습니다.'
+        SECTION_TITLE: '알림마당',
+        WIDGET_TITLE: '원주시 교통정보센터 알림마당',
+        NO_NOTICES: '등록된 공지사항이 없습니다.',
+        SEARCH_PLACEHOLDER: '알림마당 검색어 입력...',
+        TAG_PINNED: '공지',
+        ATTACHMENT: '첨부파일',
+        HITS: '조회',
+        WRITER: '작성자',
+        DATE: '등록일',
+        OFFICIAL_LINK: '원주시 교통정보센터 바로가기',
+        PREV_NOTICE: '이전 글',
+        NEXT_NOTICE: '다음 글',
+        BACK_TO_LIST: '목록으로',
     },
 
     ACCESSIBILITY: {

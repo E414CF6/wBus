@@ -8,6 +8,7 @@ import NavBar from "@shared/ui/NavBar";
 import Splash from "@shared/ui/Splash";
 
 import BusList from "@widgets/BusListSheet/BusList";
+import {NoticeWidget} from "@widgets/NoticeWidget";
 
 import dynamic from "next/dynamic";
 import {useCallback, useEffect, useMemo, useState} from "react";
@@ -88,6 +89,7 @@ export default function HomePage() {
         <div
             className="fixed inset-0 flex flex-col w-full h-[100dvh] overflow-hidden">
             <NavBar/>
+            <NoticeWidget/>
             <div className="relative flex-1 overflow-hidden">
                 <MapWrapper
                     onReady={handleMapReady}
