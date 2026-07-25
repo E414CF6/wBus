@@ -1,8 +1,7 @@
 "use client";
 
-import {useRouteIds} from "@entities/route/hooks";
-import {useBusPolylineMap} from "@features/live-tracking/usePolyline";
 import {getRouteIdColorMapping, PALETTE} from "@entities/route/polylineService";
+import {useBusData} from "@features/live-tracking/useBusData";
 import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useEffect, useMemo, useRef} from "react";
@@ -10,19 +9,41 @@ import {Layer, Source} from "react-map-gl/maplibre";
 
 export default function BusRoutePolyline({routeName}: { routeName: string }) {
     const {map} = useAppMapContext();
-    const routeIds = useRouteIds(routeName);
-    const polylineMap = useBusPolylineMap(routeIds);
+    const {routeInfo, polylineMap, activeRouteId} = useBusData(routeName);
+    const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
     const lastBoundsKeyRef = useRef<string | null>(null);
 
+    // Filter to only render the active route ID among the available route IDs
+    const selectedActiveRouteId = useMemo(() => {
+        if (activeRouteId && polylineMap.has(activeRouteId)) {
+            const data = polylineMap.get(activeRouteId);
+            if (data && (data.upPolyline.length > 0 || data.downPolyline.length > 0)) {
+                return activeRouteId;
+            }
+        }
+        for (const id of routeIds) {
+            const data = polylineMap.get(id);
+            if (data && (data.upPolyline.length > 0 || data.downPolyline.length > 0)) {
+                return id;
+            }
+        }
+        return activeRouteId ?? routeIds[0] ?? null;
+    }, [activeRouteId, polylineMap, routeIds]);
+
+    const activeRouteIds = useMemo(() => {
+        return selectedActiveRouteId ? [selectedActiveRouteId] : [];
+    }, [selectedActiveRouteId]);
+
     const routeIdColorMapping = useMemo(() => {
-        return getRouteIdColorMapping(routeIds, polylineMap);
-    }, [routeIds, polylineMap]);
+        return getRouteIdColorMapping(activeRouteIds, polylineMap);
+    }, [activeRouteIds, polylineMap]);
 
     const bbox = useMemo(() => {
         let minLat = Infinity, minLng = Infinity, maxLat = -Infinity, maxLng = -Infinity;
         let hasBounds = false;
-        for (const data of polylineMap.values()) {
-            if (data.bbox) {
+        for (const id of activeRouteIds) {
+            const data = polylineMap.get(id);
+            if (data?.bbox) {
                 const [[s, w], [n, e]] = data.bbox;
                 minLat = Math.min(minLat, s);
                 minLng = Math.min(minLng, w);
@@ -32,13 +53,13 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
             }
         }
         return hasBounds ? [[minLat, minLng], [maxLat, maxLng]] as [[number, number], [number, number]] : null;
-    }, [polylineMap]);
+    }, [activeRouteIds, polylineMap]);
 
     // Build maplibre match expression for colors
     const colorExpression = useMemo(() => {
-        if (routeIds.length === 0) return "#2563eb"; // fallback
+        if (activeRouteIds.length === 0) return "#2563eb"; // fallback
         const expr: any[] = ["match", ["get", "route_id"]];
-        for (const id of routeIds) {
+        for (const id of activeRouteIds) {
             const colorIndex = routeIdColorMapping[id] ?? 0;
             const colors = PALETTE[colorIndex % PALETTE.length];
 
@@ -54,13 +75,13 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
         }
         expr.push("#2563eb"); // default fallback
         return expr;
-    }, [routeIds, routeIdColorMapping]);
+    }, [activeRouteIds, routeIdColorMapping]);
 
     const activeGeoJson = useMemo(() => {
-        if (routeIds.length === 0) return null;
+        if (activeRouteIds.length === 0) return null;
         const features: any[] = [];
 
-        for (const id of routeIds) {
+        for (const id of activeRouteIds) {
             const data = polylineMap.get(id);
             if (!data) continue;
 
@@ -87,9 +108,9 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
         }
 
         return {type: "FeatureCollection" as const, features};
-    }, [routeIds, polylineMap]);
+    }, [activeRouteIds, polylineMap]);
 
-    // Fit map to bounds
+    // Fit map to bounds of active route ID
     useEffect(() => {
         if (!map || !bbox) return;
 
@@ -104,7 +125,7 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
         });
     }, [map, bbox]);
 
-    if (routeIds.length === 0 || !activeGeoJson) return null;
+    if (activeRouteIds.length === 0 || !activeGeoJson) return null;
 
     return (
         <Source id="active-routes-polyline" type="geojson" data={activeGeoJson}>
