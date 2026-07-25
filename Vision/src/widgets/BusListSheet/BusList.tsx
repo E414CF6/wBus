@@ -1,6 +1,7 @@
 "use client";
 
 import {getBusErrorMessage} from "@entities/bus/errorMessages";
+import {getRouteColor} from "@entities/route/routeColor";
 import {useScheduleData} from "@entities/route/hooks";
 import {formatTime, getNearestBusTime} from "@entities/route/time";
 
@@ -265,6 +266,8 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
         };
     }, [routeNames, routesData, allBuses.length]);
 
+    const routeColor = useMemo(() => getRouteColor(selectedRoute), [selectedRoute]);
+
     return (<>
         {routeNames.map((name) => (<RouteDataCollector key={name} routeName={name} onDataUpdate={handleDataUpdate}/>))}
 
@@ -277,7 +280,11 @@ export default function BusList({routeNames, allRoutes, selectedRoute, onRouteCh
             <div className={STYLES.HEADER}>
                 {/* Combined Title & Selector */}
                 <div>
-                    <div className={STYLES.SELECT_WRAPPER}>
+                    <div
+                        className={`relative flex items-center group transition-all duration-200 ${routeColor.badgeBg} border ${routeColor.border} rounded-[20px] px-4 py-2.5`}>
+                        <div
+                            className="w-2.5 h-2.5 rounded-full shrink-0 mr-2.5 shadow-xs transition-colors duration-300"
+                            style={{backgroundColor: routeColor.main}}/>
                         <select
                             value={selectedRoute}
                             onChange={(e) => handleRouteChange(e.target.value)}

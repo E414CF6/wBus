@@ -1,17 +1,26 @@
 "use client";
 
-import {getRouteIdColorMapping, PALETTE} from "@entities/route/polylineService";
+import {getRouteColor} from "@entities/route/routeColor";
+import type {Coordinate} from "@entities/route/types";
 import {useBusData} from "@features/live-tracking/useBusData";
 import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useEffect, useMemo, useRef} from "react";
 import {Layer, Source} from "react-map-gl/maplibre";
 
+function makeSegmentKey(p1: Coordinate, p2: Coordinate): string {
+    const k1 = `${p1[0].toFixed(4)},${p1[1].toFixed(4)}`;
+    const k2 = `${p2[0].toFixed(4)},${p2[1].toFixed(4)}`;
+    return k1 < k2 ? `${k1}:${k2}` : `${k2}:${k1}`;
+}
+
 export default function BusRoutePolyline({routeName}: { routeName: string }) {
     const {map} = useAppMapContext();
     const {routeInfo, polylineMap, activeRouteId} = useBusData(routeName);
     const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
     const lastBoundsKeyRef = useRef<string | null>(null);
+
+    const routeColor = useMemo(() => getRouteColor(routeName), [routeName]);
 
     // Filter to only render the active route ID among the available route IDs
     const selectedActiveRouteId = useMemo(() => {
@@ -34,10 +43,6 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
         return selectedActiveRouteId ? [selectedActiveRouteId] : [];
     }, [selectedActiveRouteId]);
 
-    const routeIdColorMapping = useMemo(() => {
-        return getRouteIdColorMapping(activeRouteIds, polylineMap);
-    }, [activeRouteIds, polylineMap]);
-
     const bbox = useMemo(() => {
         let minLat = Infinity, minLng = Infinity, maxLat = -Infinity, maxLng = -Infinity;
         let hasBounds = false;
@@ -55,28 +60,6 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
         return hasBounds ? [[minLat, minLng], [maxLat, maxLng]] as [[number, number], [number, number]] : null;
     }, [activeRouteIds, polylineMap]);
 
-    // Build maplibre match expression for colors
-    const colorExpression = useMemo(() => {
-        if (activeRouteIds.length === 0) return "#2563eb"; // fallback
-        const expr: any[] = ["match", ["get", "route_id"]];
-        for (const id of activeRouteIds) {
-            const colorIndex = routeIdColorMapping[id] ?? 0;
-            const colors = PALETTE[colorIndex % PALETTE.length];
-
-            const directionExpr = [
-                "match",
-                ["get", "direction"],
-                "up", colors.up,
-                "down", colors.down,
-                colors.up
-            ];
-
-            expr.push(id, directionExpr);
-        }
-        expr.push("#2563eb"); // default fallback
-        return expr;
-    }, [activeRouteIds, routeIdColorMapping]);
-
     const activeGeoJson = useMemo(() => {
         if (activeRouteIds.length === 0) return null;
         const features: any[] = [];
@@ -85,30 +68,83 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
             const data = polylineMap.get(id);
             if (!data) continue;
 
-            if (data.upPolyline.length > 0) {
-                features.push({
-                    type: "Feature",
-                    geometry: {
-                        type: "LineString",
-                        coordinates: data.upPolyline.map(c => [c[1], c[0]]) // MapLibre expects [lng, lat]
-                    },
-                    properties: {route_id: id, direction: "up"}
-                });
+            const upCoords = data.upPolyline;
+            const downCoords = data.downPolyline;
+
+            // Collect spatial keys for up and down polylines
+            const upKeys = new Set<string>();
+            for (let i = 0; i < upCoords.length - 1; i++) {
+                upKeys.add(makeSegmentKey(upCoords[i], upCoords[i + 1]));
             }
-            if (data.downPolyline.length > 0) {
-                features.push({
-                    type: "Feature",
-                    geometry: {
-                        type: "LineString",
-                        coordinates: data.downPolyline.map(c => [c[1], c[0]])
-                    },
-                    properties: {route_id: id, direction: "down"}
-                });
+
+            const downKeys = new Set<string>();
+            for (let i = 0; i < downCoords.length - 1; i++) {
+                downKeys.add(makeSegmentKey(downCoords[i], downCoords[i + 1]));
             }
+
+            // Build feature chunks for up and down polylines
+            const buildChunkFeatures = (coords: Coordinate[], otherKeys: Set<string>, direction: "up" | "down") => {
+                if (coords.length < 2) return;
+
+                let currentChunk: [number, number][] = [[coords[0][1], coords[0][0]]];
+                let currentOverlap = false;
+
+                for (let i = 0; i < coords.length - 1; i++) {
+                    const p1 = coords[i];
+                    const p2 = coords[i + 1];
+                    const key = makeSegmentKey(p1, p2);
+                    const isOverlap = otherKeys.has(key);
+
+                    if (i === 0) {
+                        currentOverlap = isOverlap;
+                    } else if (isOverlap !== currentOverlap) {
+                        if (currentChunk.length >= 2) {
+                            features.push({
+                                type: "Feature",
+                                geometry: {type: "LineString", coordinates: currentChunk},
+                                properties: {route_id: id, direction, is_overlap: currentOverlap}
+                            });
+                        }
+                        currentChunk = [[p1[1], p1[0]]];
+                        currentOverlap = isOverlap;
+                    }
+
+                    currentChunk.push([p2[1], p2[0]]);
+                }
+
+                if (currentChunk.length >= 2) {
+                    features.push({
+                        type: "Feature",
+                        geometry: {type: "LineString", coordinates: currentChunk},
+                        properties: {route_id: id, direction, is_overlap: currentOverlap}
+                    });
+                }
+            };
+
+            buildChunkFeatures(upCoords, downKeys, "up");
+            buildChunkFeatures(downCoords, upKeys, "down");
         }
 
         return {type: "FeatureCollection" as const, features};
     }, [activeRouteIds, polylineMap]);
+
+    // Color expression for MapLibre
+    // - Overlapping segments (is_overlap === true) -> Default colors (#2563eb for up, #dc2626 for down)
+    // - Non-overlapping active segments (is_overlap === false) -> Active route color (routeColor.main)
+    const colorExpression = useMemo(() => {
+        return [
+            "case",
+            ["get", "is_overlap"],
+            [
+                "match",
+                ["get", "direction"],
+                "up", "#2563eb",
+                "down", "#dc2626",
+                "#2563eb"
+            ],
+            routeColor.main
+        ];
+    }, [routeColor]);
 
     // Fit map to bounds of active route ID
     useEffect(() => {
@@ -134,7 +170,7 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
                 type="line"
                 paint={{
                     "line-color": colorExpression as any,
-                    "line-width": 4,
+                    "line-width": 4.5,
                     "line-opacity": 1,
                 }}
                 layout={{
@@ -158,13 +194,7 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
                     "text-ignore-placement": true,
                 }}
                 paint={{
-                    "text-color": [
-                        "match",
-                        ["get", "direction"],
-                        "up", "#2563eb",
-                        "down", "#dc2626",
-                        "#2563eb"
-                    ],
+                    "text-color": colorExpression as any,
                     "text-halo-color": "white",
                     "text-halo-width": 2,
                     "text-opacity": 0.9,
