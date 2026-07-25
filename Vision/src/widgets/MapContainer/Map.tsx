@@ -8,7 +8,6 @@ import {createMapViewFromMap, getInitialMapView, saveMapView} from "@features/ma
 import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 
-import BaseRoutePolyline from "./BaseRoutePolyline";
 import maplibregl from "maplibre-gl";
 import React, {useCallback, useEffect, useMemo, useRef} from "react";
 import MapGL, {MapRef, NavigationControl} from "react-map-gl/maplibre";
@@ -80,7 +79,6 @@ export default function Map({onReady, children}: MapProps) {
         touchPitch={false}
     >
         <NavigationControl position="top-right" showCompass={true}/>
-        <BaseRoutePolyline/>
         {children}
     </MapGL>);
 }
