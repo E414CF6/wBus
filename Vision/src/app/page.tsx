@@ -30,17 +30,20 @@ const RouteLayer = dynamic(() => import("@widgets/MapContainer/RouteLayer"), {
  */
 export default function HomePage() {
     const [isSplashVisible, setIsSplashVisible] = useState(true);
-    const [selectedRoute, setSelectedRoute] = useState<string>(() => {
-        if (typeof window === "undefined") return MAP_SETTINGS.DEFAULT_ROUTE;
+    const [selectedRoute, setSelectedRoute] = useState<string>(MAP_SETTINGS.DEFAULT_ROUTE);
+
+    useEffect(() => {
         try {
-            return localStorage.getItem(STORAGE_KEYS.ROUTE_ID) ?? MAP_SETTINGS.DEFAULT_ROUTE;
+            const savedRoute = localStorage.getItem(STORAGE_KEYS.ROUTE_ID);
+            if (savedRoute) {
+                setSelectedRoute(savedRoute);
+            }
         } catch (e) {
             if (APP_CONFIG.IS_DEV) {
-                console.warn("[handleRouteChange] Failed to load route preference from localStorage", e);
+                console.warn("[HomePage] Failed to load route preference from localStorage", e);
             }
-            return MAP_SETTINGS.DEFAULT_ROUTE;
         }
-    });
+    }, []);
 
     const routeMap = useBusRouteMap();
     const allRoutes = useMemo(() => routeMap ? Object.keys(routeMap) : [], [routeMap]);
