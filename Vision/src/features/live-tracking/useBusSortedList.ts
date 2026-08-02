@@ -12,7 +12,10 @@ export const useBusSortedList = (routeName: string) => {
         data: mapList,
         error: mapError,
         hasFetched: locationFetched,
-        connectionStatus
+        connectionStatus,
+        lastUpdated,
+        isDegraded,
+        reconnect,
     } = useBusLocationData(routeIds);
 
     const getDirection = useBusDirection(routeName);
@@ -23,6 +26,6 @@ export const useBusSortedList = (routeName: string) => {
     const sortedList = mapList || EMPTY_BUS_LIST;
 
     return useMemo(() => ({
-        sortedList, getDirection, error, hasFetched, connectionStatus
-    }), [sortedList, getDirection, error, hasFetched, connectionStatus]);
+        sortedList, getDirection, error, hasFetched, connectionStatus, lastUpdated, isDegraded, reconnect
+    }), [sortedList, getDirection, error, hasFetched, connectionStatus, lastUpdated, isDegraded, reconnect]);
 };

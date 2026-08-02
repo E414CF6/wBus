@@ -8,7 +8,7 @@ use crate::config::OSRM_CHUNK_SIZE;
 use crate::route::model::{
     BusRouteProcessor, FrontendMeta, FrontendStop, RawRouteFile, RouteSnapData,
 };
-use crate::utils::geo::{calculate_metrics, find_nearest_coord_index};
+use crate::utils::geo::{calculate_metrics, find_nearest_coord_index, simplify_polyline};
 
 impl BusRouteProcessor {
     pub async fn process_raw_to_derived(
@@ -218,14 +218,14 @@ impl BusRouteProcessor {
         stops.insert(turn_idx + 1, turn_stop_up);
         stop_to_coord.insert(turn_idx + 1, stop_to_coord[turn_idx]);
 
-        // [OPTIMIZATION] Round coordinates to 6 decimal places to reduce file size
-        // This is important for web performance
+        // [OPTIMIZATION] Round coordinates to 6 decimal places and apply RDP polyline simplification
+        // This significantly reduces JSON file size and boosts frontend GPU rendering performance
         for pt in &mut full_coordinates {
             for c in pt.iter_mut() {
                 *c = (*c * 1_000_000.0).round() / 1_000_000.0;
             }
         }
-        let optimized_coordinates = full_coordinates;
+        let optimized_coordinates = simplify_polyline(&full_coordinates, 0.5);
 
         // Calculate BBox & Distance
         // We use OSRM reported distance if available, otherwise fallback to polyline calculation

@@ -71,7 +71,7 @@ function BusAnimatedMarker({
         stopCoordIndices,
     });
 
-    const handleMarkerClick = (e: any) => {
+    const handleMarkerClick = (e: { originalEvent?: Event }) => {
         if (e.originalEvent) {
             e.originalEvent.stopPropagation();
         }

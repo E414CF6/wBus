@@ -11,7 +11,6 @@ import {useAppMapContext} from "@shared/context/AppMapContext";
 
 import BusStopPopup from "@widgets/BusListSheet/BusStopPopup";
 
-import mapboxgl from "mapbox-gl";
 import {BusFront, Info, MapPinned} from "lucide-react";
 import {memo, useCallback, useEffect, useMemo, useState} from "react";
 import {Marker, Popup} from "react-map-gl/maplibre";
@@ -23,7 +22,7 @@ type BusStopMarkerItemProps = {
 const BusStopMarkerItem = memo(({stop, onRouteChange}: BusStopMarkerItemProps) => {
     const [isPopupOpen, setIsPopupOpen] = useState(false);
 
-    const handleMarkerClick = useCallback((e: mapboxgl.MapLayerMouseEvent | any) => {
+    const handleMarkerClick = useCallback((e: { originalEvent?: Event }) => {
         if (e.originalEvent) {
             e.originalEvent.stopPropagation();
         }

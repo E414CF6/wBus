@@ -5,6 +5,7 @@ import type {Coordinate, GeoPolyline} from "@entities/route/types";
 
 import {CacheManager} from "@shared/cache/CacheManager";
 import {getStationMap} from "@entities/station/api";
+import type {StationLocation} from "@entities/station/types";
 import {snapPointToPolyline} from "@shared/utils/geo";
 
 export interface StopIndexMap {
@@ -18,8 +19,12 @@ export interface PolylineData {
     upPolyline: Coordinate[];
     downPolyline: Coordinate[];
     stopIndexMap?: StopIndexMap;
-    turnIndex: number;
+    turnIndex?: number;
     bbox?: [[number, number], [number, number]];
+    stopPolylineIndices?: number[];
+    inactiveUpSegments?: PolylineSegment[];
+    inactiveDownSegments?: PolylineSegment[];
+    bounds?: [[number, number], [number, number]] | null;
 }
 
 export interface PolylineSegment {
@@ -45,11 +50,11 @@ async function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordin
 
     const map: StopIndexMap = {byId: {}, byIdDir: {}, byOrd: {}, byOrdDir: {}};
 
-    let stationMap: Record<string, any> = {};
+    let stationMap: Record<string, StationLocation> = {};
     try {
         stationMap = await getStationMap();
-    } catch (e) {
-        console.warn("Failed to get station map for exact stop indexing", e);
+    } catch (_e) {
+        console.warn("Failed to get station map for exact stop indexing", _e);
     }
 
     // Group stops by direction and strictly sort by order
@@ -134,7 +139,7 @@ async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
     let segmentsData: Record<string, [number, number][]> = {};
     try {
         segmentsData = await getSegmentsJSON();
-    } catch (e) {
+    } catch {
         // Fallback for missing segments.json
     }
 

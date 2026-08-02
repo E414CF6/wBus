@@ -7,8 +7,7 @@ const RAW_STATIC_API_URL = getEnv(process.env.NEXT_PUBLIC_STATIC_API_URL, "NOT_S
 const STATIC_BASE_URL = RAW_STATIC_API_URL !== "NOT_SET" ? RAW_STATIC_API_URL.replace(/\/+$/, "") : "";
 
 export const APP_CONFIG = {
-    NAME: getEnv(process.env.NEXT_PUBLIC_APP_NAME, "wBus"),
-    IS_DEV: process.env.NODE_ENV === "development",
+    NAME: getEnv(process.env.NEXT_PUBLIC_APP_NAME, "wBus"), IS_DEV: process.env.NODE_ENV === "development",
 } as const;
 
 export const SITE_CONFIG = {
@@ -49,7 +48,7 @@ export const MAP_SETTINGS = {
         DEFAULT: getEnvNumber(process.env.NEXT_PUBLIC_MAP_DEFAULT_ZOOM, 13),
         MIN: getEnvNumber(process.env.NEXT_PUBLIC_MAP_MIN_ZOOM, 10),
         MAX: getEnvNumber(process.env.NEXT_PUBLIC_MAP_MAX_ZOOM, 20),
-        BUS_STOP_VISIBLE: getEnvNumber(process.env.NEXT_PUBLIC_BUS_STOP_MARKER_MIN_ZOOM, 14),
+        BUS_STOP_VISIBLE: getEnvNumber(process.env.NEXT_PUBLIC_BUS_STOP_MARKER_MIN_ZOOM, 15),
     },
     ANIMATION: {
         BUS_MOVE_MS: getEnvNumber(process.env.NEXT_PUBLIC_BUS_ANIMATION_DURATION, 4000),
@@ -71,6 +70,5 @@ export const UI_CONFIG = {
 } as const;
 
 export const STORAGE_KEYS = {
-    ROUTE_ID: "wbus_selected_route",
-    MAP_VIEW: "wbus_map_view",
+    ROUTE_ID: "wbus_selected_route", MAP_VIEW: "wbus_map_view",
 } as const;

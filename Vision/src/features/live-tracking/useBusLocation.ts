@@ -43,15 +43,24 @@ interface BusStreamHandoff {
 
 export type SSEConnectionStatus = "connecting" | "connected" | "fallback" | "suspended";
 
-interface BusLocationState {
+export interface BusLocationState {
     data: BusItem[];
     error: BusDataError;
     hasFetched: boolean;
     connectionStatus: SSEConnectionStatus;
+    lastUpdated: number | null;
+    isDegraded: boolean;
+    reconnect: () => void;
 }
 
 const EMPTY_STATE: BusLocationState = {
-    data: EMPTY_BUS_LIST, error: null, hasFetched: false, connectionStatus: "connecting",
+    data: EMPTY_BUS_LIST,
+    error: null,
+    hasFetched: false,
+    connectionStatus: "connecting",
+    lastUpdated: null,
+    isDegraded: false,
+    reconnect: () => undefined,
 };
 
 type Listener = () => void;
@@ -74,7 +83,8 @@ function getPositiveNumber(value: unknown): number | null {
 
 class BusLocationStore {
     private readonly routeIds: string[];
-    private state: BusLocationState = EMPTY_STATE;
+    private readonly routeIdsKey: string;
+    private state: BusLocationState;
     private listeners = new Set<Listener>();
 
     private eventSource: EventSource | null = null;
@@ -89,8 +99,12 @@ class BusLocationStore {
     private dataLength = 0;
     private isSuspended = false;
 
-    constructor(routeIds: string[]) {
+    constructor(routeIds: string[], routeIdsKey: string) {
         this.routeIds = routeIds;
+        this.routeIdsKey = routeIdsKey;
+        this.state = {
+            ...EMPTY_STATE, reconnect: () => this.manualReconnect(),
+        };
     }
 
     getSnapshot = () => this.state;
@@ -106,8 +120,20 @@ class BusLocationStore {
             if (this.listeners.size === 0) {
                 this.unregisterEventListeners();
                 this.stop();
+                busLocationStores.delete(this.routeIdsKey);
             }
         };
+    };
+
+    public manualReconnect = () => {
+        console.log(`[useBusLocationData] Manual reconnect requested for ${this.routeIdsKey}`);
+        this.closeStream();
+        this.clearFallbackPolling();
+        this.clearReconnectTimer();
+        this.isConnecting = false;
+        this.isSuspended = false;
+        this.reconnectAttempt = 0;
+        this.startStream();
     };
 
     private emit() {
@@ -123,18 +149,22 @@ class BusLocationStore {
 
     private updateState(partial: Partial<BusLocationState>) {
         this.setState({
-            ...this.state, ...partial,
+            ...this.state, ...partial, reconnect: this.state.reconnect,
         });
     }
 
-    private applyData(nextData: BusItem[], options?: { degraded?: boolean }) {
+    private applyData(nextData: BusItem[], options?: { degraded?: boolean; timestamp?: number }) {
         this.dataLength = nextData.length;
         const degraded = options?.degraded ?? false;
+        const timestamp = options?.timestamp ?? Date.now();
         this.setState({
             ...this.state,
             data: nextData,
             error: nextData.length === 0 ? (degraded ? "ERR:NETWORK" : "ERR:NONE_RUNNING") : null,
             hasFetched: true,
+            lastUpdated: timestamp,
+            isDegraded: degraded,
+            reconnect: this.state.reconnect,
         });
     }
 
@@ -190,8 +220,7 @@ class BusLocationStore {
             console.error("[useBusLocationData] Polling fallback failed", err);
             if (this.dataLength === 0 && !this.eventSource) {
                 this.setState({
-                    ...this.state,
-                    data: EMPTY_BUS_LIST, error: "ERR:NETWORK", hasFetched: true,
+                    ...this.state, data: EMPTY_BUS_LIST, error: "ERR:NETWORK", hasFetched: true,
                 });
             }
         }
@@ -444,7 +473,7 @@ function getBusLocationStore(routeIdsKey: string): BusLocationStore {
     const existing = busLocationStores.get(routeIdsKey);
     if (existing) return existing;
     const routeIds = routeIdsKey.split(",").filter(Boolean);
-    const store = new BusLocationStore(routeIds);
+    const store = new BusLocationStore(routeIds, routeIdsKey);
     busLocationStores.set(routeIdsKey, store);
     return store;
 }

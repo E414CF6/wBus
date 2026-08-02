@@ -27,7 +27,7 @@ export interface BusPolylineSet {
     upPolyline: Coordinate[];
     downPolyline: Coordinate[];
     stopIndexMap?: PolylineData["stopIndexMap"];
-    turnIndex: number;
+    turnIndex?: number;
     bbox?: PolylineData["bbox"];
 }
 

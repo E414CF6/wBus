@@ -74,7 +74,12 @@ export default function Map({onReady, children}: MapProps) {
         mapLib={maplibregl}
         minZoom={MAP_SETTINGS.ZOOM.MIN}
         maxZoom={MAP_SETTINGS.ZOOM.MAX}
-        maxBounds={MAP_SETTINGS.BOUNDS.MAX as [maplibregl.LngLatLike, maplibregl.LngLatLike]}
+        maxBounds={[
+            MAP_SETTINGS.BOUNDS.MAX[0][0],
+            MAP_SETTINGS.BOUNDS.MAX[0][1],
+            MAP_SETTINGS.BOUNDS.MAX[1][0],
+            MAP_SETTINGS.BOUNDS.MAX[1][1],
+        ]}
         style={{width: "100%", height: "100%", position: "relative", zIndex: 0}}
         touchPitch={false}
     >

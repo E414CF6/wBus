@@ -1,5 +1,5 @@
 import {API_CONFIG} from "@shared/config/env";
-import {getCachedOrFetch} from "@shared/redis/client";
+import {getCachedOrFetch, getMultipleCachedOrFetch} from "@shared/redis/client";
 import {fetchBusLocations, type RawBusLocation} from "@shared/redis/publicApi";
 import type {CacheMeta} from "@shared/redis/types";
 import {parseRouteIdsParam} from "@shared/utils/routeIds";
@@ -57,23 +57,24 @@ interface StreamSnapshotPayload {
 }
 
 async function fetchStreamSnapshot(routeIds: string[]): Promise<StreamSnapshotData> {
-    const results = await Promise.allSettled(routeIds.map(async (routeId) => {
-        const entry = await getCachedOrFetch<RawBusLocation[]>(`bus:${routeId}`, () => fetchBusLocations(routeId), {
-            ttlSeconds: ROUTE_TTL_SECONDS, ...LIVE_CACHE_OPTIONS,
-        });
-        return {routeId, entry};
+    const requests = routeIds.map((routeId) => ({
+        key: `bus:${routeId}`, fetcher: () => fetchBusLocations(routeId),
     }));
+
+    const cachedMap = await getMultipleCachedOrFetch<RawBusLocation[]>(requests, {
+        ttlSeconds: ROUTE_TTL_SECONDS, ...LIVE_CACHE_OPTIONS,
+    });
 
     const items: RawBusLocation[] = [];
     let failedCount = 0;
 
-    results.forEach((result, index) => {
-        const routeId = routeIds[index];
-        if (result.status === "fulfilled") {
-            items.push(...result.value.entry.data);
+    routeIds.forEach((routeId) => {
+        const cached = cachedMap.get(`bus:${routeId}`);
+        if (cached && Array.isArray(cached.data)) {
+            items.push(...cached.data);
         } else {
             failedCount += 1;
-            console.warn(`[SSE /api/bus/stream] Failed to fetch route snapshot for ${routeId}`, result.reason);
+            console.warn(`[SSE /api/bus/stream] Missing snapshot entry for ${routeId}`);
         }
     });
 

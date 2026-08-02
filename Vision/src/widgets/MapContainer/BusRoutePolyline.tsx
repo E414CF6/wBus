@@ -55,7 +55,7 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
 
     const activeGeoJson = useMemo(() => {
         if (activeRouteIds.length === 0) return null;
-        const features: any[] = [];
+        const features: GeoJSON.Feature[] = [];
 
         for (const id of activeRouteIds) {
             const data = polylineMap.get(id);

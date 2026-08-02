@@ -112,7 +112,7 @@ export function getSnappedPosition(bus: BusItem, getDirection: (nodeid: string |
     const nodeord = Number(bus.nodeord);
     const rawPosition: Coordinate = [gpslati, gpslong];
     const {
-        stopIndexMap, turnIndex, snapIndexRange = DEFAULT_SNAP_INDEX_RANGE,
+        stopIndexMap, turnIndex: _turnIndex, snapIndexRange = DEFAULT_SNAP_INDEX_RANGE,
     } = options ?? {};
 
     const apiDirection = getDirection(nodeid, nodeord, bus.routeid);

@@ -1,7 +1,7 @@
 "use client";
 
 import {getDirectionIcon} from "@entities/bus/directionIcons";
-import {getRouteIdColorMapping, PALETTE} from "@entities/route/polylineService";
+import {getBusMarkerColor} from "@entities/route/routeColor";
 
 import {getSnappedPosition} from "@entities/route/snapService";
 
@@ -52,7 +52,7 @@ const BusIconDOM = memo(({routeNumber, color}: { routeNumber: string; color?: st
             <rect x="4" y="2" width="32" height="50" rx="10" fill={themeColor}/>
         </svg>
         <div
-            className="bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 text-white text-[11px] font-extrabold px-1 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_8px_rgba(79,70,229,0.3)] tracking-[0.3px] min-w-7 max-w-7 flex items-center justify-center"
+            className="bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 text-white text-[11px] font-extrabold px-1 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_6px_rgba(0,0,0,0.3)] tracking-[0.3px] min-w-7 max-w-7 flex items-center justify-center"
             style={{backgroundColor: themeColor}}
         >
             <PopupMarquee text={routeNumber} maxWidthClass="max-w-7"/>
@@ -121,15 +121,15 @@ interface BusMarkerProps {
 export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMarkerProps) {
     // Data Fetching
     const {
-        routeInfo, busList, getDirection, polylineMap, fallbackPolylines, activeRouteId
+        routeInfo, busList, getDirection, polylineMap, fallbackPolylines, activeRouteId, connectionStatus
     } = useBusData(routeName);
 
     const [selectedBusKey, setSelectedBusKey] = useState<string | null>(null);
 
-    const routeIdColorMapping = useMemo(() => {
-        if (!routeInfo) return {};
-        return getRouteIdColorMapping(routeInfo.vehicleRouteIds, polylineMap);
-    }, [routeInfo, polylineMap]);
+    const isLiveStream = connectionStatus === "connected";
+    const effectiveAnimationDuration = isLiveStream ? 3000 : MAP_SETTINGS.ANIMATION.BUS_MOVE_MS;
+    const effectivePollingIntervalMs = isLiveStream ? 3000 : API_CONFIG.LIVE.POLLING_INTERVAL_MS;
+    const effectiveDataDelayMs = isLiveStream ? 3000 : API_CONFIG.LIVE.DATA_DELAY_MS;
 
     const routeIndicesMap = useMemo(() => {
         if (!routeInfo) return new Map();
@@ -197,9 +197,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 stopCoordIndices = snapped.direction === 1 ? routeIndices.upIndices : routeIndices.downIndices;
             }
 
-            const colorIndex = targetRouteId ? (routeIdColorMapping[targetRouteId] ?? 0) : 0;
-            const routeColors = PALETTE[colorIndex % PALETTE.length];
-            const markerColor = snapped.direction === 1 ? routeColors.up : routeColors.down;
+            const markerColor = getBusMarkerColor(bus.routenm || routeName, snapped.direction);
 
             return {
                 key: markerKey,
@@ -214,7 +212,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 markerColor,
             };
         });
-    }, [routeInfo, busList, getDirection, polylineMap, fallbackPolylines, activeRouteId, routeName, routeIndicesMap, routeIdColorMapping]);
+    }, [routeInfo, busList, getDirection, polylineMap, fallbackPolylines, activeRouteId, routeName, routeIndicesMap]);
 
     if (!routeInfo || markers.length === 0) return null;
 
@@ -239,9 +237,9 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 polyline={polyline}
                 snapIndexHint={snapIndexHint}
                 snapIndexRange={SNAP_INDEX_RANGE}
-                animationDuration={MAP_SETTINGS.ANIMATION.BUS_MOVE_MS}
-                pollingIntervalMs={API_CONFIG.LIVE.POLLING_INTERVAL_MS}
-                dataDelayMs={API_CONFIG.LIVE.DATA_DELAY_MS}
+                animationDuration={effectiveAnimationDuration}
+                pollingIntervalMs={effectivePollingIntervalMs}
+                dataDelayMs={effectiveDataDelayMs}
                 stopCoordIndices={stopCoordIndices}
                 refreshKey={refreshKey}
                 onClick={() => {

@@ -16,15 +16,10 @@ const apiFetcher = async (url: string) => {
 
 // useBusStop
 export function useBusStop(routeName: string) {
-    const {data: stops} = useSWR(
-        routeName ? `/api/route-stops/${routeName}` : null,
-        apiFetcher,
-        {
-            revalidateOnFocus: false, // Stops are static
-            dedupingInterval: 60000,
-            fallbackData: [],
-        }
-    );
+    const {data: stops} = useSWR(routeName ? `/api/route-stops/${routeName}` : null, apiFetcher, {
+        revalidateOnFocus: false, // Stops are static
+        dedupingInterval: 60000, fallbackData: [],
+    });
 
     return stops ?? [];
 }
@@ -71,19 +66,22 @@ const arrivalFetcher = async (url: string): Promise<CachedData<BusStopArrival[]>
 const EMPTY_ARRIVAL_LIST: BusStopArrival[] = [];
 
 export function useBusArrivalInfo(busStopId: string | null) {
-    const {data, error, isLoading} = useSWR<CachedData<BusStopArrival[]>>(
-        busStopId && busStopId.trim() !== "" ? `/api/bus-arrival/${busStopId}` : null,
-        arrivalFetcher,
-        {
-            refreshInterval: API_CONFIG.LIVE.POLLING_INTERVAL_MS,
-            revalidateOnFocus: true,
-            dedupingInterval: 2000,
-        }
-    );
+    const {
+        data,
+        error,
+        isLoading,
+        mutate
+    } = useSWR<CachedData<BusStopArrival[]>>(busStopId && busStopId.trim() !== "" ? `/api/bus-arrival/${busStopId}` : null, arrivalFetcher, {
+        refreshInterval: API_CONFIG.LIVE.POLLING_INTERVAL_MS, revalidateOnFocus: true, dedupingInterval: 2000,
+    });
 
     return useMemo(() => ({
         data: data?.data ?? EMPTY_ARRIVAL_LIST,
         loading: isLoading,
         error: error ? "도착 정보를 불러올 수 없습니다." : null,
-    }), [data, isLoading, error]);
+        isDegraded: Boolean(data?.meta?.degraded || error),
+        lastUpdated: data?.timestamp ?? null,
+        ageMs: data?.meta?.ageMs ?? 0,
+        refresh: () => void mutate(),
+    }), [data, isLoading, error, mutate]);
 }

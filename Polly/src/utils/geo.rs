@@ -13,6 +13,20 @@ pub fn meters_between(lon1: f64, lat1: f64, lon2: f64, lat2: f64) -> f64 {
     (x * x + y * y).sqrt() * r
 }
 
+/// Calculate bearing (heading angle 0..360 degrees) from (lon1, lat1) to (lon2, lat2)
+pub fn bearing_between(lon1: f64, lat1: f64, lon2: f64, lat2: f64) -> f64 {
+    let lat1_rad = lat1.to_radians();
+    let lat2_rad = lat2.to_radians();
+    let dlon_rad = (lon2 - lon1).to_radians();
+
+    let y = dlon_rad.sin() * lat2_rad.cos();
+    let x = lat1_rad.cos() * lat2_rad.sin() - lat1_rad.sin() * lat2_rad.cos() * dlon_rad.cos();
+
+    let bearing_rad = y.atan2(x);
+    let bearing_deg = bearing_rad.to_degrees();
+    (bearing_deg + 360.0) % 360.0
+}
+
 /// Find the closest point on a polyline to a given point
 pub fn closest_point_on_polyline(
     point: (f64, f64),
@@ -125,4 +139,105 @@ pub fn calculate_metrics(coords: &[Vec<f64>]) -> ([f64; 4], f64) {
     }
 
     ([min_lon, min_lat, max_lon, max_lat], dist)
+}
+
+/// Perpendicular distance in meters from point (px, py) to line segment (x1, y1)-(x2, y2)
+pub fn perpendicular_distance_meters(px: f64, py: f64, x1: f64, y1: f64, x2: f64, y2: f64) -> f64 {
+    let dx = x2 - x1;
+    let dy = y2 - y1;
+    let len_sq = dx * dx + dy * dy;
+    if len_sq == 0.0 {
+        return meters_between(px, py, x1, y1);
+    }
+    let t = (((px - x1) * dx + (py - y1) * dy) / len_sq).clamp(0.0, 1.0);
+    let proj_x = x1 + t * dx;
+    let proj_y = y1 + t * dy;
+    meters_between(px, py, proj_x, proj_y)
+}
+
+/// Simplify a 2D polyline using Ramer-Douglas-Peucker (RDP) algorithm with tolerance in meters.
+pub fn simplify_polyline(coords: &[Vec<f64>], tolerance_meters: f64) -> Vec<Vec<f64>> {
+    if coords.len() <= 2 || tolerance_meters <= 0.0 {
+        return coords.to_vec();
+    }
+
+    let mut keep = vec![false; coords.len()];
+    keep[0] = true;
+    keep[coords.len() - 1] = true;
+
+    fn rdp(coords: &[Vec<f64>], start: usize, end: usize, tolerance: f64, keep: &mut [bool]) {
+        if end <= start + 1 {
+            return;
+        }
+        let (x1, y1) = (coords[start][0], coords[start][1]);
+        let (x2, y2) = (coords[end][0], coords[end][1]);
+
+        let mut max_dist = 0.0;
+        let mut max_idx = start;
+
+        for i in (start + 1)..end {
+            let (px, py) = (coords[i][0], coords[i][1]);
+            let d = perpendicular_distance_meters(px, py, x1, y1, x2, y2);
+            if d > max_dist {
+                max_dist = d;
+                max_idx = i;
+            }
+        }
+
+        if max_dist > tolerance {
+            keep[max_idx] = true;
+            rdp(coords, start, max_idx, tolerance, keep);
+            rdp(coords, max_idx, end, tolerance, keep);
+        }
+    }
+
+    rdp(coords, 0, coords.len() - 1, tolerance_meters, &mut keep);
+
+    coords
+        .iter()
+        .enumerate()
+        .filter(|(i, _)| keep[*i])
+        .map(|(_, pt)| pt.clone())
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_bearing_between_north() {
+        let b = bearing_between(127.0, 37.0, 127.0, 37.1);
+        assert!((b - 0.0).abs() < 1e-3 || (b - 360.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn test_simplify_polyline_straight_line() {
+        // Points on a straight line: start, middle (collinear), end
+        let coords = vec![
+            vec![127.0, 37.0],
+            vec![127.05, 37.05], // collinear point
+            vec![127.1, 37.1],
+        ];
+
+        let simplified = simplify_polyline(&coords, 5.0);
+        // Middle point should be simplified out
+        assert_eq!(simplified.len(), 2);
+        assert_eq!(simplified[0], vec![127.0, 37.0]);
+        assert_eq!(simplified[1], vec![127.1, 37.1]);
+    }
+
+    #[test]
+    fn test_simplify_polyline_corner_preserved() {
+        // L-shaped line with a sharp corner
+        let coords = vec![
+            vec![127.0, 37.0],
+            vec![127.1, 37.0], // sharp corner point
+            vec![127.1, 37.1],
+        ];
+
+        let simplified = simplify_polyline(&coords, 5.0);
+        // Corner point must be kept
+        assert_eq!(simplified.len(), 3);
+    }
 }

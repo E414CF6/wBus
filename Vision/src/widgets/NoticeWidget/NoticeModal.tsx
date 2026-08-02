@@ -16,7 +16,8 @@ import {
     Search,
     X,
 } from "lucide-react";
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
+import {createPortal} from "react-dom";
 
 interface NoticeModalProps {
     isOpen: boolean;
@@ -25,11 +26,16 @@ interface NoticeModalProps {
 }
 
 export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: NoticeModalProps) {
+    const [mounted, setMounted] = useState(false);
     const [page, setPage] = useState(1);
     const [searchInput, setSearchInput] = useState("");
     const [activeSearch, setActiveSearch] = useState("");
     const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(initialNoticeId);
     const [filterTab, setFilterTab] = useState<"all" | "pinned">("all");
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const {data: listData, loading: listLoading, error: listError, refresh} = useNoticeList(page, activeSearch);
     const {notice: detailNotice, loading: detailLoading, error: detailError} = useNoticeDetail(selectedNoticeId);
@@ -61,11 +67,11 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
 
     const totalPages = listData?.totalCount ? Math.ceil(listData.totalCount / 10) : 1;
 
-    if (!isOpen) return null;
+    if (!isOpen || !mounted) return null;
 
-    return (
+    const modalContent = (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/40 dark:bg-black/70 backdrop-blur-md animate-fade-in"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/40 dark:bg-black/70 backdrop-blur-md animate-fade-in pointer-events-auto"
             onClick={(e) => {
                 if (e.target === e.currentTarget) onClose();
             }}
@@ -75,12 +81,12 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
         >
             <div
                 className="
-          relative flex flex-col w-full max-w-2xl h-[88vh] max-h-[780px] 
-          bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl 
-          border border-black/10 dark:border-white/10 
-          shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.7)] 
-          rounded-[32px] overflow-hidden transition-all duration-300
-        "
+                    relative flex flex-col w-full max-w-2xl h-[88vh] max-h-[780px] 
+                    bg-white/95 dark:bg-[#121212]/95 backdrop-blur-3xl 
+                    border border-black/10 dark:border-white/10 
+                    shadow-[0_20px_60px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.7)] 
+                    rounded-[32px] overflow-hidden transition-all duration-300
+                "
             >
                 {/* Header */}
                 <header
@@ -179,7 +185,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                             type="submit"
                                             className="px-3 py-1 text-xs font-semibold rounded-xl bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-opacity"
                                         >
-                                            검색
+                                            {UI_TEXT.NOTICE.SEARCH_BUTTON}
                                         </button>
                                     </div>
                                 </form>
@@ -196,7 +202,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                                     : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
                                             }`}
                                         >
-                                            전체
+                                            {UI_TEXT.NOTICE.TAB_ALL}
                                         </button>
                                         <button
                                             type="button"
@@ -208,7 +214,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                             }`}
                                         >
                                             <Megaphone className="w-3 h-3"/>
-                                            공지
+                                            {UI_TEXT.NOTICE.TAB_PINNED}
                                         </button>
                                     </div>
 
@@ -216,10 +222,10 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                         type="button"
                                         onClick={() => refresh()}
                                         className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
-                                        title="새로고침"
+                                        title={UI_TEXT.NOTICE.REFRESH}
                                     >
                                         <RefreshCw className={`w-3.5 h-3.5 ${listLoading ? "animate-spin" : ""}`}/>
-                                        <span className="hidden sm:inline">새로고침</span>
+                                        <span className="hidden sm:inline">{UI_TEXT.NOTICE.REFRESH}</span>
                                     </button>
                                 </div>
                             </div>
@@ -231,13 +237,13 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                 ) : listError ? (
                                     <div
                                         className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
-                                        <p className="text-sm">알림 정보를 불러오는 중 오류가 발생했습니다.</p>
+                                        <p className="text-sm">{UI_TEXT.NOTICE.ERROR_FETCH_LIST}</p>
                                         <button
                                             type="button"
                                             onClick={() => refresh()}
                                             className="mt-3 px-4 py-2 text-xs font-semibold rounded-xl bg-black/5 dark:bg-white/10 hover:bg-black/10 transition-colors"
                                         >
-                                            다시 시도
+                                            {UI_TEXT.COMMON.RETRY}
                                         </button>
                                     </div>
                                 ) : filteredNotices.length === 0 ? (
@@ -267,7 +273,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                                     {notice.isNotice ? (
                                                         <span
                                                             className="shrink-0 px-2 py-0.5 text-[11px] font-extrabold rounded-md bg-amber-500 text-white shadow-xs">
-                              {UI_TEXT.NOTICE.TAG_PINNED}
+                              {UI_TEXT.NOTICE.TAB_PINNED}
                             </span>
                                                     ) : (
                                                         <span
@@ -312,12 +318,12 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                         className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
                                     >
                                         <ChevronLeft className="w-3.5 h-3.5"/>
-                                        이전
+                                        {UI_TEXT.NOTICE.PREV_PAGE}
                                     </button>
 
                                     <span className="text-xs text-gray-500 font-medium">
-                    {page} / {totalPages} 페이지
-                  </span>
+                                        {UI_TEXT.NOTICE.PAGE_FORMAT(page, totalPages)}
+                                    </span>
 
                                     <button
                                         type="button"
@@ -325,7 +331,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                                         className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
                                     >
-                                        다음
+                                        {UI_TEXT.NOTICE.NEXT_PAGE}
                                         <ChevronRight className="w-3.5 h-3.5"/>
                                     </button>
                                 </footer>
@@ -336,6 +342,8 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 }
 
 interface DetailViewProps {
@@ -361,13 +369,13 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
     if (error || !notice) {
         return (
             <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-                <p className="text-sm text-gray-500">상세 정보를 불러올 수 없습니다.</p>
+                <p className="text-sm text-gray-500">{UI_TEXT.NOTICE.ERROR_FETCH_DETAIL}</p>
                 <button
                     type="button"
                     onClick={onBack}
                     className="mt-4 px-4 py-2 text-xs font-semibold rounded-xl bg-black dark:bg-white text-white dark:text-black"
                 >
-                    목록으로 돌아가기
+                    {UI_TEXT.NOTICE.BACK_TO_LIST}
                 </button>
             </div>
         );
@@ -386,15 +394,16 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
                     <div
                         className="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-black/5 dark:border-white/5">
                         <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">작성자:</span>
-                            <span>{notice.writer || "원주시"}</span>
+                            <span
+                                className="font-medium text-gray-700 dark:text-gray-300">{UI_TEXT.NOTICE.WRITER}:</span>
+                            <span>{notice.writer || UI_TEXT.NOTICE.DEFAULT_WRITER}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">등록일:</span>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">{UI_TEXT.NOTICE.DATE}:</span>
                             <span>{notice.date}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">조회수:</span>
+                            <span className="font-medium text-gray-700 dark:text-gray-300">{UI_TEXT.NOTICE.HITS}:</span>
                             <span>{notice.views}</span>
                         </div>
                     </div>
@@ -406,7 +415,7 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
                         className="p-4 rounded-2xl bg-amber-500/5 dark:bg-amber-400/5 border border-amber-500/20 space-y-2">
                         <div className="flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-400">
                             <Paperclip className="w-4 h-4"/>
-                            <span>첨부파일 ({notice.files.length})</span>
+                            <span>{UI_TEXT.NOTICE.ATTACHMENT_COUNT(notice.files.length)}</span>
                         </div>
                         <div className="space-y-1.5 pt-1">
                             {notice.files.map((file, idx) => (
@@ -445,7 +454,8 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
                                 onClick={() => onSelectNotice(notice.prevId!)}
                                 className="flex items-center gap-2 p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer transition-colors"
                             >
-                                <span className="shrink-0 font-bold text-amber-600 dark:text-amber-400">이전글</span>
+                                <span
+                                    className="shrink-0 font-bold text-amber-600 dark:text-amber-400">{UI_TEXT.NOTICE.PREV_NOTICE}</span>
                                 <span
                                     className="truncate text-gray-700 dark:text-gray-300">{notice.prevTitle || notice.prevId}</span>
                             </div>
@@ -455,7 +465,8 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
                                 onClick={() => onSelectNotice(notice.nextId!)}
                                 className="flex items-center gap-2 p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer transition-colors"
                             >
-                                <span className="shrink-0 font-bold text-amber-600 dark:text-amber-400">다음글</span>
+                                <span
+                                    className="shrink-0 font-bold text-amber-600 dark:text-amber-400">{UI_TEXT.NOTICE.NEXT_NOTICE}</span>
                                 <span
                                     className="truncate text-gray-700 dark:text-gray-300">{notice.nextTitle || notice.nextId}</span>
                             </div>
@@ -473,7 +484,7 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
                     className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-opacity"
                 >
                     <ArrowLeft className="w-3.5 h-3.5"/>
-                    목록으로
+                    {UI_TEXT.NOTICE.BACK_TO_LIST}
                 </button>
 
                 <a
@@ -482,7 +493,7 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
                     rel="noopener noreferrer"
                     className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
                 >
-                    <span>원문 보기</span>
+                    <span>{UI_TEXT.NOTICE.VIEW_ORIGINAL}</span>
                     <ExternalLink className="w-3 h-3"/>
                 </a>
             </footer>

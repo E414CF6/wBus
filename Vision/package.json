@@ -1,6 +1,6 @@
 {
   "name": "wbus",
-  "version": "26.8.0",
+  "version": "26.9.0",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",

@@ -1,9 +1,9 @@
-import type {BusItem} from "@entities/bus/types";
+import type {BusDataError, BusItem} from "@entities/bus/types";
 import {useRouteInfo} from "@entities/route/hooks";
 import type {RouteInfo} from "@entities/route/types";
 
 import {useBusDirection} from "./useBusDirection";
-import {useBusLocationData} from "./useBusLocation";
+import {type SSEConnectionStatus, useBusLocationData} from "./useBusLocation";
 
 import {type BusPolylineSet, getFallbackPolylines, useBusPolylineMap} from "./usePolyline";
 
@@ -16,6 +16,12 @@ interface UseBusData {
     polylineMap: Map<string, BusPolylineSet>;
     fallbackPolylines: BusPolylineSet;
     activeRouteId: string | null;
+    connectionStatus: SSEConnectionStatus;
+    hasFetched: boolean;
+    error: BusDataError;
+    lastUpdated: number | null;
+    isDegraded: boolean;
+    reconnect: () => void;
 }
 
 /**
@@ -27,7 +33,9 @@ interface UseBusData {
 export function useBusData(routeName: string): UseBusData {
     const routeInfo = useRouteInfo(routeName);
     const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
-    const {data: busList} = useBusLocationData(routeIds);
+    const {
+        data: busList, connectionStatus, hasFetched, error, lastUpdated, isDegraded, reconnect
+    } = useBusLocationData(routeIds);
     const directionFn = useBusDirection(routeName);
 
     const activeRouteId = useMemo(() => {
@@ -40,6 +48,17 @@ export function useBusData(routeName: string): UseBusData {
     const fallbackPolylines = useMemo(() => getFallbackPolylines(polylineMap, activeRouteId), [polylineMap, activeRouteId]);
 
     return {
-        routeInfo: routeInfo ?? null, busList, getDirection: directionFn, polylineMap, fallbackPolylines, activeRouteId,
+        routeInfo: routeInfo ?? null,
+        busList,
+        getDirection: directionFn,
+        polylineMap,
+        fallbackPolylines,
+        activeRouteId,
+        connectionStatus,
+        hasFetched,
+        error,
+        lastUpdated,
+        isDegraded,
+        reconnect,
     };
 }

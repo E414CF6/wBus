@@ -4,3 +4,5 @@
 # Ignore IDE files
 .idea
 .vscode
+.vercel
+.env*.local
