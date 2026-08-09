@@ -70,5 +70,7 @@ export const UI_CONFIG = {
 } as const;
 
 export const STORAGE_KEYS = {
-    ROUTE_ID: "wbus_selected_route", MAP_VIEW: "wbus_map_view",
+    ROUTE_ID: "wbus_selected_route",
+    MAP_VIEW: "wbus_map_view",
+    ACTIVE_TAB: "wbus_active_tab",
 } as const;
