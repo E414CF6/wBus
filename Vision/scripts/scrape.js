@@ -4,7 +4,7 @@ const path = require('path');
 const BASE_URL = 'http://its.wonju.go.kr';
 const LIST_URL = `${BASE_URL}/bus/bus04.do`;
 const DETAIL_URL = `${BASE_URL}/bus/bus04Detail.do`;
-const PRIMARY_CACHE_PATH = path.join(process.cwd(), 'data', 'scheduleCache.json');
+const PRIMARY_CACHE_PATH = path.join(process.cwd(), 'scheduleCache.json');
 
 const HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -148,7 +148,7 @@ async function runScraper() {
     const jsonStr = JSON.stringify(cacheData, null, 2);
 
     // Try saving to data/, public/data/, and /tmp/
-    const targetPaths = [PRIMARY_CACHE_PATH, path.join(process.cwd(), 'public', 'data', 'scheduleCache.json'), '/tmp/scheduleCache.json'];
+    const targetPaths = [PRIMARY_CACHE_PATH, path.join(process.cwd(), 'public', 'scheduleCache.json'), '/tmp/scheduleCache.json'];
 
     for (const targetPath of targetPaths) {
         try {

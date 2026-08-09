@@ -7,21 +7,15 @@ const {runScraper} = require("../../../scripts/scrape.js");
 
 export const MIN_REFRESH_INTERVAL_DAYS = 3;
 export const MIN_REFRESH_INTERVAL_MS = MIN_REFRESH_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
-const VERCEL_BLOB_PATH = "data/scheduleCache.json";
+const VERCEL_BLOB_PATH = "scheduleCache.json";
 
 // In-Memory cache to avoid repeated disk reads during server process lifetime
 let inMemoryCache: {
-    data: BusCacheData;
-    meta: CacheMetadata;
-    timestamp: number;
+    data: BusCacheData; meta: CacheMetadata; timestamp: number;
 } | null = null;
 
 function getCandidateFilePaths(): string[] {
-    return [
-        "/tmp/scheduleCache.json",
-        path.join(process.cwd(), "data", "scheduleCache.json"),
-        path.join(process.cwd(), "public", "data", "scheduleCache.json"),
-    ];
+    return ["/tmp/scheduleCache.json", path.join(process.cwd(), "scheduleCache.json"), path.join(process.cwd(), "public", "data", "scheduleCache.json"),];
 }
 
 function resolveExistingFilePath(): string | null {
@@ -38,7 +32,7 @@ export function getCacheMetadata(): CacheMetadata {
 
     if (!existingPath) {
         return {
-            filePath: path.join(process.cwd(), "data", "scheduleCache.json"),
+            filePath: path.join(process.cwd(), "scheduleCache.json"),
             exists: false,
             sizeBytes: 0,
             updatedAt: null,
@@ -97,9 +91,7 @@ async function saveCacheData(cacheData: BusCacheData): Promise<void> {
     // Update in-memory cache immediately
     const meta = getCacheMetadata();
     inMemoryCache = {
-        data: cacheData,
-        meta,
-        timestamp: Date.now(),
+        data: cacheData, meta, timestamp: Date.now(),
     };
 
     // 1. Upload to Vercel Blob if BLOB_READ_WRITE_TOKEN is set
@@ -107,9 +99,7 @@ async function saveCacheData(cacheData: BusCacheData): Promise<void> {
         try {
             const {put} = await import("@vercel/blob");
             await put(VERCEL_BLOB_PATH, jsonStr, {
-                access: "public",
-                contentType: "application/json",
-                addRandomSuffix: false,
+                access: "public", contentType: "application/json", addRandomSuffix: false,
             });
             console.log("[BusService] Successfully uploaded updated timetable data to Vercel Blob.");
         } catch (err) {
@@ -132,10 +122,7 @@ async function saveCacheData(cacheData: BusCacheData): Promise<void> {
 }
 
 export async function refreshBusData(force = false): Promise<{
-    refreshed: boolean;
-    message: string;
-    data: BusCacheData;
-    meta: CacheMetadata;
+    refreshed: boolean; message: string; data: BusCacheData; meta: CacheMetadata;
 }> {
     const meta = getCacheMetadata();
 
@@ -154,15 +141,9 @@ export async function refreshBusData(force = false): Promise<{
     console.log("[BusService] Minimum refresh interval (3 days) not reached. Using existing cache.");
     const res = await getOrFetchBusData(false);
 
-    const nextAvailableStr = meta.nextRefreshAvailableAt
-        ? new Date(meta.nextRefreshAvailableAt).toLocaleString("ko-KR", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-        })
-        : "";
+    const nextAvailableStr = meta.nextRefreshAvailableAt ? new Date(meta.nextRefreshAvailableAt).toLocaleString("ko-KR", {
+        year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    }) : "";
 
     return {
         refreshed: false,
@@ -175,8 +156,7 @@ export async function refreshBusData(force = false): Promise<{
 export async function getOrFetchBusData(forceRefresh = false): Promise<{ data: BusCacheData; meta: CacheMetadata }> {
     if (!forceRefresh && inMemoryCache) {
         return {
-            data: inMemoryCache.data,
-            meta: inMemoryCache.meta,
+            data: inMemoryCache.data, meta: inMemoryCache.meta,
         };
     }
 
@@ -187,8 +167,7 @@ export async function getOrFetchBusData(forceRefresh = false): Promise<{ data: B
         const newData = await runScraper();
         await saveCacheData(newData);
         return {
-            data: newData,
-            meta: getCacheMetadata(),
+            data: newData, meta: getCacheMetadata(),
         };
     }
 
@@ -197,21 +176,17 @@ export async function getOrFetchBusData(forceRefresh = false): Promise<{ data: B
         const data: BusCacheData = JSON.parse(raw);
         const meta = getCacheMetadata();
         inMemoryCache = {
-            data,
-            meta,
-            timestamp: Date.now(),
+            data, meta, timestamp: Date.now(),
         };
         return {
-            data,
-            meta,
+            data, meta,
         };
     } catch (err) {
         console.error("[BusService] Error reading cache file, rescraping:", err);
         const newData = await runScraper();
         await saveCacheData(newData);
         return {
-            data: newData,
-            meta: getCacheMetadata(),
+            data: newData, meta: getCacheMetadata(),
         };
     }
 }
