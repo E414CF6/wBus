@@ -158,6 +158,7 @@ async function runScraper() {
             }
             writeFileSync(targetPath, jsonStr, 'utf-8');
             console.log(`Saved file cache to: ${targetPath}`);
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
         } catch (e) {
             // Ignore write errors for read-only environments
         }
@@ -177,4 +178,3 @@ if (require.main === module) {
 
 export {runScraper, PRIMARY_CACHE_PATH as CACHE_PATH};
 export default {runScraper, CACHE_PATH: PRIMARY_CACHE_PATH};
-

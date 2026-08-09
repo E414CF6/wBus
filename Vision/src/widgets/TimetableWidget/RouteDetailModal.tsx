@@ -1,10 +1,10 @@
 "use client";
 
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import {BusRoute} from "@shared/types/bus";
-import {getNextDeparture, parseTimeToMinutes} from "@shared/lib/timeUtils";
+import {getNextDeparture} from "@shared/lib/timeUtils";
 import {UI_TEXT} from "@shared/config/locale";
-import {ArrowRight, Download, Info, MapPin, Search, Star, X} from "lucide-react";
+import {ArrowRight, Download, MapPin, Search, Star, X} from "lucide-react";
 
 interface RouteDetailModalProps {
     route: BusRoute | null;
@@ -12,6 +12,7 @@ interface RouteDetailModalProps {
     isBookmarked: boolean;
     onToggleBookmark: (routeId: string) => void;
     onSelectMapRoute?: (routeName: string) => void;
+    currentTime?: Date;
 }
 
 export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
@@ -20,23 +21,27 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
                                                                       isBookmarked,
                                                                       onToggleBookmark,
                                                                       onSelectMapRoute,
+                                                                      currentTime,
                                                                   }) => {
     const [tableSearch, setTableSearch] = useState("");
+    const [now, setNow] = useState<Date>(() => currentTime || new Date());
+
+    useEffect(() => {
+        if (currentTime) {
+            setNow(currentTime);
+        }
+    }, [currentTime]);
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setNow(new Date());
+        }, 10000);
+        return () => clearInterval(timer);
+    }, []);
+
     if (!route) return null;
 
-    const currentDate = new Date();
-    const currentMins = currentDate.getHours() * 60 + currentDate.getMinutes();
-    const {nextOrigin, nextDest, originWaitMins, destWaitMins} = getNextDeparture(route.timetable, currentDate);
-
-    // Find next upcoming index for highlight
-    let nextSeq = -1;
-    for (const entry of route.timetable) {
-        const oMins = parseTimeToMinutes(entry.originDepTime);
-        if (oMins !== null && oMins >= currentMins) {
-            nextSeq = entry.seq;
-            break;
-        }
-    }
+    const {nextOrigin, nextDest, originWaitMins, destWaitMins} = getNextDeparture(route.timetable, now);
 
     const filteredTimetable = route.timetable.filter((item) => {
         if (!tableSearch) return true;
@@ -50,8 +55,8 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
     });
 
     const exportCsv = () => {
-        const headers = ["운행순번", `${route.origin}발`, `${route.destination}발`, "구분", "비고"];
-        const rows = route.timetable.map((t) => [t.seq, t.originDepTime, t.destDepTime, t.type, t.notes]);
+        const headers = ["운행순번", `${route.origin}발`, `${route.destination}발`, "비고"];
+        const rows = route.timetable.map((t) => [t.seq, t.originDepTime, t.destDepTime, t.notes]);
         const csvContent =
             "data:text/csv;charset=utf-8,\uFEFF" +
             [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
@@ -156,10 +161,6 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
                     className="px-5 py-3 bg-black/[0.02] dark:bg-white/[0.02] border-b border-black/5 dark:border-white/10 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
                     <div
                         className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-slate-600 dark:text-slate-400 font-medium">
-                        <div className="flex items-center space-x-1.5">
-                            <Info className="h-4 w-4 text-blue-500 dark:text-blue-400 shrink-0"/>
-                            <span>{UI_TEXT.TIMETABLE.NEXT_BUS_HIGHLIGHT_NOTE}</span>
-                        </div>
 
                         {nextOrigin && (
                             <span
@@ -220,43 +221,61 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
                             <th className="py-2.5 px-3 rounded-l-xl">{UI_TEXT.TIMETABLE.SEQ}</th>
                             <th className="py-2.5 px-3">{UI_TEXT.TIMETABLE.ORIGIN_DEP(route.origin)}</th>
                             <th className="py-2.5 px-3">{UI_TEXT.TIMETABLE.DEST_DEP(route.destination)}</th>
-                            <th className="py-2.5 px-3">{UI_TEXT.TIMETABLE.RUN_TYPE}</th>
                             <th className="py-2.5 px-3 rounded-r-xl">{UI_TEXT.TIMETABLE.NOTES}</th>
                         </tr>
                         </thead>
                         <tbody className="divide-y divide-black/5 dark:divide-white/5 text-xs sm:text-sm">
                         {filteredTimetable.length === 0 ? (
                             <tr>
-                                <td colSpan={5} className="py-8 text-center text-slate-400">
+                                <td colSpan={4} className="py-8 text-center text-slate-400">
                                     {UI_TEXT.TIMETABLE.NO_ROUTES_FOUND}
                                 </td>
                             </tr>
                         ) : (
                             filteredTimetable.map((row) => {
-                                const isNext = row.seq === nextSeq;
+                                const isNextOrigin = nextOrigin !== null && row.seq === nextOrigin.seq;
+                                const isNextDest = nextDest !== null && row.seq === nextDest.seq;
                                 return (
                                     <tr
                                         key={row.seq}
                                         className={`transition-colors ${
-                                            isNext
-                                                ? "bg-emerald-500/10 dark:bg-emerald-500/20 font-bold text-emerald-900 dark:text-emerald-200"
-                                                : "hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
+                                            isNextOrigin && isNextDest
+                                                ? "bg-gradient-to-r from-teal-500/10 via-purple-500/10 to-indigo-500/10 font-bold"
+                                                : isNextOrigin
+                                                    ? "bg-teal-500/5 dark:bg-teal-500/10 font-bold"
+                                                    : isNextDest
+                                                        ? "bg-indigo-500/5 dark:bg-indigo-500/10 font-bold"
+                                                        : "hover:bg-black/[0.02] dark:hover:bg-white/[0.03]"
                                         }`}
                                     >
                                         <td className="py-2.5 px-3 font-mono text-slate-400 dark:text-slate-500">
                                             {row.seq}
                                         </td>
-                                        <td className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-slate-100">
-                                            {row.originDepTime}
+                                        <td className="py-2.5 px-3 font-mono">
+                                            {isNextOrigin ? (
+                                                <span
+                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-teal-500/20 dark:bg-teal-500/30 text-teal-950 dark:text-teal-100 font-extrabold border border-teal-500/40 shadow-xs">
+                                                    <span>{row.originDepTime}</span>
+                                                    <span
+                                                        className="text-[10px] px-1.5 py-0.5 rounded-md bg-teal-600 dark:bg-teal-500 text-white font-sans font-bold">다음</span>
+                                                </span>
+                                            ) : (
+                                                <span
+                                                    className="font-bold text-slate-900 dark:text-slate-100">{row.originDepTime}</span>
+                                            )}
                                         </td>
-                                        <td className="py-2.5 px-3 font-mono font-bold text-slate-900 dark:text-slate-100">
-                                            {row.destDepTime}
-                                        </td>
-                                        <td className="py-2.5 px-3">
-                        <span
-                            className="px-2 py-0.5 rounded-lg text-[11px] font-semibold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
-                          {row.type}
-                        </span>
+                                        <td className="py-2.5 px-3 font-mono">
+                                            {isNextDest ? (
+                                                <span
+                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-500/20 dark:bg-indigo-500/30 text-indigo-950 dark:text-indigo-100 font-extrabold border border-indigo-500/40 shadow-xs">
+                                                    <span>{row.destDepTime}</span>
+                                                    <span
+                                                        className="text-[10px] px-1.5 py-0.5 rounded-md bg-indigo-600 dark:bg-indigo-500 text-white font-sans font-bold">다음</span>
+                                                </span>
+                                            ) : (
+                                                <span
+                                                    className="font-bold text-slate-900 dark:text-slate-100">{row.destDepTime}</span>
+                                            )}
                                         </td>
                                         <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">
                                             {row.notes}

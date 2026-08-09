@@ -3,7 +3,7 @@
 import React, {useEffect, useMemo, useState} from "react";
 import {useNoticeList} from "@entities/notice/hooks";
 import {UI_TEXT} from "@shared/config/locale";
-import {ChevronLeft, ChevronRight, Flame, Megaphone, Sparkles} from "lucide-react";
+import {ChevronLeft, ChevronRight, Megaphone, Sparkles} from "lucide-react";
 
 interface NoticeBannerProps {
     onClick: (noticeId?: string) => void;
@@ -113,8 +113,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                             {isNew && (
                                 <span
                                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-xs animate-pulse">
-                                    <Flame className="w-3 h-3 fill-current"/>
-                                    <span>최신</span>
+                                    <span>최근</span>
                                 </span>
                             )}
 

@@ -10,10 +10,11 @@ interface BookmarkedDeparturesBannerProps {
     routes: BusRoute[];
     bookmarks: string[];
     onSelectRoute: (route: BusRoute) => void;
+    currentTime?: Date;
 }
 
 export const BookmarkedDeparturesBanner: React.FC<BookmarkedDeparturesBannerProps> = memo(
-    ({routes, bookmarks, onSelectRoute}) => {
+    ({routes, bookmarks, onSelectRoute, currentTime}) => {
         // Filter routes that are bookmarked
         const bookmarkedRoutes = routes.filter(
             (route) => bookmarks.includes(route.id) || bookmarks.includes(route.routeNo)
@@ -56,7 +57,8 @@ export const BookmarkedDeparturesBanner: React.FC<BookmarkedDeparturesBannerProp
                 <div className="flex items-stretch gap-3 overflow-x-auto pb-1.5 custom-scrollbar">
                     {bookmarkedRoutes.map((route) => {
                         const {nextOrigin, nextDest, originWaitMins, destWaitMins} = getNextDeparture(
-                            route.timetable
+                            route.timetable,
+                            currentTime
                         );
 
                         return (

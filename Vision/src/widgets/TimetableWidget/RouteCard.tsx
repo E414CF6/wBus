@@ -12,6 +12,7 @@ interface RouteCardProps {
     onToggleBookmark: (routeId: string) => void;
     onSelectRoute: (route: BusRoute) => void;
     onSelectMapRoute?: (routeName: string) => void;
+    currentTime?: Date;
 }
 
 export const RouteCard: React.FC<RouteCardProps> = memo(({
@@ -20,8 +21,15 @@ export const RouteCard: React.FC<RouteCardProps> = memo(({
                                                              onToggleBookmark,
                                                              onSelectRoute,
                                                              onSelectMapRoute,
+                                                             currentTime,
                                                          }) => {
-    const {nextOrigin, nextDest, originWaitMins, destWaitMins, soonest} = getNextDeparture(route.timetable);
+    const {
+        nextOrigin,
+        nextDest,
+        originWaitMins,
+        destWaitMins,
+        soonest
+    } = getNextDeparture(route.timetable, currentTime);
 
     // Get color gradient for route badge based on route number
     const getRouteBadgeGradient = (no: string) => {

@@ -44,6 +44,16 @@ export default function TimetableWidget({initialRoute, onSelectMapRoute}: Timeta
     const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
     const [showOnlyBookmarks, setShowOnlyBookmarks] = useState<boolean>(false);
 
+    // Live clock ticker state (updates every 10 seconds for real-time minute recalculation)
+    const [now, setNow] = useState<Date>(() => new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setNow(new Date());
+        }, 10000);
+        return () => clearInterval(timer);
+    }, []);
+
     // Update searchQuery if initialRoute prop changes
     useEffect(() => {
         if (initialRoute) {
@@ -202,7 +212,7 @@ export default function TimetableWidget({initialRoute, onSelectMapRoute}: Timeta
 
     return (
         <div
-            className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-28 min-h-[100dvh] overflow-y-auto">
+            className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-10 pb-28 min-h-dvh overflow-y-auto">
             {/* Sleek Hero Header Card */}
             <div
                 className="mb-6 backdrop-blur-2xl bg-white/70 dark:bg-[#121212]/70 rounded-3xl p-6 border border-black/5 dark:border-white/10 shadow-sm">
@@ -298,6 +308,7 @@ export default function TimetableWidget({initialRoute, onSelectMapRoute}: Timeta
                     routes={data.routes}
                     bookmarks={bookmarks}
                     onSelectRoute={(r) => setSelectedRoute(r)}
+                    currentTime={now}
                 />
             )}
 
@@ -383,6 +394,7 @@ export default function TimetableWidget({initialRoute, onSelectMapRoute}: Timeta
                                     onToggleBookmark={(id) => toggleBookmark(id)}
                                     onSelectRoute={(r) => setSelectedRoute(r)}
                                     onSelectMapRoute={onSelectMapRoute}
+                                    currentTime={now}
                                 />
                             ))}
                         </div>
@@ -398,6 +410,7 @@ export default function TimetableWidget({initialRoute, onSelectMapRoute}: Timeta
                     isBookmarked={isRouteBookmarked(selectedRoute)}
                     onToggleBookmark={(id) => toggleBookmark(id)}
                     onSelectMapRoute={onSelectMapRoute}
+                    currentTime={now}
                 />
             )}
 

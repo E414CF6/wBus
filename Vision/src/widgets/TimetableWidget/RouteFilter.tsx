@@ -115,7 +115,7 @@ export const RouteFilter: React.FC<RouteFilterProps> = ({
                 <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
           <span
               className="text-xs font-bold text-slate-600 dark:text-slate-400 shrink-0 mr-1 flex items-center gap-1">
-            <Filter className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400 stroke-[2.4]"/> {UI_TEXT.TIMETABLE.RUN_TYPE}:
+            <Filter className="h-3.5 w-3.5 text-blue-500 dark:text-blue-400 stroke-[2.4]"/> {UI_TEXT.TIMETABLE.RUN_DAY}:
           </span>
                     {DAY_TYPES.map((dt) => (
                         <button

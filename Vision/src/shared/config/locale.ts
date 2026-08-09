@@ -36,9 +36,9 @@ export const UI_TEXT = {
     },
 
     TIMETABLE: {
-        HERO_BADGE: "원주시 시내버스 시간표 대시보드",
+        HERO_BADGE: "원주시 시내버스 시간표",
         HERO_TITLE: "노선별 운행 시간표",
-        HERO_SUBTITLE: "원주시 교통정보센터(ITS) 데이터 연동 • 기점/종점 출발 시각 및 실시간 도착 정보를 한눈에 확인하세요.",
+        HERO_SUBTITLE: "시내버스의 기점/종점 출발 시각 및 실시간 정보를 한눈에 확인하세요.",
         STATS_TOTAL_ROUTES: "등록 노선",
         STATS_BOOKMARKS: "즐겨찾기",
 
@@ -64,6 +64,7 @@ export const UI_TEXT = {
         ORIGIN_DEP: (origin: string) => `${origin} 출발 (기점)`,
         DEST_DEP: (dest: string) => `${dest} 출발 (종점)`,
         RUN_TYPE: "운행 구분",
+        RUN_DAY: "운행일",
         NOTES: "비고",
         SEQ: "순번",
         CSV_DOWNLOAD: "CSV 다운로드",
@@ -72,10 +73,9 @@ export const UI_TEXT = {
         SEARCH_MODAL_PLACEHOLDER: "시간표 검색...",
 
         NO_ROUTES_FOUND: "검색 조건과 일치하는 노선이 없습니다.",
-        NO_ROUTES_DESC: "검색어 또는 운행 구분 필터를 변경하거나 즐겨찾기 상태를 확인해 보세요.",
+        NO_ROUTES_DESC: "검색어 또는 운행일 필터를 변경하거나 즐겨찾기 상태를 확인해 보세요.",
         ALL_ROUTES_BTN: "모든 노선 보기",
 
-        NEXT_BUS_HIGHLIGHT_NOTE: "● 초록색 항목은 다음 출발 예정입니다.",
         BOOKMARK_TOGGLE_ADD: "즐겨찾기 추가",
         BOOKMARK_TOGGLE_REMOVE: "즐겨찾기 해제",
 
@@ -150,7 +150,7 @@ export const UI_TEXT = {
     NOTICE: {
         SECTION_TITLE: "알림마당",
         WIDGET_TITLE: "원주시 교통정보센터 알림마당",
-        LATEST_ITS: "원주시 교통정보센터 최신 소식",
+        LATEST_ITS: "원주시 교통정보센터 소식",
         VIEW_ALL: "전체보기",
         NO_NOTICES: "등록된 공지사항이 없습니다.",
         SEARCH_PLACEHOLDER: "알림마당 검색어 입력...",
