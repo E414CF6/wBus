@@ -19,7 +19,9 @@ const hasExplicitUrl = process.env.NEXT_PUBLIC_STATIC_API_URL?.startsWith("http"
 const blobUrl = getBlobBaseUrl();
 
 const nextConfig: NextConfig = {
-    env: {
+    outputFileTracingIncludes: {
+        "/api/**/*": ["./public/data/**/*", "./scheduleCache.json"],
+    }, env: {
         // USE_REMOTE=true → auto-derive Blob URL from token (unless already set)
         ...(useRemote && blobUrl && !hasExplicitUrl ? {
             NEXT_PUBLIC_STATIC_API_URL: blobUrl,
