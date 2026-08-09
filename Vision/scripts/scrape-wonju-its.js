@@ -1,10 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import {existsSync, mkdirSync, writeFileSync} from 'fs';
+import {dirname, join} from 'path';
 
 const BASE_URL = 'http://its.wonju.go.kr';
 const LIST_URL = `${BASE_URL}/bus/bus04.do`;
 const DETAIL_URL = `${BASE_URL}/bus/bus04Detail.do`;
-const PRIMARY_CACHE_PATH = path.join(process.cwd(), 'scheduleCache.json');
+const PRIMARY_CACHE_PATH = join(process.cwd(), 'scheduleCache.json');
 
 const HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -148,15 +148,15 @@ async function runScraper() {
     const jsonStr = JSON.stringify(cacheData, null, 2);
 
     // Try saving to data/, public/data/, and /tmp/
-    const targetPaths = [PRIMARY_CACHE_PATH, path.join(process.cwd(), 'public', 'scheduleCache.json'), '/tmp/scheduleCache.json'];
+    const targetPaths = [PRIMARY_CACHE_PATH, join(process.cwd(), 'public', 'scheduleCache.json'), '/tmp/scheduleCache.json'];
 
     for (const targetPath of targetPaths) {
         try {
-            const dir = path.dirname(targetPath);
-            if (!fs.existsSync(dir)) {
-                fs.mkdirSync(dir, {recursive: true});
+            const dir = dirname(targetPath);
+            if (!existsSync(dir)) {
+                mkdirSync(dir, {recursive: true});
             }
-            fs.writeFileSync(targetPath, jsonStr, 'utf-8');
+            writeFileSync(targetPath, jsonStr, 'utf-8');
             console.log(`Saved file cache to: ${targetPath}`);
         } catch (e) {
             // Ignore write errors for read-only environments
@@ -175,4 +175,6 @@ if (require.main === module) {
     });
 }
 
-module.exports = {runScraper, CACHE_PATH: PRIMARY_CACHE_PATH};
+export {runScraper, PRIMARY_CACHE_PATH as CACHE_PATH};
+export default {runScraper, CACHE_PATH: PRIMARY_CACHE_PATH};
+

@@ -25,6 +25,12 @@ export default function TimetableWidget({initialRoute, onSelectMapRoute}: Timeta
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [isNoticeOpen, setIsNoticeOpen] = useState<boolean>(false);
+    const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
+
+    const handleOpenNotice = (noticeId?: string) => {
+        setSelectedNoticeId(noticeId || null);
+        setIsNoticeOpen(true);
+    };
 
     // Refresh notice toast/banner state
     const [refreshNotice, setRefreshNotice] = useState<{
@@ -284,7 +290,7 @@ export default function TimetableWidget({initialRoute, onSelectMapRoute}: Timeta
             />
 
             {/* Dedicated ITS Notice Center Banner */}
-            <NoticeBanner onClick={() => setIsNoticeOpen(true)}/>
+            <NoticeBanner onClick={(id) => handleOpenNotice(id)}/>
 
             {/* Dedicated Bookmarked Routes Next Departures Banner */}
             {data && data.routes && (
@@ -398,7 +404,11 @@ export default function TimetableWidget({initialRoute, onSelectMapRoute}: Timeta
             {/* Wonju ITS Notice Center Modal */}
             <NoticeModal
                 isOpen={isNoticeOpen}
-                onClose={() => setIsNoticeOpen(false)}
+                onClose={() => {
+                    setIsNoticeOpen(false);
+                    setSelectedNoticeId(null);
+                }}
+                initialNoticeId={selectedNoticeId}
             />
         </div>
     );

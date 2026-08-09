@@ -37,6 +37,12 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
         setMounted(true);
     }, []);
 
+    useEffect(() => {
+        if (isOpen) {
+            setSelectedNoticeId(initialNoticeId);
+        }
+    }, [isOpen, initialNoticeId]);
+
     const {data: listData, loading: listLoading, error: listError, refresh} = useNoticeList(page, activeSearch);
     const {notice: detailNotice, loading: detailLoading, error: detailError} = useNoticeDetail(selectedNoticeId);
 

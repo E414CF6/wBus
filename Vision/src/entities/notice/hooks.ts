@@ -6,9 +6,11 @@ import {APP_CONFIG} from "@shared/config/env";
 import useSWR from "swr";
 
 const NOTICE_SWR_OPTIONS = {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-    dedupingInterval: 30000,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    revalidateIfStale: true,
+    refreshInterval: 60000,
+    dedupingInterval: 10000,
     errorRetryCount: 2,
 } as const;
 
