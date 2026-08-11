@@ -14,7 +14,8 @@ function getBlobBaseUrl(): string | undefined {
     return `https://${match[1].toLowerCase()}.public.blob.vercel-storage.com`;
 }
 
-const useRemote = process.env.NEXT_PUBLIC_USE_REMOTE_STATIC_DATA === "true";
+const rawUseRemote = process.env.NEXT_PUBLIC_USE_REMOTE_STATIC_DATA;
+const useRemote = rawUseRemote === undefined ? true : ["true", "1", "yes", "y", "on"].includes(rawUseRemote.trim().toLowerCase());
 const hasExplicitUrl = process.env.NEXT_PUBLIC_STATIC_API_URL?.startsWith("http");
 const blobUrl = getBlobBaseUrl();
 

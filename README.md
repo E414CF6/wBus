@@ -330,7 +330,7 @@ any configuration in development mode (using local static data).
 
 | Variable                                | Default                     | Description                                       |
 |-----------------------------------------|-----------------------------|---------------------------------------------------|
-| `NEXT_PUBLIC_USE_REMOTE_STATIC_DATA`    | `false`                     | `true` to load static data from Vercel Blob       |
+| `NEXT_PUBLIC_USE_REMOTE_STATIC_DATA`    | `true`                      | `true` to load static data from Vercel Blob       |
 | `NEXT_PUBLIC_STATIC_API_URL`            | `/data`                     | Base URL for static data (local path or Blob URL) |
 | `NEXT_PUBLIC_MAP_DEFAULT_POSITION`      | `37.3421,127.91976`         | Initial map center (lat, lng)                     |
 | `NEXT_PUBLIC_MAP_DEFAULT_ZOOM`          | `13`                        | Initial zoom level                                |
