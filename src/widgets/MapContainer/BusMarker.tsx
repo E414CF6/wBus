@@ -159,16 +159,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 const rawDown = getIndicesForDir(0);
 
                 upIndices = rawUp.filter(i => i >= 0 && i < upPolyline.length).sort((a, b) => a - b);
-
-                if (turnIndex !== undefined) {
-                    const safeTurn = Math.round(turnIndex);
-                    downIndices = rawDown
-                        .map(i => i - safeTurn)
-                        .filter(i => i >= 0 && i < downPolyline.length)
-                        .sort((a, b) => a - b);
-                } else {
-                    downIndices = rawDown.filter(i => i >= 0 && i < downPolyline.length).sort((a, b) => a - b);
-                }
+                downIndices = rawDown.filter(i => i >= 0 && i < downPolyline.length).sort((a, b) => a - b);
             }
 
             map.set(id, {upIndices, downIndices});
@@ -183,8 +174,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
             const targetRouteId = bus.routeid ?? activeRouteId ?? routeInfo.vehicleRouteIds[0] ?? null;
             const polylineSet = targetRouteId ? polylineMap.get(targetRouteId) : null;
             const {upPolyline, downPolyline, stopIndexMap, turnIndex} = polylineSet ?? fallbackPolylines;
-            const markerRouteContext = targetRouteId ?? "none";
-            const markerKey = `${routeName}-${markerRouteContext}-${bus.vehicleno}`;
+            const markerKey = `${routeName}-${bus.vehicleno}`;
 
             const snapped = getSnappedPosition(bus, getDirection, upPolyline, downPolyline, {
                 stopIndexMap, turnIndex, snapIndexRange: SNAP_INDEX_RANGE,

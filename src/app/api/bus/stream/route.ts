@@ -13,10 +13,10 @@ const STREAM_INTERVAL_MS = Math.max(1000, API_CONFIG.LIVE.POLLING_INTERVAL_MS);
 const ROUTE_TTL_SECONDS = Math.max(3, Math.ceil(STREAM_INTERVAL_MS / 1000));
 const STREAM_SNAPSHOT_TTL_SECONDS = Math.max(1, Math.ceil(STREAM_INTERVAL_MS / 1000) - 1);
 const LIVE_CACHE_OPTIONS = {
-    staleWhileRevalidateSeconds: 3, staleIfErrorSeconds: 180,
+    staleWhileRevalidateSeconds: 3, staleIfErrorSeconds: 10,
 };
 const STREAM_CACHE_OPTIONS = {
-    staleWhileRevalidateSeconds: 3, staleIfErrorSeconds: 180,
+    staleWhileRevalidateSeconds: 3, staleIfErrorSeconds: 10,
 };
 const VERCEL_MAX_DURATION_MS = 60000;
 const STREAM_SHUTDOWN_BUFFER_MS = 5000;

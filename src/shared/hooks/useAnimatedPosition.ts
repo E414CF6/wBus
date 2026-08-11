@@ -68,8 +68,8 @@ const MAX_VELOCITY = 0.0003;
 // Below this the bus is considered stopped.
 const STOP_THRESHOLD = 0.000003;
 
-// Default estimated staleness of incoming position data — 60 seconds.
-const DEFAULT_DATA_DELAY_MS = 60000;
+// Default estimated staleness of incoming position data — set to 0 to prevent projecting markers far ahead.
+const DEFAULT_DATA_DELAY_MS = 0;
 
 // City bus base speed prior (cord-units/ms).
 // 1 degree ≈ 111 km → 30 km/h = 8.33 m/s ≈ 7.5e-8 deg/ms
@@ -79,14 +79,6 @@ const CITY_BUS_BASE_VELOCITY = 0.000000075;
 // doesn't shoot forward before we have real velocity data.
 // (1 degree ≈ 111 km, so 2.5e-8 deg/ms ≈ 2.8 m/s ≈ 10 km/h)
 const INITIAL_CRAWL_VELOCITY = 0.000000025;
-
-// On overshoot, scale velocity by this factor.
-// More gentle since with 60s prediction overshoots are expected.
-const OVERSHOOT_DAMPEN = 0.7;
-
-// Catch-up boost when marker falls behind significantly.
-const CATCHUP_GAP_FACTOR = 1.2;
-const CATCHUP_BOOST = 1.6;
 
 // How much of the measured velocity to trust vs. the prior.
 // Starts at 0 (all prior), ramps up as we get more data.
@@ -495,16 +487,13 @@ export function useAnimatedPosition(targetPosition: Coordinate, targetAngle: num
         prevDataTimeRef.current = now;
         hasDataRef.current = true;
 
-        // Aggressive forward projection 
-        // Data is stale by ~dataDelayMs. Project the bus forward by
-        // that amount, using the blended velocity.
+        // Controlled forward projection (capped at max 3000ms to prevent jumping far ahead)
         let projDist = 0;
         const v = velocityRef.current;
-        if (v > STOP_THRESHOLD) {
-            projDist = v * dataDelayMs;
+        const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 3000));
+        if (v > STOP_THRESHOLD && effectiveDelay > 0) {
+            projDist = v * effectiveDelay;
             // Account for stop dwell times in the projection window.
-            // Each stop the bus would pass through in the projection
-            // adds a dwell penalty.
             const stopDists = stopDistancesRef.current;
             if (stopDists.length > 0) {
                 let stopsInProjection = 0;
@@ -514,9 +503,8 @@ export function useAnimatedPosition(targetPosition: Coordinate, targetAngle: num
                         stopsInProjection++;
                     }
                 }
-                // Reduce projection by dwell time equivalent distance per stop
                 const dwellDistPerStop = v * STOP_DWELL_MS;
-                projDist = Math.max(projDist * 0.3, projDist - stopsInProjection * dwellDistPerStop,);
+                projDist = Math.max(projDist * 0.3, projDist - stopsInProjection * dwellDistPerStop);
             }
         }
         let newTarget = Math.min(rawDist + projDist, totalDist);
@@ -526,24 +514,8 @@ export function useAnimatedPosition(targetPosition: Coordinate, targetAngle: num
             newTarget = Math.max(newTarget, markerDist);
         }
 
-        // Reconcile target vs. marker
+        // Reconcile target vs. marker without corrupting velocityRef
         targetDistRef.current = newTarget;
-        const marker = markerDist;
-
-        if (newTarget >= marker) {
-            // Normal — data target is ahead of or at marker.
-            const gap = newTarget - marker;
-            const nominalStep = v * 3000;
-            if (nominalStep > 0 && gap > nominalStep * CATCHUP_GAP_FACTOR) {
-                velocityRef.current = Math.min(velocityRef.current * CATCHUP_BOOST, MAX_VELOCITY);
-            }
-        } else {
-            // Overshoot — marker ran ahead. Gently slow down.
-            velocityRef.current *= OVERSHOOT_DAMPEN;
-            if (velocityRef.current < STOP_THRESHOLD) {
-                velocityRef.current = CITY_BUS_BASE_VELOCITY * 0.5;
-            }
-        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [targetPosition[0], targetPosition[1], targetAngle, polyline, shouldSnap, snapIndexHint, snapIndexRange, dataDelayMs, updateMarkerDirect]);
 

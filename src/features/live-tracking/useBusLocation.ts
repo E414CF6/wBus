@@ -99,6 +99,7 @@ class BusLocationStore {
     private preferredRetryDelayMs = STREAM_RECONNECT_BASE_DELAY_MS;
     private dataLength = 0;
     private isSuspended = false;
+    private routeDataMap = new Map<string, BusItem[]>();
 
     constructor(routeIds: string[], routeIdsKey: string) {
         this.routeIds = routeIds;
@@ -128,6 +129,7 @@ class BusLocationStore {
 
     public manualReconnect = () => {
         console.log(`[useBusLocationData] Manual reconnect requested for ${this.routeIdsKey}`);
+        this.routeDataMap.clear();
         this.closeStream();
         this.clearFallbackPolling();
         this.clearReconnectTimer();
@@ -154,13 +156,34 @@ class BusLocationStore {
         });
     }
 
-    private applyData(nextData: BusItem[], options?: { degraded?: boolean; timestamp?: number }) {
+    private applyData(nextData: BusItem[], options?: {
+        degraded?: boolean; timestamp?: number; targetRouteIds?: string[]
+    }) {
         const degraded = options?.degraded ?? false;
         const timestamp = options?.timestamp ?? Date.now();
+        const targetRouteIds = options?.targetRouteIds ?? this.routeIds;
 
-        // Preserve existing bus markers if API/network returns empty array during degraded/error state
-        let finalData = nextData;
-        if (nextData.length === 0 && (degraded || this.state.isDegraded) && this.state.data.length > 0) {
+        // Group incoming items by routeId
+        const incomingByRouteId = new Map<string, BusItem[]>();
+        for (const item of nextData) {
+            const rid = item.routeid;
+            if (rid) {
+                const list = incomingByRouteId.get(rid) ?? [];
+                list.push(item);
+                incomingByRouteId.set(rid, list);
+            }
+        }
+
+        // For all target routeIds, update routeDataMap (clearing old buses if route now returns empty)
+        for (const rid of targetRouteIds) {
+            const items = incomingByRouteId.get(rid) ?? [];
+            this.routeDataMap.set(rid, items);
+        }
+
+        let finalData = Array.from(this.routeDataMap.values()).flat();
+
+        // Preserve existing bus markers ONLY if ALL routes in finalData are empty during degraded/error state
+        if (finalData.length === 0 && (degraded || this.state.isDegraded) && this.state.data.length > 0) {
             finalData = this.state.data;
         }
 
@@ -223,14 +246,30 @@ class BusLocationStore {
     private async fetchFallback() {
         try {
             const settled = await mapWithConcurrencyLimit(this.routeIds, (routeId) => fetchRouteData(`/api/bus/${routeId}`), {
-                concurrency: 3,
-                staggerMs: 50
+                concurrency: 3, staggerMs: 50
             });
-            const results = settled
-                .filter((r): r is PromiseFulfilledResult<CachedData<BusItem[]>> => r.status === "fulfilled")
-                .map((r) => r.value);
-            if (results.length > 0) {
-                this.applyData(mergeRouteEntries(results));
+
+            const fulfilledResults: BusItem[] = [];
+            const fulfilledRouteIds: string[] = [];
+            let hasFailures = false;
+
+            settled.forEach((result, idx) => {
+                const routeId = this.routeIds[idx];
+                if (result.status === "fulfilled") {
+                    fulfilledRouteIds.push(routeId);
+                    const items = result.value.data;
+                    if (Array.isArray(items)) {
+                        fulfilledResults.push(...items);
+                    }
+                } else {
+                    hasFailures = true;
+                }
+            });
+
+            if (fulfilledRouteIds.length > 0) {
+                this.applyData(fulfilledResults, {
+                    degraded: hasFailures, targetRouteIds: fulfilledRouteIds,
+                });
             } else if (this.routeIds.length > 0) {
                 throw new Error("All fallback route requests failed");
             }
@@ -309,7 +348,9 @@ class BusLocationStore {
             }
             const degraded = Boolean(payload.meta?.degraded || payload.partial);
             this.clearFallbackPolling();
-            this.applyData(payload.data, {degraded});
+            this.applyData(payload.data, {
+                degraded, targetRouteIds: payload.routeIds || this.routeIds,
+            });
         } catch (err) {
             console.error("[useBusLocationData] Failed to parse SSE snapshot", err);
         }

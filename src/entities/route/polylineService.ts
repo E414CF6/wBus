@@ -6,7 +6,7 @@ import type {Coordinate, GeoPolyline} from "@entities/route/types";
 import {CacheManager} from "@shared/cache/CacheManager";
 import {getStationMap} from "@entities/station/api";
 import type {StationLocation} from "@entities/station/types";
-import {snapPointToPolyline} from "@shared/utils/geo";
+import {isFiniteNumber, snapPointToPolyline} from "@shared/utils/geo";
 
 export interface StopIndexMap {
     byId: Record<string, number>;
@@ -96,9 +96,13 @@ async function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordin
                 map.byId[rawId] = exactIndex;
                 if (Number.isFinite(dir)) map.byIdDir[`${rawId}-${dir}`] = exactIndex;
             }
+            const relOrd = i + 1;
+            if (Number.isFinite(dir)) {
+                if (Number.isFinite(ord)) map.byOrdDir[`${ord}-${dir}`] = exactIndex;
+                map.byOrdDir[`${relOrd}-${dir}`] = exactIndex;
+            }
             if (Number.isFinite(ord)) {
                 map.byOrd[String(ord)] = exactIndex;
-                if (Number.isFinite(dir)) map.byOrdDir[`${ord}-${dir}`] = exactIndex;
             }
         });
     };
@@ -185,8 +189,66 @@ async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
     const downCoords = assemblePolyline(rawData.down_segments);
 
     // Convert coordinates from [lng, lat] (GeoJSON standard) to [lat, lng] (Leaflet/frontend standard)
-    const upPolyline: Coordinate[] = upCoords.map(([lng, lat]) => [lat, lng]);
-    const downPolyline: Coordinate[] = downCoords.map(([lng, lat]) => [lat, lng]);
+    let upPolyline: Coordinate[] = upCoords.map(([lng, lat]) => [lat, lng]);
+    let downPolyline: Coordinate[] = downCoords.map(([lng, lat]) => [lat, lng]);
+
+    // Runtime Fallback: Validate polyline span against stop sequence to prevent collapsed polylines
+    const getPolylineSpanMeters = (line: Coordinate[]): number => {
+        if (line.length < 2) return 0;
+        let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+        for (const [lat, lng] of line) {
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+            if (lng < minLng) minLng = lng;
+            if (lng > maxLng) maxLng = lng;
+        }
+        const dLat = maxLat - minLat;
+        const dLng = maxLng - minLng;
+        return Math.sqrt(dLat * dLat + dLng * dLng) * 111000;
+    };
+
+    let stationMap: Record<string, StationLocation> = {};
+    try {
+        stationMap = await getStationMap();
+    } catch (_e) {
+        // Warning ignored
+    }
+
+    const buildPolylineFromStops = (dirStops: typeof rawData.stops, stationMapData: Record<string, StationLocation>): Coordinate[] => {
+        const coords: Coordinate[] = [];
+        const sorted = [...dirStops].sort((a, b) => a.ord - b.ord);
+        for (const s of sorted) {
+            const rawId = typeof s.id === "string" ? s.id.trim() : "";
+            const station = rawId ? stationMapData[rawId] : null;
+            const sCoords = s as { id?: string; ord: number; lat?: number; lon?: number };
+            if (station && isFiniteNumber(station.gpslati) && isFiniteNumber(station.gpslong)) {
+                coords.push([station.gpslati, station.gpslong]);
+            } else if (isFiniteNumber(sCoords.lat) && isFiniteNumber(sCoords.lon)) {
+                coords.push([sCoords.lat!, sCoords.lon!]);
+            }
+        }
+        return coords;
+    };
+
+    const stops = rawData.stops || [];
+    const upStops = stops.filter(s => Number(s.ud) === 1);
+    const downStops = stops.filter(s => Number(s.ud) === 0);
+
+    const upSpan = getPolylineSpanMeters(upPolyline);
+    const upStopsPoly = buildPolylineFromStops(upStops, stationMap);
+    const upStopSpan = getPolylineSpanMeters(upStopsPoly);
+
+    if (upSpan < 1000 && upStopSpan > 1500) {
+        upPolyline = upStopsPoly;
+    }
+
+    const downSpan = getPolylineSpanMeters(downPolyline);
+    const downStopsPoly = buildPolylineFromStops(downStops, stationMap);
+    const downStopSpan = getPolylineSpanMeters(downStopsPoly);
+
+    if (downSpan < 1000 && downStopSpan > 1500) {
+        downPolyline = downStopsPoly;
+    }
 
     const result: PolylineData = {
         upPolyline,

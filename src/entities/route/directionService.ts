@@ -19,11 +19,19 @@ interface SequenceCandidate {
 
 type SequenceLookupMap = Map<string, SequenceCandidate[]>;
 
+export interface TurningPointInfo {
+    upTurnNodeId?: string;
+    upTurnOrd?: number;
+    downTurnNodeId?: string;
+    downTurnOrd?: number;
+}
+
 interface DirectionLookup {
     sequenceMap: SequenceLookupMap;
     routeMixedDirMap: Map<string, boolean>;
     fallbackDirMap: Map<string, DirectionCode>;
     activeRouteIds: Set<string>;
+    turningPointMap: Map<string, TurningPointInfo>;
 }
 
 const ALWAYS_UPWARD_NODEIDS = new Set(MAP_SETTINGS.ALWAYS_UPWARD_NODE_IDS);
@@ -52,7 +60,24 @@ export function buildDirectionLookup(state: DirectionResolverState): DirectionLo
 
     const activeRouteIds = new Set(state.sequences.map((s) => s.routeid));
 
-    return {sequenceMap, routeMixedDirMap, fallbackDirMap, activeRouteIds};
+    // Map turning point stops for each route to enable smooth direction switching at turnarounds
+    const turningPointMap = new Map<string, TurningPointInfo>();
+    for (const {routeid, sequence} of state.sequences) {
+        const upStops = sequence.filter(s => Number(s.updowncd) === 1).sort((a, b) => Number(a.nodeord) - Number(b.nodeord));
+        const downStops = sequence.filter(s => Number(s.updowncd) === 0).sort((a, b) => Number(a.nodeord) - Number(b.nodeord));
+
+        const upTurn = upStops.length > 0 ? upStops[upStops.length - 1] : undefined;
+        const downTurn = downStops.length > 0 ? downStops[downStops.length - 1] : undefined;
+
+        turningPointMap.set(routeid, {
+            upTurnNodeId: upTurn?.nodeid,
+            upTurnOrd: Number(upTurn?.nodeord ?? 0),
+            downTurnNodeId: downTurn?.nodeid,
+            downTurnOrd: Number(downTurn?.nodeord ?? 0),
+        });
+    }
+
+    return {sequenceMap, routeMixedDirMap, fallbackDirMap, activeRouteIds, turningPointMap};
 }
 
 export function resolveDirection(lookup: DirectionLookup, nodeid: string | null | undefined, nodeord: number, routeid?: string | null): DirectionCode {
@@ -83,12 +108,23 @@ export function resolveDirection(lookup: DirectionLookup, nodeid: string | null 
         return best;
     }, pool[0]);
 
-    if (!bestMatch) return null;
+    if (!bestMatch) {
+        const fallback = routeid ? lookup.fallbackDirMap.get(routeid) : undefined;
+        return fallback ?? null;
+    }
 
-    const isMixed = lookup.routeMixedDirMap.get(bestMatch.routeid) ?? false;
-    const fallback = lookup.fallbackDirMap.get(bestMatch.routeid);
-
-    if (!isMixed && fallback !== undefined) return fallback;
+    const targetRouteId = routeid || bestMatch.routeid;
+    if (targetRouteId && lookup.turningPointMap.has(targetRouteId)) {
+        const turnInfo = lookup.turningPointMap.get(targetRouteId)!;
+        if (turnInfo.upTurnNodeId && (normalizedNodeId === turnInfo.upTurnNodeId || (turnInfo.upTurnOrd && targetOrd === turnInfo.upTurnOrd))) {
+            // Bus is passing UP turning stop -> switch direction to DOWN (0)
+            return Direction.DOWN;
+        }
+        if (turnInfo.downTurnNodeId && (normalizedNodeId === turnInfo.downTurnNodeId || (turnInfo.downTurnOrd && targetOrd === turnInfo.downTurnOrd))) {
+            // Bus is passing DOWN turning stop -> switch direction to UP (1)
+            return Direction.UP;
+        }
+    }
 
     return bestMatch.updowncd === 0 ? Direction.DOWN : Direction.UP;
 }

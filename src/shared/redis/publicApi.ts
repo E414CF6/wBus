@@ -351,7 +351,7 @@ export async function fetchBusLocations(routeId: string): Promise<RawBusLocation
     const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusLocation>>("/BusLcInfoInqireService/getRouteAcctoBusLcList", {routeId});
 
     return extractItems(data, `getRouteAcctoBusLcList:${routeId}`).map((bus) => ({
-        ...bus, routeid: bus.routeid ?? routeId,
+        ...bus, routeid: routeId,
     }));
 }
 
