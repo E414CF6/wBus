@@ -44,7 +44,7 @@ export const CacheInfoBanner: React.FC<CacheInfoBannerProps> = ({
                         </span>
                         <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
                         <span className="hidden sm:inline text-slate-500 dark:text-slate-400 font-medium">
-                            {meta.canRefresh ? "원주 ITS 갱신 가능" : `3일 주기 갱신 (${remainingText})`}
+                            {meta.canRefresh ? "원주 ITS 갱신 가능" : `${remainingText}`}
                         </span>
                     </div>
                 </div>

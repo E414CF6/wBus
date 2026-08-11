@@ -137,7 +137,7 @@ export default function TimetableWidget({initialRoute, onSelectMapRoute}: Timeta
                 } else {
                     setRefreshNotice({
                         type: "info",
-                        message: json.message || "최소 하한 갱신 시간(3일)이 지나지 않아 시간표를 갱신하지 않고 기존 저장소 JSON 데이터를 사용합니다.",
+                        message: json.message || "최소 갱신 시간이 지나지 않아 시간표를 갱신하지 않고 기존 저장소 JSON 데이터를 사용합니다.",
                     });
                 }
             }

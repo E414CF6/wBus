@@ -3,7 +3,7 @@ import path from "path";
 import {BusCacheData, CacheMetadata} from "@shared/types/bus";
 import {runScraper} from "../../../scripts/scrape-wonju-its.mjs";
 
-export const MIN_REFRESH_INTERVAL_DAYS = 3;
+export const MIN_REFRESH_INTERVAL_DAYS = 1;
 export const MIN_REFRESH_INTERVAL_MS = MIN_REFRESH_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
 const VERCEL_BLOB_PATH = "scheduleCache.json";
 
@@ -192,7 +192,7 @@ export async function refreshBusData(force = false): Promise<{
         };
     }
 
-    console.log("[BusService] Minimum refresh interval (3 days) not reached. Using existing cache.");
+    console.log("[BusService] Minimum refresh interval not reached. Using existing cache.");
 
     const nextAvailableStr = meta.nextRefreshAvailableAt ? new Date(meta.nextRefreshAvailableAt).toLocaleString("ko-KR", {
         year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
@@ -200,7 +200,7 @@ export async function refreshBusData(force = false): Promise<{
 
     return {
         refreshed: false,
-        message: `최소 하한 갱신 시간(3일)이 지나지 않아 시간표를 갱신하지 않았습니다. (다음 갱신 가능: ${nextAvailableStr})`,
+        message: `최소 하한 갱신 시간이 지나지 않아 시간표를 갱신하지 않았습니다. (다음 갱신 가능: ${nextAvailableStr})`,
         data: currentRes.data,
         meta: currentRes.meta,
     };
