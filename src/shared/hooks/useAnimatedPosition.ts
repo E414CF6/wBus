@@ -69,7 +69,7 @@ const MAX_VELOCITY = 0.0003;
 const STOP_THRESHOLD = 0.000003;
 
 // Default estimated staleness of incoming position data — set to 0 to prevent projecting markers far ahead.
-const DEFAULT_DATA_DELAY_MS = 0;
+const DEFAULT_DATA_DELAY_MS = 60000;
 
 // City bus base speed prior (cord-units/ms).
 // 1 degree ≈ 111 km → 30 km/h = 8.33 m/s ≈ 7.5e-8 deg/ms

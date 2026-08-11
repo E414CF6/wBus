@@ -30,7 +30,7 @@ const RouteLayer = dynamic(() => import("@widgets/MapContainer/RouteLayer"), {
  * into a single unified layout with a floating pill bottom navigation bar containing dynamic route controls.
  */
 export default function HomePage() {
-    const [activeTab, setActiveTab] = useState<NavTab>("schedule");
+    const [activeTab, setActiveTab] = useState<NavTab>("map");
     const [isSplashVisible, setIsSplashVisible] = useState(false);
     const [selectedRoute, setSelectedRoute] = useState<string>(MAP_SETTINGS.DEFAULT_ROUTE);
     const [selectedScheduleRoute] = useState<string | undefined>(undefined);
