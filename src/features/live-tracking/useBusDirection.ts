@@ -63,7 +63,7 @@ export function useBusDirection(routeName: string) {
             }
         };
 
-        loadData().then(r => r);
+        void loadData();
 
         return () => {
             isMounted = false;

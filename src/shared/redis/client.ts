@@ -159,6 +159,7 @@ export async function getCachedOrFetch<T>(key: string, fetcher: () => Promise<T>
 export interface BatchFetchRequest<T> {
     key: string;
     fetcher: () => Promise<T>;
+    options?: CacheOptions;
 }
 
 /**
@@ -171,27 +172,27 @@ export async function getMultipleCachedOrFetch<T>(
     const results = new Map<string, CachedData<T>>();
     if (requests.length === 0) return results;
 
-    const resolvedOptions = resolveCacheOptions(options);
-    const {ttlSeconds, staleWhileRevalidateSeconds, staleIfErrorSeconds} = resolvedOptions;
+    const defaultResolvedOptions = resolveCacheOptions(options);
     const redis = await getRedisClient();
     const now = Date.now();
-    const staleWindowSeconds = ttlSeconds + staleWhileRevalidateSeconds;
-    const maxStaleIfErrorSeconds = staleWindowSeconds + staleIfErrorSeconds;
 
-    const missingKeysForRedis: { req: BatchFetchRequest<T>; index: number }[] = [];
+    const missingKeysForRedis: { req: BatchFetchRequest<T>; index: number; reqOptions: Required<CacheOptions> }[] = [];
 
     // Step 1: Check L1 Memory Cache for all requests
     requests.forEach((req, index) => {
+        const reqOptions = req.options ? resolveCacheOptions({...options, ...req.options}) : defaultResolvedOptions;
+        const ttlSeconds = reqOptions.ttlSeconds;
+        const staleWindowSeconds = ttlSeconds + reqOptions.staleWhileRevalidateSeconds;
         const memoryEntry = readMemoryEntry<T>(req.key);
         const memoryAgeSeconds = memoryEntry ? getAgeSeconds(memoryEntry, now) : Infinity;
 
         if (memoryEntry && memoryAgeSeconds < ttlSeconds) {
             results.set(req.key, withMeta(memoryEntry, "hit", "memory", now));
         } else if (memoryEntry && memoryAgeSeconds < staleWindowSeconds) {
-            triggerBackgroundRevalidation(req.key, req.fetcher, resolvedOptions, redis);
+            triggerBackgroundRevalidation(req.key, req.fetcher, reqOptions, redis);
             results.set(req.key, withMeta(memoryEntry, "stale", "memory", now));
         } else {
-            missingKeysForRedis.push({req, index});
+            missingKeysForRedis.push({req, index, reqOptions});
         }
     });
 
@@ -203,9 +204,11 @@ export async function getMultipleCachedOrFetch<T>(
     const redisKeys = missingKeysForRedis.map((item) => item.req.key);
     const redisEntries = await readRedisEntriesBatch<T>(redisKeys, redis);
 
-    const missingRequestsForOrigin: BatchFetchRequest<T>[] = [];
+    const missingRequestsForOrigin: { req: BatchFetchRequest<T>; reqOptions: Required<CacheOptions> }[] = [];
 
-    missingKeysForRedis.forEach(({req}, i) => {
+    missingKeysForRedis.forEach(({req, reqOptions}, i) => {
+        const ttlSeconds = reqOptions.ttlSeconds;
+        const staleWindowSeconds = ttlSeconds + reqOptions.staleWhileRevalidateSeconds;
         const redisEntry = redisEntries[i];
         const redisAgeSeconds = redisEntry ? getAgeSeconds(redisEntry, now) : Infinity;
 
@@ -218,13 +221,13 @@ export async function getMultipleCachedOrFetch<T>(
             }
 
             if (redisAgeSeconds < staleWindowSeconds) {
-                triggerBackgroundRevalidation(req.key, req.fetcher, resolvedOptions, redis);
+                triggerBackgroundRevalidation(req.key, req.fetcher, reqOptions, redis);
                 results.set(req.key, withMeta(redisEntry, "stale", "redis", now));
                 return;
             }
         }
 
-        missingRequestsForOrigin.push(req);
+        missingRequestsForOrigin.push({req, reqOptions});
     });
 
     if (missingRequestsForOrigin.length === 0) {
@@ -234,12 +237,13 @@ export async function getMultipleCachedOrFetch<T>(
     // Step 3: Fetch missing keys concurrently from origin with deduplication and throttling
     const originResults = await mapWithConcurrencyLimit(
         missingRequestsForOrigin,
-        async (req) => {
+        async ({req, reqOptions}) => {
+            const maxStaleIfErrorSeconds = reqOptions.ttlSeconds + reqOptions.staleWhileRevalidateSeconds + reqOptions.staleIfErrorSeconds;
             const memoryEntry = readMemoryEntry<T>(req.key);
             const redisEntry = (await readRedisEntry<T>(req.key, redis)) ?? memoryEntry;
 
             try {
-                const fresh = await getOrFetchDeduplicated<T>(req.key, req.fetcher, resolvedOptions, redis);
+                const fresh = await getOrFetchDeduplicated<T>(req.key, req.fetcher, reqOptions, redis);
                 return {key: req.key, entry: fresh};
             } catch (err) {
                 const bestFallback = selectBestFallback(memoryEntry, redisEntry);
@@ -257,7 +261,7 @@ export async function getMultipleCachedOrFetch<T>(
     );
 
     originResults.forEach((res, i) => {
-        const key = missingRequestsForOrigin[i].key;
+        const key = missingRequestsForOrigin[i].req.key;
         if (res.status === "fulfilled") {
             results.set(key, res.value.entry);
         }

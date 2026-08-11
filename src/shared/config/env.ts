@@ -26,11 +26,10 @@ export const API_CONFIG = {
     },
     STATIC: {
         BASE_URL: STATIC_BASE_URL,
-        USE_REMOTE: getEnvBoolean(process.env.NEXT_PUBLIC_USE_REMOTE_STATIC_DATA, false),
+        USE_REMOTE: getEnvBoolean(process.env.NEXT_PUBLIC_USE_REMOTE_STATIC_DATA, true),
         REVALIDATE_SEC: 3600,
         PATHS: {
             POLYLINES: "polylines",
-            SCHEDULES: "schedules",
             MAP_STYLE: "config.json",
             ROUTE_MAP: "routeMap.json",
             STATION_MAP: "stationMap.json",

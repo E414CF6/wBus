@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useEffect, useMemo, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useState} from "react";
 import {BusCacheData, BusRoute, CacheMetadata} from "@shared/types/bus";
 import {UI_TEXT} from "@shared/config/locale";
 import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
@@ -100,10 +100,12 @@ export default function TimetableWidget({initialRoute, onSelectMapRoute}: Timeta
         });
     };
 
-    // Helper to check bookmark status
-    const isRouteBookmarked = (route: BusRoute) => {
-        return bookmarks.includes(route.id) || bookmarks.includes(route.routeNo);
-    };
+    const bookmarkSet = useMemo(() => new Set(bookmarks), [bookmarks]);
+
+    // Helper to check bookmark status (O(1) set lookup, stable reference)
+    const isRouteBookmarked = useCallback((route: BusRoute) => {
+        return bookmarkSet.has(route.id) || bookmarkSet.has(route.routeNo);
+    }, [bookmarkSet]);
 
     // Fetch data from API (/api/bus)
     const fetchBusData = async (refresh = false) => {

@@ -210,7 +210,7 @@ async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
     let stationMap: Record<string, StationLocation> = {};
     try {
         stationMap = await getStationMap();
-    } catch (_e) {
+    } catch {
         // Warning ignored
     }
 

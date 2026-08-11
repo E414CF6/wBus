@@ -1,6 +1,6 @@
 import {API_CONFIG} from "@shared/config/env";
 import {getCachedOrFetch, getMultipleCachedOrFetch} from "@shared/redis/client";
-import {fetchBusLocations, type RawBusLocation} from "@shared/redis/publicApi";
+import {fetchBusLocations, getAdaptiveTtlSeconds, type RawBusLocation} from "@shared/redis/publicApi";
 import type {CacheMeta} from "@shared/redis/types";
 import {parseRouteIdsParam} from "@shared/utils/routeIds";
 import {NextResponse} from "next/server";
@@ -58,7 +58,9 @@ interface StreamSnapshotPayload {
 
 async function fetchStreamSnapshot(routeIds: string[]): Promise<StreamSnapshotData> {
     const requests = routeIds.map((routeId) => ({
-        key: `bus:${routeId}`, fetcher: () => fetchBusLocations(routeId),
+        key: `bus:${routeId}`, fetcher: () => fetchBusLocations(routeId), options: {
+            ttlSeconds: getAdaptiveTtlSeconds(routeId, ROUTE_TTL_SECONDS, 15),
+        },
     }));
 
     const cachedMap = await getMultipleCachedOrFetch<RawBusLocation[]>(requests, {

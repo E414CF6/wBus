@@ -98,15 +98,19 @@ export function resolveDirection(lookup: DirectionLookup, nodeid: string | null 
 
     const pool = scopedCandidates.length > 0 ? scopedCandidates : candidates;
 
-    const exactMatch = pool.find((c) => c.nodeord === targetOrd);
-
-    const bestMatch = exactMatch || pool.reduce((best, curr) => {
-        const bestDiff = Math.abs(best.nodeord - targetOrd);
-        const currDiff = Math.abs(curr.nodeord - targetOrd);
-        if (currDiff < bestDiff) return curr;
-        if (currDiff === bestDiff && curr.nodeord < best.nodeord) return curr;
-        return best;
-    }, pool[0]);
+    let bestMatch = pool.find((c) => c.nodeord === targetOrd);
+    if (!bestMatch && pool.length > 0) {
+        bestMatch = pool[0];
+        let bestDiff = Math.abs(bestMatch.nodeord - targetOrd);
+        for (let i = 1; i < pool.length; i++) {
+            const curr = pool[i];
+            const currDiff = Math.abs(curr.nodeord - targetOrd);
+            if (currDiff < bestDiff || (currDiff === bestDiff && curr.nodeord < bestMatch.nodeord)) {
+                bestMatch = curr;
+                bestDiff = currDiff;
+            }
+        }
+    }
 
     if (!bestMatch) {
         const fallback = routeid ? lookup.fallbackDirMap.get(routeid) : undefined;

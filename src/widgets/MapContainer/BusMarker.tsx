@@ -137,7 +137,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
         const map = new Map();
         for (const id of routeInfo.vehicleRouteIds) {
             const polylineSet = polylineMap.get(id) ?? fallbackPolylines;
-            const {stopIndexMap, turnIndex, upPolyline, downPolyline} = polylineSet;
+            const {stopIndexMap, upPolyline, downPolyline} = polylineSet;
 
             let upIndices: number[] = [];
             let downIndices: number[] = [];

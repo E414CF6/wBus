@@ -71,10 +71,6 @@ function buildStreamUrl(routeIds: string[]): string {
     return `/api/bus/stream?${query.toString()}`;
 }
 
-function mergeRouteEntries(entries: CachedData<BusItem[]>[]): BusItem[] {
-    return entries.flatMap((entry) => entry.data);
-}
-
 function getPositiveNumber(value: unknown): number | null {
     if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
         return null;
@@ -140,7 +136,7 @@ class BusLocationStore {
     };
 
     private emit() {
-        for (const listener of Array.from(this.listeners)) {
+        for (const listener of this.listeners) {
             listener();
         }
     }
@@ -180,7 +176,10 @@ class BusLocationStore {
             this.routeDataMap.set(rid, items);
         }
 
-        let finalData = Array.from(this.routeDataMap.values()).flat();
+        let finalData: BusItem[] = [];
+        for (const items of this.routeDataMap.values()) {
+            finalData.push(...items);
+        }
 
         // Preserve existing bus markers ONLY if ALL routes in finalData are empty during degraded/error state
         if (finalData.length === 0 && (degraded || this.state.isDegraded) && this.state.data.length > 0) {

@@ -91,7 +91,8 @@ export function snapPointToPolyline<T extends CoordinateLike>(point: CoordinateL
     let bestPos: Coordinate = [polyline[0][0], polyline[0][1]];
     let bestIdx = 0;
     let bestT = 0;
-    let bestSegment: { A: T; B: T } = {A: polyline[0], B: polyline[0]};
+    let bestA: T = polyline[0];
+    let bestB: T = polyline[0];
 
     for (let i = startIdx; i <= endIdx; i++) {
         const A = polyline[i];
@@ -113,12 +114,13 @@ export function snapPointToPolyline<T extends CoordinateLike>(point: CoordinateL
             bestPos = [projX, projY];
             bestIdx = i;
             bestT = t;
-            bestSegment = {A, B};
+            bestA = A;
+            bestB = B;
         }
     }
 
     return {
-        position: bestPos, angle: calculateBearing(bestSegment.A, bestSegment.B), segmentIndex: bestIdx, t: bestT,
+        position: bestPos, angle: calculateBearing(bestA, bestB), segmentIndex: bestIdx, t: bestT,
     };
 }
 
@@ -129,9 +131,3 @@ function clamp(value: number, min: number, max: number): number {
 export function isFiniteNumber(value: unknown): value is number {
     return typeof value === "number" && Number.isFinite(value);
 }
-
-/**
- * Advance a given Euclidean distance forward along a polyline from a starting point.
- * Used for "coasting" — continuing movement beyond the last known target position
- * so that the bus marker never appears to stop between polling intervals.
- */

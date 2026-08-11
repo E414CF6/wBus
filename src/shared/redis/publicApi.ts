@@ -198,13 +198,39 @@ function buildUrl(path: string, params: Record<string, string>, serviceKey: stri
     return url.toString();
 }
 
-async function fetchPublicApi<T>(path: string, params: Record<string, string>): Promise<T> {
+// Route-level active bus count tracker for adaptive polling & priority queuing
+interface RouteBusMetrics {
+    busCount: number;
+    lastFetchedAt: number;
+}
+
+const routeBusMetricsMap = new Map<string, RouteBusMetrics>();
+
+export function getRouteBusCount(routeId: string): number | undefined {
+    return routeBusMetricsMap.get(routeId)?.busCount;
+}
+
+/**
+ * Returns dynamic TTL based on active bus count.
+ * Routes with active buses use high-frequency activeTtl (e.g. 3s).
+ * Routes with 0 active buses use backoff idleTtl (e.g. 15s) to preserve API quota.
+ */
+export function getAdaptiveTtlSeconds(routeId: string, activeTtl = 3, idleTtl = 15): number {
+    const metrics = routeBusMetricsMap.get(routeId);
+    if (!metrics) return activeTtl;
+    return metrics.busCount > 0 ? activeTtl : idleTtl;
+}
+
+async function fetchPublicApi<T>(path: string, params: Record<string, string>, options?: {
+    priority?: number
+}): Promise<T> {
     const dedupeKey = `${path}:${JSON.stringify(params)}`;
     if (pendingInflightRequests.has(dedupeKey)) {
         return pendingInflightRequests.get(dedupeKey) as Promise<T>;
     }
 
-    const promise = publicApiQueue.enqueue(() => rawFetchPublicApi<T>(path, params))
+    const priority = options?.priority ?? 0;
+    const promise = publicApiQueue.enqueue(() => rawFetchPublicApi<T>(path, params), {priority})
         .finally(() => {
             pendingInflightRequests.delete(dedupeKey);
         });
@@ -329,6 +355,7 @@ export function getPublicApiHealth() {
         circuit: circuitBreaker.getState(),
         keys: keyManager.getMetrics(),
         inflightRequests: pendingInflightRequests.size,
+        routeBusCounts: Object.fromEntries(Array.from(routeBusMetricsMap.entries()).map(([id, m]) => [id, m.busCount])),
     };
 }
 
@@ -348,9 +375,20 @@ export interface RawBusLocation {
 }
 
 export async function fetchBusLocations(routeId: string): Promise<RawBusLocation[]> {
-    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusLocation>>("/BusLcInfoInqireService/getRouteAcctoBusLcList", {routeId});
+    const currentMetrics = routeBusMetricsMap.get(routeId);
+    // Priority: 10 for active routes with buses, 0 for initial/unknown, -5 for confirmed 0-bus idle routes
+    const priority = currentMetrics ? (currentMetrics.busCount > 0 ? 10 : -5) : 0;
 
-    return extractItems(data, `getRouteAcctoBusLcList:${routeId}`).map((bus) => ({
+    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusLocation>>("/BusLcInfoInqireService/getRouteAcctoBusLcList", {routeId}, {priority});
+
+    const items = extractItems(data, `getRouteAcctoBusLcList:${routeId}`);
+
+    // Update bus count metrics for dynamic backoff
+    routeBusMetricsMap.set(routeId, {
+        busCount: items.length, lastFetchedAt: Date.now(),
+    });
+
+    return items.map((bus) => ({
         ...bus, routeid: routeId,
     }));
 }

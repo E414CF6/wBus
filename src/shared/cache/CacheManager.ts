@@ -20,19 +20,24 @@ export class CacheManager<T> {
      * Get cached data or return null if not found
      */
     get(key: string): T | null {
-        const value = this.cache.get(key) ?? null;
-        if (value !== null) {
+        const value = this.cache.get(key);
+        if (value !== undefined) {
+            // Refresh key position to end of Map for LRU order
+            this.cache.delete(key);
+            this.cache.set(key, value);
             this.accessTimes.set(key, Date.now());
+            return value;
         }
-        return value;
+        return null;
     }
 
     /**
      * Set data in a cache with automatic eviction if a cache is full
      */
     set(key: string, value: T): void {
-        // Evict least recently used items if a cache is full
-        if (this.cache.size >= this.maxSize && !this.cache.has(key)) {
+        if (this.cache.has(key)) {
+            this.cache.delete(key);
+        } else if (this.cache.size >= this.maxSize) {
             this.evictLRU();
         }
         this.cache.set(key, value);
@@ -156,17 +161,8 @@ export class CacheManager<T> {
      * Evict the least recently used item from the cache
      */
     private evictLRU(): void {
-        let oldestKey: string | null = null;
-        let oldestTime = Infinity;
-
-        for (const [key, time] of this.accessTimes) {
-            if (time < oldestTime) {
-                oldestTime = time;
-                oldestKey = key;
-            }
-        }
-
-        if (oldestKey !== null) {
+        const oldestKey = this.cache.keys().next().value;
+        if (oldestKey !== undefined) {
             this.cache.delete(oldestKey);
             this.accessTimes.delete(oldestKey);
             this.pendingRequests.delete(oldestKey);

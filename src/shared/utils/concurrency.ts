@@ -12,14 +12,24 @@ export interface ConcurrencyOptions {
     staggerMs?: number;
 }
 
+interface QueueItem {
+    run: () => void;
+    priority: number;
+}
+
+export interface TaskEnqueueOptions {
+    /** Higher numerical priority executes first (default: 0) */
+    priority?: number;
+}
+
 /**
- * Task Queue to throttle and stagger asynchronous tasks.
+ * Task Queue to throttle, stagger, and prioritize asynchronous tasks.
  */
 export class TaskQueue {
     private readonly concurrency: number;
     private readonly staggerMs: number;
     private activeCount = 0;
-    private queue: (() => void)[] = [];
+    private queue: QueueItem[] = [];
     private lastLaunchTime = 0;
 
     constructor(options?: ConcurrencyOptions) {
@@ -27,10 +37,22 @@ export class TaskQueue {
         this.staggerMs = Math.max(0, options?.staggerMs ?? 40);
     }
 
-    async enqueue<T>(task: () => Promise<T>): Promise<T> {
+    async enqueue<T>(task: () => Promise<T>, options?: TaskEnqueueOptions): Promise<T> {
+        const priority = options?.priority ?? 0;
+
         if (this.activeCount >= this.concurrency) {
             await new Promise<void>((resolve) => {
-                this.queue.push(resolve);
+                const item: QueueItem = {run: resolve, priority};
+                if (this.queue.length === 0 || priority <= this.queue[this.queue.length - 1].priority) {
+                    this.queue.push(item);
+                } else {
+                    const insertIdx = this.queue.findIndex((q) => q.priority < priority);
+                    if (insertIdx === -1) {
+                        this.queue.push(item);
+                    } else {
+                        this.queue.splice(insertIdx, 0, item);
+                    }
+                }
             });
         }
 
@@ -51,7 +73,7 @@ export class TaskQueue {
             this.activeCount--;
             if (this.queue.length > 0) {
                 const next = this.queue.shift();
-                next?.();
+                next?.run();
             }
         }
     }
