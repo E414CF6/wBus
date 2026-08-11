@@ -1,6 +1,6 @@
 {
   "name": "wbus",
-  "version": "26.9.1",
+  "version": "26.9.2",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -9,6 +9,8 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "polyline": "node scripts/generate-polyline-segment.mjs",
+    "schedule": "node scripts/scrape-wonju-its.mjs",
     "upload-data": "node scripts/upload-to-blob.mjs"
   },
   "dependencies": {

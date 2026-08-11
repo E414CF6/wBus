@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {BusCacheData, CacheMetadata} from "@shared/types/bus";
-import {runScraper} from "../../../scripts/scrape-wonju-its.js";
+import {runScraper} from "../../../scripts/scrape-wonju-its.mjs";
 
 export const MIN_REFRESH_INTERVAL_DAYS = 3;
 export const MIN_REFRESH_INTERVAL_MS = MIN_REFRESH_INTERVAL_DAYS * 24 * 60 * 60 * 1000;

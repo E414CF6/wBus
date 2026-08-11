@@ -169,7 +169,7 @@ async function runScraper() {
     return cacheData;
 }
 
-if (require.main === module) {
+if (process.argv[1] && process.argv[1].endsWith('scrape-wonju-its.js')) {
     runScraper().catch(err => {
         console.error('Fatal error during scraping:', err);
         process.exit(1);

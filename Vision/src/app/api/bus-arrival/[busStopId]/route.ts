@@ -5,7 +5,7 @@ import {fetchBusArrivals, type RawBusArrival} from "@shared/redis/publicApi";
 export const dynamic = "force-dynamic";
 
 const LIVE_CACHE_OPTIONS = {
-    staleWhileRevalidateSeconds: 3, staleIfErrorSeconds: 10,
+    staleWhileRevalidateSeconds: 3, staleIfErrorSeconds: 180,
 };
 
 export const GET = createApiHandler<RawBusArrival[]>({

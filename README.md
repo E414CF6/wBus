@@ -1,162 +1,88 @@
-# wBus: A Real-Time Bus Tracking System
+# wBus: Real-Time Bus Tracking System
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![Next.js](https://img.shields.io/badge/Frontend-Next.js-black?logo=next.js)](./Vision)
-[![Rust](https://img.shields.io/badge/Backend-Rust-orange?logo=rust)](./Polly)
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue?logo=typescript)](./Vision)
 
-**wBus** is a full-stack, real-time bus tracking application for Wŏnju, South Korea. It combines a powerful Rust-based
-data pipeline with a modern, interactive Next.js frontend to deliver live bus locations and schedules.
+**wBus** is a full-stack, real-time bus tracking application for Wonju, South Korea. It combines an integrated data
+processing pipeline with a modern, interactive Next.js frontend to deliver live bus locations, routes, and timetables.
 
-## Project Architecture
+---
 
-The wBus project is built on a decoupled, two-part architecture: a data pipeline and a frontend application.
+## 🏗️ Architecture & Component Overview
 
-1. **Polly (Data Pipeline)**: A Rust CLI that acts as the backend processor. It fetches raw route and schedule data from
-   various public sources, cleans it, processes it, and saves it as structured, static files (JSON and GeoJSON).
-2. **Vision (Frontend)**: A Next.js application that provides the user interface. It consumes the static files generated
-   by Polly and fetches real-time bus location data from a live API to display on an interactive map.
+The application is structured inside `Vision/`:
 
-This separation of concerns allows for a robust and scalable system. Polly handles the heavy data processing offline,
-while Vision remains lightweight and fast for the end-user.
+1. **Integrated Data Pipeline (`scripts/polly.mjs`)**:
+    - Replaces the legacy Rust workspace with a lightweight Node.js script.
+    - Fetches raw route & station data from TAGO (Public Data Portal).
+    - Snaps route paths using OSRM to generate clean GeoJSON polylines.
+    - Crawls Wonju ITS timetable schedules (`scrape-wonju-its.js`).
+    - Packages output static data into `public/data/` or Vercel Blob.
 
-### Data Flow
+2. **Web Application (`Vision/`)**:
+    - Next.js 16 (App Router) + React 19 + TypeScript + MapLibre GL / Mapbox.
+    - High-performance live tracking via Server-Sent Events (SSE) `/api/bus/stream`.
+    - Resilience features: Circuit Breaker, Multi-Key Rotation, Rate-Limiting TaskQueue, and Stale-If-Error fallback
+      caching.
 
-```text
-                               +-----------------------------+
-                               |    External Data Sources    |
-                               |  (TAGO API, Wonju Website)  |
-                               +-------------+---------------+
-                                             |
-                                             | Fetches & Processes
-                                             v
-+--------------------------------------------------------------------------+
-|                                                                          |
-|   Polly (Rust Data Pipeline)                                             |
-|   - Fetches raw route and schedule data.                                 |
-|   - Snaps route geometry to roads using OSRM.                            |
-|   - Scrapes schedule tables.                                             |
-|   - Outputs clean, static data.                                          |
-|                                                                          |
-+--------------------------+-----------------------------------------------+
-                           |
-                           | Generates Static Files
-                           | (routeMap.json, snapped_routes/*.geojson, schedules/*.json)
-                           v
-           +-----------------------------+
-           |       Static Storage        |
-           | (Local folder or S3/CDN)    |
-           +-------------+---------------+
-                         |
-                         | Loads Static Data
-                         v
-+------------------------+-------------------------------------------------+  +----------------------+
-|                                                                          |  |   Live Data API      |
-|   Vision (Next.js Frontend)                                              |  | (e.g., AWS Gateway)  |
-|   - Renders interactive map and UI.                                      |  +----------+-----------+
-|   - Displays routes, stops, and schedules from static data.              |             |
-|   - Polls live API for real-time bus locations.                          | <-----------+
-|                                                                          |   Fetches Real-Time Data
-+--------------------------------------------------------------------------+
-```
+---
 
-## Project Components
+## 🚀 Quick Start
 
-This repository contains two main packages:
+### 1. Set Up Environment Variables
 
-### Backend: `Polly/`
-
-The Rust-based data processing pipeline. Its sole job is to prepare all the static data needed by the frontend.
-
-> **For detailed instructions on setup, usage, and configuration, see the [Polly README](./Polly/README.md).**
-
-### Frontend: `Vision/`
-
-The Next.js frontend application. This is the user-facing part of the project that displays the map and bus information.
-
-> **For detailed instructions on setup, usage, and configuration, see the [Vision README](./Vision/README.md).**
-
-## Full System Quick Start
-
-To get the entire wBus system running locally, follow these steps:
-
-### Step 1: Process Data with Polly
-
-First, you need to run the data pipeline to generate the static assets.
-
-1. **Navigate to the Polly directory and set it up:**
-
-    ```bash
-    cd Polly
-    cp .env.example .env
-    ```
-
-   *Edit `.env` and add your `DATA_GO_KR_SERVICE_KEY`.*
-
-2. **Run the processing commands:**
-
-    ```bash
-    # This fetches routes, snaps them to the map, and creates the route map.
-    cargo run --release -- route
-
-    # This crawls the website for schedule information.
-    cargo run --release -- schedule
-    ```
-
-### Step 2: Prepare Data for Vision
-
-Copy the generated static files from Polly's output directory to Vision's public data directory.
-
-From the **root** of the project:
+Inside `Vision/`:
 
 ```bash
-# Create the necessary directories in Vision if they don't exist
-mkdir -p Vision/public/data/polylines Vision/public/data/schedules
-
-# Copy the route map
-cp Polly/storage/routeMap.json Vision/public/data/routeMap.json
-
-# Copy the snapped route polylines (use -R for recursive)
-cp -R Polly/storage/polylines/. Vision/public/data/polylines/
-
-# Copy the schedules (use -R for recursive)
-cp -R Polly/storage/schedules/. Vision/public/data/schedules/
+cd Vision
+cp .env.local.example .env.local
 ```
 
-### Step 3: Run the Vision Frontend
+Set your Public Data Portal service key:
 
-Finally, start the frontend application.
+```dotenv
+DATA_GO_KR_SERVICE_KEY="YOUR_DECODED_SERVICE_KEY"
+```
 
-1. **Navigate to the Vision directory and set it up:**
+### 2. Run Data Pipeline (Polly)
 
-    ```bash
-    cd Vision
-    cp .env.local.example .env.local
-    ```
+To fetch routes, snap polylines, and scrape timetables:
 
-   *Edit `.env.local` to point to your live API endpoint. See the [Vision README](./Vision/README.md) for more details.*
+```bash
+npm run polly
+```
 
-2. **Install dependencies and run the dev server:**
+Or run individual subcommands:
 
-    ```bash
-    npm install
-    npm run dev
-    ```
+```bash
+# Process routes & OSRM snapping only
+npm run polly route
 
-Your local instance of wBus should now be running at `http://localhost:3000`.
+# Scrape timetable schedules only
+npm run polly:schedule
+```
 
-## Technology Stack
+### 3. Start Development Server
 
-- **Backend (Polly)**:
-    - **Language**: Rust
-    - **Core Libraries**: Tokio (Async), Reqwest (HTTP), Serde (Serialization), Scraper (HTML Parsing), Clap (CLI).
+```bash
+npm run dev
+```
 
-- **Frontend (Vision)**:
-    - **Framework**: Next.js 16
-    - **Language**: TypeScript
-    - **UI**: React 19, Tailwind CSS 4
-    - **Mapping**: React Map GL, MapLibre GL JS
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-## License
+---
+
+## 🛠️ Technology Stack
+
+- **Framework**: Next.js 16, React 19, Tailwind CSS 4
+- **Language**: TypeScript, Node.js (ES Modules)
+- **Data & Caching**: Redis (Upstash/Redis), Memory Cache, Stale-While-Revalidate (SWR)
+- **Mapping**: MapLibre GL, React Map GL
+- **Pipeline Tools**: OSRM API, Node Fetch
+
+---
+
+## 📄 License
 
 This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE) file for details.

@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
  * Fetch real-time bus locations for a specific route ID.
  */
 const LIVE_CACHE_OPTIONS = {
-    staleWhileRevalidateSeconds: 3, staleIfErrorSeconds: 10,
+    staleWhileRevalidateSeconds: 3, staleIfErrorSeconds: 180,
 };
 
 export const GET = createApiHandler<RawBusLocation[]>({

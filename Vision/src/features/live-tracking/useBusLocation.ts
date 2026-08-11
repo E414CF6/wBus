@@ -1,6 +1,7 @@
 import type {BusDataError, BusItem} from "@entities/bus/types";
 import {API_CONFIG} from "@shared/config/env";
 import type {CachedData, CacheMeta} from "@shared/redis/types";
+import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import {buildRouteIdsKey} from "@shared/utils/routeIds";
 import {useMemo, useSyncExternalStore} from "react";
 
@@ -154,13 +155,20 @@ class BusLocationStore {
     }
 
     private applyData(nextData: BusItem[], options?: { degraded?: boolean; timestamp?: number }) {
-        this.dataLength = nextData.length;
         const degraded = options?.degraded ?? false;
         const timestamp = options?.timestamp ?? Date.now();
+
+        // Preserve existing bus markers if API/network returns empty array during degraded/error state
+        let finalData = nextData;
+        if (nextData.length === 0 && (degraded || this.state.isDegraded) && this.state.data.length > 0) {
+            finalData = this.state.data;
+        }
+
+        this.dataLength = finalData.length;
         this.setState({
             ...this.state,
-            data: nextData,
-            error: nextData.length === 0 ? (degraded ? "ERR:NETWORK" : "ERR:NONE_RUNNING") : null,
+            data: finalData,
+            error: finalData.length === 0 ? (degraded ? "ERR:NETWORK" : "ERR:NONE_RUNNING") : null,
             hasFetched: true,
             lastUpdated: timestamp,
             isDegraded: degraded,
@@ -214,13 +222,27 @@ class BusLocationStore {
 
     private async fetchFallback() {
         try {
-            const results = await Promise.all(this.routeIds.map((routeId) => fetchRouteData(`/api/bus/${routeId}`)));
-            this.applyData(mergeRouteEntries(results));
+            const settled = await mapWithConcurrencyLimit(this.routeIds, (routeId) => fetchRouteData(`/api/bus/${routeId}`), {
+                concurrency: 3,
+                staggerMs: 50
+            });
+            const results = settled
+                .filter((r): r is PromiseFulfilledResult<CachedData<BusItem[]>> => r.status === "fulfilled")
+                .map((r) => r.value);
+            if (results.length > 0) {
+                this.applyData(mergeRouteEntries(results));
+            } else if (this.routeIds.length > 0) {
+                throw new Error("All fallback route requests failed");
+            }
         } catch (err) {
             console.error("[useBusLocationData] Polling fallback failed", err);
-            if (this.dataLength === 0 && !this.eventSource) {
+            if (this.state.data.length === 0 && !this.eventSource) {
                 this.setState({
-                    ...this.state, data: EMPTY_BUS_LIST, error: "ERR:NETWORK", hasFetched: true,
+                    ...this.state, data: EMPTY_BUS_LIST, error: "ERR:NETWORK", hasFetched: true, isDegraded: true,
+                });
+            } else {
+                this.setState({
+                    ...this.state, isDegraded: true, error: "ERR:NETWORK",
                 });
             }
         }

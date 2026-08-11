@@ -4,6 +4,7 @@ import {
     DEFAULT_STALE_IF_ERROR_SECONDS,
     DEFAULT_STALE_WHILE_REVALIDATE_SECONDS
 } from "@shared/cache/cachePolicy";
+import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import {createClient, type RedisClientType} from "redis";
 import type {CachedData, CacheMeta, CacheStatus} from "./types";
 
@@ -230,9 +231,10 @@ export async function getMultipleCachedOrFetch<T>(
         return results;
     }
 
-    // Step 3: Fetch missing keys concurrently from origin with deduplication
-    const originResults = await Promise.allSettled(
-        missingRequestsForOrigin.map(async (req) => {
+    // Step 3: Fetch missing keys concurrently from origin with deduplication and throttling
+    const originResults = await mapWithConcurrencyLimit(
+        missingRequestsForOrigin,
+        async (req) => {
             const memoryEntry = readMemoryEntry<T>(req.key);
             const redisEntry = (await readRedisEntry<T>(req.key, redis)) ?? memoryEntry;
 
@@ -250,7 +252,8 @@ export async function getMultipleCachedOrFetch<T>(
                 }
                 throw err;
             }
-        })
+        },
+        {concurrency: 3, staggerMs: 40}
     );
 
     originResults.forEach((res, i) => {
