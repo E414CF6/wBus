@@ -157,7 +157,7 @@ export default function TimetableWidget({
         setError(null);
 
         try {
-            const endpoint = refresh ? "/api/bus/refresh" : "/api/bus";
+            const endpoint = refresh ? "/api/bus/refresh?force=true" : "/api/bus";
             const method = refresh ? "POST" : "GET";
 
             const res = await fetch(endpoint, {method});

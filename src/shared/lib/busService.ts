@@ -27,6 +27,7 @@ function getBlobUrlFromEnv(): string | null {
 
 async function loadFromVercelBlob(): Promise<BusCacheData | null> {
     const directUrl = getBlobUrlFromEnv();
+    const cacheBuster = `?t=${Date.now()}`;
 
     // 1. Try reading via @vercel/blob SDK (head)
     if (process.env.BLOB_READ_WRITE_TOKEN) {
@@ -34,8 +35,9 @@ async function loadFromVercelBlob(): Promise<BusCacheData | null> {
             const {head} = await import("@vercel/blob");
             const blobResult = await head(VERCEL_BLOB_PATH);
             if (blobResult && blobResult.url) {
-                console.log(`[BusService] Fetching timetable cache from Vercel Blob: ${blobResult.url}`);
-                const res = await fetch(blobResult.url, {cache: "no-store"});
+                const fetchUrl = `${blobResult.url}${cacheBuster}`;
+                console.log(`[BusService] Fetching timetable cache from Vercel Blob: ${fetchUrl}`);
+                const res = await fetch(fetchUrl, {cache: "no-store"});
                 if (res.ok) {
                     const data: BusCacheData = await res.json();
                     if (data && Array.isArray(data.routes) && data.routes.length > 0) {
@@ -52,8 +54,9 @@ async function loadFromVercelBlob(): Promise<BusCacheData | null> {
     // 2. Try fetching direct Blob URL
     if (directUrl) {
         try {
-            console.log(`[BusService] Attempting to fetch timetable cache from direct Blob URL: ${directUrl}`);
-            const res = await fetch(directUrl, {cache: "no-store"});
+            const fetchUrl = `${directUrl}${cacheBuster}`;
+            console.log(`[BusService] Attempting to fetch timetable cache from direct Blob URL: ${fetchUrl}`);
+            const res = await fetch(fetchUrl, {cache: "no-store"});
             if (res.ok) {
                 const data: BusCacheData = await res.json();
                 if (data && Array.isArray(data.routes) && data.routes.length > 0) {
@@ -74,6 +77,20 @@ function getLocalFilePath(): string {
 }
 
 function loadFromLocalFile(): BusCacheData | null {
+    // Check serverless container /tmp/ scheduleCache.json first
+    const tmpPath = "/tmp/scheduleCache.json";
+    if (fs.existsSync(tmpPath)) {
+        try {
+            const raw = fs.readFileSync(tmpPath, "utf-8");
+            const data: BusCacheData = JSON.parse(raw);
+            if (data && Array.isArray(data.routes) && data.routes.length > 0) {
+                return data;
+            }
+        } catch (err) {
+            console.warn("[BusService] Error reading /tmp/scheduleCache.json:", err);
+        }
+    }
+
     const localPath = getLocalFilePath();
     if (fs.existsSync(/*turbopackIgnore: true*/ localPath)) {
         try {
@@ -89,29 +106,24 @@ function loadFromLocalFile(): BusCacheData | null {
     return null;
 }
 
-export function getCacheMetadata(): CacheMetadata {
+export function getCacheMetadata(overrideData?: BusCacheData): CacheMetadata {
     let updatedAt: string | null = null;
     let totalRoutes = 0;
     let sizeBytes = 0;
     let exists = false;
     const filePath = getLocalFilePath();
 
-    if (inMemoryCache && inMemoryCache.data) {
+    const targetData = overrideData || inMemoryCache?.data || loadFromLocalFile();
+
+    if (targetData) {
         exists = true;
-        updatedAt = inMemoryCache.data.updatedAt || new Date().toISOString();
-        totalRoutes = inMemoryCache.data.routes ? inMemoryCache.data.routes.length : 0;
-    } else {
-        const localData = loadFromLocalFile();
-        if (localData) {
-            exists = true;
-            updatedAt = localData.updatedAt || new Date().toISOString();
-            totalRoutes = localData.routes ? localData.routes.length : 0;
-            try {
-                const stats = fs.statSync(/*turbopackIgnore: true*/ filePath);
-                sizeBytes = stats.size;
-            } catch {
-                sizeBytes = 0;
-            }
+        updatedAt = targetData.updatedAt || new Date().toISOString();
+        totalRoutes = targetData.routes ? targetData.routes.length : 0;
+        try {
+            const stats = fs.statSync(/*turbopackIgnore: true*/ filePath);
+            sizeBytes = stats.size;
+        } catch {
+            sizeBytes = 0;
         }
     }
 
@@ -141,13 +153,14 @@ export function getCacheMetadata(): CacheMetadata {
 
 async function saveCacheData(cacheData: BusCacheData): Promise<void> {
     const jsonStr = JSON.stringify(cacheData, null, 2);
+    const meta = getCacheMetadata(cacheData);
 
-    // 1. Update in-memory cache
+    // 1. Update in-memory cache with new data & metadata
     inMemoryCache = {
-        data: cacheData, meta: getCacheMetadata(), timestamp: Date.now(),
+        data: cacheData, meta, timestamp: Date.now(),
     };
 
-    // 2. Try saving to local file if writable (e.g. local dev environment)
+    // 2. Save to local file & /tmp/ for serverless container fallback
     try {
         const localPath = getLocalFilePath();
         const dir = path.dirname(localPath);
@@ -155,9 +168,15 @@ async function saveCacheData(cacheData: BusCacheData): Promise<void> {
             fs.mkdirSync(dir, {recursive: true});
         }
         fs.writeFileSync(/*turbopackIgnore: true*/ localPath, jsonStr, "utf-8");
-        console.log("[BusService] Saved timetable cache to local public/data/scheduleCache.json.");
     } catch {
-        // Ignore read-only filesystem errors on serverless functions
+        // Read-only filesystem on Vercel production serverless
+    }
+
+    try {
+        const tmpPath = "/tmp/scheduleCache.json";
+        fs.writeFileSync(tmpPath, jsonStr, "utf-8");
+    } catch {
+        // Ignore write errors
     }
 
     // 3. Upload to Vercel Blob if BLOB_READ_WRITE_TOKEN is set
@@ -174,7 +193,7 @@ async function saveCacheData(cacheData: BusCacheData): Promise<void> {
     }
 }
 
-export async function refreshBusData(force = false): Promise<{
+export async function refreshBusData(force = true): Promise<{
     refreshed: boolean; message: string; data: BusCacheData; meta: CacheMetadata;
 }> {
     const currentRes = await getOrFetchBusData(false);
