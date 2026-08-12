@@ -75,7 +75,10 @@ async function upload() {
         const contentType = CONTENT_TYPES[ext] || "application/octet-stream";
         const body = readFileSync(file);
         const result = await put(blobPath, body, {
-            access: "public", contentType, addRandomSuffix: false,
+            access: "public",
+            contentType,
+            addRandomSuffix: false,
+            allowOverwrite: true,
         });
 
         uploaded++;
