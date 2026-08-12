@@ -184,7 +184,7 @@ async function saveCacheData(cacheData: BusCacheData): Promise<void> {
         try {
             const {put} = await import("@vercel/blob");
             await put(VERCEL_BLOB_PATH, jsonStr, {
-                access: "public", contentType: "application/json", addRandomSuffix: false,
+                access: "public", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true,
             });
             console.log("[BusService] Successfully uploaded updated timetable data to Vercel Blob.");
         } catch (err) {
