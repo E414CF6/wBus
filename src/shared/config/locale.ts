@@ -38,7 +38,7 @@ export const UI_TEXT = {
     TIMETABLE: {
         HERO_BADGE: "원주시 시내버스 시간표",
         HERO_TITLE: "노선별 운행 시간표",
-        HERO_SUBTITLE: "시내버스의 기점/종점 출발 시각 및 실시간 정보를 한눈에 확인하세요.",
+        HERO_SUBTITLE: "시내버스의 기점/종점 출발 시각 및 실시간 정보",
         STATS_TOTAL_ROUTES: "등록 노선",
         STATS_BOOKMARKS: "즐겨찾기",
 
@@ -86,10 +86,24 @@ export const UI_TEXT = {
     BOTTOM_NAV: {
         TAB_SCHEDULE: "시간표",
         TAB_MAP: "실시간 지도",
+        TAB_YONSEI: "연세대학교",
         ROUTE_OPTION: (route: string) => `${route}번 노선`,
         RUNNING_LIST_BTN: (count: number) => `운행 목록 (${count})`,
         RUNNING_LIST_TITLE: (route: string, count: number) => `${route}번 노선 운행 목록 (${count}대)`,
         TOGGLE_THEME: "테마 변경",
+    },
+
+    YONSEI: {
+        HERO_BADGE: "연세대학교 미래캠퍼스",
+        HERO_TITLE: "연세대학교 버스 시간표",
+        HERO_SUBTITLE: "30번 · 34번 · 34-1번 노선의 출발 시각 및 실시간 정보",
+        TARGET_ROUTES_NOTE: "30, 34, 34-1번 전용",
+        SOONEST_TITLE: "다음 출발 예정 버스",
+        NO_MORE_BUSES_TODAY: "금일 남은 운행 버스가 없습니다.",
+        FILTER_ALL_3: "전체 (3개 노선)",
+        CARD_TITLE_30: "30번 (장양리 ~ 연세대)",
+        CARD_TITLE_34: "34번 (장양리 ~ 연세대)",
+        CARD_TITLE_34_1: "34-1번 (장양리 ~ 연세대)",
     },
 
     SCHEDULE: {
@@ -190,12 +204,4 @@ export const UI_TEXT = {
         LINKS: [{label: "이용약관", href: "#"}, {label: "개인정보처리방침", href: "#"},],
         DISCLAIMER: "본 서비스는 참고용이며, 실제 운행 정보와 다를 수 있습니다.",
     },
-} as const;
-
-// ============================================================================
-// Domain Constants (Labels used in logic/display mix)
-// ============================================================================
-
-export const DAY_LABELS = {
-    WEEKDAY: "평일", WEEKEND: "주말/공휴일", SUNDAY: "일요일",
 } as const;

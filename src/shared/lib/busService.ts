@@ -182,14 +182,28 @@ export async function refreshBusData(force = false): Promise<{
 
     if (force || !meta.exists || meta.canRefresh) {
         console.log("[BusService] Starting scraper for bus timetable data...");
-        const newData: BusCacheData = await runScraper();
-        await saveCacheData(newData);
-        return {
-            refreshed: true,
-            message: "시간표 데이터가 원주시 ITS에서 새로 수집되어 Vercel Blob 및 캐시에 성공적으로 저장되었습니다.",
-            data: newData,
-            meta: getCacheMetadata(),
-        };
+        try {
+            const newData: BusCacheData = await runScraper();
+            await saveCacheData(newData);
+            return {
+                refreshed: true,
+                message: "시간표 데이터가 원주시 ITS에서 새로 수집되어 Vercel Blob 및 캐시에 성공적으로 저장되었습니다.",
+                data: newData,
+                meta: getCacheMetadata(),
+            };
+        } catch (err) {
+            console.warn("[BusService] Scraper execution failed (e.g. Wonju ITS connection timeout). Falling back to existing cache data:", err instanceof Error ? err.message : err);
+
+            if (currentRes.data) {
+                return {
+                    refreshed: false,
+                    message: "원주시 ITS 서버 연결 시간 초과로 인해 신규 수집을 취소하고 기존 저장소의 최신 시간표를 유지합니다.",
+                    data: currentRes.data,
+                    meta: currentRes.meta,
+                };
+            }
+            throw err;
+        }
     }
 
     console.log("[BusService] Minimum refresh interval not reached. Using existing cache.");
@@ -240,9 +254,20 @@ export async function getOrFetchBusData(forceRefresh = false): Promise<{ data: B
 
     // 4. Scraper Fallback (If cache missing across Blob/Local or refresh forced)
     console.log("[BusService] Cache missing across Vercel Blob/Local or refresh forced. Scraping Wonju ITS...");
-    const newData = await runScraper();
-    await saveCacheData(newData);
-    return {
-        data: newData, meta: getCacheMetadata(),
-    };
+    try {
+        const newData = await runScraper();
+        await saveCacheData(newData);
+        return {
+            data: newData, meta: getCacheMetadata(),
+        };
+    } catch (err) {
+        console.warn("[BusService] Scraper execution failed on fallback. Checking static files...", err instanceof Error ? err.message : err);
+        const localData = loadFromLocalFile();
+        if (localData) {
+            return {
+                data: localData, meta: getCacheMetadata(),
+            };
+        }
+        throw err;
+    }
 }

@@ -1,8 +1,8 @@
 # Open Source Routing Machine (OSRM) Setup Guide for ARM64 via Podman
 
 This guide provides step-by-step instructions for setting up the **Open Source Routing Machine (OSRM)** backend on an *
-*ARM64** architecture using **Podman**. This specific setup processes South Korean map data utilizing the MLD (
-Multi-Level Dijkstra) algorithm.
+*ARM64** architecture using **Podman**. This specific setup processes South Korean map data utilizing the MLD
+(Multi-Level Dijkstra) algorithm.
 
 ## Prerequisites
 
@@ -49,11 +49,11 @@ wget https://download.geofabrik.de/asia/south-korea-latest.osm.pbf
 
 We will use the **MLD (Multi-Level Dijkstra)** algorithm, which is highly flexible and allows for fast dynamic updates.
 
-| Phase         | Command          | Description                                                                |
-|---------------|------------------|----------------------------------------------------------------------------|
-| **Extract**   | `osrm-extract`   | Converts `.osm.pbf` to `.osrm` format using a routing profile (e.g., car). |
-| **Partition** | `osrm-partition` | Partitions the graph into cells recursively for the MLD algorithm.         |
-| **Customize** | `osrm-customize` | Calculates the routing weights for the partitioned cells.                  |
+| Phase         | Command          | Description                                                          |
+|---------------|------------------|----------------------------------------------------------------------|
+| **Extract**   | `osrm-extract`   | Converts `.osm.pbf` to `.osrm` format using the bus routing profile. |
+| **Partition** | `osrm-partition` | Partitions the graph into cells recursively for the MLD algorithm.   |
+| **Customize** | `osrm-customize` | Calculates the routing weights for the partitioned cells.            |
 
 Run the following commands sequentially to process the data.
 
@@ -61,17 +61,20 @@ Run the following commands sequentially to process the data.
 > optimize processing speed.
 
 ```shell
-# 1. Extract data using the Car profile
+# 1. Extract data using the Bus profile (optimized for bus routing — avoids alleys/service roads)
+#    The bus.lua profile is located in scripts/osrm-assets/profiles/bus.lua
+#    Copy it into the same directory as the .osm.pbf before running:
+#      cp scripts/osrm-assets/profiles/bus.lua ./profiles/bus.lua
 podman run --rm -t -v $(pwd):/data osrm-backend:arm64 \
-  osrm-extract -p /opt/car.lua /data/south-korea-latest.osm.pbf -t 8
+  osrm-extract -p /data/profiles/bus.lua /data/storage/south-korea-latest.osm.pbf -t 8
 
 # 2. Partition the data
 podman run --rm -t -v $(pwd):/data osrm-backend:arm64 \
-  osrm-partition /data/south-korea-latest.osrm -t 8
+  osrm-partition /data/storage/south-korea-latest.osrm -t 8
 
 # 3. Customize the data
 podman run --rm -t -v $(pwd):/data osrm-backend:arm64 \
-  osrm-customize /data/south-korea-latest.osrm -t 8
+  osrm-customize /data/storage/south-korea-latest.osrm -t 8
 ```
 
 ## 3. Running the Routing Server
@@ -87,7 +90,7 @@ podman run -d \
   -p 4000:5000 \
   -v $(pwd):/data \
   osrm-backend:arm64 \
-  osrm-routed --algorithm mld /data/south-korea-latest.osrm
+  osrm-routed --algorithm mld /data/storage/south-korea-latest.osrm
 ```
 
 ### Start the Frontend UI (Optional)

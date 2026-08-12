@@ -32,7 +32,7 @@ dotenv.config({path: join(process.cwd(), ".env")});
 const DEFAULT_CITY_CODE = "32020"; // Wonju
 const DEFAULT_TAGO_URL = "https://apis.data.go.kr/1613000/BusRouteInfoInqireService";
 const DEFAULT_OSRM_URL = process.env.OSRM_API_URL || "http://localhost:4000/route/v1/driving";
-const OSRM_SNAP_RADIUS = 50; // Meters (Set to 50m to prefer main arterial road snapping)
+const OSRM_SNAP_RADIUS = 25; // Meters (conservative: prefer main road snapping, avoid alleys)
 const CONCURRENCY_FETCH = 3;
 
 // Service Key retrieval
@@ -86,6 +86,19 @@ function getHaversineDistanceMeters(p1, p2) {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// Calculate total distance along a polyline in meters
+function getPolylineDistanceMeters(coords) {
+    let total = 0;
+    for (let i = 0; i < coords.length - 1; i++) {
+        total += getHaversineDistanceMeters(coords[i], coords[i + 1]);
+    }
+    return total;
+}
+
+// Maximum allowed ratio of OSRM segment distance to straight-line distance.
+// Segments exceeding this are considered alley detours and rejected.
+const MAX_DETOUR_RATIO = 2.0;
+
 // OSRM Route Snapper for a list of stop coordinates
 async function fetchOsrmRoute(coords, osrmBaseUrl = DEFAULT_OSRM_URL) {
     if (coords.length < 2) return null;
@@ -97,7 +110,8 @@ async function fetchOsrmRoute(coords, osrmBaseUrl = DEFAULT_OSRM_URL) {
 
     while (attempts < maxAttempts) {
         const radiuses = coords.map(() => Math.round(currentRadius)).join(";");
-        const url = `${osrmBaseUrl}/${coordsStr}?overview=full&geometries=geojson&steps=false&continue_straight=true&snapping=any&radiuses=${radiuses}`;
+        const approaches = coords.map(() => "curb").join(";");
+        const url = `${osrmBaseUrl}/${coordsStr}?overview=full&geometries=geojson&steps=false&continue_straight=true&snapping=default&radiuses=${radiuses}&approaches=${approaches}`;
 
         try {
             const controller = new AbortController();
@@ -117,7 +131,7 @@ async function fetchOsrmRoute(coords, osrmBaseUrl = DEFAULT_OSRM_URL) {
                 }
             } else if (res.status === 400) {
                 attempts++;
-                currentRadius += 100;
+                currentRadius += 25;
             } else {
                 attempts++;
             }
@@ -179,7 +193,19 @@ async function processDirectionLeg(dirStops, stationMap, osrmUrl) {
             }
 
             const segCoords = fullLine.slice(currIdx, bestIdx + 1);
-            const finalCoords = segCoords.length >= 2 ? segCoords : [validCoords[i], validCoords[i + 1]];
+            let finalCoords = segCoords.length >= 2 ? segCoords : [validCoords[i], validCoords[i + 1]];
+
+            // Detour ratio validation: reject OSRM segments that route through alleys
+            const straightDist = getHaversineDistanceMeters(validCoords[i], validCoords[i + 1]);
+            if (straightDist > 50) {
+                const segDist = getPolylineDistanceMeters(finalCoords);
+                const detourRatio = segDist / straightDist;
+                if (detourRatio > MAX_DETOUR_RATIO) {
+                    console.warn(`[Polly] ⚠ Detour ${detourRatio.toFixed(2)}x between stops ${i}→${i+1} (${Math.round(segDist)}m route vs ${Math.round(straightDist)}m straight). Rejecting alley route.`);
+                    finalCoords = [validCoords[i], validCoords[i + 1]];
+                }
+            }
+
             const hash = computeSegmentHash(finalCoords);
 
             segmentHashes.push(hash);

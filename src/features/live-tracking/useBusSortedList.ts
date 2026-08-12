@@ -12,7 +12,7 @@ const EMPTY_BUS_LIST: BusItem[] = [];
  * @param enabled - Pass false to suspend live SSE/polling fetches when not on real-time map view
  */
 export const useBusSortedList = (routeName: string, enabled: boolean = true) => {
-    const routeIds = useRouteIds(routeName);
+    const routeIds = useRouteIds(routeName, enabled);
     const activeRouteIds = useMemo(() => (enabled ? routeIds : []), [enabled, routeIds]);
 
     const {

@@ -1,69 +1,180 @@
-# wBus: Real-Time Bus Tracking System
+# wBus: Real-Time Bus Tracking & Timetable Platform
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Next.js](https://img.shields.io/badge/Frontend-Next.js-black?logo=next.js)](./Vision)
-[![TypeScript](https://img.shields.io/badge/Language-TypeScript-blue?logo=typescript)](./Vision)
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
+[![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 
-**wBus** is a full-stack, real-time bus tracking application for Wonju, South Korea. It combines an integrated data
-processing pipeline with a modern, interactive Next.js frontend to deliver live bus locations, routes, and timetables.
-
----
-
-## 🏗️ Architecture & Component Overview
-
-The application is structured inside `Vision/`:
-
-1. **Integrated Data Pipeline (`scripts/polly.mjs`)**:
-    - Replaces the legacy Rust workspace with a lightweight Node.js script.
-    - Fetches raw route & station data from TAGO (Public Data Portal).
-    - Snaps route paths using OSRM to generate clean GeoJSON polylines.
-    - Crawls Wonju ITS timetable schedules (`scrape-wonju-its.js`).
-    - Packages output static data into `public/data/` or Vercel Blob.
-
-2. **Web Application (`Vision/`)**:
-    - Next.js 16 (App Router) + React 19 + TypeScript + MapLibre GL / Mapbox.
-    - High-performance live tracking via Server-Sent Events (SSE) `/api/bus/stream`.
-    - Resilience features: Circuit Breaker, Multi-Key Rotation, Rate-Limiting TaskQueue, and Stale-If-Error fallback
-      caching.
+**wBus** is a modern, full-stack real-time bus tracking and timetable web application built for **Wonju City (원주시),
+South Korea**. It integrates a resilient data processing pipeline with a high-performance Next.js 16 frontend to deliver
+live bus locations, interactive route maps, municipal announcements, and comprehensive timetables.
 
 ---
 
-## 🚀 Quick Start
+## ✨ Key Features
 
-### 1. Set Up Environment Variables
+### 🎓 Dedicated Yonsei University Mode
 
-Inside `Vision/`:
+- **Campus Departure Focus**: Tailored schedule views for routes **30**, **34**, and **34-1**.
+- **No Depot Distractions**: Filters out irrelevant depot departure times (Jangyang-ri), displaying strictly **Yonsei
+  University departures** (Routes 30 & 34) and **Hoechon departures** (Route 34-1).
+- **Spotlight Departure Card**: Computes and highlights the soonest upcoming campus departure with live countdown timers
+  (`N minutes remaining`).
+- **Single-Column Focused Modal**: Detailed modal view featuring arrival seq, campus departure times, notes, and
+  one-click CSV schedule export.
+
+### 🗺️ Lazy-Loaded Interactive Real-Time Map
+
+- **On-Demand Loading**: MapLibre GL map engine and live telemetry streams are mounted **only** when the user activates
+  the *Real-time Map* tab.
+- **Zero Overhead**: Browsing timetables generates **zero** background map tile or SSE telemetry requests, significantly
+  optimizing bandwidth and battery life.
+- **Polyline Snapping & Animation**: Bus GPS coordinates snap onto OSRM route polylines with smooth 3-second animated
+  marker transitions.
+
+### 📅 Comprehensive City-Wide Timetables
+
+- Searchable timetable directory covering all Wonju city bus routes.
+- Multi-day filters (*Weekdays*, *Saturdays*, *Sundays/Holidays*).
+- Route bookmarking saved to local browser storage.
+- Real-time map navigation directly from schedule cards.
+
+### 📢 Wonju ITS Notice Center Integration
+
+- Direct integration with Wonju City Intelligent Transportation System (ITS) announcements.
+- Integrated banner and detail modal for viewing official municipal transit notices.
+
+### ⚡ Resilient Data Pipeline & Caching
+
+- **Multi-Tier Caching**: L1 In-Memory Cache + L2 Redis Cache + CDN / Static File fallbacks.
+- **Network Resiliency**: Includes request coalescing (preventing cache stampedes), circuit breaking, and graceful
+  static cache fallbacks when government servers (`its.wonju.go.kr`) experience network timeouts.
+
+---
+
+## 🏗️ Architecture & Project Structure
+
+The project follows **Feature-Sliced Design (FSD)** principles for strict modularity and clear code boundaries:
+
+```
+src/
+├── app/                  # Next.js App Router (pages, API endpoints, layouts)
+│   └── api/              # Server-side API endpoints (/api/bus, /api/notice, etc.)
+├── entities/             # Domain entities & data access models
+│   ├── bus/              #   Bus items, telemetry types & utilities
+│   ├── route/            #   Route information, polyline hooks & mappings
+│   └── station/          #   Bus stop & station location definitions
+├── features/             # Business logic & use-case hooks
+│   ├── live-tracking/    #   Live telemetry hooks (SSE / SWR polling)
+│   └── map-view/         #   Map view state & persistence
+├── shared/               # Cross-cutting infrastructure & design system
+│   ├── api/              #   HTTP client with retries & timeout handling
+│   ├── cache/            #   CacheManager (LRU & request deduplication)
+│   ├── config/           #   Centralized environment variables & locale strings
+│   ├── context/          #   Global map context provider
+│   ├── lib/              #   Bus service layer, data scrapers & time math utilities
+│   ├── types/            #   TypeScript interfaces & data types
+│   └── ui/               #   Unified bottom navigation bar, splash screen & common UI
+└── widgets/              # Composite UI blocks
+    ├── MapContainer/     #   MapLibre GL wrapper, route polylines & live markers
+    ├── NoticeWidget/     #   Wonju ITS notice banner & modal
+    ├── TimetableWidget/  #   City-wide timetable grid, search, filter & modals
+    └── YonseiTimetableWidget/ # Dedicated Yonsei University timetable suite
+```
+
+**Dependency Hierarchy:** `widgets → features → entities → shared`.
+
+---
+
+## 🔄 Data Pipeline & Telemetry Flow
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          EXTERNAL DATA SOURCES                          │
+│  apis.data.go.kr (TAGO API)    its.wonju.go.kr    Vercel Blob / Static  │
+│  (Live Bus Telemetry)          (ITS Schedules)    (GeoJSON & Maps)      │
+└───────────┬──────────────────────────┬─────────────────────┬────────────┘
+            │                          │                     │
+       ┌────▼────┐               ┌─────▼───────┐        ┌────▼─────┐
+       │  Redis  │               │ Local Cache │        │ Browser  │
+       │ (3s-1h) │               │ (Blob/JSON) │        │ Storage  │
+       └────┬────┘               └─────┬───────┘        └──────────┘
+            │                          │
+       ┌────▼──────────────────────────▼──────────────────────────────────┐
+       │                       API ROUTES (Server)                        │
+       │  GET  /api/bus                   → Timetable Cache & Meta        │
+       │  POST /api/bus/refresh           → ITS Scraper + Blob Update     │
+       │  GET  /api/bus/stream            → SSE Telemetry Stream          │
+       │  GET  /api/notice                → Wonju ITS Announcements       │
+       └───────────────────────────────┬──────────────────────────────────┘
+                                       │
+       ┌───────────────────────────────▼──────────────────────────────────┐
+       │                    CLIENT (Lazy SSE + SWR)                       │
+       │  Timetable View: Zero background telemetry overhead              │
+       │  Map View: SSE stream (/api/bus/stream) + MapLibre Renderer     │
+       └──────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🛠️ Technology Stack
+
+| Category                     | Technology                                           |
+|:-----------------------------|:-----------------------------------------------------|
+| **Framework**                | Next.js 16 (App Router, Turbopack)                   |
+| **UI Library**               | React 19                                             |
+| **Language**                 | TypeScript 5 (Strict Mode)                           |
+| **Styling**                  | Tailwind CSS 4, Vanilla CSS Design System            |
+| **Map Rendering**            | MapLibre GL JS via `react-map-gl`                    |
+| **Live Telemetry**           | Server-Sent Events (`EventSource`) with SWR Fallback |
+| **Data Scraping & Pipeline** | Node.js Fetch, Cheerio, OSRM Polyline Snapping       |
+| **Cache & Storage**          | Upstash Redis, Vercel Blob, Memory LRU Cache         |
+
+---
+
+## 🚀 Quick Start & Local Development
+
+### 1. Environment Setup
+
+Copy `.env.local.example` to create your local `.env.local` configuration file:
 
 ```bash
-cd Vision
 cp .env.local.example .env.local
 ```
 
-Set your Public Data Portal service key:
+Configure your environment variables inside `.env.local`:
 
 ```dotenv
+# Korea Public Data Portal Key (apis.data.go.kr)
 DATA_GO_KR_SERVICE_KEY="YOUR_DECODED_SERVICE_KEY"
+
+# Redis Cache Connection (Optional; falls back to in-memory cache)
+REDIS_URL="redis://localhost:6379"
+
+# Remote static data toggle (Set "false" to use local public/data directory)
+NEXT_PUBLIC_USE_REMOTE_STATIC_DATA="false"
+NEXT_PUBLIC_STATIC_API_URL="/data"
 ```
 
 ### 2. Run Data Pipeline (Polly)
 
-To fetch routes, snap polylines, and scrape timetables:
+To fetch route polylines, snap paths via OSRM, and scrape official schedules:
 
 ```bash
 npm run polly
 ```
 
-Or run individual subcommands:
+Or run individual sub-tasks:
 
 ```bash
-# Process routes & OSRM snapping only
-npm run polly route
-
-# Scrape timetable schedules only
+# Scrape Wonju ITS timetable schedules only
 npm run polly:schedule
 ```
 
 ### 3. Start Development Server
+
+Run the development server with Turbopack:
 
 ```bash
 npm run dev
@@ -73,283 +184,21 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
-## 🛠️ Technology Stack
+## 📜 Available Scripts
 
-- **Framework**: Next.js 16, React 19, Tailwind CSS 4
-- **Language**: TypeScript, Node.js (ES Modules)
-- **Data & Caching**: Redis (Upstash/Redis), Memory Cache, Stale-While-Revalidate (SWR)
-- **Mapping**: MapLibre GL, React Map GL
-- **Pipeline Tools**: OSRM API, Node Fetch
+| Command             | Description                                                         |
+|:--------------------|:--------------------------------------------------------------------|
+| `npm run dev`       | Starts the Next.js development server with Turbopack                |
+| `npm run build`     | Compiles the production build                                       |
+| `npm run start`     | Starts the production server                                        |
+| `npm run typecheck` | Runs TypeScript type checking without emitting files                |
+| `npm run lint`      | Runs ESLint code style and quality check                            |
+| `npm run polly`     | Runs full data processing pipeline (routes, polylines & timetables) |
+| `npm run schedule`  | Scrapes official timetables from Wonju ITS                          |
+| `npm run upload`    | Uploads static asset files to Vercel Blob storage                   |
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE) file for details.
-
-# Vision: The wBus Frontend
-
-[![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
-[![React](https://img.shields.io/badge/React-19-blue?logo=react)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
-
-Vision is the user-facing frontend for the **wBus** project — a real-time bus tracking app for Wŏnju (원주), South Korea.
-It renders live bus positions on an interactive map, animates their movement along route polylines, and displays arrival
-predictions and timetables.
-
-## Architecture
-
-The project follows [Feature-Sliced Design (FSD)](https://feature-sliced.design/) and is organized into five layers,
-each with a clear responsibility and strict import rules.
-
-```
-src/
-├── app/                # Next.js App Router — pages, layouts, API routes, global styles
-│   └── api/            # Server-side API routes (bus locations, arrivals, stops)
-├── entities/           # Domain models and data access for each entity
-│   ├── bus/            #   BusItem, BusStopArrival — types & helpers
-│   ├── route/          #   RouteInfo, BusRouteFeature, BusSchedule — polyline service
-│   └── station/        #   BusStop, StationLocation — station map access
-├── features/           # Use-case-specific logic (hooks, derived state)
-│   ├── live-tracking/  #   SWR hooks for live bus locations & arrivals
-│   └── map-view/       #   Map view persistence (localStorage)
-├── shared/             # Cross-cutting infrastructure
-│   ├── api/            #   fetchAPI() — retries, timeout, error handling
-│   ├── cache/          #   CacheManager — LRU cache with request deduplication
-│   ├── config/         #   Centralized env config with sensible defaults
-│   ├── context/        #   AppMapContext — global MapRef provider
-│   ├── hooks/          #   Shared React hooks
-│   ├── redis/          #   Redis client, public API wrappers
-│   ├── ui/             #   Shared UI components
-│   └── utils/          #   General utilities
-└── widgets/            # Composite UI blocks
-    ├── BusListSheet/   #   Route list, schedule display
-    └── MapContainer/   #   Map + markers + polylines + popups
-```
-
-**Import rule:** `widgets → features → entities → shared`. Each layer only imports from layers below it.
-
-## Data Flow
-
-### Overview
-
-Vision consumes two categories of data through a three-tier caching pipeline:
-
-```
-┌──────────────────────────────────────────────────────────────────────┐
-│                        EXTERNAL DATA SOURCES                         │
-│                                                                      │
-│  apis.data.go.kr          Vercel Blob / public/data/   localStorage  │
-│  (Live bus API)           (Static GeoJSON, schedules)  (View state)  │
-└────────┬──────────────────────────┬────────────────────────┬─────────┘
-         │                          │                        │
-    ┌────▼────┐               ┌─────▼────────┐          ┌─────▼──────┐
-    │  Redis  │               │ CacheManager │          │  Browser   │
-    │ (3-600s)│               │ (LRU, dedup) │          │  Storage   │
-    └────┬────┘               └─────┬────────┘          └────────────┘
-         │                          │
-    ┌────▼──────────────────────────▼──────────────────────────────────┐
-    │                         API ROUTES (Server)                      │
-│  GET /api/bus/[routeId]           → CachedData<BusItem[]>         │
-│  GET /api/bus/stream?routeIds=... → SSE snapshot stream           │
-│  GET /api/bus-arrival/[busStopId] → CachedData<BusStopArrival[]>  │
-│  GET /api/bus-stops/[routeId]     → CachedData<RawBusStop[]>      │
-└────────────────────────┬─────────────────────────────────────────┘
-                         │
-    ┌────────────────────────▼─────────────────────────────────────────┐
-    │                   CLIENT (SSE + SWR Hooks)                       │
-    │  useBusLocationData()  ── EventSource ──→ /api/bus/stream        │
-    │                      (stream 실패 시 /api/bus/{routeId} 폴백)      │
-    │  useBusArrivalInfo()   ─── polling ──→ /api/bus-arrival/{id}     │
-    │  useBusData()          ─── combines live data + static polylines │
-    └──────────────────────────────────────────────────────────────────┘
-```
-
-### Static Data
-
-Generated by the sibling project **Polly** and stored in `public/data/` (dev) or Vercel Blob (prod):
-
-| File                          | Format  | Content                                             |
-|-------------------------------|---------|-----------------------------------------------------|
-| `routeMap.json`               | JSON    | Maps route names (e.g. `"30"`) → array of route IDs |
-| `stationMap.json`             | JSON    | All bus stops in the city with coordinates          |
-| `polylines/{routeId}.geojson` | GeoJSON | Route path as LineString + stop metadata            |
-| `schedules/{routeName}.json`  | JSON    | Weekday/weekend timetables per route                |
-
-Static data is loaded on demand through `CacheManager`, which provides **LRU eviction** (50–100 items) and **request
-deduplication** — concurrent fetches for the same key share a single promise.
-
-### Live Data
-
-Real-time bus positions and arrival info are fetched from the
-[Korea Public Data Portal](https://www.data.go.kr/) (`apis.data.go.kr`), proxied through server-side API routes. Next.js
-API routes are marked with `export const dynamic = "force-dynamic"` to bypass default static caching and ensure our
-caching layers handle all logic.
-
-**Layered Caching Strategy:**
-
-**1. API Data (L1 Memory + L2 Redis + CDN):**
-To optimize the API and prevent timeouts from the public portal, the Redis caching layer (`src/shared/redis/client.ts`)
-implements several advanced strategies:
-
-- **L1 + L2 Cache:** Hot keys are served from in-process memory first, then Redis, then origin.
-- **Smart Caching:** Live bus positions/arrivals are cached with short TTL (3s), while static stop endpoints are cached
-  with long TTL (3600s), plus CDN edge caching via `Cache-Control`.
-- **In-Flight Request Coalescing:** Prevents **Cache Stampedes (Thundering Herd)**. If a cache expires and multiple
-  users request the same data simultaneously, only *one* outgoing request is made to the public API, and all concurrent
-  requests await its resolution.
-- **Stale Data Fallback:** The public API is occasionally unstable. The Redis cache keeps expired entries for an
-  extended period. If the public API fails (with retry/backoff), the system catches the error and serves the older
-  "stale" data instead of showing an error to the user, ensuring uninterrupted service.
-- **Degraded-Mode Resilience:** If `REDIS_URL` is unavailable or Redis is down, the API continues running with L1 memory
-  cache.
-- **Cache Telemetry Headers:** API responses include `X-Cache-Status`, `X-Cache-Layer`, and `X-Cache-Age-Ms`.
-
-| API Route                      | Caching Strategy     | TTL    | Data Source             |
-|--------------------------------|----------------------|--------|-------------------------|
-| `/api/bus/[routeId]`           | Memory + Redis + CDN | 3 sec  | Bus location API        |
-| `/api/bus/stream`              | Memory + Redis + CDN | 2 sec  | Aggregated bus snapshot |
-| `/api/bus-arrival/[busStopId]` | Memory + Redis + CDN | 3 sec  | Arrival prediction API  |
-| `/api/bus-stops/[routeId]`     | Memory + Redis + CDN | 1 hour | Route stop list API     |
-| `/api/route-stops/[routeName]` | Memory + Redis + CDN | 1 hour | Static data files       |
-
-The Redis layer implements a "smart cache" — when one user's request triggers a fetch, the result is cached for all
-later users within the TTL window.
-
-**Client-side live updates:**
-
-- Bus locations: SSE stream (`/api/bus/stream`) with pre-timeout handoff (before Vercel 60s limit), stale-stream
-  detection, and automatic polling fallback
-- Arrival info: SWR polling
-- Revalidates on tab focus for polling-based hooks
-
-### Coordinate Systems
-
-The app internally uses `[lat, lng]` order. GeoJSON files follow the standard `[lng, lat]`
-convention. Conversion happens at the boundary — when loading polylines and when passing data to MapLibre.
-
-### Request Flow Example
-
-When a user selects route **"30"**:
-
-1. `routeMap.json` resolves `"30"` → `["WJB251000068", "WJB251000376", ...]`
-2. Client opens `/api/bus/stream?routeIds=...` → server emits Redis-backed snapshots (SSE)
-3. Polyline GeoJSON files are loaded for each route ID, split at `turn_idx` into **up** and **down**
-   segments
-4. Bus GPS positions are snapped to the nearest point on the polyline
-5. `BusAnimatedMarker` smoothly animates markers along the polyline path (3-seconds duration)
-6. SSE snapshots arrive continuously; the stream performs graceful handoff/reconnect before server timeout and markers
-   animate to updated positions
-
-## Client-Side State
-
-| Mechanism         | Scope         | Data                                                        |
-|-------------------|---------------|-------------------------------------------------------------|
-| **SSE + SWR**     | Live data     | Bus locations (SSE), arrival info (polling)                 |
-| **CacheManager**  | Static data   | Polylines, route/station maps (in-memory LRU)               |
-| **AppMapContext** | UI state      | Global `MapRef` instance for cross-component map control    |
-| **localStorage**  | Persistence   | Map view state (center, zoom, bearing), selected route      |
-| **useMemo**       | Derived state | Active route detection, sorted bus lists, snapped positions |
-
-## Tech Stack
-
-| Category     | Technology                                                                                        |
-|--------------|---------------------------------------------------------------------------------------------------|
-| Framework    | [Next.js](https://nextjs.org/) 16 (App Router, Turbopack)                                         |
-| UI           | [React](https://react.dev/) 19                                                                    |
-| Language     | [TypeScript](https://www.typescriptlang.org/) 5                                                   |
-| Styling      | [Tailwind CSS](https://tailwindcss.com/) 4                                                        |
-| Map Renderer | [MapLibre GL JS](https://maplibre.org/) via [react-map-gl](https://visgl.github.io/react-map-gl/) |
-| Live Data    | SSE (`EventSource`) + [SWR](https://swr.vercel.app/) fallback/polling                             |
-| Server Cache | [Redis](https://redis.io/) for API response caching                                               |
-| Static CDN   | [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) for production assets                  |
-| Linting      | ESLint 9                                                                                          |
-
-## Getting Started
-
-1. **Navigate into the `Vision` directory:**
-
-    ```bash
-    cd Vision
-    ```
-
-2. **Install dependencies:**
-
-    ```bash
-    npm install
-    ```
-
-3. **Set up environment variables:**
-
-    ```bash
-    cp .env.local.example .env.local
-    ```
-
-   Edit `.env.local` with your credentials:
-
-    ```dotenv
-    # Static data — use local files during development
-    NEXT_PUBLIC_USE_REMOTE_STATIC_DATA="false"
-    NEXT_PUBLIC_STATIC_API_URL="/data"
-
-    # Korea Public Data Portal API key (required for live bus data)
-    DATA_GO_KR_SERVICE_KEY="your-service-key"
-
-    # Redis URL for server-side caching
-    REDIS_URL="redis://..."
-
-    # Vercel Blob token (only needed for upload-data script)
-    BLOB_READ_WRITE_TOKEN="your-token"
-    ```
-
-4. **Run the development server:**
-
-    ```bash
-    npm run dev
-    ```
-
-   Open [http://localhost:3000](http://localhost:3000).
-
-## Configuration
-
-All environment variables are centralized in `src/shared/config/env.ts` with sensible defaults — the app runs without
-any configuration in development mode (using local static data).
-
-### Server-Side
-
-| Variable                 | Required | Description                                       |
-|--------------------------|----------|---------------------------------------------------|
-| `DATA_GO_KR_SERVICE_KEY` | Yes      | API key for `apis.data.go.kr` live bus endpoints  |
-| `BLOB_READ_WRITE_TOKEN`  | No       | Vercel Blob token (only for `upload-data` script) |
-| `REDIS_URL`              | No*      | Redis connection string for shared API caching    |
-
-\* Without `REDIS_URL`, the server falls back to in-memory cache only (works, but no cross-instance sharing).
-
-### Client-Side
-
-| Variable                                | Default                     | Description                                       |
-|-----------------------------------------|-----------------------------|---------------------------------------------------|
-| `NEXT_PUBLIC_USE_REMOTE_STATIC_DATA`    | `true`                      | `true` to load static data from Vercel Blob       |
-| `NEXT_PUBLIC_STATIC_API_URL`            | `/data`                     | Base URL for static data (local path or Blob URL) |
-| `NEXT_PUBLIC_MAP_DEFAULT_POSITION`      | `37.3421,127.91976`         | Initial map center (lat, lng)                     |
-| `NEXT_PUBLIC_MAP_DEFAULT_ZOOM`          | `13`                        | Initial zoom level                                |
-| `NEXT_PUBLIC_MAP_MÏAX_BOUNDS`           | `37.10,127.60,37.60,128.30` | Map boundary limits                               |
-| `NEXT_PUBLIC_BUS_STOP_MARKER_MIN_ZOOM`  | `15`                        | Zoom threshold for stop markers                   |
-| `NEXT_PUBLIC_BUS_ANIMATION_DURATION`    | `4000`                      | Bus marker animation duration (ms)                |
-| `NEXT_PUBLIC_LIVE_API_REFRESH_INTERVAL` | `10000`                     | Live data polling interval (ms)                   |
-| `NEXT_PUBLIC_DEFAULT_ROUTE`             | `30`                        | Default route loaded on first visit               |
-
-## Scripts
-
-| Command               | Description                                           |
-|-----------------------|-------------------------------------------------------|
-| `npm run dev`         | Start dev server with Turbopack                       |
-| `npm run build`       | Production build                                      |
-| `npm run start`       | Start production server                               |
-| `npm run lint`        | Run ESLint                                            |
-| `npm run lint:fix`    | Run ESLint with auto-fix                              |
-| `npm run typecheck`   | Type-check without emitting                           |
-| `npm run polyline`    | Run data pipeline (routes, OSRM snapping & schedules) |
-| `npm run schedule`    | Scrape Wonju ITS bus timetables                       |
-| `npm run upload-data` | Upload `public/data/` to Vercel Blob                  |
+This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE) file for full details.

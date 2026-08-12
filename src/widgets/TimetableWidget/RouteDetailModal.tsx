@@ -1,6 +1,7 @@
 "use client";
 
 import React, {useEffect, useState} from "react";
+import {createPortal} from "react-dom";
 import {BusRoute} from "@shared/types/bus";
 import {getNextDeparture} from "@shared/lib/timeUtils";
 import {UI_TEXT} from "@shared/config/locale";
@@ -23,8 +24,13 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
                                                                       onSelectMapRoute,
                                                                       currentTime,
                                                                   }) => {
+    const [mounted, setMounted] = useState(false);
     const [tableSearch, setTableSearch] = useState("");
     const [now, setNow] = useState<Date>(() => currentTime || new Date());
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     useEffect(() => {
         if (currentTime) {
@@ -39,7 +45,7 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
         return () => clearInterval(timer);
     }, []);
 
-    if (!route) return null;
+    if (!route || !mounted) return null;
 
     const {nextOrigin, nextDest, originWaitMins, destWaitMins} = getNextDeparture(route.timetable, now);
 
@@ -78,9 +84,9 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
         return "from-blue-600 to-indigo-600 shadow-blue-600/20";
     };
 
-    return (
+    const modalContent = (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 dark:bg-black/80 backdrop-blur-lg animate-fadeIn"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 dark:bg-black/80 backdrop-blur-lg animate-fadeIn pointer-events-auto"
             onClick={onClose}
         >
             <div
@@ -290,4 +296,6 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
             </div>
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 };

@@ -15,10 +15,10 @@ const ROUTE_INFO_SWR_OPTIONS = {
     errorRetryCount: 2,
 } as const;
 
-export function useRouteInfo(routeName: string): RouteInfo | null {
+export function useRouteInfo(routeName: string, enabled: boolean = true): RouteInfo | null {
     const {
         data, error
-    } = useSWR<RouteInfo | null>(routeName ? ["routeInfo", routeName] : null, ([, name]: [string, string]) => getRouteInfo(name), ROUTE_INFO_SWR_OPTIONS);
+    } = useSWR<RouteInfo | null>(enabled && routeName ? ["routeInfo", routeName] : null, ([, name]: [string, string]) => getRouteInfo(name), ROUTE_INFO_SWR_OPTIONS);
 
     if (error && APP_CONFIG.IS_DEV) {
         console.error(`[useRouteInfo] Failed to fetch route info: ${routeName}`, error);
@@ -27,8 +27,8 @@ export function useRouteInfo(routeName: string): RouteInfo | null {
     return data ?? null;
 }
 
-export function useRouteIds(routeName: string): string[] {
-    const routeInfo = useRouteInfo(routeName);
+export function useRouteIds(routeName: string, enabled: boolean = true): string[] {
+    const routeInfo = useRouteInfo(routeName, enabled);
     return useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
 }
 
@@ -38,8 +38,8 @@ export function useRouteIds(routeName: string): string[] {
  *
  * Uses SWR for caching and revalidation.
  */
-export function useBusRouteMap(): Record<string, string[]> | null {
-    const {data, error} = useSWR("busRouteMap",
+export function useBusRouteMap(enabled: boolean = true): Record<string, string[]> | null {
+    const {data, error} = useSWR(enabled ? "busRouteMap" : null,
         getRouteMap, {
             revalidateOnFocus: false,
             revalidateOnReconnect: false,

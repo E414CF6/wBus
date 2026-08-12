@@ -7,14 +7,18 @@ import {useAppMapContext} from "@shared/context/AppMapContext";
 import type {BusItem} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
 import {BusListItem} from "@widgets/BusListSheet/BusListItem";
-import {Bus, Calendar, ChevronDown, MapIcon, MapPin, Moon, Sun, X} from "lucide-react";
+import {Bus, Calendar, ChevronDown, GraduationCap, MapIcon, MapPin, Moon, Sun, X} from "lucide-react";
 import {useTheme} from "next-themes";
 
 export type NavTab = "schedule" | "map";
+export type TimetableSubTab = "yonsei" | "all";
 
 interface BottomNavProps {
     activeTab: NavTab;
     onTabChange: (tab: NavTab) => void;
+    // Dynamic Timetable options (Active when activeTab === "schedule")
+    scheduleSubTab?: TimetableSubTab;
+    onScheduleSubTabChange?: (subTab: TimetableSubTab) => void;
     // Dynamic Map options (Active when activeTab === "map")
     allRoutes?: string[];
     selectedRoute?: string;
@@ -32,6 +36,8 @@ interface BottomNavProps {
 export default function BottomNav({
                                       activeTab,
                                       onTabChange,
+                                      scheduleSubTab = "yonsei",
+                                      onScheduleSubTabChange,
                                       allRoutes = [],
                                       selectedRoute = "",
                                       onSelectRoute,
@@ -199,6 +205,43 @@ export default function BottomNav({
                         );
                     })}
                 </div>
+
+                {/* Dynamic Options for Timetable (Visible only when activeTab === "schedule") */}
+                {activeTab === "schedule" && (
+                    <>
+                        {/* Divider */}
+                        <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0 animate-fadeIn"/>
+
+                        {/* Timetable Sub-tab Toggle Pills (Yonsei vs All) */}
+                        <div className="flex items-center gap-1 shrink-0 animate-fadeIn">
+                            <button
+                                type="button"
+                                onClick={() => onScheduleSubTabChange?.("yonsei")}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                                    scheduleSubTab === "yonsei"
+                                        ? "bg-[#003876] text-white shadow-md shadow-[#003876]/25 scale-[1.02]"
+                                        : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200 border border-black/5 dark:border-white/10"
+                                }`}
+                            >
+                                <GraduationCap className="w-3.5 h-3.5"/>
+                                <span className="whitespace-nowrap">연세대학교</span>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => onScheduleSubTabChange?.("all")}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                                    scheduleSubTab === "all"
+                                        ? "bg-black dark:bg-white text-white dark:text-black shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]"
+                                        : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200 border border-black/5 dark:border-white/10"
+                                }`}
+                            >
+                                <Bus className="w-3.5 h-3.5"/>
+                                <span className="whitespace-nowrap">전체</span>
+                            </button>
+                        </div>
+                    </>
+                )}
 
                 {/* Dynamic Options for Real-time Map (Visible only when activeTab === "map") */}
                 {activeTab === "map" && (

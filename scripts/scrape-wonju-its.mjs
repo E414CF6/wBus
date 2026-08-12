@@ -4,7 +4,7 @@ import {dirname, join} from 'path';
 const BASE_URL = 'http://its.wonju.go.kr';
 const LIST_URL = `${BASE_URL}/bus/bus04.do`;
 const DETAIL_URL = `${BASE_URL}/bus/bus04Detail.do`;
-const PRIMARY_CACHE_PATH = join(process.cwd(), 'scheduleCache.json');
+const PRIMARY_CACHE_PATH = join(process.cwd(), 'public', 'data', 'scheduleCache.json');
 
 const HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -14,7 +14,7 @@ const HEADERS = {
 
 async function fetchList() {
     console.log('Fetching route list from Wonju ITS...');
-    const res = await fetch(LIST_URL, {headers: HEADERS});
+    const res = await fetch(LIST_URL, {headers: HEADERS, signal: AbortSignal.timeout(8000)});
     const html = await res.text();
 
     // Extract CSRF token
@@ -85,7 +85,7 @@ async function fetchDetail(detailId, csrfToken, cookieStr) {
     };
 
     const res = await fetch(DETAIL_URL, {
-        method: 'POST', headers: reqHeaders, body: formData.toString()
+        method: 'POST', headers: reqHeaders, body: formData.toString(), signal: AbortSignal.timeout(5000)
     });
 
     const html = await res.text();
@@ -148,7 +148,7 @@ async function runScraper() {
     const jsonStr = JSON.stringify(cacheData, null, 2);
 
     // Try saving to data/, public/data/, and /tmp/
-    const targetPaths = [PRIMARY_CACHE_PATH, join(process.cwd(), 'public', 'scheduleCache.json'), '/tmp/scheduleCache.json'];
+    const targetPaths = [PRIMARY_CACHE_PATH, '/tmp/scheduleCache.json'];
 
     for (const targetPath of targetPaths) {
         try {
