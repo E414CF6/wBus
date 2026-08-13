@@ -4,12 +4,12 @@ import React, {memo, useMemo} from "react";
 import {BusRoute} from "@shared/types/bus";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 import {UI_TEXT} from "@shared/config/locale";
-import {ChevronRight, GraduationCap, MapPin, Star} from "lucide-react";
+import {ChevronRight, GraduationCap, MapPin} from "lucide-react";
 
 interface YonseiRouteCardProps {
     route: BusRoute;
-    isBookmarked: boolean;
-    onToggleBookmark: (routeId: string) => void;
+    isBookmarked?: boolean;
+    onToggleBookmark?: (routeId: string) => void;
     onSelectRoute: (route: BusRoute) => void;
     onSelectMapRoute?: (routeName: string) => void;
     currentTime?: Date;
@@ -17,14 +17,14 @@ interface YonseiRouteCardProps {
 
 export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                                                                          route,
-                                                                         isBookmarked,
-                                                                         onToggleBookmark,
+                                                                         isBookmarked: _isBookmarked,
+                                                                         onToggleBookmark: _onToggleBookmark,
                                                                          onSelectRoute,
                                                                          onSelectMapRoute,
                                                                          currentTime,
                                                                      }) => {
     const isHoechon = route.routeNo === "34-1";
-    const locationLabel = isHoechon ? "회촌 출발" : "연세대 출발";
+    const locationLabel = isHoechon ? UI_TEXT.YONSEI.LOCATION_HOECHON : UI_TEXT.YONSEI.LOCATION_YONSEI;
 
     const now = currentTime || new Date();
     const currentMins = now.getHours() * 60 + now.getMinutes();
@@ -69,66 +69,37 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
         return "from-[#003876] to-blue-700 shadow-blue-900/30";
     };
 
-    const getDayTypeBadgeStyle = () => {
-        if (route.dayType.includes("방학"))
-            return "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-300/60 dark:border-amber-500/40";
-        if (route.dayType.includes("토요일"))
-            return "bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border-indigo-300/60 dark:border-indigo-500/40";
-        if (route.dayType.includes("일") || route.dayType.includes("공휴일"))
-            return "bg-rose-500/10 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-300/60 dark:border-rose-500/40";
-        return "bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-300/60 dark:border-blue-500/40";
-    };
-
     return (
         <div
             onClick={() => onSelectRoute(route)}
             className="backdrop-blur-2xl bg-white/80 dark:bg-[#121212]/80 rounded-3xl p-5 flex flex-col justify-between relative group border border-black/5 dark:border-white/10 hover:border-blue-400/80 dark:hover:border-blue-500/50 transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 cursor-pointer select-none active:scale-[0.99]"
         >
             <div>
-                {/* Header: Route Badge, Day Type & Bookmarks */}
+                {/* Header: Route Badge & Realtime Map Button */}
                 <div className="flex items-center justify-between gap-3 mb-4">
-                    <div className="flex items-center space-x-2.5">
-                        <div
-                            className={`px-4 py-1.5 rounded-2xl bg-gradient-to-r ${getRouteBadgeGradient(
-                                route.routeNo
-                            )} font-black text-white text-lg tracking-tight shadow-md`}
-                        >
-                            {route.routeNo}번
-                        </div>
-                        <span
-                            className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold border ${getDayTypeBadgeStyle()}`}>
-                            {route.dayType}
-                        </span>
+                    <div
+                        className={`px-4 py-1.5 rounded-2xl bg-gradient-to-r ${getRouteBadgeGradient(
+                            route.routeNo
+                        )} font-black text-white text-lg tracking-tight shadow-md`}
+                    >
+                        {route.routeNo}번
                     </div>
 
-                    <div className="flex items-center space-x-1.5" onClick={(e) => e.stopPropagation()}>
-                        {onSelectMapRoute && (
+                    {onSelectMapRoute && (
+                        <div onClick={(e) => e.stopPropagation()}>
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onSelectMapRoute(route.routeNo);
                                 }}
-                                className="p-2 rounded-xl bg-slate-100/80 hover:bg-blue-50 dark:bg-white/[0.06] dark:hover:bg-blue-950/60 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors border border-black/5 dark:border-white/10 cursor-pointer"
-                                title="실시간 지도"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold border border-blue-200/60 dark:border-blue-500/20 transition-colors cursor-pointer"
+                                title={UI_TEXT.YONSEI.REALTIME_MAP_BTN}
                             >
-                                <MapPin className="h-4 w-4"/>
+                                <MapPin className="h-3.5 w-3.5"/>
+                                <span>{UI_TEXT.YONSEI.REALTIME_MAP_BTN}</span>
                             </button>
-                        )}
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleBookmark(route.id);
-                            }}
-                            className="p-2 rounded-xl bg-slate-100/80 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-slate-400 hover:text-amber-500 dark:hover:text-amber-400 transition-colors border border-black/5 dark:border-white/10 cursor-pointer"
-                            title={isBookmarked ? "즐겨찾기 해제" : "즐겨찾기 추가"}
-                        >
-                            <Star
-                                className={`h-4 w-4 ${
-                                    isBookmarked ? "fill-amber-400 text-amber-500 dark:text-amber-400" : ""
-                                }`}
-                            />
-                        </button>
-                    </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Departure Location Subtitle */}
@@ -138,7 +109,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                         <span>{locationLabel}</span>
                     </div>
                     <span className="text-[11px] font-semibold text-slate-400 font-mono">
-                        총 {validDepartures.length}회 운행
+                        {UI_TEXT.YONSEI.TOTAL_RUNS(validDepartures.length)}
                     </span>
                 </div>
 
@@ -147,7 +118,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                     className="my-3 p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-500/20">
                     <div
                         className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1 flex items-center justify-between">
-                        <span>다음 {locationLabel}</span>
+                        <span>{UI_TEXT.YONSEI.NEXT_LOCATION_DEP(locationLabel)}</span>
                         {nextInfo && (
                             <span
                                 className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-black border border-emerald-500/30">
@@ -170,7 +141,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                         </div>
                     ) : (
                         <div className="text-xs text-slate-500 dark:text-slate-400 italic">
-                            오늘 운행 종료
+                            {UI_TEXT.YONSEI.SERVICE_ENDED}
                         </div>
                     )}
                 </div>
@@ -179,7 +150,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                 {upcomingTimes.length > 0 && (
                     <div className="mt-3">
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                            이어지는 출발 시각
+                            {UI_TEXT.YONSEI.UPCOMING_DEP_TIMES}
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                             {upcomingTimes.map((item, idx) => (
@@ -202,7 +173,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
             {/* View Full Yonsei Timetable Button */}
             <div className="pt-4 mt-3 border-t border-black/5 dark:border-white/10 flex items-center justify-between">
                 <span className="text-[11px] font-medium text-slate-400">
-                    전체 시간표 상세
+                    {UI_TEXT.YONSEI.FULL_TIMETABLE_DETAIL}
                 </span>
                 <button
                     onClick={(e) => {
@@ -211,7 +182,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                     }}
                     className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-xs font-extrabold border border-blue-500/20 transition-all cursor-pointer"
                 >
-                    <span>시간표 보기</span>
+                    <span>{UI_TEXT.YONSEI.VIEW_TIMETABLE_BTN}</span>
                     <ChevronRight className="h-3.5 w-3.5"/>
                 </button>
             </div>

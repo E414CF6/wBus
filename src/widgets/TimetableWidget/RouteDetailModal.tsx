@@ -5,7 +5,7 @@ import {createPortal} from "react-dom";
 import {BusRoute} from "@shared/types/bus";
 import {getNextDeparture} from "@shared/lib/timeUtils";
 import {UI_TEXT} from "@shared/config/locale";
-import {ArrowRight, Download, MapPin, Search, Star, X} from "lucide-react";
+import {ArrowRight, MapPin, Search, Star, X} from "lucide-react";
 
 interface RouteDetailModalProps {
     route: BusRoute | null;
@@ -60,20 +60,6 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
         );
     });
 
-    const exportCsv = () => {
-        const headers = ["운행순번", `${route.origin}발`, `${route.destination}발`, "비고"];
-        const rows = route.timetable.map((t) => [t.seq, t.originDepTime, t.destDepTime, t.notes]);
-        const csvContent =
-            "data:text/csv;charset=utf-8,\uFEFF" +
-            [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `원주시_시내버스_${route.rawNo}_시간표.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
 
     const getRouteBadgeGradient = (no: string) => {
         if (no.startsWith("2")) return "from-teal-500 to-emerald-600 shadow-emerald-500/20";
@@ -207,15 +193,6 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
                                 className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/5 dark:border-white/10 text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                         </div>
-
-                        <button
-                            onClick={exportCsv}
-                            className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.06] hover:bg-slate-200 dark:hover:bg-white/[0.12] text-xs font-semibold text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/10 transition-colors cursor-pointer shrink-0"
-                            title={UI_TEXT.TIMETABLE.CSV_DOWNLOAD}
-                        >
-                            <Download className="h-3.5 w-3.5"/>
-                            <span className="hidden sm:inline">CSV</span>
-                        </button>
                     </div>
                 </div>
 

@@ -54,7 +54,7 @@ export default function TimetableWidget({
         }
     }, [externalSubTab]);
 
-    const handleSubTabChange = (newSubTab: TimetableSubTab) => {
+    const _handleSubTabChange = (newSubTab: TimetableSubTab) => {
         if (externalOnSubTabChange) {
             externalOnSubTabChange(newSubTab);
         } else {

@@ -8,7 +8,7 @@ import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
 import {CacheInfoBanner} from "@widgets/TimetableWidget/CacheInfoBanner";
 import {YonseiRouteCard} from "./YonseiRouteCard";
 import {YonseiRouteDetailModal} from "./YonseiRouteDetailModal";
-import {AlertTriangle, Bus, CheckCircle2, Clock, GraduationCap, Info, X} from "lucide-react";
+import {AlertTriangle, Bus, CheckCircle2, Clock, GraduationCap, Info, Sparkles, X} from "lucide-react";
 
 interface YonseiTimetableWidgetProps {
     onSelectMapRoute?: (routeName: string) => void;
@@ -21,15 +21,15 @@ const YONSEI_TARGET_ROUTES = ["30", "34", "34-1"];
 export default function YonseiTimetableWidget({
                                                   onSelectMapRoute,
                                                   isEmbedded = false,
-                                                  initialRouteNo
                                               }: YonseiTimetableWidgetProps) {
     const [data, setData] = useState<BusCacheData | null>(null);
     const [meta, setMeta] = useState<CacheMetadata | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const [selectedRouteNo, setSelectedRouteNo] = useState<string>(initialRouteNo || "ALL");
-    const [selectedDayType, setSelectedDayType] = useState<string>("ALL");
+
+    // One-off Day Mode Override ("AUTO" | "WEEKDAY" | "VACATION") - NOT saved to localStorage!
+    const [dayModeOverride, setDayModeOverride] = useState<"AUTO" | "WEEKDAY" | "VACATION">("AUTO");
 
     // Notice Modal state
     const [isNoticeOpen, setIsNoticeOpen] = useState<boolean>(false);
@@ -45,12 +45,6 @@ export default function YonseiTimetableWidget({
         type: "success" | "info";
         message: string;
     } | null>(null);
-
-    useEffect(() => {
-        if (initialRouteNo !== undefined) {
-            setSelectedRouteNo(initialRouteNo);
-        }
-    }, [initialRouteNo]);
 
     const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
     const [bookmarks, setBookmarks] = useState<string[]>([]);
@@ -123,12 +117,12 @@ export default function YonseiTimetableWidget({
                 if (json.refreshed) {
                     setRefreshNotice({
                         type: "success",
-                        message: json.message || "시간표 데이터가 원주시 ITS에서 새로 수집되어 갱신되었습니다.",
+                        message: json.message || UI_TEXT.YONSEI.REFRESH_SUCCESS,
                     });
                 } else {
                     setRefreshNotice({
                         type: "info",
-                        message: json.message || "최소 갱신 시간이 지나지 않아 기존 저장소 JSON 데이터를 사용합니다.",
+                        message: json.message || UI_TEXT.YONSEI.REFRESH_INFO,
                     });
                 }
             }
@@ -158,22 +152,55 @@ export default function YonseiTimetableWidget({
         });
     }, [data]);
 
-    // Apply route & dayType sub-filters
-    const filteredRoutes = useMemo(() => {
-        return yonseiRoutes.filter((route) => {
-            if (selectedRouteNo !== "ALL" && route.routeNo !== selectedRouteNo) {
-                return false;
-            }
-            if (selectedDayType !== "ALL" && route.dayType !== selectedDayType) {
-                return false;
-            }
-            return true;
-        });
-    }, [yonseiRoutes, selectedRouteNo, selectedDayType]);
+    // Check if today is actual weekend (Sunday=0, Saturday=6)
+    const isTodayWeekendOrHoliday = useMemo(() => {
+        const day = now.getDay();
+        return day === 0 || day === 6;
+    }, [now]);
 
-    // Calculate the soonest upcoming departure from Yonsei (30, 34) or Hoechon (34-1)
+    // Effective Day Mode (takes one-off dayModeOverride into account)
+    const effectiveIsHoliday = useMemo(() => {
+        if (dayModeOverride === "WEEKDAY") return false;
+        if (dayModeOverride === "VACATION") return true;
+        return isTodayWeekendOrHoliday;
+    }, [dayModeOverride, isTodayWeekendOrHoliday]);
+
+    // Pair each routeNo (30, 34, 34-1) with its matching active schedule variant
+    const filteredRoutes = useMemo(() => {
+        if (!yonseiRoutes.length) return [];
+
+        const targetRouteNos = ["30", "34", "34-1"];
+        const result: BusRoute[] = [];
+
+        for (const rNo of targetRouteNos) {
+            const matches = yonseiRoutes.filter((r) => r.routeNo === rNo);
+            if (!matches.length) continue;
+
+            if (effectiveIsHoliday) {
+                const vacationMatch = matches.find(
+                    (r) =>
+                        r.dayType === "방학,휴일" ||
+                        r.dayType.includes("방학") ||
+                        r.dayType.includes("휴일") ||
+                        r.dayType.includes("토요일") ||
+                        r.dayType.includes("공휴일") ||
+                        r.dayType === "통상"
+                );
+                result.push(vacationMatch || matches[0]);
+            } else {
+                const weekdayMatch = matches.find(
+                    (r) => r.dayType === "평일" || r.dayType === "통상"
+                );
+                result.push(weekdayMatch || matches[0]);
+            }
+        }
+
+        return result;
+    }, [yonseiRoutes, effectiveIsHoliday]);
+
+    // Calculate the soonest upcoming departure from Yonsei (30, 34) or Hoechon (34-1) for active routes
     const soonestDeparture = useMemo(() => {
-        if (!yonseiRoutes.length) return null;
+        if (!filteredRoutes.length) return null;
 
         let bestCandidate: {
             route: BusRoute;
@@ -184,9 +211,9 @@ export default function YonseiTimetableWidget({
 
         const currentMins = now.getHours() * 60 + now.getMinutes();
 
-        for (const route of yonseiRoutes) {
+        for (const route of filteredRoutes) {
             const isHoechon = route.routeNo === "34-1";
-            const locationLabel = isHoechon ? "회촌 출발" : "연세대 출발";
+            const locationLabel = isHoechon ? UI_TEXT.YONSEI.LOCATION_HOECHON : UI_TEXT.YONSEI.LOCATION_YONSEI;
 
             const validDepartures = route.timetable.filter(
                 (item) => item.destDepTime && item.destDepTime !== "-" && item.destDepTime !== ""
@@ -210,7 +237,7 @@ export default function YonseiTimetableWidget({
         }
 
         return bestCandidate;
-    }, [yonseiRoutes, now]);
+    }, [filteredRoutes, now]);
 
     return (
         <div
@@ -228,23 +255,20 @@ export default function YonseiTimetableWidget({
                         <h2 className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight">
                             {UI_TEXT.YONSEI.HERO_TITLE}
                         </h2>
-                        <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-2 font-medium">
-                            30·34번 연세대 출발 및 34-1번 회촌 출발 시각 전용 안내
-                        </p>
 
                         {/* Dedicated 3 Routes Badges */}
                         <div className="flex flex-wrap items-center gap-2 mt-4">
                             <span
                                 className="px-3 py-1 rounded-xl text-xs font-extrabold bg-blue-600/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-mono">
-                                30번 (연세대 출발)
+                                {UI_TEXT.YONSEI.BADGE_30}
                             </span>
                             <span
                                 className="px-3 py-1 rounded-xl text-xs font-extrabold bg-blue-600/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-mono">
-                                34번 (연세대 출발)
+                                {UI_TEXT.YONSEI.BADGE_34}
                             </span>
                             <span
                                 className="px-3 py-1 rounded-xl text-xs font-extrabold bg-indigo-600/10 dark:bg-indigo-400/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 font-mono">
-                                34-1번 (회촌 출발)
+                                {UI_TEXT.YONSEI.BADGE_34_1}
                             </span>
                         </div>
                     </div>
@@ -279,6 +303,55 @@ export default function YonseiTimetableWidget({
                                         className="inline-block px-3 py-1 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-black text-sm border border-emerald-500/30">
                                         {UI_TEXT.TIMETABLE.WAIT_MINUTES(soonestDeparture.waitMins)}
                                     </span>
+                                </div>
+                            </div>
+
+                            {/* One-off Day Mode Control (Directly below Next Departure Info) */}
+                            <div
+                                className="mt-3.5 pt-3 border-t border-black/5 dark:border-white/10 flex items-center justify-between gap-2">
+                                <div
+                                    className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-1">
+                                    <Sparkles className="w-3 h-3 text-amber-500"/>
+                                    <span>{UI_TEXT.YONSEI.MODE_OVERRIDE_LABEL}</span>
+                                </div>
+                                <div
+                                    className="inline-flex p-0.5 rounded-lg bg-slate-100 dark:bg-white/[0.06] text-[10px] font-black">
+                                    <button
+                                        type="button"
+                                        onClick={() => setDayModeOverride("AUTO")}
+                                        className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                                            dayModeOverride === "AUTO"
+                                                ? "bg-blue-600 text-white shadow-xs"
+                                                : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                        }`}
+                                        title={UI_TEXT.YONSEI.MODE_AUTO_TOOLTIP}
+                                    >
+                                        {UI_TEXT.YONSEI.MODE_AUTO(isTodayWeekendOrHoliday)}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDayModeOverride("WEEKDAY")}
+                                        className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                                            dayModeOverride === "WEEKDAY"
+                                                ? "bg-amber-600 text-white shadow-xs"
+                                                : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                        }`}
+                                        title={UI_TEXT.YONSEI.MODE_WEEKDAY_TOOLTIP}
+                                    >
+                                        {UI_TEXT.YONSEI.MODE_WEEKDAY}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDayModeOverride("VACATION")}
+                                        className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                                            dayModeOverride === "VACATION"
+                                                ? "bg-indigo-600 text-white shadow-xs"
+                                                : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                        }`}
+                                        title={UI_TEXT.YONSEI.MODE_VACATION_TOOLTIP}
+                                    >
+                                        {UI_TEXT.YONSEI.MODE_VACATION}
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -345,57 +418,6 @@ export default function YonseiTimetableWidget({
                 </div>
             )}
 
-            {/* Simple Filter Pills */}
-            <div
-                className="flex flex-wrap items-center justify-between gap-3 mb-6 bg-white/70 dark:bg-[#121212]/70 p-3 rounded-2xl border border-black/5 dark:border-white/10 shadow-xs">
-                {/* Route Selector Tabs */}
-                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden py-0.5">
-                    <button
-                        type="button"
-                        onClick={() => setSelectedRouteNo("ALL")}
-                        className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
-                            selectedRouteNo === "ALL"
-                                ? "bg-black dark:bg-white text-white dark:text-black shadow-sm"
-                                : "bg-black/[0.03] dark:bg-white/[0.05] text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white"
-                        }`}
-                    >
-                        {UI_TEXT.YONSEI.FILTER_ALL_3}
-                    </button>
-                    {YONSEI_TARGET_ROUTES.map((rNo) => (
-                        <button
-                            key={rNo}
-                            type="button"
-                            onClick={() => setSelectedRouteNo(rNo)}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold font-mono transition-all cursor-pointer ${
-                                selectedRouteNo === rNo
-                                    ? "bg-blue-600 text-white shadow-sm"
-                                    : "bg-black/[0.03] dark:bg-white/[0.05] text-slate-600 dark:text-slate-400 hover:text-black dark:hover:text-white"
-                            }`}
-                        >
-                            {rNo}번
-                        </button>
-                    ))}
-                </div>
-
-                {/* Day Type Filter */}
-                <div className="flex items-center gap-1 shrink-0">
-                    {["ALL", "평일", "토요일", "일/공휴일"].map((day) => (
-                        <button
-                            key={day}
-                            type="button"
-                            onClick={() => setSelectedDayType(day)}
-                            className={`px-2.5 py-1 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer ${
-                                selectedDayType === day
-                                    ? "bg-indigo-600 text-white"
-                                    : "text-slate-500 dark:text-slate-400 hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
-                            }`}
-                        >
-                            {day === "ALL" ? "전체 운행일" : day}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
             {/* Main Timetable Content */}
             {isLoading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -413,18 +435,6 @@ export default function YonseiTimetableWidget({
                     <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
                         {UI_TEXT.TIMETABLE.NO_ROUTES_FOUND}
                     </h3>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        선택한 조건(운행일: {selectedDayType})에 부합하는 노선 정보가 없습니다.
-                    </p>
-                    <button
-                        onClick={() => {
-                            setSelectedRouteNo("ALL");
-                            setSelectedDayType("ALL");
-                        }}
-                        className="mt-4 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold shadow-md cursor-pointer"
-                    >
-                        필터 초기화
-                    </button>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -446,6 +456,7 @@ export default function YonseiTimetableWidget({
             {selectedRoute && (
                 <YonseiRouteDetailModal
                     route={selectedRoute}
+                    allYonseiRoutes={yonseiRoutes}
                     onClose={() => setSelectedRoute(null)}
                     isBookmarked={isRouteBookmarked(selectedRoute)}
                     onToggleBookmark={(id) => toggleBookmark(id)}

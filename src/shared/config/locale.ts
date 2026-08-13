@@ -55,7 +55,7 @@ export const UI_TEXT = {
 
         ORIGIN_LABEL: (origin: string) => `기점(${origin})`,
         DEST_LABEL: (dest: string) => `종점(${dest})`,
-        WAIT_MINUTES: (min: number) => `(${min}분 후)`,
+        WAIT_MINUTES: (min: number) => `${min}분`,
 
         SERVICE_ENDED: "금일 운행 종료",
         FIRST_LAST_BUS: "첫차 / 막차",
@@ -67,7 +67,6 @@ export const UI_TEXT = {
         RUN_DAY: "운행일",
         NOTES: "비고",
         SEQ: "순번",
-        CSV_DOWNLOAD: "CSV 다운로드",
 
         SEARCH_PLACEHOLDER: "노선 번호, 주요 정류장, 기점/종점 검색...",
         SEARCH_MODAL_PLACEHOLDER: "시간표 검색...",
@@ -96,14 +95,45 @@ export const UI_TEXT = {
     YONSEI: {
         HERO_BADGE: "연세대학교 미래캠퍼스",
         HERO_TITLE: "연세대학교 버스 시간표",
-        HERO_SUBTITLE: "30번 · 34번 · 34-1번 노선의 출발 시각 및 실시간 정보",
-        TARGET_ROUTES_NOTE: "30, 34, 34-1번 전용",
         SOONEST_TITLE: "다음 출발 예정 버스",
         NO_MORE_BUSES_TODAY: "금일 남은 운행 버스가 없습니다.",
-        FILTER_ALL_3: "전체 (3개 노선)",
-        CARD_TITLE_30: "30번 (장양리 ~ 연세대)",
-        CARD_TITLE_34: "34번 (장양리 ~ 연세대)",
-        CARD_TITLE_34_1: "34-1번 (장양리 ~ 연세대)",
+
+        BADGE_30: "30번 (연세대 출발)",
+        BADGE_34: "34번 (연세대 출발)",
+        BADGE_34_1: "34-1번 (회촌 출발)",
+
+        LOCATION_YONSEI: "연세대 출발",
+        LOCATION_HOECHON: "회촌 출발",
+        TIMETABLE_TITLE: (label: string) => `${label} 시간표`,
+
+        MODE_OVERRIDE_LABEL: "시각 기준:",
+        MODE_AUTO: (isHoliday: boolean) => `자동(${isHoliday ? "휴일" : "평일"})`,
+        MODE_AUTO_TOOLTIP: "자동 감지 (오늘 요일 기준)",
+        MODE_WEEKDAY: "평일",
+        MODE_WEEKDAY_TOOLTIP: "평일 기준 1회성 적용",
+        MODE_VACATION: "휴일(방학)",
+        MODE_VACATION_TOOLTIP: "휴일·방학 기준 1회성 적용",
+
+        TOTAL_RUNS: (count: number) => `총 ${count}회 운행`,
+        NEXT_LOCATION_DEP: (location: string) => `다음 ${location}`,
+        SERVICE_ENDED: "오늘 운행 종료",
+        UPCOMING_DEP_TIMES: "이어지는 출발 시각",
+        FULL_TIMETABLE_DETAIL: "전체 시간표 상세",
+        VIEW_TIMETABLE_BTN: "시간표 보기",
+        REALTIME_MAP_BTN: "실시간 지도",
+
+        SEARCH_MODAL_PLACEHOLDER: "출발 시각 또는 비고 검색...",
+        HOURS_DISPLAYED: (count: number) => `${count}개 시간대 표시 중`,
+        HOUR_LABEL: "시간",
+        HOUR_SUFFIX: "시",
+        WEEKDAY_COLUMN: "평일",
+        VACATION_COLUMN: "휴일 / 방학",
+        NO_TIMES_MATCH: "검색 조건에 맞는 출발 시각이 없습니다.",
+        NEXT_BUS_BADGE: "다음",
+        FOOTNOTE_TITLE: "각주 안내 (비고)",
+
+        REFRESH_SUCCESS: "시간표 데이터가 원주시 ITS에서 새로 수집되어 갱신되었습니다.",
+        REFRESH_INFO: "최소 갱신 시간이 지나지 않아 기존 저장소 JSON 데이터를 사용합니다.",
     },
 
     SCHEDULE: {
