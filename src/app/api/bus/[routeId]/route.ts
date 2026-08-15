@@ -1,5 +1,4 @@
 import {createApiHandler} from "@shared/api/createApiHandler";
-import {buildCacheControl} from "@shared/cache/cachePolicy";
 import {fetchBusLocations, type RawBusLocation} from "@shared/redis/publicApi";
 
 // Always treat this route as dynamic to avoid prerendered 404s on deploy
@@ -20,9 +19,7 @@ export const GET = createApiHandler<RawBusLocation[]>({
     ttl: 3,
     cacheOptions: LIVE_CACHE_OPTIONS,
     errorMessage: "Failed to fetch bus data",
-    cacheControl: buildCacheControl({
-        ttlSeconds: 3, ...LIVE_CACHE_OPTIONS,
-    }),
+    cacheControl: "no-store, no-cache, must-revalidate",
     loggerPrefix: "/bus",
     validate: (id) => /^[a-zA-Z0-9_-]+$/.test(id) && id.length <= 50,
 });

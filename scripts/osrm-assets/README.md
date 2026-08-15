@@ -61,12 +61,9 @@ Run the following commands sequentially to process the data.
 > optimize processing speed.
 
 ```shell
-# 1. Extract data using the Bus profile (optimized for bus routing — avoids alleys/service roads)
-#    The bus.lua profile is located in scripts/osrm-assets/profiles/bus.lua
-#    Copy it into the same directory as the .osm.pbf before running:
-#      cp scripts/osrm-assets/profiles/bus.lua ./profiles/bus.lua
+# 1. Extract data using the car.lua profile (or your custom bus routing profile)
 podman run --rm -t -v $(pwd):/data osrm-backend:arm64 \
-  osrm-extract -p /data/profiles/bus.lua /data/storage/south-korea-latest.osm.pbf -t 8
+  osrm-extract -p /opt/car.lua /data/storage/south-korea-latest.osm.pbf -t 8
 
 # 2. Partition the data
 podman run --rm -t -v $(pwd):/data osrm-backend:arm64 \

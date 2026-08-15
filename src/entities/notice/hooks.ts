@@ -5,12 +5,20 @@ import type {NoticeDetail, NoticeListResponse} from "./types";
 import {APP_CONFIG} from "@shared/config/env";
 import useSWR from "swr";
 
-const NOTICE_SWR_OPTIONS = {
-    revalidateOnFocus: true,
+const NOTICE_LIST_SWR_OPTIONS = {
+    revalidateOnFocus: false,
     revalidateOnReconnect: true,
     revalidateIfStale: true,
-    refreshInterval: 60000,
-    dedupingInterval: 10000,
+    refreshInterval: 300000, // 5 min interval for notice list
+    dedupingInterval: 30000,
+    errorRetryCount: 2,
+} as const;
+
+const NOTICE_DETAIL_SWR_OPTIONS = {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    revalidateIfStale: false,
+    dedupingInterval: 60000,
     errorRetryCount: 2,
 } as const;
 
@@ -20,7 +28,7 @@ export function useNoticeList(page = 1, searchText = "", searchGb = "title") {
     const {data, error, isLoading, mutate} = useSWR<NoticeListResponse>(
         key,
         () => getNoticeList(page, searchText, searchGb),
-        NOTICE_SWR_OPTIONS
+        NOTICE_LIST_SWR_OPTIONS
     );
 
     if (error && APP_CONFIG.IS_DEV) {
@@ -41,7 +49,7 @@ export function useNoticeDetail(id: string | null) {
     const {data, error, isLoading} = useSWR<NoticeDetail>(
         key,
         () => (id ? getNoticeDetail(id) : Promise.reject("No ID")),
-        NOTICE_SWR_OPTIONS
+        NOTICE_DETAIL_SWR_OPTIONS
     );
 
     if (error && APP_CONFIG.IS_DEV) {

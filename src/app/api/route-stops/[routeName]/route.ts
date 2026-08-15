@@ -1,14 +1,21 @@
 import {getRouteDetails, getRouteMapData} from "@entities/route/api";
 import {getStationMap} from "@entities/station/api";
 import type {BusStop} from "@entities/station/types";
-import {createApiHandler} from "@shared/api/createApiHandler";
+import {CacheManager} from "@shared/cache/CacheManager";
 import {buildCacheControl} from "@shared/cache/cachePolicy";
+import {NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const STATIC_CACHE_OPTIONS = {
-    staleWhileRevalidateSeconds: 86400, staleIfErrorSeconds: 86400,
-};
+const memoryCache = new CacheManager<BusStop[]>(100);
+
+const CACHE_CONTROL = buildCacheControl({
+    ttlSeconds: 3600,
+    maxAgeSeconds: 300,
+    sMaxAgeSeconds: 86400,
+    staleWhileRevalidateSeconds: 86400,
+    staleIfErrorSeconds: 86400,
+});
 
 async function getRouteStopsByRouteName(routeName: string): Promise<BusStop[]> {
     const routeMapData = await getRouteMapData();
@@ -30,8 +37,10 @@ async function getRouteStopsByRouteName(routeName: string): Promise<BusStop[]> {
             const key = `${stop.nodeid}-${stop.updowncd ?? ""}`;
             if (stopMap.has(key)) return;
             stopMap.set(key, {
-                ...station, nodeid: stop.nodeid,
-                nodeord: stop.nodeord, updowncd: stop.updowncd,
+                ...station,
+                nodeid: stop.nodeid,
+                nodeord: stop.nodeord,
+                updowncd: stop.updowncd,
             });
         });
     });
@@ -39,16 +48,43 @@ async function getRouteStopsByRouteName(routeName: string): Promise<BusStop[]> {
     return Array.from(stopMap.values());
 }
 
-export const GET = createApiHandler<BusStop[]>({
-    paramKey: "routeName",
-    cacheKey: (id) => `route-stops:${id}`,
-    fetcher: getRouteStopsByRouteName,
-    ttl: 3600,
-    cacheOptions: STATIC_CACHE_OPTIONS,
-    errorMessage: "Failed to fetch route stops",
-    cacheControl: buildCacheControl({
-        ttlSeconds: 3600, ...STATIC_CACHE_OPTIONS,
-    }),
-    loggerPrefix: "/route-stops",
-    validate: (id) => /^[a-zA-Z0-9_\uAC00-\uD7A3-]+$/.test(id) && id.length <= 30,
-});
+export async function GET(_request: Request, {params}: { params: Promise<{ routeName: string }> }) {
+    const {routeName} = await params;
+
+    if (!routeName || !/^[a-zA-Z0-9_\uAC00-\uD7A3-]+$/.test(routeName) || routeName.length > 30) {
+        return NextResponse.json({error: "Invalid routeName"}, {status: 400});
+    }
+
+    try {
+        const cached = memoryCache.get(routeName);
+        if (cached) {
+            return NextResponse.json(
+                {data: cached, timestamp: Date.now(), meta: {status: "hit", layer: "memory"}},
+                {
+                    headers: {
+                        "Cache-Control": CACHE_CONTROL,
+                        "X-Cache-Status": "hit",
+                        "X-Cache-Layer": "memory",
+                    },
+                }
+            );
+        }
+
+        const data = await getRouteStopsByRouteName(routeName);
+        memoryCache.set(routeName, data);
+
+        return NextResponse.json(
+            {data, timestamp: Date.now(), meta: {status: "miss", layer: "memory"}},
+            {
+                headers: {
+                    "Cache-Control": CACHE_CONTROL,
+                    "X-Cache-Status": "miss",
+                    "X-Cache-Layer": "memory",
+                },
+            }
+        );
+    } catch (err) {
+        console.error(`[API /route-stops/${routeName}]`, err);
+        return NextResponse.json({error: "Failed to fetch route stops"}, {status: 500});
+    }
+}

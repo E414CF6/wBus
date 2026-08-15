@@ -1,5 +1,4 @@
 import {createApiHandler} from "@shared/api/createApiHandler";
-import {buildCacheControl} from "@shared/cache/cachePolicy";
 import {fetchBusArrivals, type RawBusArrival} from "@shared/redis/publicApi";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +14,7 @@ export const GET = createApiHandler<RawBusArrival[]>({
     ttl: 3,
     cacheOptions: LIVE_CACHE_OPTIONS,
     errorMessage: "Failed to fetch arrival data",
-    cacheControl: buildCacheControl({
-        ttlSeconds: 3, ...LIVE_CACHE_OPTIONS,
-    }),
+    cacheControl: "no-store, no-cache, must-revalidate",
     loggerPrefix: "/bus-arrival",
     validate: (id) => /^[a-zA-Z0-9_-]+$/.test(id) && id.length <= 50,
 });

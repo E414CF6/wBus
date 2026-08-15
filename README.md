@@ -157,19 +157,19 @@ NEXT_PUBLIC_USE_REMOTE_STATIC_DATA="false"
 NEXT_PUBLIC_STATIC_API_URL="/data"
 ```
 
-### 2. Run Data Pipeline (Polly)
+### 2. Run Data Pipeline
 
 To fetch route polylines, snap paths via OSRM, and scrape official schedules:
 
 ```bash
-npm run polly
+npm run polyline
 ```
 
 Or run individual sub-tasks:
 
 ```bash
 # Scrape Wonju ITS timetable schedules only
-npm run polly:schedule
+npm run schedule
 ```
 
 ### 3. Start Development Server
@@ -186,16 +186,16 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 📜 Available Scripts
 
-| Command             | Description                                                         |
-|:--------------------|:--------------------------------------------------------------------|
-| `npm run dev`       | Starts the Next.js development server with Turbopack                |
-| `npm run build`     | Compiles the production build                                       |
-| `npm run start`     | Starts the production server                                        |
-| `npm run typecheck` | Runs TypeScript type checking without emitting files                |
-| `npm run lint`      | Runs ESLint code style and quality check                            |
-| `npm run polly`     | Runs full data processing pipeline (routes, polylines & timetables) |
-| `npm run schedule`  | Scrapes official timetables from Wonju ITS                          |
-| `npm run upload`    | Uploads static asset files to Vercel Blob storage                   |
+| Command             | Description                                          |
+|:--------------------|:-----------------------------------------------------|
+| `npm run dev`       | Starts the Next.js development server with Turbopack |
+| `npm run build`     | Compiles the production build                        |
+| `npm run start`     | Starts the production server                         |
+| `npm run typecheck` | Runs TypeScript type checking without emitting files |
+| `npm run lint`      | Runs ESLint code style and quality check             |
+| `npm run polyline`  | Runs full polyline processing pipeline               |
+| `npm run schedule`  | Scrapes official timetables from Wonju ITS           |
+| `npm run upload`    | Uploads static asset files to Vercel Blob storage    |
 
 ---
 

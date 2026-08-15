@@ -1,5 +1,5 @@
 import {API_CONFIG} from "@shared/config/env";
-import {getCachedOrFetch, getMultipleCachedOrFetch} from "@shared/redis/client";
+import {getMultipleCachedOrFetch} from "@shared/redis/client";
 import {fetchBusLocations, getAdaptiveTtlSeconds, type RawBusLocation} from "@shared/redis/publicApi";
 import type {CacheMeta} from "@shared/redis/types";
 import {parseRouteIdsParam} from "@shared/utils/routeIds";
@@ -11,11 +11,7 @@ export const maxDuration = 60;
 
 const STREAM_INTERVAL_MS = Math.max(1000, API_CONFIG.LIVE.POLLING_INTERVAL_MS);
 const ROUTE_TTL_SECONDS = Math.max(3, Math.ceil(STREAM_INTERVAL_MS / 1000));
-const STREAM_SNAPSHOT_TTL_SECONDS = Math.max(1, Math.ceil(STREAM_INTERVAL_MS / 1000) - 1);
 const LIVE_CACHE_OPTIONS = {
-    staleWhileRevalidateSeconds: 3, staleIfErrorSeconds: 10,
-};
-const STREAM_CACHE_OPTIONS = {
     staleWhileRevalidateSeconds: 3, staleIfErrorSeconds: 10,
 };
 const VERCEL_MAX_DURATION_MS = 60000;
@@ -90,16 +86,9 @@ async function fetchStreamSnapshot(routeIds: string[]): Promise<StreamSnapshotDa
 }
 
 async function getStreamSnapshot(routeIds: string[]): Promise<StreamSnapshotPayload> {
-    const batchKey = `bus:stream:${routeIds.join(",")}`;
-    const snapshot = await getCachedOrFetch<StreamSnapshotData>(batchKey, () => fetchStreamSnapshot(routeIds), {
-        ttlSeconds: STREAM_SNAPSHOT_TTL_SECONDS, ...STREAM_CACHE_OPTIONS,
-    });
-    const meta = snapshot.meta ? {
-        ...snapshot.meta, degraded: snapshot.meta.degraded || Boolean(snapshot.data.partial),
-    } : undefined;
-
+    const snapshotData = await fetchStreamSnapshot(routeIds);
     return {
-        routeIds, data: snapshot.data.items, timestamp: snapshot.timestamp, meta, partial: snapshot.data.partial,
+        routeIds, data: snapshotData.items, timestamp: Date.now(), partial: snapshotData.partial,
     };
 }
 

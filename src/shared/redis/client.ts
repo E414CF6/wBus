@@ -9,14 +9,14 @@ import {createClient, type RedisClientType} from "redis";
 import type {CachedData, CacheMeta, CacheStatus} from "./types";
 
 /**
- * Redis Client for API Response Caching
+ * Redis Client for Live Transit Telemetry Caching
  *
- * This Redis instance is used for both:
- * - Live transit data (bus locations, arrivals, SSE snapshots)
- * - Static/slow-changing API data (route stops, stop lists)
+ * This Redis instance is dedicated strictly to high-frequency live transit data:
+ * - Live bus locations (bus:${routeId})
+ * - Real-time arrival predictions (arrival:${busStopId})
  *
- * Static files loaded directly on the client (e.g. polylines/schedules JSON)
- * still use in-process CacheManager and CDN caching.
+ * All static/slow-changing data (route stops, station maps, polylines, notices, schedules)
+ * uses in-process JSON CacheManager, Vercel Blob, and CDN caching.
  */
 
 const MEMORY_CACHE_MAX_KEYS = 500;

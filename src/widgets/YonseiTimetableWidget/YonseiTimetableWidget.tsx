@@ -8,6 +8,7 @@ import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
 import {CacheInfoBanner} from "@widgets/TimetableWidget/CacheInfoBanner";
 import {YonseiRouteCard} from "./YonseiRouteCard";
 import {YonseiRouteDetailModal} from "./YonseiRouteDetailModal";
+import {YonseiShuttleCard} from "./YonseiShuttleCard";
 import {AlertTriangle, Bus, CheckCircle2, Clock, GraduationCap, Info, Sparkles, X} from "lucide-react";
 
 interface YonseiTimetableWidgetProps {
@@ -393,6 +394,9 @@ export default function YonseiTimetableWidget({
 
             {/* Dedicated ITS Notice Center Banner */}
             <NoticeBanner onClick={(id) => handleOpenNotice(id)}/>
+
+            {/* Dedicated Yonsei Shuttle & Commuter Bus Banner */}
+            <YonseiShuttleCard className="mb-6"/>
 
             {/* Cache Information Banner (Compact text bar & refresh button) */}
             <CacheInfoBanner

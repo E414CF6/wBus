@@ -1,9 +1,19 @@
 import type {NoticeDetail} from "@entities/notice/types";
+import {CacheManager} from "@shared/cache/CacheManager";
 import {buildCacheControl} from "@shared/cache/cachePolicy";
-import {getCachedOrFetch} from "@shared/redis/client";
 import {NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
+
+const noticeDetailCache = new CacheManager<NoticeDetail>(100);
+
+const CACHE_CONTROL = buildCacheControl({
+    ttlSeconds: 1800,
+    maxAgeSeconds: 300,
+    sMaxAgeSeconds: 3600,
+    staleWhileRevalidateSeconds: 3600,
+    staleIfErrorSeconds: 86400,
+});
 
 async function fetchNoticeDetailFromOrigin(id: string): Promise<NoticeDetail> {
     const url = `http://its.wonju.go.kr/center/noticeView.do?bdIdx=${encodeURIComponent(id)}`;
@@ -83,25 +93,33 @@ export async function GET(_request: Request, {params}: { params: Promise<{ id: s
             return NextResponse.json({error: "유효하지 않은 게시글 ID입니다."}, {status: 400});
         }
 
-        const cacheKey = `notice:detail:${id}`;
-        const cacheOptions = {
-            ttlSeconds: 1800, // 30 min cache for notice details
-            staleWhileRevalidateSeconds: 3600, staleIfErrorSeconds: 86400,
-        };
+        const cached = noticeDetailCache.get(id);
+        if (cached) {
+            return NextResponse.json(
+                {data: cached, timestamp: Date.now(), meta: {status: "hit", layer: "memory"}},
+                {
+                    headers: {
+                        "Cache-Control": CACHE_CONTROL,
+                        "X-Cache-Status": "hit",
+                        "X-Cache-Layer": "memory",
+                    },
+                }
+            );
+        }
 
-        const result = await getCachedOrFetch<NoticeDetail>(cacheKey, () => fetchNoticeDetailFromOrigin(id), cacheOptions);
+        const data = await fetchNoticeDetailFromOrigin(id);
+        noticeDetailCache.set(id, data);
 
-        const cacheControl = buildCacheControl({
-            ttlSeconds: 1800, staleWhileRevalidateSeconds: 3600,
-        });
-
-        return NextResponse.json(result, {
-            headers: {
-                "Cache-Control": cacheControl, ...(result.meta ? {
-                    "X-Cache-Status": result.meta.status, "X-Cache-Layer": result.meta.layer,
-                } : {}),
-            },
-        });
+        return NextResponse.json(
+            {data, timestamp: Date.now(), meta: {status: "miss", layer: "memory"}},
+            {
+                headers: {
+                    "Cache-Control": CACHE_CONTROL,
+                    "X-Cache-Status": "miss",
+                    "X-Cache-Layer": "memory",
+                },
+            }
+        );
     } catch (error) {
         console.error("[API /api/notice/[id]]", error);
         return NextResponse.json({error: "공지사항 상세 정보를 불러오는 데 실패했습니다."}, {status: 500});

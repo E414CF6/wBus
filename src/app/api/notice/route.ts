@@ -1,9 +1,19 @@
 import type {NoticeItem, NoticeListResponse} from "@entities/notice/types";
+import {CacheManager} from "@shared/cache/CacheManager";
 import {buildCacheControl} from "@shared/cache/cachePolicy";
-import {getCachedOrFetch} from "@shared/redis/client";
 import {NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
+
+const noticeListCache = new CacheManager<NoticeListResponse>(50);
+
+const CACHE_CONTROL = buildCacheControl({
+    ttlSeconds: 300,
+    maxAgeSeconds: 60,
+    sMaxAgeSeconds: 600,
+    staleWhileRevalidateSeconds: 600,
+    staleIfErrorSeconds: 3600,
+});
 
 async function fetchNoticeListFromOrigin(page: number, searchText: string, searchGb: string): Promise<NoticeListResponse> {
     const params = new URLSearchParams();
@@ -80,25 +90,35 @@ export async function GET(request: Request) {
         const searchText = (searchParams.get("searchText") || "").trim();
         const searchGb = (searchParams.get("searchGb") || "title").trim();
 
-        const cacheKey = `notice:list:p${page}:q${encodeURIComponent(searchText)}:g${searchGb}`;
-        const cacheOptions = {
-            ttlSeconds: 300, // 5 min cache
-            staleWhileRevalidateSeconds: 600, staleIfErrorSeconds: 3600,
-        };
+        const cacheKey = `p${page}:q${encodeURIComponent(searchText)}:g${searchGb}`;
 
-        const result = await getCachedOrFetch<NoticeListResponse>(cacheKey, () => fetchNoticeListFromOrigin(page, searchText, searchGb), cacheOptions);
+        const cached = noticeListCache.get(cacheKey);
+        if (cached) {
+            return NextResponse.json(
+                {data: cached, timestamp: Date.now(), meta: {status: "hit", layer: "memory"}},
+                {
+                    headers: {
+                        "Cache-Control": CACHE_CONTROL,
+                        "X-Cache-Status": "hit",
+                        "X-Cache-Layer": "memory",
+                    },
+                }
+            );
+        }
 
-        const cacheControl = buildCacheControl({
-            ttlSeconds: 300, staleWhileRevalidateSeconds: 600,
-        });
+        const data = await fetchNoticeListFromOrigin(page, searchText, searchGb);
+        noticeListCache.set(cacheKey, data);
 
-        return NextResponse.json(result, {
-            headers: {
-                "Cache-Control": cacheControl, ...(result.meta ? {
-                    "X-Cache-Status": result.meta.status, "X-Cache-Layer": result.meta.layer,
-                } : {}),
-            },
-        });
+        return NextResponse.json(
+            {data, timestamp: Date.now(), meta: {status: "miss", layer: "memory"}},
+            {
+                headers: {
+                    "Cache-Control": CACHE_CONTROL,
+                    "X-Cache-Status": "miss",
+                    "X-Cache-Layer": "memory",
+                },
+            }
+        );
     } catch (error) {
         console.error("[API /api/notice]", error);
         return NextResponse.json({error: "알림마당 목록을 불러오는 데 실패했습니다."}, {status: 500});

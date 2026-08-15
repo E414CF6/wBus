@@ -5,7 +5,6 @@
 export class CacheManager<T> {
     private cache: Map<string, T> = new Map();
     private pendingRequests: Map<string, Promise<T>> = new Map();
-    private accessTimes: Map<string, number> = new Map();
     private readonly maxSize: number;
 
     /**
@@ -25,7 +24,6 @@ export class CacheManager<T> {
             // Refresh key position to end of Map for LRU order
             this.cache.delete(key);
             this.cache.set(key, value);
-            this.accessTimes.set(key, Date.now());
             return value;
         }
         return null;
@@ -41,7 +39,6 @@ export class CacheManager<T> {
             this.evictLRU();
         }
         this.cache.set(key, value);
-        this.accessTimes.set(key, Date.now());
     }
 
     /**
@@ -58,7 +55,6 @@ export class CacheManager<T> {
     // noinspection JSUnusedGlobalSymbols
     delete(key: string): void {
         this.cache.delete(key);
-        this.accessTimes.delete(key);
         this.pendingRequests.delete(key);
     }
 
@@ -67,7 +63,6 @@ export class CacheManager<T> {
      */
     clear(): void {
         this.cache.clear();
-        this.accessTimes.clear();
         this.pendingRequests.clear();
     }
 
@@ -81,7 +76,6 @@ export class CacheManager<T> {
         for (const key of this.cache.keys()) {
             if (!keepSet.has(key)) {
                 this.cache.delete(key);
-                this.accessTimes.delete(key);
             }
         }
         for (const key of this.pendingRequests.keys()) {
@@ -100,8 +94,7 @@ export class CacheManager<T> {
     async getOrFetch(key: string, fetchFn: () => Promise<T>): Promise<T> {
         // Return cached data if available
         if (this.cache.has(key)) {
-            this.accessTimes.set(key, Date.now());
-            return this.cache.get(key)!;
+            return this.get(key)!;
         }
 
         // Return a pending request if one exists
@@ -164,7 +157,6 @@ export class CacheManager<T> {
         const oldestKey = this.cache.keys().next().value;
         if (oldestKey !== undefined) {
             this.cache.delete(oldestKey);
-            this.accessTimes.delete(oldestKey);
             this.pendingRequests.delete(oldestKey);
         }
     }
