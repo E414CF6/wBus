@@ -52,14 +52,14 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
         return null;
     }, [validDepartures, currentMins]);
 
-    // Next 4 upcoming departure times preview
+    // Next 4 upcoming departure times preview (excluding the current next departure)
     const upcomingTimes = useMemo(() => {
         if (!validDepartures.length) return [];
         const future = validDepartures.filter((item) => {
             const mins = parseTimeToMinutes(item.destDepTime);
             return mins !== null && mins >= currentMins;
         });
-        return (future.length > 0 ? future : validDepartures).slice(0, 4);
+        return future.slice(1, 5);
     }, [validDepartures, currentMins]);
 
     const getRouteBadgeGradient = (no: string) => {
@@ -156,11 +156,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                             {upcomingTimes.map((item, idx) => (
                                 <span
                                     key={idx}
-                                    className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold border transition-colors ${
-                                        nextInfo && nextInfo.entry.destDepTime === item.destDepTime && idx === 0
-                                            ? "bg-blue-600 text-white border-blue-600 shadow-xs"
-                                            : "bg-black/[0.03] dark:bg-white/[0.05] text-slate-700 dark:text-slate-300 border-black/5 dark:border-white/5"
-                                    }`}
+                                    className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold border transition-colors bg-black/[0.03] dark:bg-white/[0.05] text-slate-700 dark:text-slate-300 border-black/5 dark:border-white/5"
                                 >
                                     {item.destDepTime}
                                 </span>

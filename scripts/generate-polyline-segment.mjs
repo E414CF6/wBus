@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Polly - wBus Integrated Data Pipeline Script (Overhauled)
+ * Integrated Data Pipeline Script
  *
  * Consolidates TAGO API route collection, OSRM snapping with fallback,
  * segment-based GeoJSON polyline generation, schedule scraping, and static packaging.
@@ -95,27 +95,157 @@ function getPolylineDistanceMeters(coords) {
     return total;
 }
 
-// Maximum allowed ratio of OSRM segment distance to straight-line distance.
-// Segments exceeding this are considered alley detours and rejected.
-const MAX_DETOUR_RATIO = 2.0;
+// Calculate bearing in degrees (0-360) between two [lng, lat] coordinates
+function calculateBearing(p1, p2) {
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const toDeg = (rad) => (rad * 180) / Math.PI;
+    const y = Math.sin(toRad(p2[0] - p1[0])) * Math.cos(toRad(p2[1]));
+    const x = Math.cos(toRad(p1[1])) * Math.sin(toRad(p2[1])) -
+        Math.sin(toRad(p1[1])) * Math.cos(toRad(p2[1])) * Math.cos(toRad(p2[0] - p1[0]));
+    return Math.round((toDeg(Math.atan2(y, x)) + 360) % 360);
+}
 
-// OSRM Route Snapper for a list of stop coordinates
-async function fetchOsrmRoute(coords, osrmBaseUrl = DEFAULT_OSRM_URL) {
+// Multi-factor candidate scoring function to prioritize main arterial roads (대로/로) over side alleys/driveways
+function scoreCandidate(cand, stopName, prevRoad, nextRoad, corridorRoads) {
+    let score = 0;
+    const dist = cand.distance;
+    const name = (cand.name || "").trim();
+
+    // 1. Distance penalty (gradual up to 20m, steep beyond 20m)
+    if (dist <= 20) {
+        score -= dist * 1.0;
+    } else {
+        score -= 20.0 + (dist - 20) * 2.5;
+    }
+
+    // 2. Road Hierarchy base score
+    if (name.endsWith("대로")) {
+        score += 30; // Arterial Boulevard
+    } else if (name.endsWith("길") || name.endsWith("로")) {
+        score += 20; // Major Avenue / Collector Road
+    } else if (name.endsWith("거리")) {
+        score += 8; // Local Street
+    } else if (!name) {
+        score -= 15; // Unnamed side alley / parking driveway / service lane
+    }
+
+    // 3. Corridor Continuity (reward matching roads from adjacent stops or dominant route corridor)
+    if (name) {
+        if (prevRoad && name === prevRoad) score += 25;
+        if (nextRoad && name === nextRoad) score += 25;
+        if (corridorRoads && corridorRoads.has(name)) score += 10;
+    }
+
+    // 4. Stop name semantic hint
+    if (name && stopName && stopName.includes(name)) {
+        score += 20;
+    }
+
+    return score;
+}
+
+// Smart Stop Coordinate Snapper
+async function smartSnapStops(stops, osrmHost) {
+    const corridorRoads = new Set();
+    const stopCandidates = [];
+    const BATCH_SIZE = 10;
+
+    // Phase 1: Fetch nearest road candidates in concurrent batches
+    for (let i = 0; i < stops.length; i += BATCH_SIZE) {
+        const batch = stops.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(batch.map(async (s) => {
+            const rawCoord = [s.lon, s.lat];
+            const url = `${osrmHost}/nearest/v1/driving/${rawCoord[0].toFixed(6)},${rawCoord[1].toFixed(6)}?number=8`;
+            try {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 2500);
+                const res = await fetch(url, {signal: controller.signal});
+                clearTimeout(timer);
+                if (res.ok) {
+                    const json = await res.json();
+                    const candidates = (json.waypoints || []).filter(c => c.distance <= 50);
+                    return {stop: s, rawCoord, candidates};
+                }
+            } catch {
+                // Ignore timeout/error and fallback to raw coordinate
+            }
+            return {stop: s, rawCoord, candidates: []};
+        }));
+
+        for (const item of batchResults) {
+            stopCandidates.push(item);
+            for (const c of item.candidates) {
+                if (c.name && (c.name.endsWith("로") || c.name.endsWith("대로"))) {
+                    corridorRoads.add(c.name);
+                }
+            }
+        }
+    }
+
+    // Phase 2: Multi-pass corridor scoring & optimal candidate selection
+    const snappedStops = [];
+    for (let i = 0; i < stopCandidates.length; i++) {
+        const {stop, rawCoord, candidates} = stopCandidates[i];
+
+        let prevRoad = "";
+        if (i > 0 && snappedStops[i - 1].name) {
+            prevRoad = snappedStops[i - 1].name;
+        }
+
+        let nextRoad = "";
+        if (i < stopCandidates.length - 1) {
+            const nextCand = stopCandidates[i + 1].candidates;
+            const nextMajor = nextCand.find(c => c.name && (c.name.endsWith("대로") || c.name.endsWith("로")));
+            if (nextMajor) nextRoad = nextMajor.name;
+        }
+
+        if (candidates.length > 0) {
+            const scored = candidates.map(c => ({
+                ...c,
+                score: scoreCandidate(c, stop.name || "", prevRoad, nextRoad, corridorRoads)
+            })).sort((a, b) => b.score - a.score);
+
+            const best = scored[0];
+            snappedStops.push({
+                rawCoord,
+                coord: best.location,
+                name: best.name,
+                distance: best.distance,
+                stopName: stop.name
+            });
+        } else {
+            snappedStops.push({
+                rawCoord,
+                coord: rawCoord,
+                name: "",
+                distance: 0,
+                stopName: stop.name
+            });
+        }
+    }
+
+    return snappedStops;
+}
+
+// Maximum allowed ratio of OSRM segment distance to straight-line distance.
+const MAX_DETOUR_RATIO = 1.7;
+
+// OSRM Route Snapper for a list of coordinates
+async function fetchOsrmRoute(coords, osrmRouteUrl = DEFAULT_OSRM_URL, snapRadius = OSRM_SNAP_RADIUS) {
     if (coords.length < 2) return null;
 
     const coordsStr = coords.map(c => `${c[0].toFixed(6)},${c[1].toFixed(6)}`).join(";");
-    let currentRadius = OSRM_SNAP_RADIUS;
+    let currentRadius = snapRadius;
     let attempts = 0;
     const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
         const radiuses = coords.map(() => Math.round(currentRadius)).join(";");
-        const approaches = coords.map(() => "curb").join(";");
-        const url = `${osrmBaseUrl}/${coordsStr}?overview=full&geometries=geojson&steps=false&continue_straight=true&snapping=default&radiuses=${radiuses}&approaches=${approaches}`;
+        const url = `${osrmRouteUrl}/${coordsStr}?overview=full&geometries=geojson&steps=false&continue_straight=true&radiuses=${radiuses}`;
 
         try {
             const controller = new AbortController();
-            const timer = setTimeout(() => controller.abort(), 3000);
+            const timer = setTimeout(() => controller.abort(), 4000);
             const res = await fetch(url, {signal: controller.signal});
             clearTimeout(timer);
 
@@ -145,40 +275,53 @@ async function fetchOsrmRoute(coords, osrmBaseUrl = DEFAULT_OSRM_URL) {
 }
 
 // Process a single direction leg (UP or DOWN) from stops
-async function processDirectionLeg(dirStops, stationMap, osrmUrl) {
+async function processDirectionLeg(dirStops, stationMap, osrmUrl = DEFAULT_OSRM_URL) {
     const sorted = [...dirStops].sort((a, b) => Number(a.nodeord ?? a.ord) - Number(b.nodeord ?? b.ord));
-    const validCoords = [];
+    const stopsWithCoords = [];
 
     for (const s of sorted) {
         const rawId = typeof s.nodeid === "string" ? s.nodeid.trim() : (typeof s.id === "string" ? s.id.trim() : "");
         const station = rawId ? stationMap[rawId] : null;
+        let lat = 0, lon = 0;
         if (station && Number.isFinite(station.gpslati) && Number.isFinite(station.gpslong)) {
-            validCoords.push([station.gpslong, station.gpslati]); // GeoJSON [lng, lat]
+            lat = station.gpslati;
+            lon = station.gpslong;
         } else {
-            const lat = Number(s.gpslati ?? s.lat ?? 0);
-            const lon = Number(s.gpslong ?? s.lon ?? 0);
-            if (lat > 0 && lon > 0) {
-                validCoords.push([lon, lat]);
-            }
+            lat = Number(s.gpslati ?? s.lat ?? 0);
+            lon = Number(s.gpslong ?? s.lon ?? 0);
+        }
+        if (lat > 0 && lon > 0) {
+            stopsWithCoords.push({
+                id: rawId,
+                name: String(s.nodenm ?? s.name ?? ""),
+                ord: Number(s.nodeord ?? s.ord ?? 0),
+                lat,
+                lon,
+            });
         }
     }
 
-    if (validCoords.length < 2) {
+    if (stopsWithCoords.length < 2) {
         return {segmentHashes: [], segmentsMap: {}, totalDist: 0};
     }
 
-    // Try OSRM route snapping first
-    const osrmResult = await fetchOsrmRoute(validCoords, osrmUrl);
+    const osrmHost = osrmUrl.replace(/\/route\/v1\/driving\/?$/, "");
+
+    // Phase 1: Smart pre-snapping to lock stops onto main road corridors
+    const snapped = await smartSnapStops(stopsWithCoords, osrmHost);
+    const validCoords = snapped.map(s => s.coord);
+
+    // Phase 2: Route snapping along pre-snapped main road coordinates
+    const osrmResult = await fetchOsrmRoute(validCoords, osrmUrl, 25);
     const segmentHashes = [];
     const segmentsMap = {};
     let totalDist = 0;
 
     if (osrmResult && osrmResult.coordinates.length >= validCoords.length) {
-        // OSRM succeeded: break down OSRM polyline into segments between consecutive stops
+        // Break down OSRM polyline into segments between consecutive stops
         const fullLine = osrmResult.coordinates;
-        totalDist = osrmResult.distance;
-
         let currIdx = 0;
+
         for (let i = 0; i < validCoords.length - 1; i++) {
             const target = validCoords[i + 1];
             let bestIdx = currIdx + 1;
@@ -192,37 +335,42 @@ async function processDirectionLeg(dirStops, stationMap, osrmUrl) {
                 }
             }
 
-            const segCoords = fullLine.slice(currIdx, bestIdx + 1);
-            let finalCoords = segCoords.length >= 2 ? segCoords : [validCoords[i], validCoords[i + 1]];
-
-            // Detour ratio validation: reject OSRM segments that route through alleys
+            let segCoords = fullLine.slice(currIdx, bestIdx + 1);
             const straightDist = getHaversineDistanceMeters(validCoords[i], validCoords[i + 1]);
-            if (straightDist > 50) {
-                const segDist = getPolylineDistanceMeters(finalCoords);
-                const detourRatio = segDist / straightDist;
-                if (detourRatio > MAX_DETOUR_RATIO) {
-                    console.warn(`[Polly] ⚠ Detour ${detourRatio.toFixed(2)}x between stops ${i}→${i+1} (${Math.round(segDist)}m route vs ${Math.round(straightDist)}m straight). Rejecting alley route.`);
-                    finalCoords = [validCoords[i], validCoords[i + 1]];
+            const segDist = getPolylineDistanceMeters(segCoords);
+
+            // If slicing yielded < 2 points or experienced an index skip on overlapping loops
+            if (segCoords.length < 2 || (straightDist > 60 && (segDist / straightDist) > 2.5)) {
+                // Attempt direct pairwise OSRM query for this specific segment
+                const pairRes = await fetchOsrmRoute([validCoords[i], validCoords[i + 1]], osrmUrl, 25);
+                if (pairRes && pairRes.coordinates?.length >= 2) {
+                    const pairDist = getPolylineDistanceMeters(pairRes.coordinates);
+                    if (segCoords.length < 2 || pairDist < segDist) {
+                        segCoords = pairRes.coordinates;
+                    }
                 }
             }
 
-            const hash = computeSegmentHash(finalCoords);
+            if (segCoords.length < 2) {
+                segCoords = [validCoords[i], validCoords[i + 1]];
+            }
 
+            const hash = computeSegmentHash(segCoords);
             segmentHashes.push(hash);
-            segmentsMap[hash] = finalCoords;
+            segmentsMap[hash] = segCoords;
+            totalDist += getPolylineDistanceMeters(segCoords);
             currIdx = bestIdx;
         }
     } else {
-        // Fallback: direct straight-line segments between consecutive stops
+        // Fallback: segment-by-segment pairwise OSRM query
         for (let i = 0; i < validCoords.length - 1; i++) {
-            const p1 = validCoords[i];
-            const p2 = validCoords[i + 1];
-            const segCoords = [p1, p2];
-            const hash = computeSegmentHash(segCoords);
+            const pairRes = await fetchOsrmRoute([validCoords[i], validCoords[i + 1]], osrmUrl, 25);
+            let segCoords = (pairRes && pairRes.coordinates?.length >= 2) ? pairRes.coordinates : [validCoords[i], validCoords[i + 1]];
 
-            totalDist += getHaversineDistanceMeters(p1, p2);
+            const hash = computeSegmentHash(segCoords);
             segmentHashes.push(hash);
             segmentsMap[hash] = segCoords;
+            totalDist += getPolylineDistanceMeters(segCoords);
         }
     }
 
@@ -434,19 +582,20 @@ async function runRoutePipeline(options) {
         }
     }
 
-    // Existing segments.json preservation & merge
+    // Existing segments.json preservation & merge (newly generated segments take precedence)
+    let finalSegmentsMap = {...masterSegmentsMap};
     const existingSegmentsPath = join(derivedDir, "segments.json");
     if (existsSync(existingSegmentsPath)) {
         try {
             const existing = JSON.parse(readFileSync(existingSegmentsPath, "utf-8"));
-            Object.assign(masterSegmentsMap, existing);
+            finalSegmentsMap = {...existing, ...masterSegmentsMap};
         } catch {
             // Ignore error
         }
     }
 
-    writeFileSync(existingSegmentsPath, JSON.stringify(masterSegmentsMap, null, 2));
-    console.log(`[Polly Phase 2] Complete. Processed ${processedCount} routes. Saved segments.json with ${Object.keys(masterSegmentsMap).length} segments.`);
+    writeFileSync(existingSegmentsPath, JSON.stringify(finalSegmentsMap, null, 2));
+    console.log(`[Polly Phase 2] Complete. Processed ${processedCount} routes. Saved segments.json with ${Object.keys(finalSegmentsMap).length} segments.`);
 }
 
 // CLI Command Handler

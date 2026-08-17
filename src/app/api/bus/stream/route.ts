@@ -12,7 +12,7 @@ export const maxDuration = 60;
 const STREAM_INTERVAL_MS = Math.max(1000, API_CONFIG.LIVE.POLLING_INTERVAL_MS);
 const ROUTE_TTL_SECONDS = Math.max(3, Math.ceil(STREAM_INTERVAL_MS / 1000));
 const LIVE_CACHE_OPTIONS = {
-    staleWhileRevalidateSeconds: 3, staleIfErrorSeconds: 10,
+    staleWhileRevalidateSeconds: 3, staleIfErrorSeconds: 120,
 };
 const VERCEL_MAX_DURATION_MS = 60000;
 const STREAM_SHUTDOWN_BUFFER_MS = 5000;
@@ -55,7 +55,7 @@ interface StreamSnapshotPayload {
 async function fetchStreamSnapshot(routeIds: string[]): Promise<StreamSnapshotData> {
     const requests = routeIds.map((routeId) => ({
         key: `bus:${routeId}`, fetcher: () => fetchBusLocations(routeId), options: {
-            ttlSeconds: getAdaptiveTtlSeconds(routeId, ROUTE_TTL_SECONDS, 15),
+            ttlSeconds: getAdaptiveTtlSeconds(routeId, ROUTE_TTL_SECONDS, 20),
         },
     }));
 

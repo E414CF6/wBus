@@ -1,10 +1,8 @@
-import type {BusStop, BusStopArrival} from "@entities/station/types";
-import {API_CONFIG} from "@shared/config/env";
-import {useAppMapContext} from "@shared/context/AppMapContext";
-import type {CachedData} from "@shared/redis/types";
-import {getHaversineDistance} from "@shared/utils/geo";
-import {useEffect, useMemo, useState} from "react";
+import {useMemo} from "react";
 import useSWR from "swr";
+
+import type {BusStopArrival} from "@entities/station/types";
+import type {CachedData} from "@shared/redis/types";
 
 // Fetcher for the new API
 const apiFetcher = async (url: string) => {
@@ -24,38 +22,6 @@ export function useBusStop(routeName: string) {
     return stops ?? [];
 }
 
-// useClosestStopOrd
-export function useClosestStopOrd(routeName: string): number | null {
-    const {map} = useAppMapContext();
-    const stops = useBusStop(routeName);
-    const [closestOrd, setClosestOrd] = useState<number | null>(null);
-
-    useEffect(() => {
-        if (!map || stops.length === 0) return;
-
-        const calculateClosest = () => {
-            if (!map.getCenter) return;
-            const {lat, lng} = map.getCenter();
-            const closest = stops.reduce((best: BusStop, current: BusStop) => {
-                const bestDist = getHaversineDistance(lat, lng, best.gpslati, best.gpslong);
-                const currDist = getHaversineDistance(lat, lng, current.gpslati, current.gpslong);
-                return currDist < bestDist ? current : best;
-            }, stops[0]);
-            const ord = Number(closest.nodeord);
-            setClosestOrd(Number.isFinite(ord) ? ord : null);
-        };
-
-        calculateClosest();
-        map.on("moveend", calculateClosest);
-
-        return () => {
-            map.off("moveend", calculateClosest);
-        };
-    }, [map, stops]);
-
-    return closestOrd;
-}
-
 // useBusArrivalInfo
 const arrivalFetcher = async (url: string): Promise<CachedData<BusStopArrival[]>> => {
     const res = await fetch(url);
@@ -67,12 +33,9 @@ const EMPTY_ARRIVAL_LIST: BusStopArrival[] = [];
 
 export function useBusArrivalInfo(busStopId: string | null) {
     const {
-        data,
-        error,
-        isLoading,
-        mutate
+        data, error, isLoading, mutate
     } = useSWR<CachedData<BusStopArrival[]>>(busStopId && busStopId.trim() !== "" ? `/api/bus-arrival/${busStopId}` : null, arrivalFetcher, {
-        refreshInterval: API_CONFIG.LIVE.POLLING_INTERVAL_MS, revalidateOnFocus: true, dedupingInterval: 2000,
+        refreshInterval: 10000, revalidateOnFocus: true, dedupingInterval: 4000,
     });
 
     return useMemo(() => ({

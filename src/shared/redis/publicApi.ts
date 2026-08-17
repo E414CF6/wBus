@@ -14,7 +14,7 @@ const PUBLIC_API_BASE = "https://apis.data.go.kr/1613000";
 const CITY_CODE = "32020"; // Wonju
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 300;
-const KEY_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes cooldown for rate-limited keys
+const KEY_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes cooldown for rate-limited / quota-exhausted keys
 const CIRCUIT_COOLDOWN_MS = 30 * 1000; // 30 seconds circuit breaker open time
 const DEFAULT_PARAMS = {
     numOfRows: "1024", pageNo: "1", _type: "json", cityCode: CITY_CODE,
@@ -85,7 +85,7 @@ class ServiceKeyManager {
     markCooldown(keyIndex: number) {
         if (this.keys[keyIndex]) {
             this.keys[keyIndex].cooldownUntil = Date.now() + KEY_COOLDOWN_MS;
-            console.warn(`[PublicAPI KeyManager] Service key #${keyIndex + 1} rate-limited. Cooldown until ${new Date(this.keys[keyIndex].cooldownUntil).toISOString()}`);
+            console.warn(`[PublicAPI KeyManager] Service key #${keyIndex + 1} rate-limited or quota exceeded. Cooldown until ${new Date(this.keys[keyIndex].cooldownUntil).toISOString()}`);
         }
     }
 
@@ -212,10 +212,10 @@ export function getRouteBusCount(routeId: string): number | undefined {
 
 /**
  * Returns dynamic TTL based on active bus count.
- * Routes with active buses use high-frequency activeTtl (e.g. 3s).
- * Routes with 0 active buses use backoff idleTtl (e.g. 15s) to preserve API quota.
+ * Routes with active buses use high-frequency activeTtl (e.g. 4s).
+ * Routes with 0 active buses use backoff idleTtl (e.g. 20s) to preserve API quota.
  */
-export function getAdaptiveTtlSeconds(routeId: string, activeTtl = 3, idleTtl = 15): number {
+export function getAdaptiveTtlSeconds(routeId: string, activeTtl = 4, idleTtl = 20): number {
     const metrics = routeBusMetricsMap.get(routeId);
     if (!metrics) return activeTtl;
     return metrics.busCount > 0 ? activeTtl : idleTtl;
@@ -239,6 +239,37 @@ async function fetchPublicApi<T>(path: string, params: Record<string, string>, o
     return promise;
 }
 
+function inspectResponseForErrors(data: unknown): {
+    isError: boolean; isQuotaOrKeyError: boolean; message: string; code: string;
+} {
+    if (!data || typeof data !== "object") {
+        return {isError: false, isQuotaOrKeyError: false, message: "", code: ""};
+    }
+
+    const obj = data as Record<string, unknown>;
+    const xmlError = (obj.OpenAPI_ServiceResponse as Record<string, unknown> | undefined)?.cmmMsgHeader as Record<string, unknown> | undefined;
+    if (xmlError) {
+        const code = String(xmlError.returnReasonCode ?? "").trim();
+        const msg = String(xmlError.errMsg ?? "OpenAPI Error").trim();
+        const upperMsg = msg.toUpperCase();
+        const isQuotaOrKeyError = code === "22" || code === "30" || code === "31" || code === "20" || code === "429" || upperMsg.includes("LIMITED") || upperMsg.includes("TRAFFIC") || upperMsg.includes("EXCEED") || upperMsg.includes("KEY");
+        return {isError: true, isQuotaOrKeyError, message: msg, code};
+    }
+
+    const header = (obj.response as Record<string, unknown> | undefined)?.header as Record<string, unknown> | undefined;
+    if (header && header.resultCode !== undefined) {
+        const code = String(header.resultCode).trim();
+        const msg = String(header.resultMsg ?? "API Error").trim();
+        if (code !== "00" && code !== "0" && code !== "0000") {
+            const upperMsg = msg.toUpperCase();
+            const isQuotaOrKeyError = code === "22" || code === "30" || code === "31" || code === "20" || code === "429" || upperMsg.includes("LIMITED") || upperMsg.includes("TRAFFIC") || upperMsg.includes("EXCEED") || upperMsg.includes("KEY");
+            return {isError: true, isQuotaOrKeyError, message: msg, code};
+        }
+    }
+
+    return {isError: false, isQuotaOrKeyError: false, message: "", code: ""};
+}
+
 async function rawFetchPublicApi<T>(path: string, params: Record<string, string>): Promise<T> {
     if (!circuitBreaker.canExecute()) {
         throw new PublicApiError("[PublicAPI] Circuit Breaker is OPEN due to upstream failure.", 503, path);
@@ -259,6 +290,24 @@ async function rawFetchPublicApi<T>(path: string, params: Record<string, string>
 
             if (res.ok) {
                 const data = await res.json() as T;
+                const errCheck = inspectResponseForErrors(data);
+
+                if (errCheck.isError) {
+                    if (errCheck.isQuotaOrKeyError) {
+                        keyManager.markCooldown(keyIndex);
+                    }
+
+                    console.warn(`[PublicAPI] Key #${keyIndex + 1} returned upstream API error: ${errCheck.message} (Code: ${errCheck.code}, Quota/Key Error: ${errCheck.isQuotaOrKeyError}). Attempt ${attempt}/${MAX_RETRY_ATTEMPTS}`);
+
+                    if (attempt < MAX_RETRY_ATTEMPTS) {
+                        await delay(attempt);
+                        continue;
+                    }
+
+                    const safeUrl = url.replace(/serviceKey=[^&]+/, "serviceKey=***");
+                    throw new PublicApiError(`[PublicAPI] ${errCheck.message} (Code: ${errCheck.code})`, errCheck.isQuotaOrKeyError ? 429 : 502, safeUrl);
+                }
+
                 circuitBreaker.recordSuccess();
                 return data;
             }
@@ -328,17 +377,9 @@ interface PublicApiResponseEnvelope<T> {
 function extractItems<T>(data: PublicApiResponseEnvelope<T>, urlHint = "apis.data.go.kr"): T[] {
     if (!data) return [];
 
-    const xmlError = data.OpenAPI_ServiceResponse?.cmmMsgHeader;
-    if (xmlError) {
-        throw new PublicApiError(`[PublicAPI] ${xmlError.errMsg || "OpenAPI Error"} (Code: ${xmlError.returnReasonCode})`, 429, urlHint);
-    }
-
-    const header = data.response?.header;
-    if (header && header.resultCode !== undefined) {
-        const codeStr = String(header.resultCode).trim();
-        if (codeStr !== "00" && codeStr !== "0" && codeStr !== "0000") {
-            throw new PublicApiError(`[PublicAPI] ${header.resultMsg || "API Error"} (Code: ${header.resultCode})`, 429, urlHint);
-        }
+    const errCheck = inspectResponseForErrors(data);
+    if (errCheck.isError) {
+        throw new PublicApiError(`[PublicAPI] ${errCheck.message} (Code: ${errCheck.code})`, errCheck.isQuotaOrKeyError ? 429 : 502, urlHint);
     }
 
     const raw = data.response?.body?.items?.item;
