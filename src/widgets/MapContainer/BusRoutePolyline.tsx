@@ -1,6 +1,6 @@
 "use client";
 
-import {getRouteColor} from "@entities/route/routeColor";
+import {getRouteIdColor} from "@entities/route/routeColor";
 import {useBusData} from "@features/live-tracking/useBusData";
 import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
@@ -13,33 +13,26 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
     const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
     const lastBoundsKeyRef = useRef<string | null>(null);
 
-    const routeColor = useMemo(() => getRouteColor(routeName), [routeName]);
-
-    // Filter to only render the active route ID among the available route IDs
-    const selectedActiveRouteId = useMemo(() => {
+    // Filter to render all available route IDs for this route number
+    const validRouteIds = useMemo(() => {
+        const available = routeIds.filter(id => {
+            const data = polylineMap.get(id);
+            return data && (data.upPolyline.length > 0 || data.downPolyline.length > 0);
+        });
+        if (available.length > 0) return available;
         if (activeRouteId && polylineMap.has(activeRouteId)) {
             const data = polylineMap.get(activeRouteId);
             if (data && (data.upPolyline.length > 0 || data.downPolyline.length > 0)) {
-                return activeRouteId;
+                return [activeRouteId];
             }
         }
-        for (const id of routeIds) {
-            const data = polylineMap.get(id);
-            if (data && (data.upPolyline.length > 0 || data.downPolyline.length > 0)) {
-                return id;
-            }
-        }
-        return activeRouteId ?? routeIds[0] ?? null;
-    }, [activeRouteId, polylineMap, routeIds]);
-
-    const activeRouteIds = useMemo(() => {
-        return selectedActiveRouteId ? [selectedActiveRouteId] : [];
-    }, [selectedActiveRouteId]);
+        return routeIds.slice(0, 1);
+    }, [routeIds, polylineMap, activeRouteId]);
 
     const bbox = useMemo(() => {
         let minLat = Infinity, minLng = Infinity, maxLat = -Infinity, maxLng = -Infinity;
         let hasBounds = false;
-        for (const id of activeRouteIds) {
+        for (const id of validRouteIds) {
             const data = polylineMap.get(id);
             if (data?.bbox) {
                 const [[s, w], [n, e]] = data.bbox;
@@ -51,15 +44,18 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
             }
         }
         return hasBounds ? [[minLat, minLng], [maxLat, maxLng]] as [[number, number], [number, number]] : null;
-    }, [activeRouteIds, polylineMap]);
+    }, [validRouteIds, polylineMap]);
 
     const activeGeoJson = useMemo(() => {
-        if (activeRouteIds.length === 0) return null;
+        if (validRouteIds.length === 0) return null;
         const features: GeoJSON.Feature[] = [];
 
-        for (const id of activeRouteIds) {
+        for (const id of validRouteIds) {
             const data = polylineMap.get(id);
             if (!data) continue;
+
+            const colorConfig = getRouteIdColor(id, routeIds, routeName);
+            const color = colorConfig.main;
 
             if (data.upPolyline.length >= 2) {
                 features.push({
@@ -68,7 +64,11 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
                         type: "LineString",
                         coordinates: data.upPolyline.map((c) => [c[1], c[0]])
                     },
-                    properties: {route_id: id, direction: "up"}
+                    properties: {
+                        route_id: id,
+                        direction: "up",
+                        color
+                    }
                 });
             }
 
@@ -79,17 +79,19 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
                         type: "LineString",
                         coordinates: data.downPolyline.map((c) => [c[1], c[0]])
                     },
-                    properties: {route_id: id, direction: "down"}
+                    properties: {
+                        route_id: id,
+                        direction: "down",
+                        color
+                    }
                 });
             }
         }
 
         return {type: "FeatureCollection" as const, features};
-    }, [activeRouteIds, polylineMap]);
+    }, [validRouteIds, polylineMap, routeIds, routeName]);
 
-    const lineColor = routeColor.main;
-
-    // Fit map to bounds of active route ID
+    // Fit map to bounds of routes
     useEffect(() => {
         if (!map || !bbox) return;
 
@@ -104,7 +106,7 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
         });
     }, [map, bbox]);
 
-    if (activeRouteIds.length === 0 || !activeGeoJson) return null;
+    if (validRouteIds.length === 0 || !activeGeoJson) return null;
 
     return (
         <Source id="active-routes-polyline" type="geojson" data={activeGeoJson}>
@@ -122,12 +124,12 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
                     "line-join": "round",
                 }}
             />
-            {/* Main bus route polyline layer */}
+            {/* Main bus route polyline layer with color driven by route ID */}
             <Layer
                 id="polyline-active-layer"
                 type="line"
                 paint={{
-                    "line-color": lineColor,
+                    "line-color": ["get", "color"] as unknown as string,
                     "line-width": 4.5,
                     "line-opacity": 0.95,
                 }}
@@ -153,7 +155,7 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
                     "text-ignore-placement": true,
                 }}
                 paint={{
-                    "text-color": lineColor,
+                    "text-color": ["get", "color"] as unknown as string,
                     "text-halo-color": "#ffffff",
                     "text-halo-width": 2,
                     "text-opacity": 0.95,

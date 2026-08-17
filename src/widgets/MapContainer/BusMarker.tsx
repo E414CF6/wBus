@@ -66,15 +66,20 @@ BusIconDOM.displayName = "BusIconDOM";
 // Sub-Component: Popup Content
 // ----------------------------------------------------------------------
 
-const BusPopupContent = memo(({bus, stopName, DirectionIcon}: {
-    bus: BusItem; stopName: string; DirectionIcon: React.ElementType
+const BusPopupContent = memo(({bus, stopName, DirectionIcon, themeColor}: {
+    bus: BusItem; stopName: string; DirectionIcon: React.ElementType; themeColor?: string;
 }) => (<div
     className="min-w-60 sm:min-w-70 flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl rounded-[28px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)] border border-black/4 dark:border-white/6">
     {/* Header */}
     <div className="bg-transparent px-4 py-4 border-b border-black/5 dark:border-white/5">
         <div className="flex items-center gap-2.5 text-black dark:text-white">
             <div
-                className="p-1.5 bg-indigo-100/50 dark:bg-indigo-500/20 rounded-[10px] text-indigo-600 dark:text-indigo-400">
+                className="p-1.5 rounded-[10px] flex items-center justify-center bg-indigo-100/50 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400"
+                style={themeColor ? {
+                    backgroundColor: `${themeColor}22`,
+                    color: themeColor
+                } : undefined}
+            >
                 <DirectionIcon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true"/>
             </div>
             <span className="font-extrabold text-lg tracking-tight leading-none">
@@ -187,7 +192,12 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 stopCoordIndices = snapped.direction === 1 ? routeIndices.upIndices : routeIndices.downIndices;
             }
 
-            const markerColor = getBusMarkerColor(bus.routenm || routeName, snapped.direction);
+            const markerColor = getBusMarkerColor(
+                bus.routenm || routeName,
+                snapped.direction,
+                targetRouteId,
+                routeInfo.vehicleRouteIds
+            );
 
             return {
                 key: markerKey,
@@ -258,6 +268,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
                 bus={selectedMarker.bus}
                 stopName={selectedMarker.bus.nodenm || ""}
                 DirectionIcon={getDirectionIcon(selectedMarker.direction)}
+                themeColor={selectedMarker.markerColor}
             />
         </Popup>)}
     </>);
