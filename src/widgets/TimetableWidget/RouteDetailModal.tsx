@@ -115,13 +115,13 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
                         <div
                             className="flex items-center space-x-3 mt-2 text-xs text-slate-500 dark:text-slate-400 font-medium">
               <span>
-                첫차: <strong
-                  className="text-slate-800 dark:text-slate-200 font-mono">{route.firstBus}</strong> | 막차:{" "}
+                {UI_TEXT.TIMETABLE.FIRST_BUS_LABEL} <strong
+                  className="text-slate-800 dark:text-slate-200 font-mono">{route.firstBus}</strong> | {UI_TEXT.TIMETABLE.LAST_BUS_LABEL}{" "}
                   <strong className="text-slate-800 dark:text-slate-200 font-mono">{route.lastBus}</strong>
               </span>
                             <span>•</span>
                             <span>
-                운행: <strong className="text-slate-800 dark:text-slate-200 font-mono">{route.runCount}</strong> ({route.interval})
+                {UI_TEXT.TIMETABLE.RUN_COUNT_LABEL} <strong className="text-slate-800 dark:text-slate-200 font-mono">{route.runCount}</strong> ({route.interval})
               </span>
                         </div>
                     </div>
@@ -240,7 +240,7 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
                                                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-teal-500/20 dark:bg-teal-500/30 text-teal-950 dark:text-teal-100 font-extrabold border border-teal-500/40 shadow-xs">
                                                     <span>{row.originDepTime}</span>
                                                     <span
-                                                        className="text-[10px] px-1.5 py-0.5 rounded-md bg-teal-600 dark:bg-teal-500 text-white font-sans font-bold">다음</span>
+                                                        className="text-[10px] px-1.5 py-0.5 rounded-md bg-teal-600 dark:bg-teal-500 text-white font-sans font-bold">{UI_TEXT.TIMETABLE.NEXT_BADGE}</span>
                                                 </span>
                                             ) : (
                                                 <span
@@ -253,7 +253,7 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
                                                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-500/20 dark:bg-indigo-500/30 text-indigo-950 dark:text-indigo-100 font-extrabold border border-indigo-500/40 shadow-xs">
                                                     <span>{row.destDepTime}</span>
                                                     <span
-                                                        className="text-[10px] px-1.5 py-0.5 rounded-md bg-indigo-600 dark:bg-indigo-500 text-white font-sans font-bold">다음</span>
+                                                        className="text-[10px] px-1.5 py-0.5 rounded-md bg-indigo-600 dark:bg-indigo-500 text-white font-sans font-bold">{UI_TEXT.TIMETABLE.NEXT_BADGE}</span>
                                                 </span>
                                             ) : (
                                                 <span

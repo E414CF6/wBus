@@ -18,23 +18,23 @@ interface RouteFilterProps {
 }
 
 const DAY_TYPES = [
-    {id: "ALL", label: UI_TEXT.NOTICE.TAB_ALL},
-    {id: "평일", label: "평일"},
-    {id: "토요일", label: "토요일"},
-    {id: "일,공휴일", label: "일·공휴일"},
-    {id: "방학,휴일", label: "방학·휴일"},
-    {id: "주말,공휴일", label: "주말·공휴일"},
+    {id: "ALL", label: UI_TEXT.TIMETABLE.DAY_ALL},
+    {id: "평일", label: UI_TEXT.TIMETABLE.DAY_WEEKDAY},
+    {id: "토요일", label: UI_TEXT.TIMETABLE.DAY_SATURDAY},
+    {id: "일,공휴일", label: UI_TEXT.TIMETABLE.DAY_SUN_HOLIDAY},
+    {id: "방학,휴일", label: UI_TEXT.TIMETABLE.DAY_VACATION_HOLIDAY},
+    {id: "주말,공휴일", label: UI_TEXT.TIMETABLE.DAY_WEEKEND_HOLIDAY},
 ];
 
 const QUICK_CATEGORIES = [
-    {id: "ALL", label: "전체 노선", icon: "🚌"},
-    {id: "2", label: "2번 계열 (횡성)", icon: "🏞️"},
-    {id: "3", label: "3·4번 계열", icon: "🚏"},
-    {id: "6", label: "6·7·8번", icon: "🏙️"},
-    {id: "16", label: "16번 (순환)", icon: "🔄"},
-    {id: "30", label: "30번대 (연세대)", icon: "🎓"},
-    {id: "41", label: "41번 (구룡사)", icon: "🌲"},
-    {id: "50", label: "50번대 (문막)", icon: "🏭"},
+    {id: "ALL", label: UI_TEXT.TIMETABLE.CAT_ALL, icon: "🚌"},
+    {id: "2", label: UI_TEXT.TIMETABLE.CAT_2, icon: "🏞️"},
+    {id: "3", label: UI_TEXT.TIMETABLE.CAT_3_4, icon: "🚏"},
+    {id: "6", label: UI_TEXT.TIMETABLE.CAT_6_7_8, icon: "🏙️"},
+    {id: "16", label: UI_TEXT.TIMETABLE.CAT_16, icon: "🔄"},
+    {id: "30", label: UI_TEXT.TIMETABLE.CAT_30, icon: "🎓"},
+    {id: "41", label: UI_TEXT.TIMETABLE.CAT_41, icon: "🌲"},
+    {id: "50", label: UI_TEXT.TIMETABLE.CAT_50, icon: "🏭"},
 ];
 
 export const RouteFilter: React.FC<RouteFilterProps> = ({
@@ -74,7 +74,7 @@ export const RouteFilter: React.FC<RouteFilterProps> = ({
                         <button
                             onClick={() => setSearchQuery("")}
                             className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-                            aria-label="검색어 지우기"
+                            aria-label={UI_TEXT.TIMETABLE.CLEAR_SEARCH_ARIA}
                         >
                             <X className="h-4 w-4"/>
                         </button>
@@ -137,7 +137,7 @@ export const RouteFilter: React.FC<RouteFilterProps> = ({
                     className="flex items-center gap-1.5 overflow-x-auto pt-2.5 border-t border-black/5 dark:border-white/5 custom-scrollbar">
           <span
               className="text-xs font-bold text-slate-600 dark:text-slate-400 shrink-0 mr-1 flex items-center gap-1">
-            <Layers className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 stroke-[2.4]"/> 주요노선:
+            <Layers className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400 stroke-[2.4]"/> {UI_TEXT.TIMETABLE.MAIN_ROUTES_LABEL}
           </span>
                     {QUICK_CATEGORIES.map((cat) => (
                         <button
@@ -159,7 +159,7 @@ export const RouteFilter: React.FC<RouteFilterProps> = ({
             {/* Filter Summary Footer */}
             <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 px-1 pt-1">
         <span className="font-medium">
-          검색 결과: <strong className="text-slate-900 dark:text-white font-mono font-bold">{totalFilteredCount}</strong>개 노선
+          {UI_TEXT.TIMETABLE.SEARCH_RESULTS_LABEL} <strong className="text-slate-900 dark:text-white font-mono font-bold">{totalFilteredCount}</strong>{UI_TEXT.TIMETABLE.ROUTE_COUNT(totalFilteredCount).replace(/^[0-9]+/, "")}
         </span>
 
                 {isFilteredActive && (
@@ -173,7 +173,7 @@ export const RouteFilter: React.FC<RouteFilterProps> = ({
                         className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-500 font-bold cursor-pointer transition-colors"
                     >
                         <X className="h-3.5 w-3.5"/>
-                        <span>필터 초기화</span>
+                        <span>{UI_TEXT.TIMETABLE.RESET_FILTER}</span>
                     </button>
                 )}
             </div>

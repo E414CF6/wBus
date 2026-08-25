@@ -2,6 +2,7 @@
 
 import React from "react";
 import {CacheMetadata} from "@shared/types/bus";
+import {UI_TEXT} from "@shared/config/locale";
 import {Clock, RefreshCw} from "lucide-react";
 
 interface CacheInfoBannerProps {
@@ -34,7 +35,7 @@ export const CacheInfoBanner: React.FC<CacheInfoBannerProps> = ({
             <div className="flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0"/>
                 <span>
-                    기준일시: <strong
+                    {UI_TEXT.TIMETABLE.BASE_DATETIME_LABEL} <strong
                     className="font-mono text-slate-700 dark:text-slate-300 font-bold">{formattedDate}</strong>
                 </span>
             </div>
@@ -48,7 +49,7 @@ export const CacheInfoBanner: React.FC<CacheInfoBannerProps> = ({
                     className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-extrabold transition-all cursor-pointer active:scale-95 text-[11px] border border-blue-500/20"
                 >
                     <RefreshCw className={`w-3 h-3 ${isRefreshing ? "animate-spin" : ""}`}/>
-                    <span>{isRefreshing ? "갱신 중..." : "시간표 갱신"}</span>
+                    <span>{isRefreshing ? UI_TEXT.TIMETABLE.CACHE_REFRESHING : UI_TEXT.TIMETABLE.CACHE_REFRESH_BUTTON}</span>
                 </button>
             )}
         </div>

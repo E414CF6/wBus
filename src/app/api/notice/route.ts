@@ -1,6 +1,7 @@
 import type {NoticeItem, NoticeListResponse} from "@entities/notice/types";
 import {CacheManager} from "@shared/cache/CacheManager";
 import {buildCacheControl} from "@shared/cache/cachePolicy";
+import {UI_TEXT} from "@shared/config/locale";
 import {NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -60,7 +61,7 @@ async function fetchNoticeListFromOrigin(page: number, searchText: string, searc
             if (!id) continue;
 
             const numMatch = trHtml.match(/<span class="num">(\d+)<\/span>/i);
-            const num = isNotice ? "공지" : (numMatch ? numMatch[1] : "");
+            const num = isNotice ? UI_TEXT.NOTICE.PINNED_BADGE : (numMatch ? numMatch[1] : "");
 
             const titleMatch = trHtml.match(/<span class="title"><a[^>]*>([\s\S]*?)<\/a><\/span>/i);
             const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, "").trim() : "";
@@ -121,6 +122,7 @@ export async function GET(request: Request) {
         );
     } catch (error) {
         console.error("[API /api/notice]", error);
-        return NextResponse.json({error: "알림마당 목록을 불러오는 데 실패했습니다."}, {status: 500});
+        return NextResponse.json({error: UI_TEXT.NOTICE.ERROR_FETCH_LIST}, {status: 500});
     }
 }
+

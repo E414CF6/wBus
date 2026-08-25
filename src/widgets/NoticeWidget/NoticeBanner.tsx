@@ -113,7 +113,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                             {isNew && (
                                 <span
                                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-xs animate-pulse">
-                                    <span>최근</span>
+                                    <span>{UI_TEXT.NOTICE.BADGE_NEW}</span>
                                 </span>
                             )}
 
@@ -121,7 +121,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                                 <span
                                     className="hidden xs:inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
                                     <Sparkles className="w-3 h-3"/>
-                                    <span>중요 공지 {pinnedCount}건</span>
+                                    <span>{UI_TEXT.NOTICE.PINNED_COUNT(pinnedCount)}</span>
                                 </span>
                             )}
                         </div>
@@ -133,7 +133,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                                 {currentNotice.isNotice && (
                                     <span
                                         className="shrink-0 px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                                        공지
+                                        {UI_TEXT.NOTICE.PINNED_BADGE}
                                     </span>
                                 )}
                                 <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
@@ -164,7 +164,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                             <button
                                 type="button"
                                 onClick={handlePrev}
-                                aria-label="이전 최신공지"
+                                aria-label={UI_TEXT.NOTICE.PREV_NOTICE_ARIA}
                                 className="p-1 rounded-lg hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 transition-colors"
                             >
                                 <ChevronLeft className="w-3.5 h-3.5"/>
@@ -176,7 +176,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                                         key={idx}
                                         type="button"
                                         onClick={(e) => handleDotClick(e, idx)}
-                                        aria-label={`공지 ${idx + 1}`}
+                                        aria-label={UI_TEXT.NOTICE.NOTICE_INDEX_ARIA(idx + 1)}
                                         className={`h-1.5 rounded-full transition-all duration-300 ${
                                             idx === currentIndex
                                                 ? "w-4 bg-amber-600 dark:bg-amber-400"
@@ -189,7 +189,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                             <button
                                 type="button"
                                 onClick={handleNext}
-                                aria-label="다음 최신공지"
+                                aria-label={UI_TEXT.NOTICE.NEXT_NOTICE_ARIA}
                                 className="p-1 rounded-lg hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 transition-colors"
                             >
                                 <ChevronRight className="w-3.5 h-3.5"/>

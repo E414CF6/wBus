@@ -4,7 +4,7 @@ import React, {memo, useMemo} from "react";
 import {BusRoute} from "@shared/types/bus";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 import {UI_TEXT} from "@shared/config/locale";
-import {ChevronRight, GraduationCap, MapPin} from "lucide-react";
+import {AlertCircle, ChevronRight, Clock, MapPin, Sparkles} from "lucide-react";
 
 interface YonseiRouteCardProps {
     route: BusRoute;
@@ -29,9 +29,29 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
     const now = currentTime || new Date();
     const currentMins = now.getHours() * 60 + now.getMinutes();
 
+    // Key via stops
+    const viaStops = useMemo(() => {
+        if (route.routeNo === "30") {
+            return UI_TEXT.YONSEI.VIA_30;
+        }
+        if (route.routeNo === "34") {
+            return UI_TEXT.YONSEI.VIA_34;
+        }
+        if (route.routeNo === "34-1") {
+            return UI_TEXT.YONSEI.VIA_34_1;
+        }
+        return "";
+    }, [route.routeNo]);
+
+    // Day type label
+    const isVacationSchedule = useMemo(() => {
+        const dType = route.dayType || "";
+        return dType.includes("방학") || dType.includes("휴일") || dType.includes("토요일") || dType.includes("공휴일");
+    }, [route.dayType]);
+
     // Valid departure times from 연세대 (30, 34) or 회촌 (34-1)
     const validDepartures = useMemo(() => {
-        return route.timetable.filter(
+        return (route.timetable || []).filter(
             (item) => item.destDepTime && item.destDepTime !== "-" && item.destDepTime !== ""
         );
     }, [route.timetable]);
@@ -52,123 +72,205 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
         return null;
     }, [validDepartures, currentMins]);
 
-    // Next 4 upcoming departure times preview (excluding the current next departure)
+    // Upcoming subsequent departure times (up to 4 upcoming times)
     const upcomingTimes = useMemo(() => {
         if (!validDepartures.length) return [];
-        const future = validDepartures.filter((item) => {
-            const mins = parseTimeToMinutes(item.destDepTime);
-            return mins !== null && mins >= currentMins;
-        });
-        return future.slice(1, 5);
+
+        const remaining = validDepartures
+            .map((item) => {
+                const mins = parseTimeToMinutes(item.destDepTime);
+                return {
+                    ...item,
+                    minutes: mins,
+                    offsetMins: mins !== null && mins >= currentMins ? mins - currentMins : null,
+                };
+            })
+            .filter((item) => item.minutes !== null && item.minutes >= currentMins);
+
+        return remaining.slice(1, 5);
     }, [validDepartures, currentMins]);
 
     const getRouteBadgeGradient = (no: string) => {
-        if (no === "30") return "from-[#003876] to-blue-700 shadow-blue-900/30";
-        if (no === "34") return "from-blue-600 to-indigo-600 shadow-blue-500/20";
-        if (no === "34-1") return "from-indigo-600 to-purple-600 shadow-indigo-500/20";
-        return "from-[#003876] to-blue-700 shadow-blue-900/30";
+        if (no === "30") return "from-[#003876] to-blue-700 shadow-blue-900/30 text-white";
+        if (no === "34") return "from-blue-600 to-indigo-600 shadow-blue-500/25 text-white";
+        if (no === "34-1") return "from-indigo-600 to-purple-600 shadow-indigo-500/25 text-white";
+        return "from-[#003876] to-blue-700 shadow-blue-900/30 text-white";
+    };
+
+    // Urgency styling for wait time badge
+    const getWaitBadgeStyle = (waitMins: number) => {
+        if (waitMins <= 5) {
+            return "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 font-black animate-pulse";
+        }
+        if (waitMins <= 15) {
+            return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-black";
+        }
+        return "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30 font-extrabold";
     };
 
     return (
         <div
             onClick={() => onSelectRoute(route)}
-            className="backdrop-blur-2xl bg-white/80 dark:bg-[#121212]/80 rounded-3xl p-5 flex flex-col justify-between relative group border border-black/5 dark:border-white/10 hover:border-blue-400/80 dark:hover:border-blue-500/50 transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 cursor-pointer select-none active:scale-[0.99]"
+            className="backdrop-blur-2xl bg-white/90 dark:bg-[#141822]/90 rounded-3xl p-4 sm:p-6 flex flex-col justify-between relative group border border-slate-200/80 dark:border-slate-800/80 hover:border-blue-500/60 dark:hover:border-blue-500/60 transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer select-none active:scale-[0.98]"
         >
             <div>
-                {/* Header: Route Badge & Realtime Map Button */}
-                <div className="flex items-center justify-between gap-3 mb-4">
-                    <div
-                        className={`px-4 py-1.5 rounded-2xl bg-gradient-to-r ${getRouteBadgeGradient(
-                            route.routeNo
-                        )} font-black text-white text-lg tracking-tight shadow-md`}
-                    >
-                        {route.routeNo}번
+                {/* Top Section: Route Badge + Location Header & Realtime Map Button */}
+                <div className="flex items-center justify-between gap-2.5 mb-2.5 sm:mb-3">
+                    <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                        <div
+                            className={`px-3 sm:px-3.5 py-1 rounded-2xl bg-gradient-to-r ${getRouteBadgeGradient(
+                                route.routeNo
+                            )} font-black text-lg sm:text-xl tracking-tight shadow-sm font-mono shrink-0`}
+                        >
+                            {route.routeNo}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight truncate">
+                                {locationLabel}
+                            </span>
+                        </div>
                     </div>
 
                     {onSelectMapRoute && (
-                        <div onClick={(e) => e.stopPropagation()}>
+                        <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     onSelectMapRoute(route.routeNo);
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold border border-blue-200/60 dark:border-blue-500/20 transition-colors cursor-pointer"
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-200/70 dark:border-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
                                 title={UI_TEXT.YONSEI.REALTIME_MAP_BTN}
                             >
-                                <MapPin className="h-3.5 w-3.5"/>
-                                <span>{UI_TEXT.YONSEI.REALTIME_MAP_BTN}</span>
+                                <MapPin className="h-3 w-3 shrink-0"/>
+                                <span className="sm:inline">{UI_TEXT.YONSEI.REALTIME_MAP_BTN}</span>
                             </button>
                         </div>
                     )}
                 </div>
 
-                {/* Departure Location Subtitle */}
+                {/* Key via stop route strip with Marquee Animation */}
+                {viaStops && (
+                    <div className="relative flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.04] text-[10px] font-medium text-slate-600 dark:text-slate-300 mb-2.5 sm:mb-3 border border-black/5 dark:border-white/5 overflow-hidden">
+                        <span className="font-extrabold text-blue-600 dark:text-blue-400 shrink-0 text-[10px] z-10 bg-slate-100/90 dark:bg-[#141822]/90 px-1.5 py-0.5 rounded-md shadow-2xs">
+                            {UI_TEXT.YONSEI.VIA_SHORT_LABEL}
+                        </span>
+                        <div className="relative overflow-hidden flex-1 flex items-center h-4">
+                            <div className="animate-marquee-fast flex shrink-0 items-center whitespace-nowrap">
+                                <span className="mr-8">{viaStops}</span>
+                                <span className="mr-8">{viaStops}</span>
+                            </div>
+                            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-100/90 dark:from-[#141822] to-transparent z-10" />
+                        </div>
+                    </div>
+                )}
+
+                {/* Schedule Mode Badge & Total Departures Count */}
                 <div className="flex items-center justify-between my-2 text-xs">
-                    <div className="flex items-center space-x-1.5 font-extrabold text-slate-900 dark:text-white">
-                        <GraduationCap className="w-4 h-4 text-blue-600 dark:text-blue-400"/>
-                        <span>{locationLabel}</span>
+                    <div className="flex items-center gap-1.5">
+                        <span
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${
+                                route.routeNo === "30"
+                                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
+                                    : isVacationSchedule
+                                    ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30"
+                                    : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30"
+                            }`}
+                        >
+                            {route.routeNo === "30"
+                                ? UI_TEXT.YONSEI.SCHEDULE_APPLIED_ALL_DAYS
+                                : isVacationSchedule
+                                ? UI_TEXT.YONSEI.SCHEDULE_APPLIED_VACATION
+                                : UI_TEXT.YONSEI.SCHEDULE_APPLIED_WEEKDAY}
+                        </span>
                     </div>
                     <span className="text-[11px] font-semibold text-slate-400 font-mono">
                         {UI_TEXT.YONSEI.TOTAL_RUNS(validDepartures.length)}
                     </span>
                 </div>
 
-                {/* Next Upcoming Departure Spotlight */}
+                {/* Next Upcoming Departure Spotlight Card */}
                 <div
-                    className="my-3 p-3.5 rounded-2xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-500/20">
+                    className={`my-2.5 sm:my-3 p-3.5 sm:p-4 rounded-2xl border transition-all ${
+                        nextInfo && nextInfo.waitMins <= 5
+                            ? "bg-gradient-to-br from-rose-50/80 to-amber-50/60 dark:from-rose-950/30 dark:to-amber-950/20 border-rose-300/80 dark:border-rose-500/40 shadow-sm"
+                            : "bg-blue-50/70 dark:bg-blue-950/30 border-blue-200/70 dark:border-blue-500/25"
+                    }`}
+                >
                     <div
-                        className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1 flex items-center justify-between">
-                        <span>{UI_TEXT.YONSEI.NEXT_LOCATION_DEP(locationLabel)}</span>
+                        className="text-[11px] font-bold uppercase tracking-wider mb-1 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-blue-700 dark:text-blue-300">
+                            <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"/>
+                            <span>{UI_TEXT.YONSEI.NEXT_LOCATION_DEP(locationLabel)}</span>
+                        </span>
                         {nextInfo && (
                             <span
-                                className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[10px] font-black border border-emerald-500/30">
-                                {UI_TEXT.TIMETABLE.WAIT_MINUTES(nextInfo.waitMins)}
+                                className={`px-2.5 py-0.5 rounded-lg text-[11px] border ${getWaitBadgeStyle(
+                                    nextInfo.waitMins
+                                )}`}
+                            >
+                                {nextInfo.waitMins <= 5 && (
+                                    <AlertCircle className="w-3 h-3 inline mr-1 -mt-0.5"/>
+                                )}
+                                {nextInfo.waitMins === 0
+                                    ? UI_TEXT.YONSEI.STATUS_DEPARTING_SOON
+                                    : UI_TEXT.TIMETABLE.WAIT_MINUTES(nextInfo.waitMins)}
                             </span>
                         )}
                     </div>
 
                     {nextInfo ? (
-                        <div className="flex items-baseline justify-between">
-                            <span className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+                        <div className="flex items-baseline justify-between mt-1">
+                            <span
+                                className="text-2xl sm:text-3xl font-black font-mono tracking-tight text-slate-900 dark:text-white">
                                 {nextInfo.entry.destDepTime}
                             </span>
                             {nextInfo.entry.notes && (
                                 <span
-                                    className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate max-w-[120px]">
+                                    className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[11px] font-extrabold border border-amber-500/20 truncate max-w-[130px]"
+                                    title={nextInfo.entry.notes}
+                                >
                                     {nextInfo.entry.notes}
                                 </span>
                             )}
                         </div>
                     ) : (
-                        <div className="text-xs text-slate-500 dark:text-slate-400 italic">
+                        <div className="text-xs text-slate-500 dark:text-slate-400 italic py-1">
                             {UI_TEXT.YONSEI.SERVICE_ENDED}
                         </div>
                     )}
                 </div>
 
-                {/* Upcoming Times Horizontal Badges */}
+                {/* Upcoming Departure Times Timeline Chips */}
                 {upcomingTimes.length > 0 && (
-                    <div className="mt-3">
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
-                            {UI_TEXT.YONSEI.UPCOMING_DEP_TIMES}
+                    <div className="mt-3.5">
+                        <div
+                            className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-blue-500"/>
+                            <span>{UI_TEXT.YONSEI.UPCOMING_DEP_TIMES}</span>
                         </div>
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="grid grid-cols-2 gap-1.5">
                             {upcomingTimes.map((item, idx) => (
-                                <span
+                                <div
                                     key={idx}
-                                    className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold border transition-colors bg-black/[0.03] dark:bg-white/[0.05] text-slate-700 dark:text-slate-300 border-black/5 dark:border-white/5"
+                                    className="flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-mono font-bold bg-slate-100/80 dark:bg-white/[0.05] border border-black/5 dark:border-white/5 text-slate-800 dark:text-slate-200"
                                 >
-                                    {item.destDepTime}
-                                </span>
+                                    <span className="font-mono text-[13px]">{item.destDepTime}</span>
+                                    {item.offsetMins !== null && (
+                                        <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-400">
+                                            {UI_TEXT.YONSEI.STATUS_MINUTES_REL(item.offsetMins)}
+                                        </span>
+                                    )}
+                                </div>
                             ))}
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* View Full Yonsei Timetable Button */}
-            <div className="pt-4 mt-3 border-t border-black/5 dark:border-white/10 flex items-center justify-between">
-                <span className="text-[11px] font-medium text-slate-400">
+            {/* View Full Timetable Footer Button */}
+            <div
+                className="pt-4 mt-4 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                     {UI_TEXT.YONSEI.FULL_TIMETABLE_DETAIL}
                 </span>
                 <button
@@ -176,7 +278,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                         e.stopPropagation();
                         onSelectRoute(route);
                     }}
-                    className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-xs font-extrabold border border-blue-500/20 transition-all cursor-pointer"
+                    className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-xs font-black border border-blue-500/20 transition-all cursor-pointer active:scale-95"
                 >
                     <span>{UI_TEXT.YONSEI.VIEW_TIMETABLE_BTN}</span>
                     <ChevronRight className="h-3.5 w-3.5"/>
@@ -187,3 +289,4 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
 });
 
 YonseiRouteCard.displayName = "YonseiRouteCard";
+

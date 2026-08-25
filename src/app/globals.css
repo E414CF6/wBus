@@ -223,4 +223,32 @@ body {
     .animate-fade-in {
         animation: fade-in 0.3s ease-out forwards;
     }
+
+    @keyframes marquee {
+        0% {
+            transform: translateX(0%);
+        }
+        100% {
+            transform: translateX(-50%);
+        }
+    }
+
+    .animate-marquee {
+        display: inline-flex;
+        white-space: nowrap;
+        animation: marquee 16s linear infinite;
+    }
+
+    .animate-marquee-fast {
+        display: inline-flex;
+        white-space: nowrap;
+        animation: marquee 10s linear infinite;
+    }
+
+    .animate-marquee:hover,
+    .animate-marquee-fast:hover,
+    .group:hover .animate-marquee,
+    .group:hover .animate-marquee-fast {
+        animation-play-state: paused;
+    }
 }

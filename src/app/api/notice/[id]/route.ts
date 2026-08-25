@@ -1,6 +1,7 @@
 import type {NoticeDetail} from "@entities/notice/types";
 import {CacheManager} from "@shared/cache/CacheManager";
 import {buildCacheControl} from "@shared/cache/cachePolicy";
+import {UI_TEXT} from "@shared/config/locale";
 import {NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ async function fetchNoticeDetailFromOrigin(id: string): Promise<NoticeDetail> {
     const contMatch = html.match(/<div class="cont_area">([\s\S]*?)<\/div>/i);
 
     const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, "").trim() : "";
-    const writer = writerMatch ? writerMatch[1].replace(/<[^>]+>/g, "").trim() : "원주시";
+    const writer = writerMatch ? writerMatch[1].replace(/<[^>]+>/g, "").trim() : UI_TEXT.NOTICE.DEFAULT_WRITER;
     const date = dateMatch ? dateMatch[1].replace(/<[^>]+>/g, "").trim() : "";
     const views = hitMatch ? hitMatch[1].replace(/<[^>]+>/g, "").trim() : "0";
 
@@ -90,7 +91,7 @@ export async function GET(_request: Request, {params}: { params: Promise<{ id: s
         const id = resolvedParams.id;
 
         if (!id || !/^\d+$/.test(id)) {
-            return NextResponse.json({error: "유효하지 않은 게시글 ID입니다."}, {status: 400});
+            return NextResponse.json({error: UI_TEXT.NOTICE.ERROR_INVALID_ID}, {status: 400});
         }
 
         const cached = noticeDetailCache.get(id);
@@ -122,6 +123,7 @@ export async function GET(_request: Request, {params}: { params: Promise<{ id: s
         );
     } catch (error) {
         console.error("[API /api/notice/[id]]", error);
-        return NextResponse.json({error: "공지사항 상세 정보를 불러오는 데 실패했습니다."}, {status: 500});
+        return NextResponse.json({error: UI_TEXT.NOTICE.ERROR_FETCH_DETAIL}, {status: 500});
     }
 }
+

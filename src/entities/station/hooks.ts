@@ -3,6 +3,7 @@ import useSWR from "swr";
 
 import type {BusStopArrival} from "@entities/station/types";
 import type {CachedData} from "@shared/redis/types";
+import {UI_TEXT} from "@shared/config/locale";
 
 // Fetcher for the new API
 const apiFetcher = async (url: string) => {
@@ -41,10 +42,11 @@ export function useBusArrivalInfo(busStopId: string | null) {
     return useMemo(() => ({
         data: data?.data ?? EMPTY_ARRIVAL_LIST,
         loading: isLoading,
-        error: error ? "도착 정보를 불러올 수 없습니다." : null,
+        error: error ? UI_TEXT.ERROR.NO_ARRIVAL_INFO : null,
         isDegraded: Boolean(data?.meta?.degraded || error),
         lastUpdated: data?.timestamp ?? null,
         ageMs: data?.meta?.ageMs ?? 0,
         refresh: () => void mutate(),
     }), [data, isLoading, error, mutate]);
 }
+

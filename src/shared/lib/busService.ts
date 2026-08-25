@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {BusCacheData, CacheMetadata} from "@shared/types/bus";
+import {UI_TEXT} from "@shared/config/locale";
 import {runScraper} from "../../../scripts/scrape-wonju-its.mjs";
 
 export const MIN_REFRESH_INTERVAL_DAYS = 1;
@@ -206,7 +207,7 @@ export async function refreshBusData(force = true): Promise<{
             await saveCacheData(newData);
             return {
                 refreshed: true,
-                message: "시간표 데이터가 원주시 ITS에서 새로 수집되어 Vercel Blob 및 캐시에 성공적으로 저장되었습니다.",
+                message: UI_TEXT.BUS_SERVICE.DATA_UPDATED,
                 data: newData,
                 meta: getCacheMetadata(),
             };
@@ -216,7 +217,7 @@ export async function refreshBusData(force = true): Promise<{
             if (currentRes.data) {
                 return {
                     refreshed: false,
-                    message: "원주시 ITS 서버 연결 시간 초과로 인해 신규 수집을 취소하고 기존 저장소의 최신 시간표를 유지합니다.",
+                    message: UI_TEXT.BUS_SERVICE.TIMEOUT_MAINTAIN_CACHE,
                     data: currentRes.data,
                     meta: currentRes.meta,
                 };
@@ -233,7 +234,7 @@ export async function refreshBusData(force = true): Promise<{
 
     return {
         refreshed: false,
-        message: `최소 하한 갱신 시간이 지나지 않아 시간표를 갱신하지 않았습니다. (다음 갱신 가능: ${nextAvailableStr})`,
+        message: UI_TEXT.BUS_SERVICE.MIN_INTERVAL_NOT_REACHED(nextAvailableStr),
         data: currentRes.data,
         meta: currentRes.meta,
     };

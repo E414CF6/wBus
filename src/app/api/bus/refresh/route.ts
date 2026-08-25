@@ -1,5 +1,6 @@
 import {NextRequest, NextResponse} from "next/server";
 import {refreshBusData} from "@shared/lib/busService";
+import {UI_TEXT} from "@shared/config/locale";
 
 export async function POST(request: NextRequest) {
     const startTime = Date.now();
@@ -22,15 +23,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({
                 success: true,
                 refreshed: false,
-                message: "원주시 ITS 서버 응답 지연으로 기존 저장소의 시간표를 유지합니다.",
+                message: UI_TEXT.BUS_SERVICE.SERVER_TIMEOUT_FALLBACK,
                 data: fallback.data,
                 meta: fallback.meta,
                 elapsedMs: Date.now() - startTime,
             });
         } catch {
             return NextResponse.json({
-                success: false, error: error instanceof Error ? error.message : "시간표 갱신 처리 중 오류가 발생했습니다.",
+                success: false, error: error instanceof Error ? error.message : UI_TEXT.BUS_SERVICE.REFRESH_ERROR,
             }, {status: 500});
         }
     }
 }
+

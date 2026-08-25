@@ -64,7 +64,7 @@ export const LiveStatusBadge = memo(({
             type="button"
             onClick={onReconnect}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-tight transition-all duration-200 bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] backdrop-blur-md border border-black/5 dark:border-white/10 shadow-xs hover:border-black/15 dark:hover:border-white/20 active:scale-95 cursor-pointer max-w-full overflow-hidden ${className}`}
-            title="실시간 연결 상태 (클릭 시 재연결)"
+            title={UI_TEXT.CONNECTION.STATUS_TOOLTIP}
         >
             <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
                 {isPulsing && (
@@ -84,13 +84,13 @@ export const LiveStatusBadge = memo(({
             <span className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap flex items-center gap-1">
                 {countText && <span className="opacity-30 font-normal">•</span>}
                 <span>{statusLabel}</span>
-                {isDegraded && <span className="text-amber-500 dark:text-amber-400 font-bold">(지연)</span>}
+                {isDegraded && <span className="text-amber-500 dark:text-amber-400 font-bold">{UI_TEXT.CONNECTION.DEGRADED}</span>}
             </span>
 
             {secondsAgo !== null && (
                 <span
                     className="text-[10px] text-gray-400 dark:text-gray-500 font-mono pl-1 border-l border-black/10 dark:border-white/10 whitespace-nowrap">
-                    {secondsAgo === 0 ? "방금 전" : `${secondsAgo}초 전`}
+                    {secondsAgo === 0 ? UI_TEXT.TIME.JUST_NOW : UI_TEXT.TIME.SECONDS_AGO(secondsAgo)}
                 </span>
             )}
         </button>

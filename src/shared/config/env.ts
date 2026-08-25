@@ -1,4 +1,5 @@
 import {getEnv, getEnvArray, getEnvBoolean, getEnvBounds, getEnvNumber} from "@shared/utils/parser";
+import {UI_TEXT} from "@shared/config/locale";
 
 const RAW_POSITION = getEnv(process.env.NEXT_PUBLIC_MAP_DEFAULT_POSITION, "37.3421,127.91976");
 const [defaultLat, defaultLng] = RAW_POSITION.split(",").map(Number);
@@ -7,13 +8,13 @@ const RAW_STATIC_API_URL = getEnv(process.env.NEXT_PUBLIC_STATIC_API_URL, "NOT_S
 const STATIC_BASE_URL = RAW_STATIC_API_URL !== "NOT_SET" ? RAW_STATIC_API_URL.replace(/\/+$/, "") : "";
 
 export const APP_CONFIG = {
-    NAME: getEnv(process.env.NEXT_PUBLIC_APP_NAME, "wBus"), IS_DEV: process.env.NODE_ENV === "development",
+    NAME: getEnv(process.env.NEXT_PUBLIC_APP_NAME, UI_TEXT.METADATA.TITLE), IS_DEV: process.env.NODE_ENV === "development",
 } as const;
 
 export const SITE_CONFIG = {
     METADATA: {
-        TITLE: getEnv(process.env.NEXT_PUBLIC_SITE_TITLE, "wBus"),
-        DESCRIPTION: getEnv(process.env.NEXT_PUBLIC_SITE_DESCRIPTION, "실시간 버스 위치 및 도착 정보 서비스"),
+        TITLE: getEnv(process.env.NEXT_PUBLIC_SITE_TITLE, UI_TEXT.METADATA.TITLE),
+        DESCRIPTION: getEnv(process.env.NEXT_PUBLIC_SITE_DESCRIPTION, UI_TEXT.METADATA.DESC),
         BASE_URL: getEnv(process.env.NEXT_PUBLIC_SITE_BASE_URL, "https://wbus.vercel.app"),
         SOCIAL_IMAGE: getEnv(process.env.NEXT_PUBLIC_SOCIAL_IMAGE_PATH, "/opengraph-image.png"),
     },

@@ -1,4 +1,5 @@
 import {TimetableEntry} from "@shared/types/bus";
+import {UI_TEXT} from "@shared/config/locale";
 
 export function parseTimeToMinutes(timeStr: string): number | null {
     if (!timeStr || timeStr === "-") return null;
@@ -83,17 +84,17 @@ export function formatRemainingTime(targetDateStr: string | null): string {
     if (isNaN(targetMs)) return "";
 
     const diffMs = targetMs - Date.now();
-    if (diffMs <= 0) return "지금 갱신 가능";
+    if (diffMs <= 0) return UI_TEXT.TIME.REFRESH_AVAILABLE_NOW;
 
     const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
     if (days > 0) {
-        return `${days}일 ${hours}시간 후 갱신 가능`;
+        return UI_TEXT.TIME.REFRESH_AVAILABLE_DAYS(days, hours);
     }
     if (hours > 0) {
-        return `${hours}시간 ${mins}분 후 갱신 가능`;
+        return UI_TEXT.TIME.REFRESH_AVAILABLE_HOURS(hours, mins);
     }
-    return `${mins}분 후 갱신 가능`;
+    return UI_TEXT.TIME.REFRESH_AVAILABLE_MINS(mins);
 }

@@ -224,7 +224,7 @@ export default function BottomNav({
                                 }`}
                             >
                                 <GraduationCap className="w-3.5 h-3.5"/>
-                                <span className="whitespace-nowrap">연세대학교</span>
+                                <span className="whitespace-nowrap">{UI_TEXT.BOTTOM_NAV.TAB_YONSEI}</span>
                             </button>
 
                             <button
@@ -237,7 +237,7 @@ export default function BottomNav({
                                 }`}
                             >
                                 <Bus className="w-3.5 h-3.5"/>
-                                <span className="whitespace-nowrap">전체</span>
+                                <span className="whitespace-nowrap">{UI_TEXT.BOTTOM_NAV.TAB_ALL}</span>
                             </button>
                         </div>
                     </>

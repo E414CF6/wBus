@@ -140,7 +140,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                             type="button"
                             onClick={onClose}
                             className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
-                            aria-label="Close modal"
+                            aria-label={UI_TEXT.ACCESSIBILITY.CLOSE_MODAL}
                         >
                             <X className="w-5 h-5"/>
                         </button>
