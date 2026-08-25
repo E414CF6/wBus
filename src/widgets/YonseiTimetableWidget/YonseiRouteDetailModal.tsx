@@ -279,16 +279,13 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
 
     const modalContent = (
         <div
-            className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-6 bg-slate-950/60 dark:bg-black/80 backdrop-blur-lg animate-fadeIn pointer-events-auto"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-3.5 sm:p-6 bg-slate-950/60 dark:bg-black/80 backdrop-blur-lg animate-fadeIn pointer-events-auto"
             onClick={onClose}
         >
             <div
-                className="w-full sm:max-w-4xl h-[94dvh] sm:h-auto sm:max-h-[90vh] rounded-t-3xl sm:rounded-3xl border-t sm:border border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden bg-white dark:bg-[#121620] transition-colors duration-300"
+                className="w-full max-w-4xl h-[90dvh] sm:h-auto sm:max-h-[90vh] rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden bg-white dark:bg-[#121620] transition-colors duration-300"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Mobile Drag Indicator Handle */}
-                <div className="w-12 h-1 rounded-full bg-slate-300 dark:bg-white/20 mx-auto mt-2.5 sm:hidden shrink-0" />
-
                 {/* Header */}
                 <div
                     className="p-4 sm:p-6 border-b border-slate-200/70 dark:border-white/10 bg-slate-50/90 dark:bg-white/[0.03] flex items-center justify-between gap-3 sm:gap-4 shrink-0">
@@ -304,7 +301,8 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                             <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-1.5 sm:gap-2 truncate">
                                 <span>{UI_TEXT.YONSEI.TIMETABLE_TITLE(locationLabel)}</span>
                                 {isSingleSchedule && (
-                                    <span className="px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-black bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 shrink-0">
+                                    <span
+                                        className="px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-black bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 shrink-0">
                                         {UI_TEXT.YONSEI.SCHEDULE_APPLIED_ALL_DAYS}
                                     </span>
                                 )}
@@ -337,16 +335,20 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
 
                 {/* Full-width Via Marquee Strip (좌우를 가득 채우는 주요 경유지 바) */}
                 {viaStops && (
-                    <div className="w-full px-3.5 sm:px-6 py-1.5 sm:py-2 bg-slate-100/90 dark:bg-white/[0.03] border-b border-slate-200/70 dark:border-white/10 flex items-center gap-2 sm:gap-2.5 overflow-hidden shrink-0">
-                        <span className="px-1.5 sm:px-2 py-0.5 rounded-md bg-blue-600 text-white font-black text-[9px] sm:text-[10px] shrink-0 shadow-2xs">
+                    <div
+                        className="w-full px-3.5 sm:px-6 py-1.5 sm:py-2 bg-slate-100/90 dark:bg-white/[0.03] border-b border-slate-200/70 dark:border-white/10 flex items-center gap-2 sm:gap-2.5 overflow-hidden shrink-0">
+                        <span
+                            className="px-1.5 sm:px-2 py-0.5 rounded-md bg-blue-600 text-white font-black text-[9px] sm:text-[10px] shrink-0 shadow-2xs">
                             {UI_TEXT.YONSEI.VIA_LABEL}
                         </span>
-                        <div className="relative overflow-hidden flex-1 flex items-center h-4 sm:h-4.5 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200">
+                        <div
+                            className="relative overflow-hidden flex-1 flex items-center h-4 sm:h-4.5 text-[11px] sm:text-xs font-semibold text-slate-700 dark:text-slate-200">
                             <div className="animate-marquee-fast flex shrink-0 items-center whitespace-nowrap">
                                 <span className="mr-10 sm:mr-12">{viaStops}</span>
                                 <span className="mr-10 sm:mr-12">{viaStops}</span>
                             </div>
-                            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 sm:w-12 bg-gradient-to-l from-slate-100/95 dark:from-[#121620] to-transparent z-10" />
+                            <div
+                                className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 sm:w-12 bg-gradient-to-l from-slate-100/95 dark:from-[#121620] to-transparent z-10"/>
                         </div>
                     </div>
                 )}
@@ -364,7 +366,8 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                             className="w-full pl-9 pr-4 py-1.5 sm:py-2 rounded-xl bg-slate-100 dark:bg-white/[0.06] border border-transparent focus:border-blue-500/50 text-xs font-semibold text-slate-900 dark:text-white outline-none transition-all"
                         />
                     </div>
-                    <div className="text-[11px] sm:text-xs font-extrabold text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-2">
+                    <div
+                        className="text-[11px] sm:text-xs font-extrabold text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-2">
                         <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
                             <Clock className="w-3.5 h-3.5"/>
                             <span>{UI_TEXT.YONSEI.CURRENT_HOUR_STR(currentHourStr)}</span>
@@ -377,7 +380,8 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                 {/* Timetable Table Header */}
                 <div
                     className="sticky top-0 z-10 bg-slate-100/95 dark:bg-[#181d2a]/95 backdrop-blur-md px-4 py-3 border-b border-slate-200/80 dark:border-white/10 grid grid-cols-12 gap-2 text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                    <div className="col-span-3 sm:col-span-2 text-center border-r border-slate-200/80 dark:border-white/10 pr-2">
+                    <div
+                        className="col-span-3 sm:col-span-2 text-center border-r border-slate-200/80 dark:border-white/10 pr-2">
                         {UI_TEXT.YONSEI.HOUR_LABEL}
                     </div>
 
@@ -413,7 +417,13 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                         </div>
                     ) : (
                         <div className="divide-y divide-slate-100 dark:divide-white/[0.06]">
-                            {dualHourlyTimetable.map(({hourStr, displayHour, isCurrentHour, weekdayMinutes, vacationMinutes}) => (
+                            {dualHourlyTimetable.map(({
+                                                          hourStr,
+                                                          displayHour,
+                                                          isCurrentHour,
+                                                          weekdayMinutes,
+                                                          vacationMinutes
+                                                      }) => (
                                 <div
                                     key={hourStr}
                                     className={`grid grid-cols-12 gap-2 p-3 sm:p-4 transition-colors items-center text-xs ${
@@ -440,7 +450,8 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                             </span>
                                         </div>
                                         {isCurrentHour && (
-                                            <span className="mt-0.5 px-1.5 py-0.2 rounded-md bg-blue-600 text-white text-[9px] font-extrabold">
+                                            <span
+                                                className="mt-0.5 px-1.5 py-0.2 rounded-md bg-blue-600 text-white text-[9px] font-extrabold">
                                                 {UI_TEXT.YONSEI.CURRENT_HOUR_BADGE}
                                             </span>
                                         )}
@@ -450,7 +461,8 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                         /* Single Column Body for Route 30 */
                                         <div className="col-span-9 sm:col-span-10 pl-2">
                                             {weekdayMinutes.length === 0 ? (
-                                                <span className="text-slate-300 dark:text-slate-600 italic text-[11px]">-</span>
+                                                <span
+                                                    className="text-slate-300 dark:text-slate-600 italic text-[11px]">-</span>
                                             ) : (
                                                 <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                                                     {weekdayMinutes.map((item) => (
@@ -462,9 +474,11 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                                                     : "bg-blue-50/80 dark:bg-blue-950/40 text-blue-950 dark:text-blue-200 border-blue-200/60 dark:border-blue-500/20 hover:border-blue-400/60"
                                                             }`}
                                                         >
-                                                            <span className="font-extrabold text-xs sm:text-[13px]">{item.minuteStr}</span>
+                                                            <span
+                                                                className="font-extrabold text-xs sm:text-[13px]">{item.minuteStr}</span>
                                                             {item.isNextBus && (
-                                                                <span className="text-[8px] sm:text-[9px] px-1 py-0.2 rounded bg-white/20 text-white font-sans font-black">
+                                                                <span
+                                                                    className="text-[8px] sm:text-[9px] px-1 py-0.2 rounded bg-white/20 text-white font-sans font-black">
                                                                     {UI_TEXT.YONSEI.NEXT_BUS_BADGE}
                                                                 </span>
                                                             )}
@@ -499,7 +513,8 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                         /* Dual Column Body for Routes 34, 34-1 */
                                         <>
                                             {/* Weekday Minutes Column */}
-                                            <div className="col-span-4 sm:col-span-5 border-r border-slate-200/80 dark:border-white/10 pr-1.5 sm:pr-2">
+                                            <div
+                                                className="col-span-4 sm:col-span-5 border-r border-slate-200/80 dark:border-white/10 pr-1.5 sm:pr-2">
                                                 {weekdayMinutes.length === 0 ? (
                                                     <span
                                                         className="text-slate-300 dark:text-slate-600 italic text-[11px]">-</span>
@@ -613,17 +628,20 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                         className="p-3 sm:p-4 bg-slate-100/90 dark:bg-white/[0.04] border-t border-slate-200/80 dark:border-white/10 text-xs shrink-0">
                         <div
                             className="flex items-center justify-between gap-2 mb-1.5 sm:mb-2">
-                            <div className="flex items-center gap-1.5 font-extrabold text-slate-800 dark:text-slate-200 text-xs">
+                            <div
+                                className="flex items-center gap-1.5 font-extrabold text-slate-800 dark:text-slate-200 text-xs">
                                 <Info className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"/>
                                 <span>{UI_TEXT.YONSEI.FOOTNOTE_TITLE}</span>
                             </div>
-                            <div className="text-[10px] sm:text-[11px] font-semibold text-slate-400 dark:text-slate-400">
+                            <div
+                                className="text-[10px] sm:text-[11px] font-semibold text-slate-400 dark:text-slate-400">
                                 {UI_TEXT.YONSEI.FOOTNOTE_SCROLL_HINT} →
                             </div>
                         </div>
 
                         {/* Single-row Horizontal Scroll Strip */}
-                        <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar py-1 scroll-smooth touch-pan-x overscroll-x-contain">
+                        <div
+                            className="flex items-center gap-2 overflow-x-auto custom-scrollbar py-1 scroll-smooth touch-pan-x overscroll-x-contain">
                             {Array.from(footnoteMap.entries()).map(([noteText, num]) => {
                                 const isHighlighted = selectedFootnote === num;
                                 return (
@@ -636,10 +654,12 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                                 : "bg-white dark:bg-[#181d2a] border-slate-200/80 dark:border-white/10 hover:border-blue-400/60"
                                         }`}
                                     >
-                                        <span className="font-black text-amber-600 dark:text-amber-400 text-xs sm:text-sm shrink-0 font-mono">
+                                        <span
+                                            className="font-black text-amber-600 dark:text-amber-400 text-xs sm:text-sm shrink-0 font-mono">
                                             {getFootnoteSymbol(num)}
                                         </span>
-                                        <span className="text-slate-700 dark:text-slate-200 font-bold text-[11px] sm:text-xs whitespace-nowrap">
+                                        <span
+                                            className="text-slate-700 dark:text-slate-200 font-bold text-[11px] sm:text-xs whitespace-nowrap">
                                             {noteText}
                                         </span>
                                     </div>

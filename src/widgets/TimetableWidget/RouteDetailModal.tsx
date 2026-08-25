@@ -72,16 +72,16 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
 
     const modalContent = (
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 dark:bg-black/80 backdrop-blur-lg animate-fadeIn pointer-events-auto"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-3.5 sm:p-6 bg-slate-950/60 dark:bg-black/80 backdrop-blur-lg animate-fadeIn pointer-events-auto"
             onClick={onClose}
         >
             <div
-                className="w-full max-w-4xl max-h-[92vh] rounded-3xl border border-black/10 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden bg-white dark:bg-[#121212] transition-colors duration-300"
+                className="w-full max-w-4xl max-h-[90vh] rounded-3xl border border-black/10 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden bg-white dark:bg-[#121212] transition-colors duration-300"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Modal Header */}
                 <div
-                    className="p-5 sm:p-6 border-b border-black/5 dark:border-white/10 bg-slate-50/80 dark:bg-white/[0.03] flex items-start justify-between gap-4">
+                    className="p-4 sm:p-6 border-b border-black/5 dark:border-white/10 bg-slate-50/80 dark:bg-white/[0.03] flex items-start justify-between gap-4">
                     <div>
                         <div className="flex items-center space-x-3 mb-2">
                             <div
@@ -121,7 +121,8 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
               </span>
                             <span>•</span>
                             <span>
-                {UI_TEXT.TIMETABLE.RUN_COUNT_LABEL} <strong className="text-slate-800 dark:text-slate-200 font-mono">{route.runCount}</strong> ({route.interval})
+                {UI_TEXT.TIMETABLE.RUN_COUNT_LABEL} <strong
+                                className="text-slate-800 dark:text-slate-200 font-mono">{route.runCount}</strong> ({route.interval})
               </span>
                         </div>
                     </div>
