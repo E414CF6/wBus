@@ -5,13 +5,31 @@ import {CommentItem, CommentsDataset} from "@/types/comment";
 const BLOB_COMMENTS_PATH = "comments.json";
 export const COMMENT_DISPLAY_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours (1 day)
 
-// Default initial sample comments
+// Default initial sample comments for realistic board preview
 const INITIAL_COMMENTS: CommentItem[] = [{
     id: "c-init-1",
-    author: "고양이",
-    content: "34-1번 탈 때 6분 정도 이후에 학관에 도착해요.",
-    createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(), // 3 hours ago
+    author: "매지호오리",
+    content: "34-1번 탈 때 회촌 출발 후 5~7분 정도 뒤에 학관에 도착해요!",
+    category: "꿀팁",
+    createdAt: new Date(Date.now() - 1000 * 60 * 75).toISOString(), // 75 mins ago
     routeNo: "34-1",
+    likes: 3,
+}, {
+    id: "c-init-2",
+    author: "독수리",
+    content: "오늘 34번 시내 방면 도로 원활해서 제시간에 잘 도착합니다.",
+    category: "제보",
+    createdAt: new Date(Date.now() - 1000 * 60 * 160).toISOString(), // ~2.5 hours ago
+    routeNo: "34",
+    likes: 2,
+}, {
+    id: "c-init-3",
+    author: "학관러버",
+    content: "30번 버스는 평일과 방학/휴일 운행 시간이 동일하니 참고하세요!",
+    category: "꿀팁",
+    createdAt: new Date(Date.now() - 1000 * 60 * 320).toISOString(), // ~5 hours ago
+    routeNo: "30",
+    likes: 5,
 },];
 
 let inMemoryComments: CommentItem[] | null = null;
@@ -117,8 +135,8 @@ function saveToLocalFile(comments: CommentItem[]): void {
 /**
  * Loads all stored comments from storage/memory.
  */
-export async function getAllStoredComments(): Promise<CommentItem[]> {
-    if (inMemoryComments) {
+export async function getAllStoredComments(forceReload = false): Promise<CommentItem[]> {
+    if (!forceReload && inMemoryComments) {
         return inMemoryComments;
     }
 
@@ -145,8 +163,8 @@ export async function getAllStoredComments(): Promise<CommentItem[]> {
  * Retrieves comments.
  * By default (onlyRecent = true), returns only comments written within the last 24 hours.
  */
-export async function getComments(onlyRecent = true): Promise<CommentItem[]> {
-    const allComments = await getAllStoredComments();
+export async function getComments(onlyRecent = true, forceReload = false): Promise<CommentItem[]> {
+    const allComments = await getAllStoredComments(forceReload);
 
     if (!onlyRecent) {
         return allComments;
@@ -160,9 +178,9 @@ export async function getComments(onlyRecent = true): Promise<CommentItem[]> {
 }
 
 export async function addComment({
-                                     author, content, routeNo,
+                                     author, content, routeNo, category,
                                  }: {
-    author?: string; content: string; routeNo?: string;
+    author?: string; content: string; routeNo?: string; category?: string;
 }): Promise<CommentItem> {
     const cleanContent = content.trim();
     if (!cleanContent) {
@@ -179,8 +197,10 @@ export async function addComment({
         id: `c-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         author: cleanAuthor.slice(0, 20),
         content: cleanContent,
+        category: category ? category.slice(0, 10) : "제보",
         createdAt: new Date().toISOString(),
         routeNo: routeNo ? routeNo.slice(0, 10) : undefined,
+        likes: 0,
     };
 
     // Permanently save new comment at the top of the archive (up to 5000 items)
@@ -193,6 +213,32 @@ export async function addComment({
     });
 
     return newComment;
+}
+
+export async function likeComment(id: string): Promise<CommentItem | null> {
+    const currentList = await getAllStoredComments();
+    let updatedComment: CommentItem | null = null;
+
+    const nextList = currentList.map((c) => {
+        if (c.id === id) {
+            updatedComment = {
+                ...c, likes: (c.likes || 0) + 1,
+            };
+            return updatedComment;
+        }
+        return c;
+    });
+
+    if (!updatedComment) {
+        return null;
+    }
+
+    inMemoryComments = nextList;
+    saveToLocalFile(nextList);
+    saveToBlob(nextList).catch(() => {
+    });
+
+    return updatedComment;
 }
 
 export async function deleteComment(id: string): Promise<boolean> {

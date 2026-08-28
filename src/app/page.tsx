@@ -31,6 +31,9 @@ export default function YonseiTimetablePage() {
     const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
 
     const [comments, setComments] = useState<CommentItem[]>([]);
+    const [totalStoredCommentsCount, setTotalStoredCommentsCount] = useState<number>(0);
+    const [isCommentsFiltered24h, setIsCommentsFiltered24h] = useState<boolean>(true);
+    const [isRefreshingComments, setIsRefreshingComments] = useState<boolean>(false);
     const [toastNotice, setToastNotice] = useState<{
         type: "success" | "info" | "error";
         message: string;
@@ -97,24 +100,36 @@ export default function YonseiTimetablePage() {
         fetchScheduleData();
     }, [fetchScheduleData]);
 
-    // Load comments from API
-    const fetchComments = useCallback(async () => {
+    // Load comments from API (with refresh & archive support)
+    const fetchComments = useCallback(async (showAll = false, force = false) => {
+        setIsRefreshingComments(true);
         try {
-            const res = await fetch(`/api/comments?t=${Date.now()}`, {
-                cache: "no-store",
-                headers: {"Cache-Control": "no-cache"},
-            });
+            const res = await fetch(
+                `/api/comments?all=${showAll ? "true" : "false"}&force=${force ? "true" : "false"}&t=${Date.now()}`,
+                {
+                    cache: "no-store",
+                    headers: {"Cache-Control": "no-cache"},
+                }
+            );
             const json = await res.json();
             if (json.success && Array.isArray(json.comments)) {
                 setComments(json.comments);
+                if (typeof json.totalStoredCount === "number") {
+                    setTotalStoredCommentsCount(json.totalStoredCount);
+                }
+                if (typeof json.isFiltered24h === "boolean") {
+                    setIsCommentsFiltered24h(json.isFiltered24h);
+                }
             }
-        } catch {
-            // Fallback
+        } catch (err) {
+            console.warn("Failed to fetch comments:", err);
+        } finally {
+            setIsRefreshingComments(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchComments();
+        fetchComments(false, false);
     }, [fetchComments]);
 
     // Fetch or refresh schedule from Wonju ITS API
@@ -177,6 +192,7 @@ export default function YonseiTimetablePage() {
         author?: string;
         content: string;
         routeNo?: string;
+        category?: string;
     }) => {
         const res = await fetch("/api/comments", {
             method: "POST",
@@ -189,6 +205,25 @@ export default function YonseiTimetablePage() {
         }
         if (json.comment) {
             setComments((prev) => [json.comment, ...prev]);
+            setTotalStoredCommentsCount((prev) => prev + 1);
+        }
+    };
+
+    const handleLikeComment = async (id: string) => {
+        try {
+            const res = await fetch("/api/comments", {
+                method: "PATCH",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({id, action: "like"}),
+            });
+            const json = await res.json();
+            if (json.success && json.comment) {
+                setComments((prev) =>
+                    prev.map((c) => (c.id === id ? json.comment : c))
+                );
+            }
+        } catch (err) {
+            console.warn("Failed to like comment:", err);
         }
     };
 
@@ -200,6 +235,7 @@ export default function YonseiTimetablePage() {
             const json = await res.json();
             if (json.success) {
                 setComments((prev) => prev.filter((c) => c.id !== id));
+                setTotalStoredCommentsCount((prev) => Math.max(0, prev - 1));
             }
         } catch {
             // Ignore
@@ -321,18 +357,24 @@ export default function YonseiTimetablePage() {
                 )}
             </div>
 
-            {/* Floating Action Button (FAB) for Comments */}
+            {/* Floating Action Button (FAB) for Comments / Chat */}
             <button
                 type="button"
                 onClick={() => setIsCommentsModalOpen(true)}
                 className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer border border-white/20"
-                title="댓글 페이지"
+                title="실시간 버스 톡 & 메모"
             >
-                <MessageSquare className="w-4 h-4"/>
+                <div className="relative">
+                    <MessageSquare className="w-4 h-4"/>
+                    {comments.length > 0 && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping"/>
+                    )}
+                </div>
+                <span>실시간 톡</span>
                 {comments.length > 0 && (
                     <span className="px-2 py-0.5 rounded-full bg-white text-blue-600 text-[11px] font-black shadow-xs">
-            {comments.length}
-          </span>
+                        {comments.length}
+                    </span>
                 )}
             </button>
 
@@ -351,8 +393,13 @@ export default function YonseiTimetablePage() {
                 isOpen={isCommentsModalOpen}
                 onClose={() => setIsCommentsModalOpen(false)}
                 comments={comments}
+                totalStoredCount={totalStoredCommentsCount}
+                isFiltered24h={isCommentsFiltered24h}
                 onAddComment={handleAddComment}
                 onDeleteComment={handleDeleteComment}
+                onLikeComment={handleLikeComment}
+                onRefresh={fetchComments}
+                isRefreshing={isRefreshingComments}
             />
 
             {/* Wonju ITS Notice Center Modal */}
@@ -368,6 +415,5 @@ export default function YonseiTimetablePage() {
             {/* Minimal Footer */}
             <Footer/>
         </main>
-    )
-
+    );
 }
