@@ -4,7 +4,6 @@ import {CommentItem, CommentsDataset} from "@/types/comment";
 import {generateUserTag, getRandomNickname} from "@/data/nicknames";
 
 const BLOB_COMMENTS_PATH = "comments.json";
-export const COMMENT_DISPLAY_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours (1 day)
 
 // Default initial sample comments for realistic board preview
 const INITIAL_COMMENTS: CommentItem[] = [{
@@ -162,20 +161,9 @@ export async function getAllStoredComments(forceReload = false): Promise<Comment
 
 /**
  * Retrieves comments.
- * By default (onlyRecent = true), returns only comments written within the last 24 hours.
  */
-export async function getComments(onlyRecent = true, forceReload = false): Promise<CommentItem[]> {
-    const allComments = await getAllStoredComments(forceReload);
-
-    if (!onlyRecent) {
-        return allComments;
-    }
-
-    const cutoff = Date.now() - COMMENT_DISPLAY_DURATION_MS;
-    return allComments.filter((c) => {
-        const time = new Date(c.createdAt).getTime();
-        return !isNaN(time) && time >= cutoff;
-    });
+export async function getComments(forceReload = false): Promise<CommentItem[]> {
+    return getAllStoredComments(forceReload);
 }
 
 export async function addComment({
@@ -261,14 +249,31 @@ export async function likeComment(id: string): Promise<CommentItem | null> {
     return updatedComment;
 }
 
-export async function deleteComment(id: string): Promise<boolean> {
+export async function deleteComment(id: string, authorTag?: string): Promise<CommentItem | null> {
     const currentList = await getAllStoredComments();
-    const nextList = currentList.filter((c) => c.id !== id);
-    inMemoryComments = nextList;
+    let updatedComment: CommentItem | null = null;
 
+    const nextList = currentList.map((c) => {
+        if (c.id === id) {
+            if (authorTag && c.authorTag && c.authorTag !== authorTag) {
+                return c;
+            }
+            updatedComment = {
+                ...c, isDeleted: true,
+            };
+            return updatedComment;
+        }
+        return c;
+    });
+
+    if (!updatedComment) {
+        return null;
+    }
+
+    inMemoryComments = nextList;
     saveToLocalFile(nextList);
     saveToBlob(nextList).catch(() => {
     });
 
-    return true;
+    return updatedComment;
 }

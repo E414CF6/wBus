@@ -4,6 +4,7 @@ import {createPortal} from "react-dom";
 import React, {useEffect, useMemo, useRef, useState} from "react";
 import {
     ArrowUp,
+    Ban,
     Check,
     CheckCircle2,
     Clock,
@@ -15,12 +16,13 @@ import {
     Send,
     Sparkles,
     ThumbsUp,
+    Trash2,
     X,
 } from "lucide-react";
 
 import {CommentItem} from "@/types/comment";
 import {formatRelativeTime} from "@lib/timeUtils";
-import {getRandomNickname} from "@/data/nicknames";
+import {generateUserTag, getRandomNickname} from "@/data/nicknames";
 
 interface CommentsModalProps {
     isOpen: boolean;
@@ -37,6 +39,7 @@ interface CommentsModalProps {
         replyToAuthorTag?: string;
     }) => Promise<void>;
     onLikeComment?: (id: string) => Promise<void>;
+    onDeleteComment?: (id: string, authorTag?: string) => Promise<void>;
     onRefresh: (force?: boolean) => Promise<void>;
     isRefreshing?: boolean;
     initialRouteTag?: string;
@@ -77,6 +80,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                                                                 comments,
                                                                 onAddComment,
                                                                 onLikeComment,
+                                                                onDeleteComment,
                                                                 onRefresh,
                                                                 isRefreshing = false,
                                                                 initialRouteTag,
@@ -84,6 +88,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     const [mounted, setMounted] = useState(false);
     const [newContent, setNewContent] = useState("");
     const [newAuthor, setNewAuthor] = useState("");
+    const [userTag, setUserTag] = useState<string>("");
     const [selectedRouteTag, setSelectedRouteTag] = useState<string>("ALL");
     const [selectedCategory, setSelectedCategory] = useState<string>("잡담");
 
@@ -98,6 +103,8 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
     const [likedCommentIds, setLikedCommentIds] = useState<Set<string>>(new Set());
+    const [myCommentIds, setMyCommentIds] = useState<Set<string>>(new Set());
+    const [deletingId, setDeletingId] = useState<string | null>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [showScrollTop, setShowScrollTop] = useState(false);
     const [latestCreatedId, setLatestCreatedId] = useState<string | null>(null);
@@ -107,7 +114,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
 
     useEffect(() => {
         setMounted(true);
-        // Load saved nickname & liked comments
+        // Load saved nickname & liked comments & user tag
         try {
             let savedNick = localStorage.getItem("wbus_chat_nickname");
             if (!savedNick || !savedNick.trim() || savedNick.trim() === "익명") {
@@ -115,12 +122,26 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                 localStorage.setItem("wbus_chat_nickname", savedNick);
             }
             setNewAuthor(savedNick);
+
+            let savedTag = localStorage.getItem("wbus_user_tag");
+            if (!savedTag || !savedTag.startsWith("#")) {
+                savedTag = generateUserTag();
+                localStorage.setItem("wbus_user_tag", savedTag);
+            }
+            setUserTag(savedTag);
+
             const savedLikes = localStorage.getItem("wbus_liked_comments");
             if (savedLikes) {
                 setLikedCommentIds(new Set(JSON.parse(savedLikes)));
             }
+
+            const savedMy = localStorage.getItem("wbus_my_comments");
+            if (savedMy) {
+                setMyCommentIds(new Set(JSON.parse(savedMy)));
+            }
         } catch {
             setNewAuthor(getRandomNickname());
+            setUserTag(generateUserTag());
         }
     }, []);
 
@@ -249,6 +270,32 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
         }
     }, [comments]);
 
+    const isMyComment = (comment: CommentItem) => {
+        if (userTag && comment.authorTag && comment.authorTag === userTag) {
+            return true;
+        }
+        if (myCommentIds.has(comment.id)) {
+            return true;
+        }
+        return false;
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm("이 메시지를 삭제하시겠습니까?\n삭제된 메시지는 '삭제된 메시지입니다'로 표시됩니다.")) {
+            return;
+        }
+        if (onDeleteComment) {
+            setDeletingId(id);
+            try {
+                await onDeleteComment(id, userTag);
+            } catch {
+                alert("메시지 삭제에 실패했습니다.");
+            } finally {
+                setDeletingId(null);
+            }
+        }
+    };
+
     const handleLike = async (id: string) => {
         if (likedCommentIds.has(id)) return;
 
@@ -274,7 +321,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
         });
     };
 
-    // Filter displayed comments (only 24h recent comments are passed in)
+    // Filter displayed comments
     const displayedComments = useMemo(() => {
         return comments.filter((c) => {
             // Route filter
@@ -348,7 +395,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                         <div className="min-w-0">
                             <div className="flex items-center gap-2">
                                 <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
-                                    Live Chat
+                                    실시간 톡
                                 </h2>
                             </div>
                             <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5 truncate">
@@ -468,7 +515,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                                 <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
                                     {searchQuery || filterRouteTag !== "ALL" || filterCategory !== "ALL"
                                         ? "조건에 일치하는 댓글이 없습니다."
-                                        : "최근 24시간 동안 등록된 실시간 메모가 없습니다. 아래에서 첫 메시지를 남겨보세요!"}
+                                        : "등록된 실시간 메모가 없습니다. 아래에서 첫 메시지를 남겨보세요!"}
                                 </p>
                             </div>
                         ) : (
@@ -481,48 +528,71 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                                     <div
                                         key={item.id}
                                         className={`p-3.5 rounded-2xl border flex items-start gap-3 shadow-2xs hover:border-slate-300 dark:hover:border-white/10 transition-all group ${
-                                            isNewest
-                                                ? "animate-slideUp bg-blue-50/90 dark:bg-[#192235] border-blue-300 dark:border-blue-500/40 ring-1 ring-blue-400/30"
-                                                : "bg-slate-50/90 dark:bg-[#161a26] border-slate-200/80 dark:border-white/5"
+                                            item.isDeleted
+                                                ? "bg-slate-50/40 dark:bg-white/[0.01] border-slate-200/50 dark:border-white/5 opacity-80"
+                                                : isNewest
+                                                    ? "animate-slideUp bg-blue-50/90 dark:bg-[#192235] border-blue-300 dark:border-blue-500/40 ring-1 ring-blue-400/30"
+                                                    : "bg-slate-50/90 dark:bg-[#161a26] border-slate-200/80 dark:border-white/5"
                                         }`}
                                     >
                                         {/* Author Initial Avatar */}
                                         <div
-                                            className={`w-8 h-8 rounded-xl bg-gradient-to-br ${getAvatarGradient(
-                                                item.author
-                                            )} text-white font-black text-xs flex items-center justify-center shadow-xs shrink-0 select-none uppercase`}
+                                            className={`w-8 h-8 rounded-xl ${
+                                                item.isDeleted
+                                                    ? "bg-slate-200 dark:bg-slate-800 text-slate-400"
+                                                    : `bg-gradient-to-br ${getAvatarGradient(item.author)} text-white`
+                                            } font-black text-xs flex items-center justify-center shadow-xs shrink-0 select-none uppercase`}
                                         >
-                                            {item.author.charAt(0)}
+                                            {item.isDeleted ? (
+                                                <Ban className="w-3.5 h-3.5"/>
+                                            ) : (
+                                                item.author.charAt(0)
+                                            )}
                                         </div>
 
                                         {/* Body Content */}
                                         <div className="min-w-0 flex-1">
                                             {/* Meta line */}
                                             <div className="flex flex-wrap items-center gap-1.5 mb-1">
-                                                <span className="text-xs font-black text-slate-900 dark:text-white">
+                                                <span
+                                                    className={`text-xs font-black ${
+                                                        item.isDeleted
+                                                            ? "text-slate-400 dark:text-slate-500"
+                                                            : "text-slate-900 dark:text-white"
+                                                    }`}
+                                                >
                                                     {item.author}
                                                 </span>
 
-                                                {/* Category Badge */}
-                                                {item.category && (
+                                                {item.isDeleted ? (
                                                     <span
-                                                        className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold border ${getCategoryBadgeClass(
-                                                            item.category
-                                                        )}`}
-                                                    >
-                                                        {item.category}
+                                                        className="px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-slate-500 text-[10px] font-bold">
+                                                        삭제됨
                                                     </span>
-                                                )}
+                                                ) : (
+                                                    <>
+                                                        {/* Category Badge */}
+                                                        {item.category && (
+                                                            <span
+                                                                className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold border ${getCategoryBadgeClass(
+                                                                    item.category
+                                                                )}`}
+                                                            >
+                                                                {item.category}
+                                                            </span>
+                                                        )}
 
-                                                {/* Route Badge */}
-                                                {item.routeNo && (
-                                                    <span
-                                                        className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold border ${getRouteBadgeClass(
-                                                            item.routeNo
-                                                        )}`}
-                                                    >
-                                                        {item.routeNo}번
-                                                    </span>
+                                                        {/* Route Badge */}
+                                                        {item.routeNo && (
+                                                            <span
+                                                                className={`px-1.5 py-0.2 rounded-md text-[10px] font-extrabold border ${getRouteBadgeClass(
+                                                                    item.routeNo
+                                                                )}`}
+                                                            >
+                                                                {item.routeNo}번
+                                                            </span>
+                                                        )}
+                                                    </>
                                                 )}
 
                                                 {/* Relative Time */}
@@ -535,49 +605,72 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                                             </div>
 
                                             {/* Text Content */}
-                                            <p className="text-xs sm:text-[13px] text-slate-800 dark:text-slate-200 leading-relaxed break-words font-medium">
-                                                {item.content}
-                                            </p>
+                                            {item.isDeleted ? (
+                                                <p className="text-xs text-slate-400 dark:text-slate-500 italic leading-relaxed break-words font-medium flex items-center gap-1.5 select-none">
+                                                    <Ban className="w-3.5 h-3.5 shrink-0 opacity-60"/>
+                                                    <span>삭제된 메시지입니다.</span>
+                                                </p>
+                                            ) : (
+                                                <p className="text-xs sm:text-[13px] text-slate-800 dark:text-slate-200 leading-relaxed break-words font-medium">
+                                                    {item.content}
+                                                </p>
+                                            )}
 
                                             {/* Action bar under comment */}
-                                            <div className="flex items-center gap-2 mt-2 pt-1">
-                                                {/* Upvote / Like Button */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleLike(item.id)}
-                                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer active:scale-90 ${
-                                                        isLiked
-                                                            ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-500/30 font-black"
-                                                            : "bg-white dark:bg-white/5 text-slate-500 dark:text-slate-400 border-slate-200/80 dark:border-white/5 hover:text-rose-600 dark:hover:text-rose-400"
-                                                    }`}
-                                                    title={isLiked ? "공감함" : "도움돼요 / 공감"}
-                                                >
-                                                    <ThumbsUp
-                                                        className={`w-3 h-3 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`}
-                                                    />
-                                                    <span>{item.likes || 0}</span>
-                                                </button>
+                                            {!item.isDeleted && (
+                                                <div className="flex items-center gap-2 mt-2 pt-1">
+                                                    {/* Upvote / Like Button */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleLike(item.id)}
+                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-all cursor-pointer active:scale-90 ${
+                                                            isLiked
+                                                                ? "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-300 dark:border-rose-500/30 font-black"
+                                                                : "bg-white dark:bg-white/5 text-slate-500 dark:text-slate-400 border-slate-200/80 dark:border-white/5 hover:text-rose-600 dark:hover:text-rose-400"
+                                                        }`}
+                                                        title={isLiked ? "공감함" : "도움돼요 / 공감"}
+                                                    >
+                                                        <ThumbsUp
+                                                            className={`w-3 h-3 ${isLiked ? "fill-rose-500 text-rose-500" : ""}`}
+                                                        />
+                                                        <span>{item.likes || 0}</span>
+                                                    </button>
 
-                                                {/* Copy Button */}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleCopy(item.id, item.content)}
-                                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
-                                                    title="내용 복사"
-                                                >
-                                                    {isCopied ? (
-                                                        <>
-                                                            <Check className="w-3 h-3 text-emerald-500"/>
-                                                            <span className="text-emerald-500">복사됨</span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Copy className="w-3 h-3"/>
-                                                            <span>복사</span>
-                                                        </>
+                                                    {/* Copy Button */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleCopy(item.id, item.content)}
+                                                        className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-bold text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                                                        title="내용 복사"
+                                                    >
+                                                        {isCopied ? (
+                                                            <>
+                                                                <Check className="w-3 h-3 text-emerald-500"/>
+                                                                <span className="text-emerald-500">복사됨</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Copy className="w-3 h-3"/>
+                                                                <span>복사</span>
+                                                            </>
+                                                        )}
+                                                    </button>
+
+                                                    {/* Delete Button for Author */}
+                                                    {isMyComment(item) && onDeleteComment && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleDelete(item.id)}
+                                                            disabled={deletingId === item.id}
+                                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[10px] font-bold text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer disabled:opacity-50"
+                                                            title="메시지 삭제"
+                                                        >
+                                                            <Trash2 className="w-3 h-3"/>
+                                                            <span>삭제</span>
+                                                        </button>
                                                     )}
-                                                </button>
-                                            </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 );

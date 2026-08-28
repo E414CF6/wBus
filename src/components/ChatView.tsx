@@ -3,6 +3,7 @@
 import React, {useEffect, useMemo, useRef, useState} from "react";
 import {
     ArrowDown,
+    Ban,
     Check,
     CheckCircle2,
     Clock,
@@ -16,6 +17,7 @@ import {
     SlidersHorizontal,
     Sparkles,
     ThumbsUp,
+    Trash2,
     X,
 } from "lucide-react";
 
@@ -43,6 +45,7 @@ interface ChatViewProps {
         replyToAuthorTag?: string;
     }) => Promise<void>;
     onLikeComment?: (id: string) => Promise<void>;
+    onDeleteComment?: (id: string, authorTag?: string) => Promise<void>;
     onRefresh: (force?: boolean) => Promise<void>;
     isRefreshing?: boolean;
     filterRoute?: string;
@@ -84,6 +87,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                                       comments,
                                                       onAddComment,
                                                       onLikeComment,
+                                                      onDeleteComment,
                                                       onRefresh,
                                                       isRefreshing = false,
                                                       filterRoute = "ALL",
@@ -107,6 +111,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const [autoRefresh, setAutoRefresh] = useState(true);
     const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
     const [likedCommentIds, setLikedCommentIds] = useState<Set<string>>(new Set());
+    const [myCommentIds, setMyCommentIds] = useState<Set<string>>(new Set());
+    const [deletingId, setDeletingId] = useState<string | null>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [showScrollBottom, setShowScrollBottom] = useState(false);
     const [latestCreatedId, setLatestCreatedId] = useState<string | null>(null);
@@ -165,6 +171,12 @@ export const ChatView: React.FC<ChatViewProps> = ({
             const savedLikes = localStorage.getItem("wbus_liked_comments");
             if (savedLikes) {
                 setLikedCommentIds(new Set(JSON.parse(savedLikes)));
+            }
+
+            // 4. My authored comments
+            const savedMy = localStorage.getItem("wbus_my_comments");
+            if (savedMy) {
+                setMyCommentIds(new Set(JSON.parse(savedMy)));
             }
         } catch {
             setNewAuthor(getRandomNickname());
@@ -227,13 +239,39 @@ export const ChatView: React.FC<ChatViewProps> = ({
             id: rootParentId || comment.id,
             author: comment.author,
             authorTag: comment.authorTag,
-            content: comment.content,
+            content: comment.isDeleted ? "삭제된 메시지" : comment.content,
         });
         if (comment.routeNo) {
             setSelectedRouteTag(comment.routeNo);
         }
         if (inputRef.current) {
             inputRef.current.focus();
+        }
+    };
+
+    const isMyComment = (comment: CommentItem) => {
+        if (userTag && comment.authorTag && comment.authorTag === userTag) {
+            return true;
+        }
+        if (myCommentIds.has(comment.id)) {
+            return true;
+        }
+        return false;
+    };
+
+    const handleDelete = async (id: string) => {
+        if (!window.confirm("이 메시지를 삭제하시겠습니까?\n삭제된 메시지는 '삭제된 메시지입니다'로 표시됩니다.")) {
+            return;
+        }
+        if (onDeleteComment) {
+            setDeletingId(id);
+            try {
+                await onDeleteComment(id, userTag);
+            } catch {
+                alert("메시지 삭제에 실패했습니다.");
+            } finally {
+                setDeletingId(null);
+            }
         }
     };
 
@@ -402,7 +440,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         <div className="w-full flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 animate-fadeIn">
             {/* 1. Header Card with Title, Filters & Controls */}
             <div
-                className="shrink-0 backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl p-3.5 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-sm space-y-3">
+                className="shrink-0 backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl p-3.5 sm:p-4 border border-slate-200/80 dark:border-whitㅌe/10 shadow-sm space-y-3">
                 {/* Top Info Bar */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
@@ -413,7 +451,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         <div>
                             <div className="flex items-center gap-2">
                                 <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
-                                    실시간 버스 톡
+                                    실시간 톡
                                 </h2>
                                 <span
                                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black border border-emerald-500/20">
@@ -422,7 +460,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                 </span>
                             </div>
                             <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                                최근 24시간 동안 연세 미래캠 버스 탑승자들의 실시간 제보와 소통 피드입니다.
+                                {filteredRoots.length}개의 메시지
                             </p>
                         </div>
                     </div>
@@ -517,25 +555,40 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                     {/* Main Root Comment Card */}
                                     <div
                                         className={`p-3.5 sm:p-4 rounded-2xl border transition-all duration-300 ${
-                                            isLatest
-                                                ? "bg-blue-50/50 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800 animate-slideUp"
-                                                : "bg-slate-50/60 dark:bg-white/[0.02] border-slate-200/70 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
+                                            comment.isDeleted
+                                                ? "bg-slate-50/40 dark:bg-white/[0.01] border-slate-200/50 dark:border-white/5 opacity-80"
+                                                : isLatest
+                                                    ? "bg-blue-50/50 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800 animate-slideUp"
+                                                    : "bg-slate-50/60 dark:bg-white/[0.02] border-slate-200/70 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
                                         }`}
                                     >
                                         <div className="flex items-start justify-between gap-2.5">
                                             <div className="flex items-center gap-2.5">
                                                 <div
-                                                    className={`w-7 h-7 rounded-xl bg-gradient-to-tr ${getAvatarGradient(
-                                                        comment.author,
-                                                        comment.authorTag
-                                                    )} text-white flex items-center justify-center font-black text-xs shadow-xs shrink-0`}
+                                                    className={`w-7 h-7 rounded-xl ${
+                                                        comment.isDeleted
+                                                            ? "bg-slate-200 dark:bg-slate-800 text-slate-400"
+                                                            : `bg-gradient-to-tr ${getAvatarGradient(
+                                                                comment.author,
+                                                                comment.authorTag
+                                                            )} text-white`
+                                                    } flex items-center justify-center font-black text-xs shadow-xs shrink-0`}
                                                 >
-                                                    {comment.author.charAt(0)}
+                                                    {comment.isDeleted ? (
+                                                        <Ban className="w-3.5 h-3.5"/>
+                                                    ) : (
+                                                        comment.author.charAt(0)
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-1.5 flex-wrap">
                                                         <span
-                                                            className="font-extrabold text-xs text-slate-900 dark:text-white">
+                                                            className={`font-extrabold text-xs ${
+                                                                comment.isDeleted
+                                                                    ? "text-slate-400 dark:text-slate-500"
+                                                                    : "text-slate-900 dark:text-white"
+                                                            }`}
+                                                        >
                                                             {comment.author}
                                                         </span>
                                                         {comment.authorTag && (
@@ -544,26 +597,35 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                                                 {comment.authorTag}
                                                             </span>
                                                         )}
-                                                        {comment.category && (
+                                                        {comment.isDeleted ? (
                                                             <span
-                                                                className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
-                                                                    comment.category === "제보"
-                                                                        ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
-                                                                        : comment.category === "꿀팁"
-                                                                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                                                                            : comment.category === "분실물"
-                                                                                ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
-                                                                                : "bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300"
-                                                                }`}
-                                                            >
-                                                                {comment.category}
+                                                                className="px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-slate-500 text-[10px] font-bold">
+                                                                삭제됨
                                                             </span>
-                                                        )}
-                                                        {comment.routeNo && (
-                                                            <span
-                                                                className="px-1.5 py-0.2 rounded-md bg-blue-600/10 text-blue-600 dark:text-blue-400 text-[10px] font-black">
-                                                                {comment.routeNo}번
-                                                            </span>
+                                                        ) : (
+                                                            <>
+                                                                {comment.category && (
+                                                                    <span
+                                                                        className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
+                                                                            comment.category === "제보"
+                                                                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                                                                : comment.category === "꿀팁"
+                                                                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                                                                    : comment.category === "분실물"
+                                                                                        ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                                                                                        : "bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300"
+                                                                        }`}
+                                                                    >
+                                                                        {comment.category}
+                                                                    </span>
+                                                                )}
+                                                                {comment.routeNo && (
+                                                                    <span
+                                                                        className="px-1.5 py-0.2 rounded-md bg-blue-600/10 text-blue-600 dark:text-blue-400 text-[10px] font-black">
+                                                                        {comment.routeNo}번
+                                                                    </span>
+                                                                )}
+                                                            </>
                                                         )}
                                                     </div>
                                                     <div
@@ -574,7 +636,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                                 </div>
                                             </div>
 
-                                            {/* Actions: Reply, Like & Copy */}
+                                            {/* Actions: Reply, Like & Copy & Delete */}
                                             <div className="flex items-center gap-1 shrink-0">
                                                 {/* Reply Button */}
                                                 <button
@@ -593,41 +655,65 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                                     )}
                                                 </button>
 
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleLike(comment.id)}
-                                                    disabled={isLiked}
-                                                    className={`flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-90 ${
-                                                        isLiked
-                                                            ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
-                                                            : "bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-white/5"
-                                                    }`}
-                                                    title="좋아요"
-                                                >
-                                                    <ThumbsUp
-                                                        className={`w-3 h-3 ${isLiked ? "fill-current text-rose-500" : ""}`}/>
-                                                    <span className="text-[11px] font-black">{comment.likes || 0}</span>
-                                                </button>
+                                                {!comment.isDeleted && (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleLike(comment.id)}
+                                                            disabled={isLiked}
+                                                            className={`flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-90 ${
+                                                                isLiked
+                                                                    ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
+                                                                    : "bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-white/5"
+                                                            }`}
+                                                            title="좋아요"
+                                                        >
+                                                            <ThumbsUp
+                                                                className={`w-3 h-3 ${isLiked ? "fill-current text-rose-500" : ""}`}/>
+                                                            <span
+                                                                className="text-[11px] font-black">{comment.likes || 0}</span>
+                                                        </button>
 
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleCopy(comment.id, comment.content)}
-                                                    className="p-1.5 rounded-xl bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-white/5 transition-all cursor-pointer active:scale-90"
-                                                    title="내용 복사"
-                                                >
-                                                    {copiedId === comment.id ? (
-                                                        <Check className="w-3 h-3 text-emerald-500"/>
-                                                    ) : (
-                                                        <Copy className="w-3 h-3"/>
-                                                    )}
-                                                </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleCopy(comment.id, comment.content)}
+                                                            className="p-1.5 rounded-xl bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-white/5 transition-all cursor-pointer active:scale-90"
+                                                            title="내용 복사"
+                                                        >
+                                                            {copiedId === comment.id ? (
+                                                                <Check className="w-3 h-3 text-emerald-500"/>
+                                                            ) : (
+                                                                <Copy className="w-3 h-3"/>
+                                                            )}
+                                                        </button>
+
+                                                        {isMyComment(comment) && onDeleteComment && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleDelete(comment.id)}
+                                                                disabled={deletingId === comment.id}
+                                                                className="p-1.5 rounded-xl bg-white dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200/80 dark:border-white/5 transition-all cursor-pointer active:scale-90 disabled:opacity-50"
+                                                                title="메시지 삭제"
+                                                            >
+                                                                <Trash2 className="w-3 h-3"/>
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
 
                                         {/* Message Body */}
-                                        <p className="mt-2 text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap break-words leading-relaxed pl-9">
-                                            {comment.content}
-                                        </p>
+                                        {comment.isDeleted ? (
+                                            <p className="mt-2 text-xs sm:text-sm text-slate-400 dark:text-slate-500 italic font-medium whitespace-pre-wrap break-words leading-relaxed pl-9 flex items-center gap-1.5 select-none">
+                                                <Ban className="w-3.5 h-3.5 shrink-0 opacity-60"/>
+                                                <span>삭제된 메시지입니다.</span>
+                                            </p>
+                                        ) : (
+                                            <p className="mt-2 text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap break-words leading-relaxed pl-9">
+                                                {comment.content}
+                                            </p>
+                                        )}
                                     </div>
 
                                     {/* Nested Replies List (Thread) */}
@@ -642,26 +728,41 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                                     <div
                                                         key={reply.id}
                                                         className={`p-3 rounded-2xl border transition-all duration-300 ${
-                                                            isReplyLatest
-                                                                ? "bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 animate-slideUp"
-                                                                : "bg-white/70 dark:bg-white/[0.03] border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
+                                                            reply.isDeleted
+                                                                ? "bg-slate-50/40 dark:bg-white/[0.01] border-slate-200/50 dark:border-white/5 opacity-80"
+                                                                : isReplyLatest
+                                                                    ? "bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 animate-slideUp"
+                                                                    : "bg-white/70 dark:bg-white/[0.03] border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
                                                         }`}
                                                     >
                                                         <div className="flex items-start justify-between gap-2">
                                                             <div className="flex items-center gap-2">
                                                                 <div
-                                                                    className={`w-6 h-6 rounded-lg bg-gradient-to-tr ${getAvatarGradient(
-                                                                        reply.author,
-                                                                        reply.authorTag
-                                                                    )} text-white flex items-center justify-center font-black text-[10px] shadow-xs shrink-0`}
+                                                                    className={`w-6 h-6 rounded-lg ${
+                                                                        reply.isDeleted
+                                                                            ? "bg-slate-200 dark:bg-slate-800 text-slate-400"
+                                                                            : `bg-gradient-to-tr ${getAvatarGradient(
+                                                                                reply.author,
+                                                                                reply.authorTag
+                                                                            )} text-white`
+                                                                    } flex items-center justify-center font-black text-[10px] shadow-xs shrink-0`}
                                                                 >
-                                                                    {reply.author.charAt(0)}
+                                                                    {reply.isDeleted ? (
+                                                                        <Ban className="w-3 h-3"/>
+                                                                    ) : (
+                                                                        reply.author.charAt(0)
+                                                                    )}
                                                                 </div>
                                                                 <div>
                                                                     <div
                                                                         className="flex items-center gap-1.5 flex-wrap">
                                                                         <span
-                                                                            className="font-extrabold text-xs text-slate-900 dark:text-white">
+                                                                            className={`font-extrabold text-xs ${
+                                                                                reply.isDeleted
+                                                                                    ? "text-slate-400 dark:text-slate-500"
+                                                                                    : "text-slate-900 dark:text-white"
+                                                                            }`}
+                                                                        >
                                                                             {reply.author}
                                                                         </span>
                                                                         {reply.authorTag && (
@@ -670,19 +771,26 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                                                                 {reply.authorTag}
                                                                             </span>
                                                                         )}
-                                                                        {reply.replyToAuthor && (
+                                                                        {reply.isDeleted ? (
                                                                             <span
-                                                                                className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-1.5 py-0.2 rounded-md">
-                                                                                <CornerDownRight
-                                                                                    className="w-2.5 h-2.5"/>
-                                                                                @{reply.replyToAuthor}
-                                                                                {reply.replyToAuthorTag && (
-                                                                                    <span
-                                                                                        className="font-mono text-[9px] opacity-75">
-                                                                                        {reply.replyToAuthorTag}
-                                                                                    </span>
-                                                                                )}
+                                                                                className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-slate-500 text-[9px] font-bold">
+                                                                                삭제됨
                                                                             </span>
+                                                                        ) : (
+                                                                            reply.replyToAuthor && (
+                                                                                <span
+                                                                                    className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-1.5 py-0.2 rounded-md">
+                                                                                    <CornerDownRight
+                                                                                        className="w-2.5 h-2.5"/>
+                                                                                    @{reply.replyToAuthor}
+                                                                                    {reply.replyToAuthorTag && (
+                                                                                        <span
+                                                                                            className="font-mono text-[9px] opacity-75">
+                                                                                            {reply.replyToAuthorTag}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </span>
+                                                                            )
                                                                         )}
                                                                     </div>
                                                                     <div
@@ -694,49 +802,69 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                                             </div>
 
                                                             {/* Reply Actions */}
-                                                            <div className="flex items-center gap-1 shrink-0">
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleStartReply(reply, comment.id)}
-                                                                    className="px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 text-[10px] font-bold transition-all cursor-pointer active:scale-95"
-                                                                    title="답글 달기"
-                                                                >
-                                                                    답글
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleLike(reply.id)}
-                                                                    disabled={isReplyLiked}
-                                                                    className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer active:scale-90 ${
-                                                                        isReplyLiked
-                                                                            ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
-                                                                            : "bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400"
-                                                                    }`}
-                                                                >
-                                                                    <ThumbsUp
-                                                                        className={`w-2.5 h-2.5 ${isReplyLiked ? "fill-current text-rose-500" : ""}`}/>
-                                                                    <span>{reply.likes || 0}</span>
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleCopy(reply.id, reply.content)}
-                                                                    className="p-1 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-all cursor-pointer active:scale-90"
-                                                                    title="복사"
-                                                                >
-                                                                    {copiedId === reply.id ? (
-                                                                        <Check
-                                                                            className="w-2.5 h-2.5 text-emerald-500"/>
-                                                                    ) : (
-                                                                        <Copy className="w-2.5 h-2.5"/>
+                                                            {!reply.isDeleted && (
+                                                                <div className="flex items-center gap-1 shrink-0">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleStartReply(reply, comment.id)}
+                                                                        className="px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 text-[10px] font-bold transition-all cursor-pointer active:scale-95"
+                                                                        title="답글 달기"
+                                                                    >
+                                                                        답글
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleLike(reply.id)}
+                                                                        disabled={isReplyLiked}
+                                                                        className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer active:scale-90 ${
+                                                                            isReplyLiked
+                                                                                ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
+                                                                                : "bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400"
+                                                                        }`}
+                                                                    >
+                                                                        <ThumbsUp
+                                                                            className={`w-2.5 h-2.5 ${isReplyLiked ? "fill-current text-rose-500" : ""}`}/>
+                                                                        <span>{reply.likes || 0}</span>
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleCopy(reply.id, reply.content)}
+                                                                        className="p-1 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-all cursor-pointer active:scale-90"
+                                                                        title="복사"
+                                                                    >
+                                                                        {copiedId === reply.id ? (
+                                                                            <Check
+                                                                                className="w-2.5 h-2.5 text-emerald-500"/>
+                                                                        ) : (
+                                                                            <Copy className="w-2.5 h-2.5"/>
+                                                                        )}
+                                                                    </button>
+                                                                    {isMyComment(reply) && onDeleteComment && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleDelete(reply.id)}
+                                                                            disabled={deletingId === reply.id}
+                                                                            className="p-1 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-all cursor-pointer active:scale-90 disabled:opacity-50"
+                                                                            title="삭제"
+                                                                        >
+                                                                            <Trash2 className="w-2.5 h-2.5"/>
+                                                                        </button>
                                                                     )}
-                                                                </button>
-                                                            </div>
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         {/* Reply Content */}
-                                                        <p className="mt-1.5 text-xs text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap break-words leading-relaxed pl-8">
-                                                            {reply.content}
-                                                        </p>
+                                                        {reply.isDeleted ? (
+                                                            <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500 italic font-medium whitespace-pre-wrap break-words leading-relaxed pl-8 flex items-center gap-1 select-none">
+                                                                <Ban className="w-3 h-3 shrink-0 opacity-60"/>
+                                                                <span>삭제된 메시지입니다.</span>
+                                                            </p>
+                                                        ) : (
+                                                            <p className="mt-1.5 text-xs text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap break-words leading-relaxed pl-8">
+                                                                {reply.content}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 );
                                             })}

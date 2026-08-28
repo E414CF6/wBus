@@ -13,6 +13,7 @@ export interface CommentItem {
     replyToAuthor?: string;
     authorTag?: string;
     replyToAuthorTag?: string;
+    isDeleted?: boolean;
 }
 
 export interface CommentsDataset {

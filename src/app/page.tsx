@@ -136,7 +136,7 @@ export default function YonseiTimetablePage() {
         fetchScheduleData();
     }, [fetchScheduleData]);
 
-    // Load comments from API (strictly recent 24 hours)
+    // Load comments from API
     const fetchComments = useCallback(async (force = false) => {
         setIsRefreshingComments(true);
         try {
@@ -239,6 +239,16 @@ export default function YonseiTimetablePage() {
         }
         if (json.comment) {
             setComments((prev) => [json.comment, ...prev]);
+            try {
+                const saved = localStorage.getItem("wbus_my_comments");
+                const list: string[] = saved ? JSON.parse(saved) : [];
+                if (!list.includes(json.comment.id)) {
+                    list.push(json.comment.id);
+                    localStorage.setItem("wbus_my_comments", JSON.stringify(list));
+                }
+            } catch {
+                // Ignore
+            }
         }
     };
 
@@ -257,6 +267,27 @@ export default function YonseiTimetablePage() {
             }
         } catch (err) {
             console.warn("Failed to like comment:", err);
+        }
+    };
+
+    const handleDeleteComment = async (id: string, authorTag?: string) => {
+        try {
+            const params = new URLSearchParams({id});
+            if (authorTag) params.set("authorTag", authorTag);
+            const res = await fetch(`/api/comments?${params.toString()}`, {
+                method: "DELETE",
+            });
+            const json = await res.json();
+            if (json.success) {
+                setComments((prev) =>
+                    prev.map((c) => (c.id === id ? (json.comment || {...c, isDeleted: true}) : c))
+                );
+            } else {
+                throw new Error(json.error || "댓글 삭제에 실패했습니다.");
+            }
+        } catch (err) {
+            console.warn("Failed to delete comment:", err);
+            throw err;
         }
     };
 
@@ -385,6 +416,7 @@ export default function YonseiTimetablePage() {
                         comments={comments}
                         onAddComment={handleAddComment}
                         onLikeComment={handleLikeComment}
+                        onDeleteComment={handleDeleteComment}
                         onRefresh={fetchComments}
                         isRefreshing={isRefreshingComments}
                         filterRoute={chatFilterRoute}
@@ -423,6 +455,7 @@ export default function YonseiTimetablePage() {
                     comments={comments}
                     onAddComment={handleAddComment}
                     onLikeComment={handleLikeComment}
+                    onDeleteComment={handleDeleteComment}
                     onRefresh={fetchComments}
                     isRefreshing={isRefreshingComments}
                 />
