@@ -7,7 +7,6 @@ import {TARGET_ROUTE_NUMBERS} from "@data/yonseiRoutes";
 
 import {isWeekend, selectRouteVariant} from "@lib/timeUtils";
 
-import {Header} from "@components/Header";
 import {RouteCard} from "@components/RouteCard";
 import {RouteDetailModal} from "@components/RouteDetailModal";
 import {NoticeBanner} from "@components/NoticeBanner";
@@ -292,29 +291,22 @@ export default function YonseiTimetablePage() {
 
     return (
         <main
-            className={`w-full flex flex-col justify-between items-center px-3 sm:px-6 lg:px-8 ${
+            className={`w-full items-center px-3 sm:px-6 lg:px-8 ${
                 activeTab === "chat"
-                    ? "h-[100dvh] max-h-[100dvh] pt-2 sm:pt-4 pb-20 sm:pb-24 overflow-hidden"
-                    : "min-h-screen pt-3 sm:pt-6 pb-24 sm:pb-28"
+                    ? "h-[100dvh] max-h-[100dvh] pt-2 sm:pt-4 pb-[calc(env(safe-area-inset-bottom,0)+4.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+5rem)] flex flex-col overflow-hidden"
+                    : "min-h-screen py-6 sm:py-10 pb-28 sm:pb-32 flex flex-col justify-center"
             }`}>
             {/* Centered Dashboard Container */}
-            <div className="w-full max-w-6xl flex-1 flex flex-col justify-between my-auto">
-                {/* Top Header with Day Mode Switcher, Notice, Talk & Theme Toggle */}
-                <Header
-                    dayMode={dayMode}
-                    onDayModeChange={setDayMode}
-                    isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-                    onOpenNoticeModal={() => handleOpenNoticeModal()}
-                    onOpenCommentsModal={() => handleTabChange("chat")}
-                    commentCount={comments.length}
-                    activeTab={activeTab}
-                    onTabChange={handleTabChange}
-                />
-
+            <div
+                className={`w-full max-w-6xl flex flex-col ${
+                    activeTab === "chat"
+                        ? "flex-1 min-h-0 gap-2.5 sm:gap-3"
+                        : "gap-4 sm:gap-6 my-auto"
+                }`}>
                 {/* Toast Message Notification */}
                 {toastNotice && (
                     <div
-                        className={`p-3.5 sm:p-4 mb-5 rounded-2xl border flex items-center justify-between transition-all animate-fadeIn shadow-sm ${
+                        className={`p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between transition-all animate-fadeIn shadow-sm shrink-0 ${
                             toastNotice.type === "success"
                                 ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
                                 : toastNotice.type === "error"
@@ -344,13 +336,13 @@ export default function YonseiTimetablePage() {
 
                 {/* TAB 1: Schedule View */}
                 {activeTab === "schedule" && (
-                    <div className="space-y-4 pb-1 animate-fadeIn">
+                    <div className="space-y-4 sm:space-y-5 animate-fadeIn">
                         {/* Wonju ITS Live Notice Banner (Date-sorted, latest first) */}
                         <NoticeBanner onOpenNoticeModal={handleOpenNoticeModal}/>
 
                         {/* 3 Route Cards Grid (30, 34, 34-1) */}
                         {isLoadingSchedule && activeRoutes.length === 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                                 {[1, 2, 3].map((i) => (
                                     <div
                                         key={i}
@@ -363,7 +355,7 @@ export default function YonseiTimetablePage() {
                                 ))}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                                 {activeRoutes.map((route) => (
                                     <RouteCard
                                         key={route.id}
@@ -381,6 +373,9 @@ export default function YonseiTimetablePage() {
                             onRefresh={() => handleRefreshSchedule(true)}
                             isRefreshing={isRefreshing}
                         />
+
+                        {/* Minimal Footer for Schedule Tab */}
+                        <Footer/>
                     </div>
                 )}
 
@@ -396,9 +391,6 @@ export default function YonseiTimetablePage() {
                         onFilterRouteChange={setChatFilterRoute}
                     />
                 )}
-
-                {/* Minimal Footer */}
-                <Footer/>
             </div>
 
             {/* Floating Pill Bottom Navigation Bar */}

@@ -30,7 +30,7 @@ export const CacheInfoBanner: React.FC<CacheInfoBannerProps> = ({
 
     return (
         <div
-            className="flex flex-wrap items-center justify-between gap-3 px-3 sm:px-4 py-2.5 mb-2 rounded-2xl bg-white/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 text-xs text-slate-500 dark:text-slate-400 select-none">
+            className="flex flex-wrap items-center justify-between gap-3 px-3 sm:px-4 py-2.5 rounded-2xl bg-white/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 text-xs text-slate-500 dark:text-slate-400 select-none">
             {/* Timetable Criteria Timestamp & Cooldown Status */}
             <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5">

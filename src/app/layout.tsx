@@ -3,8 +3,8 @@ import {ThemeProvider} from "@components/ThemeProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-    title: "연세대학교 버스 시간표",
-    description: "연세대학교 미래캠퍼스 30번, 34번, 34-1번 실시간 다음 버스 및 운행 시간표",
+    title: "연세대학교 버스 정보",
+    description: "연세대학교 미래캠퍼스 운행 정보를 제공하는 웹사이트입니다. 미래캠퍼스의 30번, 34번, 34-1번 버스 시간표와 매지리, 회촌 등 주요 정류장 정보를 확인할 수 있습니다.",
     keywords: ["연세대학교", "미래캠퍼스", "원주", "버스시간표", "30번", "34번", "34-1번", "매지리", "회촌",],
     authors: [{name: "wBus"}],
 };

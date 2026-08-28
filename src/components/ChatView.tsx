@@ -399,10 +399,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
     }, [rootComments, repliesByParent, filterRoute, filterCategory, searchQuery]);
 
     return (
-        <div className="w-full flex-1 flex flex-col justify-between space-y-3 pb-1 animate-fadeIn">
+        <div className="w-full flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 animate-fadeIn">
             {/* 1. Header Card with Title, Filters & Controls */}
             <div
-                className="backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/10 shadow-sm space-y-4">
+                className="shrink-0 backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl p-3.5 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-sm space-y-3">
                 {/* Top Info Bar */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
@@ -484,13 +484,13 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 </div>
             </div>
 
-            {/* 2. Full-Width Message Feed Container (Screen-fitted height) */}
+            {/* 2. Full-Width Message Feed Container (Screen-fitted responsive flex height) */}
             <div
                 ref={listContainerRef}
                 onScroll={handleScroll}
-                className="h-[calc(100dvh-320px)] sm:h-[calc(100dvh-340px)] min-h-[260px] relative backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-white/10 shadow-sm flex flex-col justify-between overflow-hidden"
+                className="flex-1 min-h-0 relative backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl p-3.5 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-sm flex flex-col overflow-hidden"
             >
-                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-1.5">
+                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-4 pr-1 sm:pr-1.5">
                     {filteredRoots.length === 0 ? (
                         <div className="py-24 text-center space-y-3">
                             <div
@@ -766,11 +766,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
             </div>
 
             {/* 3. Bottom Compose Bar with Settings Popover */}
-            <div className="relative w-full" ref={menuRef}>
+            <div className="shrink-0 relative w-full" ref={menuRef}>
                 {/* Expandable Settings & Tools Popover Panel (Appears above input) */}
                 {isMenuOpen && (
                     <div
-                        className="absolute bottom-full mb-2.5 left-0 w-full sm:w-[420px] backdrop-blur-2xl bg-white/95 dark:bg-[#151a27]/95 rounded-3xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/15 shadow-2xl z-30 space-y-3.5 animate-slideUp">
+                        className="absolute bottom-full mb-2 left-0 w-full sm:w-[420px] max-h-[60vh] overflow-y-auto custom-scrollbar backdrop-blur-2xl bg-white/95 dark:bg-[#151a27]/95 rounded-3xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/15 shadow-2xl z-30 space-y-3.5 animate-slideUp">
                         {/* Popover Header */}
                         <div
                             className="flex items-center justify-between border-b border-slate-200/70 dark:border-white/10 pb-2.5">

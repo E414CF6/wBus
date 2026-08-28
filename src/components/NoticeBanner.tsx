@@ -74,7 +74,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({
     return (
         <div
             onClick={() => onOpenNoticeModal(currentNotice?.id)}
-            className="mb-6 backdrop-blur-xl bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 dark:from-amber-500/15 dark:via-orange-500/10 dark:to-amber-500/15 rounded-3xl p-4 sm:p-5 border border-amber-500/30 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden group cursor-pointer select-none"
+            className="backdrop-blur-xl bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 dark:from-amber-500/15 dark:via-orange-500/10 dark:to-amber-500/15 rounded-3xl p-4 sm:p-5 border border-amber-500/30 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden group cursor-pointer select-none"
         >
             {/* Decorative Glow */}
             <div
