@@ -3,6 +3,7 @@ import path from "path";
 import { CacheMetadata, RouteDataset } from "@/types/bus";
 import { YONSEI_DATA } from "@/data/yonseiRoutes";
 import { scrapeWonjuItsYonsei } from "./itsScraper";
+import { loadFromVercelBlob, saveToVercelBlob } from "./blobService";
 
 export const MIN_REFRESH_INTERVAL_DAYS = 1;
 export const MIN_REFRESH_INTERVAL_MS =
@@ -19,7 +20,7 @@ function getLocalFilePath(): string {
 }
 
 function loadFromFile(): RouteDataset | null {
-  // Check /tmp first for serverless
+  // Check /tmp first for serverless environment
   const tmpPath = "/tmp/yonseiRoutes.json";
   if (fs.existsSync(tmpPath)) {
     try {
@@ -51,7 +52,8 @@ function loadFromFile(): RouteDataset | null {
 }
 
 export function getCacheMetadata(overrideData?: RouteDataset): CacheMetadata {
-  const target = overrideData || inMemoryCache?.data || loadFromFile() || YONSEI_DATA;
+  const target =
+    overrideData || inMemoryCache?.data || loadFromFile() || YONSEI_DATA;
   const updatedAt = target.updatedAt || new Date().toISOString();
   const totalRoutes = target.routes ? target.routes.length : 0;
 
@@ -88,14 +90,21 @@ async function saveCache(data: RouteDataset): Promise<void> {
     timestamp: Date.now(),
   };
 
-  // 2. Save to /tmp/
+  // 2. Save to Vercel Blob (Supports OIDC or token authentication)
+  try {
+    await saveToVercelBlob(data);
+  } catch (err) {
+    console.warn("[ScheduleService] Vercel Blob save skipped:", err);
+  }
+
+  // 3. Save to /tmp/ for serverless container caching
   try {
     fs.writeFileSync("/tmp/yonseiRoutes.json", jsonStr, "utf-8");
   } catch {
     // Ignore in read-only environment
   }
 
-  // 3. Save to src/data/ if writable (e.g. in local development)
+  // 4. Save to local file if writable
   try {
     const localPath = getLocalFilePath();
     const dir = path.dirname(localPath);
@@ -111,6 +120,7 @@ async function saveCache(data: RouteDataset): Promise<void> {
 export async function getOrFetchSchedule(
   force = false
 ): Promise<{ data: RouteDataset; meta: CacheMetadata }> {
+  // 1. Check in-memory cache
   if (!force && inMemoryCache) {
     return {
       data: inMemoryCache.data,
@@ -119,6 +129,19 @@ export async function getOrFetchSchedule(
   }
 
   if (!force) {
+    // 2. Check Vercel Blob (OIDC or Token)
+    try {
+      const blobData = await loadFromVercelBlob();
+      if (blobData) {
+        const meta = getCacheMetadata(blobData);
+        inMemoryCache = { data: blobData, meta, timestamp: Date.now() };
+        return { data: blobData, meta };
+      }
+    } catch (err) {
+      console.warn("[ScheduleService] Vercel Blob load fallback:", err);
+    }
+
+    // 3. Check local/tmp file
     const fromFile = loadFromFile();
     if (fromFile) {
       const meta = getCacheMetadata(fromFile);
@@ -127,7 +150,7 @@ export async function getOrFetchSchedule(
     }
   }
 
-  // Fallback to static bundled data if no refresh requested
+  // 4. Fallback to bundled dataset
   const meta = getCacheMetadata(YONSEI_DATA);
   inMemoryCache = { data: YONSEI_DATA, meta, timestamp: Date.now() };
   return { data: YONSEI_DATA, meta };
