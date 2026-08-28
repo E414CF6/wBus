@@ -9,6 +9,7 @@ import { Header } from "@/components/Header";
 import { RouteCard } from "@/components/RouteCard";
 import { RouteDetailModal } from "@/components/RouteDetailModal";
 import { NoticeBanner } from "@/components/NoticeBanner";
+import { NoticeModal } from "@/components/NoticeModal";
 import { CacheInfoBanner } from "@/components/CacheInfoBanner";
 import { RefreshConfirmModal } from "@/components/RefreshConfirmModal";
 import { Footer } from "@/components/Footer";
@@ -26,6 +27,11 @@ export default function YonseiTimetablePage() {
   }));
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRefreshModalOpen, setIsRefreshModalOpen] = useState(false);
+
+  // Notice Modal State
+  const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
+  const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
+
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [toastNotice, setToastNotice] = useState<{
     type: "success" | "info" | "error";
@@ -220,6 +226,11 @@ export default function YonseiTimetablePage() {
     }
   };
 
+  const handleOpenNoticeModal = (noticeId?: string) => {
+    setSelectedNoticeId(noticeId || null);
+    setIsNoticeModalOpen(true);
+  };
+
   // Check if today is actual weekend
   const isTodayWeekendOrHoliday = useMemo(() => {
     return isWeekend(currentTime);
@@ -263,8 +274,8 @@ export default function YonseiTimetablePage() {
           currentTime={currentTime}
         />
 
-        {/* Notice Info Banner */}
-        <NoticeBanner />
+        {/* Wonju ITS Live Notice Banner */}
+        <NoticeBanner onOpenNoticeModal={handleOpenNoticeModal} />
 
         {/* Refresh Toast Banner */}
         {toastNotice && (
@@ -402,6 +413,16 @@ export default function YonseiTimetablePage() {
         comments={comments}
         onAddComment={handleAddComment}
         onDeleteComment={handleDeleteComment}
+      />
+
+      {/* Wonju ITS Notice Center Modal */}
+      <NoticeModal
+        isOpen={isNoticeModalOpen}
+        onClose={() => {
+          setIsNoticeModalOpen(false);
+          setSelectedNoticeId(null);
+        }}
+        initialNoticeId={selectedNoticeId}
       />
 
       {/* Minimal Footer */}
