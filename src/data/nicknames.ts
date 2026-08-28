@@ -14,3 +14,15 @@ export function getRandomNickname(exclude?: string): string {
     const randomIndex = Math.floor(Math.random() * pool.length);
     return pool[randomIndex];
 }
+
+/**
+ * 7자리 랜덤 해시태그(예: '#d67qe62')를 생성합니다.
+ */
+export function generateUserTag(): string {
+    const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let result = "";
+    for (let i = 0; i < 7; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `#${result}`;
+}

@@ -14,12 +14,17 @@ import {NoticeBanner} from "@components/NoticeBanner";
 import {NoticeModal} from "@components/NoticeModal";
 import {CacheInfoBanner} from "@components/CacheInfoBanner";
 import {CommentsModal} from "@components/CommentsModal";
+import {ChatView} from "@components/ChatView";
+import {BottomNav, NavTab} from "@components/BottomNav";
 import {Footer} from "@components/Footer";
 
 import React, {useCallback, useEffect, useMemo, useState} from "react";
-import {CheckCircle2, Info, MessageSquare, X} from "lucide-react";
+import {CheckCircle2, Info, X} from "lucide-react";
 
 export default function YonseiTimetablePage() {
+    const [activeTab, setActiveTab] = useState<NavTab>("schedule");
+    const [chatFilterRoute, setChatFilterRoute] = useState<string>("ALL");
+
     const [routes, setRoutes] = useState<BusRoute[]>([]);
     const [meta, setMeta] = useState<CacheMetadata | null>(null);
     const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
@@ -47,6 +52,41 @@ export default function YonseiTimetablePage() {
             setCurrentTime(new Date());
         }, 10000);
         return () => clearInterval(timer);
+    }, []);
+
+    // Restore active tab from URL param or localStorage on mount
+    useEffect(() => {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const urlTab = params.get("tab") as NavTab | null;
+            if (urlTab === "schedule" || urlTab === "chat") {
+                setActiveTab(urlTab);
+                return;
+            }
+
+            const savedTab = localStorage.getItem("wbus_active_tab") as NavTab | null;
+            if (savedTab === "schedule" || savedTab === "chat") {
+                setActiveTab(savedTab);
+            }
+        } catch {
+            // Ignore
+        }
+    }, []);
+
+    const handleTabChange = useCallback((tab: NavTab) => {
+        setActiveTab(tab);
+        try {
+            localStorage.setItem("wbus_active_tab", tab);
+            const url = new URL(window.location.href);
+            if (tab === "chat") {
+                url.searchParams.set("tab", "chat");
+            } else {
+                url.searchParams.delete("tab");
+            }
+            window.history.replaceState({}, "", url.toString());
+        } catch {
+            // Ignore
+        }
     }, []);
 
     // Load cached meta from localStorage
@@ -184,6 +224,10 @@ export default function YonseiTimetablePage() {
         content: string;
         routeNo?: string;
         category?: string;
+        parentId?: string;
+        replyToAuthor?: string;
+        authorTag?: string;
+        replyToAuthorTag?: string;
     }) => {
         const res = await fetch("/api/comments", {
             method: "POST",
@@ -248,17 +292,23 @@ export default function YonseiTimetablePage() {
 
     return (
         <main
-            className="min-h-screen w-full flex flex-col justify-center items-center py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
+            className={`w-full flex flex-col justify-between items-center px-3 sm:px-6 lg:px-8 ${
+                activeTab === "chat"
+                    ? "h-[100dvh] max-h-[100dvh] pt-2 sm:pt-4 pb-20 sm:pb-24 overflow-hidden"
+                    : "min-h-screen pt-3 sm:pt-6 pb-24 sm:pb-28"
+            }`}>
             {/* Centered Dashboard Container */}
-            <div className="w-full max-w-6xl flex flex-col justify-center my-auto">
+            <div className="w-full max-w-6xl flex-1 flex flex-col justify-between my-auto">
                 {/* Top Header with Day Mode Switcher, Notice, Talk & Theme Toggle */}
                 <Header
                     dayMode={dayMode}
                     onDayModeChange={setDayMode}
                     isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
                     onOpenNoticeModal={() => handleOpenNoticeModal()}
-                    onOpenCommentsModal={() => setIsCommentsModalOpen(true)}
+                    onOpenCommentsModal={() => handleTabChange("chat")}
                     commentCount={comments.length}
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
                 />
 
                 {/* Toast Message Notification */}
@@ -292,66 +342,76 @@ export default function YonseiTimetablePage() {
                     </div>
                 )}
 
-                {/* Wonju ITS Live Notice Banner (Date-sorted, latest first) */}
-                <NoticeBanner onOpenNoticeModal={handleOpenNoticeModal}/>
+                {/* TAB 1: Schedule View */}
+                {activeTab === "schedule" && (
+                    <div className="space-y-4 pb-1 animate-fadeIn">
+                        {/* Wonju ITS Live Notice Banner (Date-sorted, latest first) */}
+                        <NoticeBanner onOpenNoticeModal={handleOpenNoticeModal}/>
 
-                {/* 3 Route Cards Grid (30, 34, 34-1) */}
-                {isLoadingSchedule && activeRoutes.length === 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4">
-                        {[1, 2, 3].map((i) => (
-                            <div
-                                key={i}
-                                className="glass-panel rounded-3xl p-6 space-y-4 animate-pulse"
-                            >
-                                <div className="h-8 w-1/3 bg-slate-200 dark:bg-white/10 rounded-xl"/>
-                                <div className="h-4 w-2/3 bg-slate-200 dark:bg-white/10 rounded-md"/>
-                                <div className="h-24 w-full bg-slate-200 dark:bg-white/10 rounded-2xl"/>
+                        {/* 3 Route Cards Grid (30, 34, 34-1) */}
+                        {isLoadingSchedule && activeRoutes.length === 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4">
+                                {[1, 2, 3].map((i) => (
+                                    <div
+                                        key={i}
+                                        className="glass-panel rounded-3xl p-6 space-y-4 animate-pulse"
+                                    >
+                                        <div className="h-8 w-1/3 bg-slate-200 dark:bg-white/10 rounded-xl"/>
+                                        <div className="h-4 w-2/3 bg-slate-200 dark:bg-white/10 rounded-md"/>
+                                        <div className="h-24 w-full bg-slate-200 dark:bg-white/10 rounded-2xl"/>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4">
-                        {activeRoutes.map((route) => (
-                            <RouteCard
-                                key={route.id}
-                                route={route}
-                                currentTime={currentTime}
-                                onOpenModal={setSelectedRoute}
-                            />
-                        ))}
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4">
+                                {activeRoutes.map((route) => (
+                                    <RouteCard
+                                        key={route.id}
+                                        route={route}
+                                        currentTime={currentTime}
+                                        onOpenModal={setSelectedRoute}
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {/* Timetable Criteria & Refresh Banner (Above Footer) */}
+                        <CacheInfoBanner
+                            meta={meta}
+                            onRefresh={() => handleRefreshSchedule(true)}
+                            isRefreshing={isRefreshing}
+                        />
                     </div>
                 )}
 
-                {/* Timetable Criteria & Refresh Banner (Above Footer) */}
-                <CacheInfoBanner
-                    meta={meta}
-                    onRefresh={() => handleRefreshSchedule(true)}
-                    isRefreshing={isRefreshing}
-                />
+                {/* TAB 2: Independent Full Chat / Talk View */}
+                {activeTab === "chat" && (
+                    <ChatView
+                        comments={comments}
+                        onAddComment={handleAddComment}
+                        onLikeComment={handleLikeComment}
+                        onRefresh={fetchComments}
+                        isRefreshing={isRefreshingComments}
+                        filterRoute={chatFilterRoute}
+                        onFilterRouteChange={setChatFilterRoute}
+                    />
+                )}
 
                 {/* Minimal Footer */}
                 <Footer/>
             </div>
 
-            {/* Floating Action Button (FAB) for Comments / Chat */}
-            <button
-                type="button"
-                onClick={() => setIsCommentsModalOpen(true)}
-                className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer border border-white/20"
-                title="Live Chat"
-            >
-                <div className="relative">
-                    <MessageSquare className="w-4 h-4"/>
-                    {comments.length > 0 && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping"/>
-                    )}
-                </div>
-                {comments.length > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-white text-blue-600 text-[11px] font-black shadow-xs">
-                        {comments.length}
-                    </span>
-                )}
-            </button>
+            {/* Floating Pill Bottom Navigation Bar */}
+            <BottomNav
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                dayMode={dayMode}
+                onDayModeChange={setDayMode}
+                isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                chatFilterRoute={chatFilterRoute}
+                onChatFilterRouteChange={setChatFilterRoute}
+                commentCount={comments.length}
+            />
 
             {/* Detailed Timetable Modal */}
             {selectedRoute && (
@@ -363,16 +423,18 @@ export default function YonseiTimetablePage() {
                 />
             )}
 
-            {/* Dedicated Comments Modal */}
-            <CommentsModal
-                isOpen={isCommentsModalOpen}
-                onClose={() => setIsCommentsModalOpen(false)}
-                comments={comments}
-                onAddComment={handleAddComment}
-                onLikeComment={handleLikeComment}
-                onRefresh={fetchComments}
-                isRefreshing={isRefreshingComments}
-            />
+            {/* Optional Fallback Comments Modal (Kept for compatibility) */}
+            {isCommentsModalOpen && (
+                <CommentsModal
+                    isOpen={isCommentsModalOpen}
+                    onClose={() => setIsCommentsModalOpen(false)}
+                    comments={comments}
+                    onAddComment={handleAddComment}
+                    onLikeComment={handleLikeComment}
+                    onRefresh={fetchComments}
+                    isRefreshing={isRefreshingComments}
+                />
+            )}
 
             {/* Wonju ITS Notice Center Modal */}
             <NoticeModal

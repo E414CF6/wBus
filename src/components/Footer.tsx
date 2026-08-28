@@ -2,7 +2,7 @@ import React from "react";
 
 export const Footer: React.FC = () => {
     return (<footer
-        className="mt-4 pt-4 pb-2 border-t border-slate-200/60 dark:border-white/5 text-center text-xs text-slate-500 dark:text-slate-400 w-full">
+        className="mt-2 pt-3 pb-1 border-t border-slate-200/60 dark:border-white/5 text-center text-xs text-slate-500 dark:text-slate-400 w-full">
         <div className="w-full px-2 flex flex-col sm:flex-row items-center justify-between gap-2">
             <p className="font-medium text-[11px]">
                 © {new Date().getFullYear()} wBus

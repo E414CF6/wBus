@@ -31,6 +31,10 @@ interface CommentsModalProps {
         content: string;
         routeNo?: string;
         category?: string;
+        parentId?: string;
+        replyToAuthor?: string;
+        authorTag?: string;
+        replyToAuthorTag?: string;
     }) => Promise<void>;
     onLikeComment?: (id: string) => Promise<void>;
     onRefresh: (force?: boolean) => Promise<void>;

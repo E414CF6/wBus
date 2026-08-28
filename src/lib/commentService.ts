@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {CommentItem, CommentsDataset} from "@/types/comment";
-import {getRandomNickname} from "@/data/nicknames";
+import {generateUserTag, getRandomNickname} from "@/data/nicknames";
 
 const BLOB_COMMENTS_PATH = "comments.json";
 export const COMMENT_DISPLAY_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours (1 day)
@@ -179,9 +179,23 @@ export async function getComments(onlyRecent = true, forceReload = false): Promi
 }
 
 export async function addComment({
-                                     author, content, routeNo, category,
+                                     author,
+                                     content,
+                                     routeNo,
+                                     category,
+                                     parentId,
+                                     replyToAuthor,
+                                     authorTag,
+                                     replyToAuthorTag,
                                  }: {
-    author?: string; content: string; routeNo?: string; category?: string;
+    author?: string;
+    content: string;
+    routeNo?: string;
+    category?: string;
+    parentId?: string;
+    replyToAuthor?: string;
+    authorTag?: string;
+    replyToAuthorTag?: string;
 }): Promise<CommentItem> {
     const cleanContent = content.trim();
     if (!cleanContent) {
@@ -192,16 +206,21 @@ export async function addComment({
     }
 
     const cleanAuthor = (author?.trim() && author.trim() !== "익명") ? author.trim() : getRandomNickname();
+    const cleanAuthorTag = authorTag ? (authorTag.startsWith("#") ? authorTag : `#${authorTag}`).slice(0, 10) : generateUserTag();
     const currentList = await getAllStoredComments();
 
     const newComment: CommentItem = {
         id: `c-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         author: cleanAuthor.slice(0, 20),
+        authorTag: cleanAuthorTag,
         content: cleanContent,
         category: category ? category.slice(0, 10) : "잡담",
         createdAt: new Date().toISOString(),
         routeNo: routeNo ? routeNo.slice(0, 10) : undefined,
         likes: 0,
+        parentId: parentId || undefined,
+        replyToAuthor: replyToAuthor ? replyToAuthor.slice(0, 20) : undefined,
+        replyToAuthorTag: replyToAuthorTag ? (replyToAuthorTag.startsWith("#") ? replyToAuthorTag : `#${replyToAuthorTag}`).slice(0, 10) : undefined,
     };
 
     // Permanently save new comment at the top of the archive (up to 5000 items)

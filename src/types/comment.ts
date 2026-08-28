@@ -9,6 +9,10 @@ export interface CommentItem {
     category?: "제보" | "꿀팁" | "질문" | "분실물" | "잡담" | string;
     likes?: number;
     ipHash?: string;
+    parentId?: string;
+    replyToAuthor?: string;
+    authorTag?: string;
+    replyToAuthorTag?: string;
 }
 
 export interface CommentsDataset {

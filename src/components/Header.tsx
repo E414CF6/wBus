@@ -1,18 +1,20 @@
 "use client";
 
 import React from "react";
-import {Bus, Megaphone, MessageSquare} from "lucide-react";
+import {Bus, Megaphone} from "lucide-react";
 
 import {DayMode} from "@/types/bus";
-import {ThemeToggle} from "./ThemeToggle";
+import {NavTab} from "./BottomNav";
 
 interface HeaderProps {
     dayMode: DayMode;
     onDayModeChange: (mode: DayMode) => void;
     isTodayWeekendOrHoliday: boolean;
     onOpenNoticeModal: () => void;
-    onOpenCommentsModal: () => void;
+    onOpenCommentsModal?: () => void;
     commentCount: number;
+    activeTab?: NavTab;
+    onTabChange?: (tab: NavTab) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,6 +24,8 @@ export const Header: React.FC<HeaderProps> = ({
                                                   onOpenNoticeModal,
                                                   onOpenCommentsModal,
                                                   commentCount,
+                                                  activeTab = "schedule",
+                                                  onTabChange,
                                               }) => {
     return (
         <header className="w-full mb-6 select-none">
@@ -41,7 +45,7 @@ export const Header: React.FC<HeaderProps> = ({
                             </span>
                         </div>
                         <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                            연세대학교 미래캠퍼스 버스 시간표
+                            연세대학교 미래캠퍼스 버스 정보
                         </p>
                     </div>
                 </div>
@@ -99,26 +103,6 @@ export const Header: React.FC<HeaderProps> = ({
                         <Megaphone className="w-3.5 h-3.5"/>
                         <span className="hidden md:inline">Notice</span>
                     </button>
-
-                    {/* Quick Live Chat Trigger */}
-                    <button
-                        type="button"
-                        onClick={onOpenCommentsModal}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-xs font-black transition-all cursor-pointer active:scale-95 shadow-2xs"
-                        title="Live Chat"
-                    >
-                        <MessageSquare className="w-3.5 h-3.5"/>
-                        <span className="hidden md:inline">Live Chat</span>
-                        {commentCount > 0 && (
-                            <span
-                                className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[10px] font-black shadow-2xs">
-                                {commentCount}
-                            </span>
-                        )}
-                    </button>
-
-                    {/* Dark/Light Theme Toggle */}
-                    <ThemeToggle/>
                 </div>
             </div>
         </header>

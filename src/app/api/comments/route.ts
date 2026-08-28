@@ -45,13 +45,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
-        const {author, content, routeNo, category} = body;
+        const {author, content, routeNo, category, parentId, replyToAuthor, authorTag, replyToAuthorTag} = body;
 
         const newComment = await addComment({
             author,
             content,
             routeNo,
             category,
+            parentId,
+            replyToAuthor,
+            authorTag,
+            replyToAuthorTag,
         });
 
         return NextResponse.json({
