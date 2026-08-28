@@ -1,5 +1,6 @@
 import {NextRequest, NextResponse} from "next/server";
-import {addComment, deleteComment, getAllStoredComments, getComments,} from "@/lib/commentService";
+
+import {addComment, deleteComment, getAllStoredComments, getComments,} from "@lib/commentService";
 
 export const dynamic = "force-dynamic";
 

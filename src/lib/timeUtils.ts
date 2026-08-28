@@ -1,214 +1,172 @@
-import { BusRoute, TimetableEntry } from "@/types/bus";
+import {BusRoute, TimetableEntry} from "@/types/bus";
 
 /**
  * Parses "HH:mm" or "H:mm" to total minutes since 00:00.
  * Returns null if invalid or format is "-".
  */
 export function parseTimeToMinutes(timeStr: string | undefined | null): number | null {
-  if (!timeStr || timeStr === "-" || timeStr.trim() === "") return null;
-  const parts = timeStr.trim().split(":");
-  if (parts.length !== 2) return null;
-  const hours = parseInt(parts[0], 10);
-  const minutes = parseInt(parts[1], 10);
-  if (isNaN(hours) || isNaN(minutes)) return null;
-  return hours * 60 + minutes;
+    if (!timeStr || timeStr === "-" || timeStr.trim() === "") return null;
+    const parts = timeStr.trim().split(":");
+    if (parts.length !== 2) return null;
+    const hours = parseInt(parts[0], 10);
+    const minutes = parseInt(parts[1], 10);
+    if (isNaN(hours) || isNaN(minutes)) return null;
+    return hours * 60 + minutes;
 }
 
 /**
  * Formats total minutes to "HH:mm".
  */
 export function formatMinutesToTime(minutes: number): string {
-  const h = Math.floor(minutes / 60) % 24;
-  const m = minutes % 60;
-  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+    const h = Math.floor(minutes / 60) % 24;
+    const m = minutes % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
 }
 
 /**
  * Checks if a given date is weekend (Saturday or Sunday).
  */
 export function isWeekend(date: Date = new Date()): boolean {
-  const day = date.getDay();
-  return day === 0 || day === 6;
+    const day = date.getDay();
+    return day === 0 || day === 6;
 }
 
 export interface DepartureInfo {
-  entry: TimetableEntry;
-  timeStr: string;
-  minutes: number;
-  waitMins: number;
+    entry: TimetableEntry;
+    timeStr: string;
+    minutes: number;
+    waitMins: number;
 }
 
 /**
  * Finds the next upcoming departure and subsequent upcoming departures
  * from a list of timetable entries based on current time.
  */
-export function getUpcomingDepartures(
-  timetable: TimetableEntry[],
-  direction: "DEST" | "ORIGIN",
-  currentDate: Date = new Date()
-): {
-  nextDeparture: DepartureInfo | null;
-  subsequentDepartures: DepartureInfo[];
-  allValidDepartures: TimetableEntry[];
+export function getUpcomingDepartures(timetable: TimetableEntry[], direction: "DEST" | "ORIGIN", currentDate: Date = new Date()): {
+    nextDeparture: DepartureInfo | null; subsequentDepartures: DepartureInfo[]; allValidDepartures: TimetableEntry[];
 } {
-  const currentMins = currentDate.getHours() * 60 + currentDate.getMinutes();
+    const currentMins = currentDate.getHours() * 60 + currentDate.getMinutes();
 
-  // Filter valid entries for this direction
-  const allValidDepartures = (timetable || []).filter((item) => {
-    const raw = direction === "DEST" ? item.destDepTime : item.originDepTime;
-    return raw && raw !== "-" && raw.trim() !== "";
-  });
+    // Filter valid entries for this direction
+    const allValidDepartures = (timetable || []).filter((item) => {
+        const raw = direction === "DEST" ? item.destDepTime : item.originDepTime;
+        return raw && raw !== "-" && raw.trim() !== "";
+    });
 
-  const parsedList: DepartureInfo[] = [];
+    const parsedList: DepartureInfo[] = [];
 
-  for (const item of allValidDepartures) {
-    const timeStr = direction === "DEST" ? item.destDepTime : item.originDepTime;
-    const mins = parseTimeToMinutes(timeStr);
-    if (mins !== null && mins >= currentMins) {
-      parsedList.push({
-        entry: item,
-        timeStr,
-        minutes: mins,
-        waitMins: mins - currentMins,
-      });
+    for (const item of allValidDepartures) {
+        const timeStr = direction === "DEST" ? item.destDepTime : item.originDepTime;
+        const mins = parseTimeToMinutes(timeStr);
+        if (mins !== null && mins >= currentMins) {
+            parsedList.push({
+                entry: item, timeStr, minutes: mins, waitMins: mins - currentMins,
+            });
+        }
     }
-  }
 
-  // Sort by minutes ascending
-  parsedList.sort((a, b) => a.minutes - b.minutes);
+    // Sort by minutes ascending
+    parsedList.sort((a, b) => a.minutes - b.minutes);
 
-  const nextDeparture = parsedList.length > 0 ? parsedList[0] : null;
-  const subsequentDepartures = parsedList.slice(1, 5);
+    const nextDeparture = parsedList.length > 0 ? parsedList[0] : null;
+    const subsequentDepartures = parsedList.slice(1, 5);
 
-  return {
-    nextDeparture,
-    subsequentDepartures,
-    allValidDepartures,
-  };
+    return {
+        nextDeparture, subsequentDepartures, allValidDepartures,
+    };
 }
 
 /**
  * Filters the active route variant for a route number (e.g. 30, 34, 34-1)
  * based on the active holiday/weekday mode.
  */
-export function selectRouteVariant(
-  routes: BusRoute[],
-  routeNo: string,
-  isHolidayOrVacation: boolean
-): BusRoute | null {
-  const matches = routes.filter((r) => r.routeNo === routeNo);
-  if (!matches.length) return null;
+export function selectRouteVariant(routes: BusRoute[], routeNo: string, isHolidayOrVacation: boolean): BusRoute | null {
+    const matches = routes.filter((r) => r.routeNo === routeNo);
+    if (!matches.length) return null;
 
-  if (routeNo === "30") {
-    return matches[0];
-  }
+    if (routeNo === "30") {
+        return matches[0];
+    }
 
-  if (isHolidayOrVacation) {
-    const vacationMatch = matches.find(
-      (r) =>
-        r.dayType === "방학,휴일" ||
-        r.dayType.includes("방학") ||
-        r.dayType.includes("휴일") ||
-        r.dayType.includes("토요일") ||
-        r.dayType.includes("공휴일") ||
-        r.dayType === "통상"
-    );
-    return vacationMatch || matches[0];
-  } else {
-    const weekdayMatch = matches.find((r) => r.dayType === "평일" || r.dayType === "통상");
-    return weekdayMatch || matches[0];
-  }
+    if (isHolidayOrVacation) {
+        const vacationMatch = matches.find((r) => r.dayType === "방학,휴일" || r.dayType.includes("방학") || r.dayType.includes("휴일") || r.dayType.includes("토요일") || r.dayType.includes("공휴일") || r.dayType === "통상");
+        return vacationMatch || matches[0];
+    } else {
+        const weekdayMatch = matches.find((r) => r.dayType === "평일" || r.dayType === "통상");
+        return weekdayMatch || matches[0];
+    }
 }
 
 /**
  * Calculates remaining 24-hour cooldown time and formatted string.
  */
-export function formatCooldownRemaining(
-  updatedAt: string | null | undefined,
-  cooldownHours = 24
-): {
-  isReady: boolean;
-  remainingMs: number;
-  text: string;
-  nextAvailableDate: Date | null;
+export function formatCooldownRemaining(updatedAt: string | null | undefined, cooldownHours = 24): {
+    isReady: boolean; remainingMs: number; text: string; nextAvailableDate: Date | null;
 } {
-  if (!updatedAt) {
+    if (!updatedAt) {
+        return {
+            isReady: true, remainingMs: 0, text: "지금 갱신 가능", nextAvailableDate: null,
+        };
+    }
+
+    const lastMs = new Date(updatedAt).getTime();
+    if (isNaN(lastMs)) {
+        return {
+            isReady: true, remainingMs: 0, text: "지금 갱신 가능", nextAvailableDate: null,
+        };
+    }
+
+    const cooldownMs = cooldownHours * 60 * 60 * 1000;
+    const nextMs = lastMs + cooldownMs;
+    const nowMs = Date.now();
+    const diffMs = nextMs - nowMs;
+
+    if (diffMs <= 0) {
+        return {
+            isReady: true, remainingMs: 0, text: "지금 갱신 가능", nextAvailableDate: new Date(nextMs),
+        };
+    }
+
+    const hours = Math.floor(diffMs / (1000 * 60 * 60));
+    const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+    let text = "";
+    if (hours > 0) {
+        text = `${hours}시간 ${mins}분 후 갱신 가능`;
+    } else {
+        text = `${mins}분 후 갱신 가능`;
+    }
+
     return {
-      isReady: true,
-      remainingMs: 0,
-      text: "지금 갱신 가능",
-      nextAvailableDate: null,
+        isReady: false, remainingMs: diffMs, text, nextAvailableDate: new Date(nextMs),
     };
-  }
-
-  const lastMs = new Date(updatedAt).getTime();
-  if (isNaN(lastMs)) {
-    return {
-      isReady: true,
-      remainingMs: 0,
-      text: "지금 갱신 가능",
-      nextAvailableDate: null,
-    };
-  }
-
-  const cooldownMs = cooldownHours * 60 * 60 * 1000;
-  const nextMs = lastMs + cooldownMs;
-  const nowMs = Date.now();
-  const diffMs = nextMs - nowMs;
-
-  if (diffMs <= 0) {
-    return {
-      isReady: true,
-      remainingMs: 0,
-      text: "지금 갱신 가능",
-      nextAvailableDate: new Date(nextMs),
-    };
-  }
-
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-  let text = "";
-  if (hours > 0) {
-    text = `${hours}시간 ${mins}분 후 갱신 가능`;
-  } else {
-    text = `${mins}분 후 갱신 가능`;
-  }
-
-  return {
-    isReady: false,
-    remainingMs: diffMs,
-    text,
-    nextAvailableDate: new Date(nextMs),
-  };
 }
 
 /**
  * Formats ISO timestamp to human-friendly relative time (e.g. 방금 전, 5분 전, 2시간 전, 어제)
  */
 export function formatRelativeTime(isoString: string): string {
-  const timestamp = new Date(isoString).getTime();
-  if (isNaN(timestamp)) return "";
+    const timestamp = new Date(isoString).getTime();
+    if (isNaN(timestamp)) return "";
 
-  const diffSec = Math.floor((Date.now() - timestamp) / 1000);
+    const diffSec = Math.floor((Date.now() - timestamp) / 1000);
 
-  if (diffSec < 60) {
-    return "방금 전";
-  }
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) {
-    return `${diffMin}분 전`;
-  }
-  const diffHours = Math.floor(diffMin / 60);
-  if (diffHours < 24) {
-    return `${diffHours}시간 전`;
-  }
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) {
-    return `${diffDays}일 전`;
-  }
-  return new Date(timestamp).toLocaleDateString("ko-KR", {
-    month: "numeric",
-    day: "numeric",
-  });
+    if (diffSec < 60) {
+        return "방금 전";
+    }
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) {
+        return `${diffMin}분 전`;
+    }
+    const diffHours = Math.floor(diffMin / 60);
+    if (diffHours < 24) {
+        return `${diffHours}시간 전`;
+    }
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) {
+        return `${diffDays}일 전`;
+    }
+    return new Date(timestamp).toLocaleDateString("ko-KR", {
+        month: "numeric", day: "numeric",
+    });
 }

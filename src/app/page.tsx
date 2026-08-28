@@ -1,461 +1,373 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { BusRoute, CacheMetadata, DayMode } from "@/types/bus";
-import { CommentItem } from "@/types/comment";
-import { TARGET_ROUTE_NUMBERS } from "@/data/yonseiRoutes";
-import { isWeekend, selectRouteVariant } from "@/lib/timeUtils";
-import { Header } from "@/components/Header";
-import { RouteCard } from "@/components/RouteCard";
-import { RouteDetailModal } from "@/components/RouteDetailModal";
-import { NoticeBanner } from "@/components/NoticeBanner";
-import { NoticeModal } from "@/components/NoticeModal";
-import { CacheInfoBanner } from "@/components/CacheInfoBanner";
-import { RefreshConfirmModal } from "@/components/RefreshConfirmModal";
-import { CommentsModal } from "@/components/CommentsModal";
-import { Footer } from "@/components/Footer";
-import { Bus, CheckCircle2, Info, MessageSquare, X } from "lucide-react";
+import {BusRoute, CacheMetadata, DayMode} from "@/types/bus";
+import {CommentItem} from "@/types/comment";
+
+import {TARGET_ROUTE_NUMBERS} from "@data/yonseiRoutes";
+
+import {isWeekend, selectRouteVariant} from "@lib/timeUtils";
+
+import {Header} from "@components/Header";
+import {RouteCard} from "@components/RouteCard";
+import {RouteDetailModal} from "@components/RouteDetailModal";
+import {NoticeBanner} from "@components/NoticeBanner";
+import {NoticeModal} from "@components/NoticeModal";
+import {CacheInfoBanner} from "@components/CacheInfoBanner";
+import {CommentsModal} from "@components/CommentsModal";
+import {Footer} from "@components/Footer";
+
+import React, {useCallback, useEffect, useMemo, useState} from "react";
+import {CheckCircle2, Info, MessageSquare, X} from "lucide-react";
 
 export default function YonseiTimetablePage() {
-  const [routes, setRoutes] = useState<BusRoute[]>([]);
-  const [meta, setMeta] = useState<CacheMetadata | null>(null);
-  const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+    const [routes, setRoutes] = useState<BusRoute[]>([]);
+    const [meta, setMeta] = useState<CacheMetadata | null>(null);
+    const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Modals state
-  const [isRefreshModalOpen, setIsRefreshModalOpen] = useState(false);
-  const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
-  const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
-  const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
+    // Modals state
+    const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
+    const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
+    const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
 
-  const [comments, setComments] = useState<CommentItem[]>([]);
-  const [toastNotice, setToastNotice] = useState<{
-    type: "success" | "info" | "error";
-    message: string;
-  } | null>(null);
+    const [comments, setComments] = useState<CommentItem[]>([]);
+    const [toastNotice, setToastNotice] = useState<{
+        type: "success" | "info" | "error";
+        message: string;
+    } | null>(null);
 
-  const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
-  const [dayMode, setDayMode] = useState<DayMode>("AUTO");
-  const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
-  const [selectedFilter, setSelectedFilter] = useState<string>("ALL");
-  const [bookmarks, setBookmarks] = useState<string[]>([]);
+    const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
+    const [dayMode, setDayMode] = useState<DayMode>("AUTO");
+    const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
+    const [selectedFilter, setSelectedFilter] = useState<string>("ALL");
 
-  // Update live clock every 10 seconds
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 10000);
-    return () => clearInterval(timer);
-  }, []);
+    // Update live clock every 10 seconds
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 10000);
+        return () => clearInterval(timer);
+    }, []);
 
-  // Load bookmarks & cached meta from localStorage
-  useEffect(() => {
-    try {
-      const savedBookmarks = localStorage.getItem("yonsei_bus_bookmarks");
-      if (savedBookmarks) {
-        setBookmarks(JSON.parse(savedBookmarks));
-      }
-      const savedMeta = localStorage.getItem("yonsei_last_meta");
-      if (savedMeta) {
-        const parsedMeta = JSON.parse(savedMeta);
-        if (parsedMeta && parsedMeta.updatedAt) {
-          setMeta((prev) => (prev ? { ...prev, ...parsedMeta } : parsedMeta));
-        }
-      }
-    } catch {
-      // Ignore
-    }
-  }, []);
-
-  // Fetch latest schedule data on mount
-  const fetchScheduleData = useCallback(async () => {
-    setIsLoadingSchedule(true);
-    try {
-      const res = await fetch(`/api/schedule?t=${Date.now()}`, {
-        cache: "no-store",
-        headers: { "Cache-Control": "no-cache" },
-      });
-      const json = await res.json();
-      if (json.success) {
-        if (json.data && Array.isArray(json.data.routes)) {
-          setRoutes(json.data.routes);
-        }
-        if (json.meta) {
-          setMeta(json.meta);
-          try {
-            localStorage.setItem("yonsei_last_meta", JSON.stringify(json.meta));
-          } catch {
-            // Ignore
-          }
-        }
-      }
-    } catch (err) {
-      console.warn("Failed to fetch current schedule:", err);
-    } finally {
-      setIsLoadingSchedule(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchScheduleData();
-  }, [fetchScheduleData]);
-
-  // Load comments from API
-  const fetchComments = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/comments?t=${Date.now()}`, {
-        cache: "no-store",
-        headers: { "Cache-Control": "no-cache" },
-      });
-      const json = await res.json();
-      if (json.success && Array.isArray(json.comments)) {
-        setComments(json.comments);
-      }
-    } catch {
-      // Fallback
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchComments();
-  }, [fetchComments]);
-
-  const toggleBookmark = useCallback((routeNo: string) => {
-    setBookmarks((prev) => {
-      const next = prev.includes(routeNo)
-        ? prev.filter((id) => id !== routeNo)
-        : [...prev, routeNo];
-      try {
-        localStorage.setItem("yonsei_bus_bookmarks", JSON.stringify(next));
-      } catch {
-        // Ignore
-      }
-      return next;
-    });
-  }, []);
-
-  // Fetch or refresh schedule from Wonju ITS API
-  const handleRefreshSchedule = async (force = true) => {
-    setIsRefreshing(true);
-    setToastNotice(null);
-    try {
-      const endpoint = force
-        ? `/api/schedule/refresh?force=true&t=${Date.now()}`
-        : `/api/schedule?t=${Date.now()}`;
-      const method = force ? "POST" : "GET";
-
-      const res = await fetch(endpoint, {
-        method,
-        cache: "no-store",
-        headers: { "Cache-Control": "no-cache" },
-      });
-      const json = await res.json();
-
-      if (!json.success) {
-        throw new Error(json.error || "시간표 정보를 불러오는 데 실패했습니다.");
-      }
-
-      if (json.data && Array.isArray(json.data.routes)) {
-        setRoutes(json.data.routes);
-      }
-      if (json.meta) {
-        setMeta(json.meta);
+    // Load cached meta from localStorage
+    useEffect(() => {
         try {
-          localStorage.setItem("yonsei_last_meta", JSON.stringify(json.meta));
+            const savedMeta = localStorage.getItem("yonsei_last_meta");
+            if (savedMeta) {
+                const parsedMeta = JSON.parse(savedMeta);
+                if (parsedMeta && parsedMeta.updatedAt) {
+                    setMeta((prev) => (prev ? {...prev, ...parsedMeta} : parsedMeta));
+                }
+            }
         } catch {
-          // Ignore
+            // Ignore
         }
-      }
+    }, []);
 
-      if (force) {
-        setToastNotice({
-          type: json.refreshed ? "success" : "info",
-          message:
-            json.message ||
-            (json.refreshed
-              ? "원주시 ITS에서 최신 시간표를 성공적으로 가져왔습니다."
-              : "기존 저장된 최신 시간표를 유지합니다."),
+    // Fetch latest schedule data on mount
+    const fetchScheduleData = useCallback(async () => {
+        setIsLoadingSchedule(true);
+        try {
+            const res = await fetch(`/api/schedule?t=${Date.now()}`, {
+                cache: "no-store",
+                headers: {"Cache-Control": "no-cache"},
+            });
+            const json = await res.json();
+            if (json.success) {
+                if (json.data && Array.isArray(json.data.routes)) {
+                    setRoutes(json.data.routes);
+                }
+                if (json.meta) {
+                    setMeta(json.meta);
+                    try {
+                        localStorage.setItem("yonsei_last_meta", JSON.stringify(json.meta));
+                    } catch {
+                        // Ignore
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn("Failed to fetch current schedule:", err);
+        } finally {
+            setIsLoadingSchedule(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchScheduleData();
+    }, [fetchScheduleData]);
+
+    // Load comments from API
+    const fetchComments = useCallback(async () => {
+        try {
+            const res = await fetch(`/api/comments?t=${Date.now()}`, {
+                cache: "no-store",
+                headers: {"Cache-Control": "no-cache"},
+            });
+            const json = await res.json();
+            if (json.success && Array.isArray(json.comments)) {
+                setComments(json.comments);
+            }
+        } catch {
+            // Fallback
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchComments();
+    }, [fetchComments]);
+
+    // Fetch or refresh schedule from Wonju ITS API
+    const handleRefreshSchedule = async (force = true) => {
+        setIsRefreshing(true);
+        setToastNotice(null);
+        try {
+            const endpoint = force
+                ? `/api/schedule/refresh?force=true&t=${Date.now()}`
+                : `/api/schedule?t=${Date.now()}`;
+            const method = force ? "POST" : "GET";
+
+            const res = await fetch(endpoint, {
+                method,
+                cache: "no-store",
+                headers: {"Cache-Control": "no-cache"},
+            });
+            const json = await res.json();
+
+            if (!json.success) {
+                throw new Error(json.error || "시간표 정보를 불러오는 데 실패했습니다.");
+            }
+
+            if (json.data && Array.isArray(json.data.routes)) {
+                setRoutes(json.data.routes);
+            }
+            if (json.meta) {
+                setMeta(json.meta);
+                try {
+                    localStorage.setItem("yonsei_last_meta", JSON.stringify(json.meta));
+                } catch {
+                    // Ignore
+                }
+            }
+
+            if (force) {
+                setToastNotice({
+                    type: json.refreshed ? "success" : "info",
+                    message:
+                        json.message ||
+                        (json.refreshed
+                            ? "최신 시간표를 성공적으로 가져왔습니다."
+                            : "기존 저장된 최신 시간표를 유지합니다."),
+                });
+            }
+        } catch (err) {
+            setToastNotice({
+                type: "error",
+                message:
+                    err instanceof Error
+                        ? err.message
+                        : "시간표 갱신 중 오류가 발생했습니다.",
+            });
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    const handleAddComment = async (data: {
+        author?: string;
+        content: string;
+        routeNo?: string;
+    }) => {
+        const res = await fetch("/api/comments", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(data),
         });
-      }
-    } catch (err) {
-      setToastNotice({
-        type: "error",
-        message:
-          err instanceof Error
-            ? err.message
-            : "시간표 갱신 중 오류가 발생했습니다.",
-      });
-    } finally {
-      setIsRefreshing(false);
-      setIsRefreshModalOpen(false);
-    }
-  };
+        const json = await res.json();
+        if (!json.success) {
+            throw new Error(json.error || "댓글 등록에 실패했습니다.");
+        }
+        if (json.comment) {
+            setComments((prev) => [json.comment, ...prev]);
+        }
+    };
 
-  const handleAddComment = async (data: {
-    author?: string;
-    content: string;
-    routeNo?: string;
-  }) => {
-    const res = await fetch("/api/comments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (!json.success) {
-      throw new Error(json.error || "댓글 등록에 실패했습니다.");
-    }
-    if (json.comment) {
-      setComments((prev) => [json.comment, ...prev]);
-    }
-  };
+    const handleDeleteComment = async (id: string) => {
+        try {
+            const res = await fetch(`/api/comments?id=${encodeURIComponent(id)}`, {
+                method: "DELETE",
+            });
+            const json = await res.json();
+            if (json.success) {
+                setComments((prev) => prev.filter((c) => c.id !== id));
+            }
+        } catch {
+            // Ignore
+        }
+    };
 
-  const handleDeleteComment = async (id: string) => {
-    try {
-      const res = await fetch(`/api/comments?id=${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
-      const json = await res.json();
-      if (json.success) {
-        setComments((prev) => prev.filter((c) => c.id !== id));
-      }
-    } catch {
-      // Ignore
-    }
-  };
+    const handleOpenNoticeModal = (noticeId?: string) => {
+        setSelectedNoticeId(noticeId || null);
+        setIsNoticeModalOpen(true);
+    };
 
-  const handleOpenNoticeModal = (noticeId?: string) => {
-    setSelectedNoticeId(noticeId || null);
-    setIsNoticeModalOpen(true);
-  };
+    // Check if today is actual weekend
+    const isTodayWeekendOrHoliday = useMemo(() => {
+        return isWeekend(currentTime);
+    }, [currentTime]);
 
-  // Check if today is actual weekend
-  const isTodayWeekendOrHoliday = useMemo(() => {
-    return isWeekend(currentTime);
-  }, [currentTime]);
+    // Effective holiday flag taking DayMode into account
+    const effectiveIsHoliday = useMemo(() => {
+        if (dayMode === "WEEKDAY") return false;
+        if (dayMode === "VACATION") return true;
+        return isTodayWeekendOrHoliday;
+    }, [dayMode, isTodayWeekendOrHoliday]);
 
-  // Effective holiday flag taking DayMode into account
-  const effectiveIsHoliday = useMemo(() => {
-    if (dayMode === "WEEKDAY") return false;
-    if (dayMode === "VACATION") return true;
-    return isTodayWeekendOrHoliday;
-  }, [dayMode, isTodayWeekendOrHoliday]);
+    // Pair each target routeNo (30, 34, 34-1) with its matching active schedule variant
+    const activeRoutes = useMemo(() => {
+        const list: BusRoute[] = [];
+        for (const rNo of TARGET_ROUTE_NUMBERS) {
+            const route = selectRouteVariant(routes, rNo, effectiveIsHoliday);
+            if (route) {
+                list.push(route);
+            }
+        }
+        return list;
+    }, [routes, effectiveIsHoliday]);
 
-  // Pair each target routeNo (30, 34, 34-1) with its matching active schedule variant
-  const activeRoutes = useMemo(() => {
-    const list: BusRoute[] = [];
-    for (const rNo of TARGET_ROUTE_NUMBERS) {
-      const route = selectRouteVariant(routes, rNo, effectiveIsHoliday);
-      if (route) {
-        list.push(route);
-      }
-    }
-    return list;
-  }, [routes, effectiveIsHoliday]);
+    // Filter routes if user selects a specific route filter tab
+    const displayedRoutes = useMemo(() => {
+        if (selectedFilter === "ALL") return activeRoutes;
+        return activeRoutes.filter((r) => r.routeNo === selectedFilter);
+    }, [activeRoutes, selectedFilter]);
 
-  // Filter routes if user selects a specific route filter tab
-  const displayedRoutes = useMemo(() => {
-    if (selectedFilter === "ALL") return activeRoutes;
-    return activeRoutes.filter((r) => r.routeNo === selectedFilter);
-  }, [activeRoutes, selectedFilter]);
+    return (
+        <main className="min-h-screen flex flex-col justify-between py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+            <div>
+                {/* Top Header */}
+                <Header
+                    dayMode={dayMode}
+                    onDayModeChange={setDayMode}
+                    isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                    currentTime={currentTime}
+                />
 
-  return (
-    <main className="min-h-screen flex flex-col justify-between py-6 px-3 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      <div>
-        {/* Top Header */}
-        <Header
-          dayMode={dayMode}
-          onDayModeChange={setDayMode}
-          isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-          currentTime={currentTime}
-          onOpenCommentsModal={() => setIsCommentsModalOpen(true)}
-          commentsCount={comments.length}
-        />
+                {/* Wonju ITS Live Notice Banner */}
+                <NoticeBanner onOpenNoticeModal={handleOpenNoticeModal}/>
 
-        {/* Wonju ITS Live Notice Banner */}
-        <NoticeBanner onOpenNoticeModal={handleOpenNoticeModal} />
-
-        {/* Refresh Toast Banner */}
-        {toastNotice && (
-          <div
-            className={`p-3.5 sm:p-4 mb-4 rounded-2xl border flex items-center justify-between transition-all animate-fadeIn shadow-sm ${
-              toastNotice.type === "success"
-                ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
-                : toastNotice.type === "error"
-                ? "bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200"
-                : "bg-blue-50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-500/40 text-blue-800 dark:text-blue-200"
-            }`}
-          >
-            <div className="flex items-center space-x-2.5">
-              {toastNotice.type === "success" ? (
-                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
-              )}
-              <span className="text-xs sm:text-sm font-semibold">
+                {/* Refresh Toast Banner */}
+                {toastNotice && (
+                    <div
+                        className={`p-3.5 sm:p-4 mb-4 rounded-2xl border flex items-center justify-between transition-all animate-fadeIn shadow-sm ${
+                            toastNotice.type === "success"
+                                ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
+                                : toastNotice.type === "error"
+                                    ? "bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200"
+                                    : "bg-blue-50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-500/40 text-blue-800 dark:text-blue-200"
+                        }`}
+                    >
+                        <div className="flex items-center space-x-2.5">
+                            {toastNotice.type === "success" ? (
+                                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"/>
+                            ) : (
+                                <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"/>
+                            )}
+                            <span className="text-xs sm:text-sm font-semibold">
                 {toastNotice.message}
               </span>
+                        </div>
+                        <button
+                            onClick={() => setToastNotice(null)}
+                            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors shrink-0 ml-2 cursor-pointer"
+                            title="닫기"
+                        >
+                            <X className="h-4 w-4"/>
+                        </button>
+                    </div>
+                )}
+
+                {/* Timetable Criteria & Action Banner */}
+                <CacheInfoBanner
+                    meta={meta}
+                    onRefresh={() => handleRefreshSchedule(true)}
+                    isRefreshing={isRefreshing}
+                />
+
+                {/* Route Cards Grid */}
+                {isLoadingSchedule && displayedRoutes.length === 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        {[1, 2, 3].map((i) => (
+                            <div
+                                key={i}
+                                className="glass-panel rounded-3xl p-6 space-y-4 animate-pulse"
+                            >
+                                <div className="h-8 w-1/3 bg-slate-200 dark:bg-white/10 rounded-xl"/>
+                                <div className="h-4 w-2/3 bg-slate-200 dark:bg-white/10 rounded-md"/>
+                                <div className="h-24 w-full bg-slate-200 dark:bg-white/10 rounded-2xl"/>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        {displayedRoutes.map((route) => (
+                            <RouteCard
+                                key={route.id}
+                                route={route}
+                                currentTime={currentTime}
+                                onOpenModal={setSelectedRoute}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
-            <button
-              onClick={() => setToastNotice(null)}
-              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors shrink-0 ml-2 cursor-pointer"
-              title="닫기"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
 
-        {/* Timetable Criteria & Action Banner (Separate Comments & Refresh) */}
-        <CacheInfoBanner
-          meta={meta}
-          onOpenRefreshModal={() => setIsRefreshModalOpen(true)}
-          onOpenCommentsModal={() => setIsCommentsModalOpen(true)}
-          isRefreshing={isRefreshing}
-          commentsCount={comments.length}
-        />
-
-        {/* Route Filter Navigation Pills */}
-        <div className="flex flex-wrap items-center justify-between gap-2.5 mb-5">
-          <div className="flex items-center gap-1.5 p-1 rounded-2xl bg-white/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 shadow-2xs">
+            {/* Floating Action Button (FAB) for Comments */}
             <button
-              type="button"
-              onClick={() => setSelectedFilter("ALL")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                selectedFilter === "ALL"
-                  ? "bg-[#003876] text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              }`}
+                type="button"
+                onClick={() => setIsCommentsModalOpen(true)}
+                className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer border border-white/20"
+                title="댓글 페이지"
             >
-              전체 노선 (3)
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedFilter("30")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                selectedFilter === "30"
-                  ? "bg-[#003876] text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              30번
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedFilter("34")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                selectedFilter === "34"
-                  ? "bg-blue-600 text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              34번
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedFilter("34-1")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
-                selectedFilter === "34-1"
-                  ? "bg-indigo-600 text-white shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-              }`}
-            >
-              34-1번
-            </button>
-          </div>
-
-          <div className="text-xs font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 bg-blue-50/80 dark:bg-blue-950/40 px-3 py-1.5 rounded-xl border border-blue-200/60 dark:border-blue-500/20">
-            <Bus className="w-3.5 h-3.5" />
-            <span>연세대 · 회촌 출발 → 시내 방면</span>
-          </div>
-        </div>
-
-        {/* Route Cards Grid */}
-        {isLoadingSchedule && displayedRoutes.length === 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="glass-panel rounded-3xl p-6 space-y-4 animate-pulse"
-              >
-                <div className="h-8 w-1/3 bg-slate-200 dark:bg-white/10 rounded-xl" />
-                <div className="h-4 w-2/3 bg-slate-200 dark:bg-white/10 rounded-md" />
-                <div className="h-24 w-full bg-slate-200 dark:bg-white/10 rounded-2xl" />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {displayedRoutes.map((route) => (
-              <RouteCard
-                key={route.id}
-                route={route}
-                currentTime={currentTime}
-                onOpenModal={setSelectedRoute}
-                isBookmarked={bookmarks.includes(route.routeNo)}
-                onToggleBookmark={toggleBookmark}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Floating Action Button (FAB) for Comments */}
-      <button
-        type="button"
-        onClick={() => setIsCommentsModalOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer border border-white/20"
-        title="연세인 한줄 댓글 보기 및 작성"
-      >
-        <MessageSquare className="w-4 h-4" />
-        <span>한줄 댓글</span>
-        {comments.length > 0 && (
-          <span className="px-2 py-0.5 rounded-full bg-white text-blue-600 text-[11px] font-black shadow-xs">
+                <MessageSquare className="w-4 h-4"/>
+                {comments.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-white text-blue-600 text-[11px] font-black shadow-xs">
             {comments.length}
           </span>
-        )}
-      </button>
+                )}
+            </button>
 
-      {/* Detailed Timetable Modal */}
-      {selectedRoute && (
-        <RouteDetailModal
-          route={selectedRoute}
-          allRoutes={routes}
-          onClose={() => setSelectedRoute(null)}
-          currentTime={currentTime}
-        />
-      )}
+            {/* Detailed Timetable Modal */}
+            {selectedRoute && (
+                <RouteDetailModal
+                    route={selectedRoute}
+                    allRoutes={routes}
+                    onClose={() => setSelectedRoute(null)}
+                    currentTime={currentTime}
+                />
+            )}
 
-      {/* Dedicated Timetable Refresh Modal */}
-      <RefreshConfirmModal
-        isOpen={isRefreshModalOpen}
-        onClose={() => setIsRefreshModalOpen(false)}
-        meta={meta}
-        onConfirmRefresh={handleRefreshSchedule}
-        isRefreshing={isRefreshing}
-      />
+            {/* Dedicated Comments Modal */}
+            <CommentsModal
+                isOpen={isCommentsModalOpen}
+                onClose={() => setIsCommentsModalOpen(false)}
+                comments={comments}
+                onAddComment={handleAddComment}
+                onDeleteComment={handleDeleteComment}
+            />
 
-      {/* Dedicated One-Line Comments Modal */}
-      <CommentsModal
-        isOpen={isCommentsModalOpen}
-        onClose={() => setIsCommentsModalOpen(false)}
-        comments={comments}
-        onAddComment={handleAddComment}
-        onDeleteComment={handleDeleteComment}
-      />
+            {/* Wonju ITS Notice Center Modal */}
+            <NoticeModal
+                isOpen={isNoticeModalOpen}
+                onClose={() => {
+                    setIsNoticeModalOpen(false);
+                    setSelectedNoticeId(null);
+                }}
+                initialNoticeId={selectedNoticeId}
+            />
 
-      {/* Wonju ITS Notice Center Modal */}
-      <NoticeModal
-        isOpen={isNoticeModalOpen}
-        onClose={() => {
-          setIsNoticeModalOpen(false);
-          setSelectedNoticeId(null);
-        }}
-        initialNoticeId={selectedNoticeId}
-      />
+            {/* Minimal Footer */}
+            <Footer/>
+        </main>
+    )
 
-      {/* Minimal Footer */}
-      <Footer />
-    </main>
-  );
 }

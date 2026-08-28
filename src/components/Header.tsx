@@ -1,145 +1,116 @@
 "use client";
 
 import React from "react";
-import { GraduationCap, Sparkles, Clock, Bus, MessageSquare } from "lucide-react";
-import { DayMode } from "@/types/bus";
-import { ThemeToggle } from "./ThemeToggle";
+import {Clock, GraduationCap} from "lucide-react";
+import {DayMode} from "@/types/bus";
+import {ThemeToggle} from "./ThemeToggle";
 
 interface HeaderProps {
-  dayMode: DayMode;
-  onDayModeChange: (mode: DayMode) => void;
-  isTodayWeekendOrHoliday: boolean;
-  currentTime: Date;
-  onOpenCommentsModal?: () => void;
-  commentsCount?: number;
+    dayMode: DayMode;
+    onDayModeChange: (mode: DayMode) => void;
+    isTodayWeekendOrHoliday: boolean;
+    currentTime: Date;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  dayMode,
-  onDayModeChange,
-  isTodayWeekendOrHoliday,
-  currentTime,
-  onOpenCommentsModal,
-  commentsCount = 0,
-}) => {
-  const timeFormatted = currentTime.toLocaleTimeString("ko-KR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
+                                                  dayMode,
+                                                  onDayModeChange,
+                                                  isTodayWeekendOrHoliday,
+                                                  currentTime,
+                                              }) => {
+    const timeFormatted = currentTime.toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+    });
 
-  return (
-    <header className="w-full mb-6">
-      {/* Top Bar: Yonsei Mirae Campus Branding & Theme Toggle */}
-      <div className="backdrop-blur-2xl bg-gradient-to-br from-blue-900/15 via-indigo-900/10 to-slate-900/10 dark:from-blue-950/60 dark:via-indigo-950/40 dark:to-slate-900/60 rounded-3xl p-4 sm:p-6 border border-blue-500/20 shadow-sm relative overflow-hidden">
-        {/* Glow decoration */}
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-44 h-44 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+    return (
+        <header className="w-full mb-6">
+            {/* Top Bar: Yonsei Mirae Campus Branding & Day Mode / Clock / Theme */}
+            <div
+                className="backdrop-blur-2xl bg-gradient-to-br from-blue-900/15 via-indigo-900/10 to-slate-900/10 dark:from-blue-950/60 dark:via-indigo-950/40 dark:to-slate-900/60 rounded-3xl p-4 sm:p-6 border border-blue-500/20 shadow-sm relative overflow-hidden">
+                {/* Glow decoration */}
+                <div
+                    className="absolute top-0 right-0 -mt-8 -mr-8 w-44 h-44 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"/>
 
-        <div className="relative z-10">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-            {/* Yonsei Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black bg-[#003876] text-white shadow-sm ring-1 ring-white/10">
-              <GraduationCap className="w-4 h-4 text-blue-200" />
-              <span>연세대학교 미래캠퍼스</span>
+                <div className="relative z-10">
+                    <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
+                        {/* Yonsei Badge */}
+                        <div
+                            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black bg-[#003876] text-white shadow-sm ring-1 ring-white/10">
+                            <GraduationCap className="w-4 h-4 text-blue-200"/>
+                            <span>연세대학교 미래캠퍼스</span>
+                        </div>
+
+                        {/* Right Group: Compact Day Mode Pill, Live Clock & Theme Toggle */}
+                        <div className="flex flex-wrap items-center gap-2">
+                            {/* Compact Day Mode Switcher (자동 / 평일 / 방학·휴일) */}
+                            <div
+                                className="inline-flex p-0.5 rounded-2xl bg-white/85 dark:bg-[#141824]/90 text-[10px] sm:text-[11px] font-black border border-slate-200/80 dark:border-white/10 shadow-2xs">
+                                <button
+                                    type="button"
+                                    onClick={() => onDayModeChange("AUTO")}
+                                    className={`px-2 sm:px-2.5 py-1 rounded-xl transition-all active:scale-95 cursor-pointer ${
+                                        dayMode === "AUTO"
+                                            ? "bg-blue-600 text-white shadow-xs font-black"
+                                            : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                    }`}
+                                    title={`오늘 요일 기준 자동 감지 (${isTodayWeekendOrHoliday ? "휴일" : "평일"})`}
+                                >
+                                    자동
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => onDayModeChange("WEEKDAY")}
+                                    className={`px-2 sm:px-2.5 py-1 rounded-xl transition-all active:scale-95 cursor-pointer ${
+                                        dayMode === "WEEKDAY"
+                                            ? "bg-amber-600 text-white shadow-xs font-black"
+                                            : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                    }`}
+                                    title="평일 운행 시간표"
+                                >
+                                    평일
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => onDayModeChange("VACATION")}
+                                    className={`px-2 sm:px-2.5 py-1 rounded-xl transition-all active:scale-95 cursor-pointer ${
+                                        dayMode === "VACATION"
+                                            ? "bg-indigo-600 text-white shadow-xs font-black"
+                                            : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                                    }`}
+                                    title="방학 및 주말/공휴일 시간표"
+                                >
+                                    방학·휴일
+                                </button>
+                            </div>
+
+                            {/* Live Clock */}
+                            <div
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-2xl bg-white/80 dark:bg-white/5 text-xs font-mono font-bold text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 shadow-2xs">
+                                <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-pulse"/>
+                                <span suppressHydrationWarning>{timeFormatted}</span>
+                            </div>
+
+                            {/* Theme Toggle */}
+                            <ThemeToggle/>
+                        </div>
+                    </div>
+
+                    {/* Title & Subtitle */}
+                    <div className="mt-2">
+                        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                            시내버스 시간표
+                        </h1>
+                        <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mt-1 max-w-xl flex items-center gap-1.5">
+                            <span>
+                                <strong>30, 34, 34-1</strong>번 버스 운행 시간표
+                            </span>
+                        </p>
+                    </div>
+                </div>
             </div>
-
-            {/* Right Group: Live Clock, Comment Button & Theme Toggle */}
-            <div className="flex items-center gap-2">
-              {onOpenCommentsModal && (
-                <button
-                  type="button"
-                  onClick={onOpenCommentsModal}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-xs font-black border border-blue-500/20 shadow-2xs transition-all cursor-pointer active:scale-95"
-                  title="연세인 한줄 댓글 보기"
-                >
-                  <MessageSquare className="w-3.5 h-3.5" />
-                  <span className="hidden xs:inline">한줄 댓글</span>
-                  {commentsCount > 0 && (
-                    <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[10px] font-bold">
-                      {commentsCount}
-                    </span>
-                  )}
-                </button>
-              )}
-
-              <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-white/80 dark:bg-white/5 text-xs font-mono font-bold text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 shadow-2xs">
-                <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-pulse" />
-                <span>{timeFormatted}</span>
-              </div>
-              <ThemeToggle />
-            </div>
-          </div>
-
-          {/* Title & Subtitle */}
-          <div className="mt-2">
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-              연세대학교 시내버스 시간표
-            </h1>
-            <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mt-1 max-w-xl flex items-center gap-1.5">
-              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
-              <span>
-                <strong>연세대 · 회촌 출발 → 시내 방면</strong> (터미널 · 원주역 · 남부시장) 전용 시간표
-              </span>
-            </p>
-          </div>
-
-          {/* Day Mode Controls Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-200/60 dark:border-white/10">
-            {/* Direction Indicator Badge */}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/10 dark:bg-blue-500/15 border border-blue-500/20 text-xs font-black text-blue-700 dark:text-blue-300">
-              <Bus className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>연세대·회촌 출발 (시내 방면)</span>
-            </div>
-
-            {/* Day Mode Switcher (자동 / 평일 / 방학·휴일) */}
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-amber-500" />
-                <span>운행 기준:</span>
-              </span>
-              <div className="inline-flex p-0.5 rounded-xl bg-white/85 dark:bg-[#141824]/90 text-[11px] font-black border border-slate-200/80 dark:border-white/10 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => onDayModeChange("AUTO")}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer ${
-                    dayMode === "AUTO"
-                      ? "bg-blue-600 text-white shadow-xs font-black"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                  title="오늘 요일 기준 자동 감지"
-                >
-                  자동 ({isTodayWeekendOrHoliday ? "휴일" : "평일"})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDayModeChange("WEEKDAY")}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer ${
-                    dayMode === "WEEKDAY"
-                      ? "bg-amber-600 text-white shadow-xs font-black"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                  title="평일 운행 시간표"
-                >
-                  평일
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDayModeChange("VACATION")}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer ${
-                    dayMode === "VACATION"
-                      ? "bg-indigo-600 text-white shadow-xs font-black"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                  title="방학 및 주말/공휴일 시간표"
-                >
-                  방학 · 휴일
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </header>
-  );
+        </header>
+    );
 };
