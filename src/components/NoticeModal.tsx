@@ -130,10 +130,19 @@ export const NoticeModal: React.FC<NoticeModalProps> = ({
         setSearchText(searchInput.trim());
     };
 
-    const filteredNotices = (listData?.notices || []).filter((item) => {
-        if (activeTab === "PINNED") return item.isNotice;
-        return true;
-    });
+    const filteredNotices = (listData?.notices || [])
+        .filter((item) => {
+            if (activeTab === "PINNED") return item.isNotice;
+            return true;
+        })
+        .sort((a, b) => {
+            const dateA = a.date || "";
+            const dateB = b.date || "";
+            if (dateA !== dateB) {
+                return dateB.localeCompare(dateA);
+            }
+            return (parseInt(b.id, 10) || 0) - (parseInt(a.id, 10) || 0);
+        });
 
     const totalPages = listData
         ? Math.max(1, Math.ceil(listData.totalCount / 10))

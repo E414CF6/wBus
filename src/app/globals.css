@@ -53,7 +53,6 @@ body {
     background: #334155;
 }
 
-/* Animations */
 @keyframes fadeIn {
     from {
         opacity: 0;
@@ -65,17 +64,27 @@ body {
     }
 }
 
-@keyframes marquee {
+@keyframes slideUpFade {
     0% {
-        transform: translateX(0%);
+        opacity: 0;
+        transform: translateY(24px) scale(0.97);
+    }
+    70% {
+        opacity: 1;
+        transform: translateY(-2px) scale(1.005);
     }
     100% {
-        transform: translateX(-50%);
+        opacity: 1;
+        transform: translateY(0) scale(1);
     }
 }
 
 .animate-fadeIn {
     animation: fadeIn 0.25s ease-out forwards;
+}
+
+.animate-slideUp {
+    animation: slideUpFade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .animate-marquee-fast {

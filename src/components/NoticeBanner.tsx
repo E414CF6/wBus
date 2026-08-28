@@ -1,8 +1,9 @@
 "use client";
 
 import React, {useCallback, useEffect, useState} from "react";
+import {ChevronLeft, ChevronRight, Megaphone} from "lucide-react";
+
 import {NoticeItem} from "@/types/notice";
-import {ChevronLeft, ChevronRight, Megaphone, Sparkles} from "lucide-react";
 
 interface NoticeBannerProps {
     onOpenNoticeModal: (noticeId?: string) => void;
@@ -15,7 +16,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Fetch notices from API
+    // Fetch notices from API and sort strictly by date (latest first)
     useEffect(() => {
         let isCancelled = false;
         const fetchNotices = async () => {
@@ -24,7 +25,18 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({
                 const json = await res.json();
                 if (!isCancelled && json.success && json.data) {
                     const list: NoticeItem[] = json.data.notices || [];
-                    setNotices(list.slice(0, 5)); // Take top 5
+
+                    // Sort purely by date descending, then by id descending (newest first, ignoring pin priority)
+                    const dateSorted = [...list].sort((a, b) => {
+                        const dateA = a.date || "";
+                        const dateB = b.date || "";
+                        if (dateA !== dateB) {
+                            return dateB.localeCompare(dateA);
+                        }
+                        return (parseInt(b.id, 10) || 0) - (parseInt(a.id, 10) || 0);
+                    });
+
+                    setNotices(dateSorted.slice(0, 5)); // Take top 5 newest
                 }
             } catch (err) {
                 console.warn("Failed to fetch notice banner:", err);
@@ -58,12 +70,11 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({
     }, [notices.length, handleNext]);
 
     const currentNotice = notices[currentIndex];
-    const pinnedCount = notices.filter((n) => n.isNotice).length;
 
     return (
         <div
             onClick={() => onOpenNoticeModal(currentNotice?.id)}
-            className="mb-6 backdrop-blur-xl bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 dark:from-amber-500/15 dark:via-orange-500/10 dark:to-amber-500/15 rounded-3xl p-4 sm:p-5 border border-amber-500/30 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden group cursor-pointer"
+            className="mb-6 backdrop-blur-xl bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 dark:from-amber-500/15 dark:via-orange-500/10 dark:to-amber-500/15 rounded-3xl p-4 sm:p-5 border border-amber-500/30 shadow-xs hover:shadow-md transition-all duration-300 relative overflow-hidden group cursor-pointer select-none"
         >
             {/* Decorative Glow */}
             <div
@@ -75,28 +86,19 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({
                     <div
                         className="relative flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/25 shrink-0 group-hover:scale-105 transition-transform">
                         <Megaphone className="w-4 h-4 stroke-[2.5]"/>
-                        {pinnedCount > 0 && (
-                            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"/>
-                <span
-                    className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-white dark:border-slate-900"/>
-              </span>
-                        )}
                     </div>
 
                     <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-1.5 mb-1">
-              <span
-                  className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30">
-                원주시 교통정보 알림마당
-              </span>
-
-                            {pinnedCount > 0 && (
+                            <span
+                                className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30">
+                                원주시 교통정보 알림마당
+                            </span>
+                            {currentNotice?.date && (
                                 <span
-                                    className="hidden sm:inline-flex items-center gap-1 text-[10px] font-extrabold text-amber-700 dark:text-amber-400">
-                  <Sparkles className="w-3 h-3 text-amber-500"/>
-                  <span>중요 공지 {pinnedCount}건</span>
-                </span>
+                                    className="text-[10px] font-bold text-amber-700/80 dark:text-amber-400/80 font-mono">
+                                    {currentNotice.date}
+                                </span>
                             )}
                         </div>
 
@@ -104,21 +106,9 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({
                             <div className="h-4 w-60 bg-amber-500/15 rounded-md animate-pulse my-0.5"/>
                         ) : currentNotice ? (
                             <div className="flex items-center space-x-2 min-w-0">
-                                {currentNotice.isNotice && (
-                                    <span
-                                        className="shrink-0 px-1.5 py-0.2 text-[9px] font-black rounded bg-amber-500 text-white shadow-2xs">
-                    공지
-                  </span>
-                                )}
                                 <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                                     {currentNotice.title}
                                 </h3>
-                                {currentNotice.date && (
-                                    <span
-                                        className="hidden md:inline text-[11px] text-slate-400 dark:text-slate-500 shrink-0 font-medium">
-                    ({currentNotice.date})
-                  </span>
-                                )}
                             </div>
                         ) : (
                             <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">

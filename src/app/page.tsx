@@ -31,8 +31,6 @@ export default function YonseiTimetablePage() {
     const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
 
     const [comments, setComments] = useState<CommentItem[]>([]);
-    const [totalStoredCommentsCount, setTotalStoredCommentsCount] = useState<number>(0);
-    const [isCommentsFiltered24h, setIsCommentsFiltered24h] = useState<boolean>(true);
     const [isRefreshingComments, setIsRefreshingComments] = useState<boolean>(false);
     const [toastNotice, setToastNotice] = useState<{
         type: "success" | "info" | "error";
@@ -42,9 +40,8 @@ export default function YonseiTimetablePage() {
     const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
     const [dayMode, setDayMode] = useState<DayMode>("AUTO");
     const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
-    const [selectedFilter, setSelectedFilter] = useState<string>("ALL");
 
-    // Update live clock every 10 seconds
+    // Update live clock for departure time calculations every 10 seconds
     useEffect(() => {
         const timer = setInterval(() => {
             setCurrentTime(new Date());
@@ -100,12 +97,12 @@ export default function YonseiTimetablePage() {
         fetchScheduleData();
     }, [fetchScheduleData]);
 
-    // Load comments from API (with refresh & archive support)
-    const fetchComments = useCallback(async (showAll = false, force = false) => {
+    // Load comments from API (strictly recent 24 hours)
+    const fetchComments = useCallback(async (force = false) => {
         setIsRefreshingComments(true);
         try {
             const res = await fetch(
-                `/api/comments?all=${showAll ? "true" : "false"}&force=${force ? "true" : "false"}&t=${Date.now()}`,
+                `/api/comments?force=${force ? "true" : "false"}&t=${Date.now()}`,
                 {
                     cache: "no-store",
                     headers: {"Cache-Control": "no-cache"},
@@ -114,12 +111,6 @@ export default function YonseiTimetablePage() {
             const json = await res.json();
             if (json.success && Array.isArray(json.comments)) {
                 setComments(json.comments);
-                if (typeof json.totalStoredCount === "number") {
-                    setTotalStoredCommentsCount(json.totalStoredCount);
-                }
-                if (typeof json.isFiltered24h === "boolean") {
-                    setIsCommentsFiltered24h(json.isFiltered24h);
-                }
             }
         } catch (err) {
             console.warn("Failed to fetch comments:", err);
@@ -129,7 +120,7 @@ export default function YonseiTimetablePage() {
     }, []);
 
     useEffect(() => {
-        fetchComments(false, false);
+        fetchComments(false);
     }, [fetchComments]);
 
     // Fetch or refresh schedule from Wonju ITS API
@@ -205,7 +196,6 @@ export default function YonseiTimetablePage() {
         }
         if (json.comment) {
             setComments((prev) => [json.comment, ...prev]);
-            setTotalStoredCommentsCount((prev) => prev + 1);
         }
     };
 
@@ -224,21 +214,6 @@ export default function YonseiTimetablePage() {
             }
         } catch (err) {
             console.warn("Failed to like comment:", err);
-        }
-    };
-
-    const handleDeleteComment = async (id: string) => {
-        try {
-            const res = await fetch(`/api/comments?id=${encodeURIComponent(id)}`, {
-                method: "DELETE",
-            });
-            const json = await res.json();
-            if (json.success) {
-                setComments((prev) => prev.filter((c) => c.id !== id));
-                setTotalStoredCommentsCount((prev) => Math.max(0, prev - 1));
-            }
-        } catch {
-            // Ignore
         }
     };
 
@@ -271,30 +246,25 @@ export default function YonseiTimetablePage() {
         return list;
     }, [routes, effectiveIsHoliday]);
 
-    // Filter routes if user selects a specific route filter tab
-    const displayedRoutes = useMemo(() => {
-        if (selectedFilter === "ALL") return activeRoutes;
-        return activeRoutes.filter((r) => r.routeNo === selectedFilter);
-    }, [activeRoutes, selectedFilter]);
-
     return (
-        <main className="min-h-screen flex flex-col justify-between py-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-            <div>
-                {/* Top Header */}
+        <main
+            className="min-h-screen w-full flex flex-col justify-center items-center py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
+            {/* Centered Dashboard Container */}
+            <div className="w-full max-w-6xl flex flex-col justify-center my-auto">
+                {/* Top Header with Day Mode Switcher, Notice, Talk & Theme Toggle */}
                 <Header
                     dayMode={dayMode}
                     onDayModeChange={setDayMode}
                     isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-                    currentTime={currentTime}
+                    onOpenNoticeModal={() => handleOpenNoticeModal()}
+                    onOpenCommentsModal={() => setIsCommentsModalOpen(true)}
+                    commentCount={comments.length}
                 />
 
-                {/* Wonju ITS Live Notice Banner */}
-                <NoticeBanner onOpenNoticeModal={handleOpenNoticeModal}/>
-
-                {/* Refresh Toast Banner */}
+                {/* Toast Message Notification */}
                 {toastNotice && (
                     <div
-                        className={`p-3.5 sm:p-4 mb-4 rounded-2xl border flex items-center justify-between transition-all animate-fadeIn shadow-sm ${
+                        className={`p-3.5 sm:p-4 mb-5 rounded-2xl border flex items-center justify-between transition-all animate-fadeIn shadow-sm ${
                             toastNotice.type === "success"
                                 ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
                                 : toastNotice.type === "error"
@@ -309,8 +279,8 @@ export default function YonseiTimetablePage() {
                                 <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"/>
                             )}
                             <span className="text-xs sm:text-sm font-semibold">
-                {toastNotice.message}
-              </span>
+                                {toastNotice.message}
+                            </span>
                         </div>
                         <button
                             onClick={() => setToastNotice(null)}
@@ -322,16 +292,12 @@ export default function YonseiTimetablePage() {
                     </div>
                 )}
 
-                {/* Timetable Criteria & Action Banner */}
-                <CacheInfoBanner
-                    meta={meta}
-                    onRefresh={() => handleRefreshSchedule(true)}
-                    isRefreshing={isRefreshing}
-                />
+                {/* Wonju ITS Live Notice Banner (Date-sorted, latest first) */}
+                <NoticeBanner onOpenNoticeModal={handleOpenNoticeModal}/>
 
-                {/* Route Cards Grid */}
-                {isLoadingSchedule && displayedRoutes.length === 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {/* 3 Route Cards Grid (30, 34, 34-1) */}
+                {isLoadingSchedule && activeRoutes.length === 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4">
                         {[1, 2, 3].map((i) => (
                             <div
                                 key={i}
@@ -344,8 +310,8 @@ export default function YonseiTimetablePage() {
                         ))}
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                        {displayedRoutes.map((route) => (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4">
+                        {activeRoutes.map((route) => (
                             <RouteCard
                                 key={route.id}
                                 route={route}
@@ -355,6 +321,16 @@ export default function YonseiTimetablePage() {
                         ))}
                     </div>
                 )}
+
+                {/* Timetable Criteria & Refresh Banner (Above Footer) */}
+                <CacheInfoBanner
+                    meta={meta}
+                    onRefresh={() => handleRefreshSchedule(true)}
+                    isRefreshing={isRefreshing}
+                />
+
+                {/* Minimal Footer */}
+                <Footer/>
             </div>
 
             {/* Floating Action Button (FAB) for Comments / Chat */}
@@ -393,10 +369,7 @@ export default function YonseiTimetablePage() {
                 isOpen={isCommentsModalOpen}
                 onClose={() => setIsCommentsModalOpen(false)}
                 comments={comments}
-                totalStoredCount={totalStoredCommentsCount}
-                isFiltered24h={isCommentsFiltered24h}
                 onAddComment={handleAddComment}
-                onDeleteComment={handleDeleteComment}
                 onLikeComment={handleLikeComment}
                 onRefresh={fetchComments}
                 isRefreshing={isRefreshingComments}
@@ -411,9 +384,6 @@ export default function YonseiTimetablePage() {
                 }}
                 initialNoticeId={selectedNoticeId}
             />
-
-            {/* Minimal Footer */}
-            <Footer/>
         </main>
     );
 }

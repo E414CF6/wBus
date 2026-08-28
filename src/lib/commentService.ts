@@ -197,7 +197,7 @@ export async function addComment({
         id: `c-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         author: cleanAuthor.slice(0, 20),
         content: cleanContent,
-        category: category ? category.slice(0, 10) : "제보",
+        category: category ? category.slice(0, 10) : "잡담",
         createdAt: new Date().toISOString(),
         routeNo: routeNo ? routeNo.slice(0, 10) : undefined,
         likes: 0,

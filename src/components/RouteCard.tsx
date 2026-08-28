@@ -1,10 +1,12 @@
 "use client";
 
 import React, {useMemo} from "react";
+import {AlertCircle, ArrowRight, Clock, Sparkles} from "lucide-react";
+
 import {BusRoute} from "@/types/bus";
+
 import {ROUTE_CONFIG} from "@data/yonseiRoutes";
 import {getUpcomingDepartures} from "@lib/timeUtils";
-import {AlertCircle, ChevronRight, Clock, Sparkles} from "lucide-react";
 
 interface RouteCardProps {
     route: BusRoute;
@@ -62,7 +64,7 @@ export const RouteCard: React.FC<RouteCardProps> = ({
     return (
         <div
             onClick={() => onOpenModal(route)}
-            className="glass-panel rounded-3xl p-5 sm:p-6 flex flex-col justify-between relative group hover:border-blue-500/60 dark:hover:border-blue-400/60 transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer select-none active:scale-[0.99]"
+            className="backdrop-blur-2xl bg-white/75 dark:bg-[#111622]/80 border border-slate-200/80 dark:border-white/10 rounded-3xl p-5 sm:p-6 flex flex-col justify-between relative group hover:border-blue-500/60 dark:hover:border-blue-400/60 transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer select-none active:scale-[0.99]"
         >
             <div>
                 {/* Top Row: Route Badge + Departure Title & Direction Subtitle */}
@@ -83,30 +85,22 @@ export const RouteCard: React.FC<RouteCardProps> = ({
               </span>
                         </div>
                     </div>
-                </div>
 
-                {/* Schedule Mode Badge & Total Departures Count */}
-                <div className="flex items-center justify-between my-2 text-xs">
-                    <div className="flex items-center gap-1.5">
-            <span
-                className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${
-                    route.routeNo === "30"
-                        ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
-                        : isVacationSchedule
-                            ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30"
-                            : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30"
-                }`}
-            >
+                    <span
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${
+                            route.routeNo === "30"
+                                ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
+                                : isVacationSchedule
+                                    ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30"
+                                    : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30"
+                        }`}
+                    >
               {route.routeNo === "30"
                   ? "매일 운행"
                   : isVacationSchedule
-                      ? "방학 · 휴일 시간표"
-                      : "평일 시간표"}
+                      ? "방학 · 휴일"
+                      : "평일"}
             </span>
-                    </div>
-                    <span className="text-[11px] font-semibold text-slate-400 font-mono">
-            총 {allValidDepartures.length}회 운행
-          </span>
                 </div>
 
                 {/* Next Upcoming Departure Spotlight Card */}
@@ -114,7 +108,7 @@ export const RouteCard: React.FC<RouteCardProps> = ({
                     className={`my-3 p-4 rounded-2xl border transition-all ${
                         nextDeparture && nextDeparture.waitMins <= 5
                             ? "bg-gradient-to-br from-rose-50/90 to-amber-50/70 dark:from-rose-950/40 dark:to-amber-950/20 border-rose-300/80 dark:border-rose-500/40 shadow-xs"
-                            : "bg-blue-50/70 dark:bg-blue-950/30 border-blue-200/70 dark:border-blue-500/25"
+                            : "bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/70 dark:border-blue-500/25"
                     }`}
                 >
                     <div
@@ -188,8 +182,8 @@ export const RouteCard: React.FC<RouteCardProps> = ({
             {/* View Full Timetable Footer Button */}
             <div
                 className="pt-4 mt-4 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
-        <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-          전체 시간표 상세 보기
+        <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 font-mono">
+          총 {allValidDepartures.length}회 운행
         </span>
                 <button
                     type="button"
@@ -199,8 +193,8 @@ export const RouteCard: React.FC<RouteCardProps> = ({
                     }}
                     className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-xs font-black border border-blue-500/20 transition-all cursor-pointer active:scale-95"
                 >
-                    <span>시간표 보기</span>
-                    <ChevronRight className="h-3.5 w-3.5"/>
+                    <span>시간표 전체보기</span>
+                    <ArrowRight className="h-3.5 w-3.5"/>
                 </button>
             </div>
         </div>
