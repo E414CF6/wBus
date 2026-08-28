@@ -119,3 +119,96 @@ export function selectRouteVariant(
     return weekdayMatch || matches[0];
   }
 }
+
+/**
+ * Calculates remaining 24-hour cooldown time and formatted string.
+ */
+export function formatCooldownRemaining(
+  updatedAt: string | null | undefined,
+  cooldownHours = 24
+): {
+  isReady: boolean;
+  remainingMs: number;
+  text: string;
+  nextAvailableDate: Date | null;
+} {
+  if (!updatedAt) {
+    return {
+      isReady: true,
+      remainingMs: 0,
+      text: "지금 갱신 가능",
+      nextAvailableDate: null,
+    };
+  }
+
+  const lastMs = new Date(updatedAt).getTime();
+  if (isNaN(lastMs)) {
+    return {
+      isReady: true,
+      remainingMs: 0,
+      text: "지금 갱신 가능",
+      nextAvailableDate: null,
+    };
+  }
+
+  const cooldownMs = cooldownHours * 60 * 60 * 1000;
+  const nextMs = lastMs + cooldownMs;
+  const nowMs = Date.now();
+  const diffMs = nextMs - nowMs;
+
+  if (diffMs <= 0) {
+    return {
+      isReady: true,
+      remainingMs: 0,
+      text: "지금 갱신 가능",
+      nextAvailableDate: new Date(nextMs),
+    };
+  }
+
+  const hours = Math.floor(diffMs / (1000 * 60 * 60));
+  const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+
+  let text = "";
+  if (hours > 0) {
+    text = `${hours}시간 ${mins}분 후 갱신 가능`;
+  } else {
+    text = `${mins}분 후 갱신 가능`;
+  }
+
+  return {
+    isReady: false,
+    remainingMs: diffMs,
+    text,
+    nextAvailableDate: new Date(nextMs),
+  };
+}
+
+/**
+ * Formats ISO timestamp to human-friendly relative time (e.g. 방금 전, 5분 전, 2시간 전, 어제)
+ */
+export function formatRelativeTime(isoString: string): string {
+  const timestamp = new Date(isoString).getTime();
+  if (isNaN(timestamp)) return "";
+
+  const diffSec = Math.floor((Date.now() - timestamp) / 1000);
+
+  if (diffSec < 60) {
+    return "방금 전";
+  }
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) {
+    return `${diffMin}분 전`;
+  }
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) {
+    return `${diffHours}시간 전`;
+  }
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) {
+    return `${diffDays}일 전`;
+  }
+  return new Date(timestamp).toLocaleDateString("ko-KR", {
+    month: "numeric",
+    day: "numeric",
+  });
+}

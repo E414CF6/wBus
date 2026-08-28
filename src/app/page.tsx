@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BusRoute, CacheMetadata, DayMode, DepartureDirection } from "@/types/bus";
+import { CommentItem } from "@/types/comment";
 import { YONSEI_DATA, TARGET_ROUTE_NUMBERS } from "@/data/yonseiRoutes";
 import { isWeekend, selectRouteVariant } from "@/lib/timeUtils";
 import { Header } from "@/components/Header";
@@ -9,6 +10,7 @@ import { RouteCard } from "@/components/RouteCard";
 import { RouteDetailModal } from "@/components/RouteDetailModal";
 import { NoticeBanner } from "@/components/NoticeBanner";
 import { CacheInfoBanner } from "@/components/CacheInfoBanner";
+import { RefreshConfirmModal } from "@/components/RefreshConfirmModal";
 import { Footer } from "@/components/Footer";
 import { Bus, CheckCircle2, Info, X } from "lucide-react";
 
@@ -23,6 +25,8 @@ export default function YonseiTimetablePage() {
     nextRefreshAvailableAt: null,
   }));
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRefreshModalOpen, setIsRefreshModalOpen] = useState(false);
+  const [comments, setComments] = useState<CommentItem[]>([]);
   const [toastNotice, setToastNotice] = useState<{
     type: "success" | "info" | "error";
     message: string;
@@ -54,6 +58,23 @@ export default function YonseiTimetablePage() {
       // Ignore
     }
   }, []);
+
+  // Load comments from API
+  const fetchComments = useCallback(async () => {
+    try {
+      const res = await fetch("/api/comments");
+      const json = await res.json();
+      if (json.success && Array.isArray(json.comments)) {
+        setComments(json.comments);
+      }
+    } catch {
+      // Fallback
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchComments();
+  }, [fetchComments]);
 
   const toggleBookmark = useCallback((routeNo: string) => {
     setBookmarks((prev) => {
@@ -113,6 +134,40 @@ export default function YonseiTimetablePage() {
       });
     } finally {
       setIsRefreshing(false);
+      setIsRefreshModalOpen(false);
+    }
+  };
+
+  const handleAddComment = async (data: {
+    author?: string;
+    content: string;
+    routeNo?: string;
+  }) => {
+    const res = await fetch("/api/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!json.success) {
+      throw new Error(json.error || "댓글 등록에 실패했습니다.");
+    }
+    if (json.comment) {
+      setComments((prev) => [json.comment, ...prev]);
+    }
+  };
+
+  const handleDeleteComment = async (id: string) => {
+    try {
+      const res = await fetch(`/api/comments?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        setComments((prev) => prev.filter((c) => c.id !== id));
+      }
+    } catch {
+      // Ignore
     }
   };
 
@@ -196,8 +251,9 @@ export default function YonseiTimetablePage() {
         {/* Timetable Criteria & Refresh Banner */}
         <CacheInfoBanner
           meta={meta}
-          onRefresh={() => handleRefreshSchedule(true)}
+          onOpenRefreshModal={() => setIsRefreshModalOpen(true)}
           isRefreshing={isRefreshing}
+          commentsCount={comments.length}
         />
 
         {/* Route Filter Navigation Pills */}
@@ -286,6 +342,18 @@ export default function YonseiTimetablePage() {
           currentTime={currentTime}
         />
       )}
+
+      {/* Refresh Confirmation & One-Line Comments Modal */}
+      <RefreshConfirmModal
+        isOpen={isRefreshModalOpen}
+        onClose={() => setIsRefreshModalOpen(false)}
+        meta={meta}
+        onConfirmRefresh={handleRefreshSchedule}
+        isRefreshing={isRefreshing}
+        comments={comments}
+        onAddComment={handleAddComment}
+        onDeleteComment={handleDeleteComment}
+      />
 
       {/* Minimal Footer */}
       <Footer />
