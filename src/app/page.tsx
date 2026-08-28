@@ -1,17 +1,33 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { BusRoute, DayMode, DepartureDirection } from "@/types/bus";
-import { YONSEI_ROUTES, TARGET_ROUTE_NUMBERS } from "@/data/yonseiRoutes";
+import { BusRoute, CacheMetadata, DayMode, DepartureDirection } from "@/types/bus";
+import { YONSEI_DATA, TARGET_ROUTE_NUMBERS } from "@/data/yonseiRoutes";
 import { isWeekend, selectRouteVariant } from "@/lib/timeUtils";
 import { Header } from "@/components/Header";
 import { RouteCard } from "@/components/RouteCard";
 import { RouteDetailModal } from "@/components/RouteDetailModal";
 import { NoticeBanner } from "@/components/NoticeBanner";
+import { CacheInfoBanner } from "@/components/CacheInfoBanner";
 import { Footer } from "@/components/Footer";
-import { Bus, Filter } from "lucide-react";
+import { Bus, CheckCircle2, Info, X } from "lucide-react";
 
 export default function YonseiTimetablePage() {
+  const [routes, setRoutes] = useState<BusRoute[]>(() => YONSEI_DATA.routes);
+  const [meta, setMeta] = useState<CacheMetadata | null>(() => ({
+    exists: true,
+    updatedAt: YONSEI_DATA.updatedAt,
+    totalRoutes: YONSEI_DATA.totalRoutes,
+    minRefreshIntervalDays: 1,
+    canRefresh: true,
+    nextRefreshAvailableAt: null,
+  }));
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [toastNotice, setToastNotice] = useState<{
+    type: "success" | "info" | "error";
+    message: string;
+  } | null>(null);
+
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
   const [dayMode, setDayMode] = useState<DayMode>("AUTO");
   const [direction, setDirection] = useState<DepartureDirection>("DEST");
@@ -35,7 +51,7 @@ export default function YonseiTimetablePage() {
         setBookmarks(JSON.parse(saved));
       }
     } catch {
-      // Ignore localStorage errors
+      // Ignore
     }
   }, []);
 
@@ -53,6 +69,53 @@ export default function YonseiTimetablePage() {
     });
   }, []);
 
+  // Fetch or refresh schedule from Wonju ITS API
+  const handleRefreshSchedule = async (force = true) => {
+    setIsRefreshing(true);
+    setToastNotice(null);
+    try {
+      const endpoint = force
+        ? "/api/schedule/refresh?force=true"
+        : "/api/schedule";
+      const method = force ? "POST" : "GET";
+
+      const res = await fetch(endpoint, { method });
+      const json = await res.json();
+
+      if (!json.success) {
+        throw new Error(json.error || "시간표 정보를 불러오는 데 실패했습니다.");
+      }
+
+      if (json.data && Array.isArray(json.data.routes)) {
+        setRoutes(json.data.routes);
+      }
+      if (json.meta) {
+        setMeta(json.meta);
+      }
+
+      if (force) {
+        setToastNotice({
+          type: json.refreshed ? "success" : "info",
+          message:
+            json.message ||
+            (json.refreshed
+              ? "원주시 ITS에서 최신 시간표를 성공적으로 가져왔습니다."
+              : "기존 저장된 최신 시간표를 유지합니다."),
+        });
+      }
+    } catch (err) {
+      setToastNotice({
+        type: "error",
+        message:
+          err instanceof Error
+            ? err.message
+            : "시간표 갱신 중 오류가 발생했습니다.",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Check if today is actual weekend
   const isTodayWeekendOrHoliday = useMemo(() => {
     return isWeekend(currentTime);
@@ -69,13 +132,13 @@ export default function YonseiTimetablePage() {
   const activeRoutes = useMemo(() => {
     const list: BusRoute[] = [];
     for (const rNo of TARGET_ROUTE_NUMBERS) {
-      const route = selectRouteVariant(YONSEI_ROUTES, rNo, effectiveIsHoliday);
+      const route = selectRouteVariant(routes, rNo, effectiveIsHoliday);
       if (route) {
         list.push(route);
       }
     }
     return list;
-  }, [effectiveIsHoliday]);
+  }, [routes, effectiveIsHoliday]);
 
   // Filter routes if user selects a specific route filter tab
   const displayedRoutes = useMemo(() => {
@@ -98,6 +161,44 @@ export default function YonseiTimetablePage() {
 
         {/* Notice Info Banner */}
         <NoticeBanner />
+
+        {/* Refresh Toast Banner */}
+        {toastNotice && (
+          <div
+            className={`p-3.5 sm:p-4 mb-4 rounded-2xl border flex items-center justify-between transition-all animate-fadeIn shadow-sm ${
+              toastNotice.type === "success"
+                ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
+                : toastNotice.type === "error"
+                ? "bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200"
+                : "bg-blue-50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-500/40 text-blue-800 dark:text-blue-200"
+            }`}
+          >
+            <div className="flex items-center space-x-2.5">
+              {toastNotice.type === "success" ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+              )}
+              <span className="text-xs sm:text-sm font-semibold">
+                {toastNotice.message}
+              </span>
+            </div>
+            <button
+              onClick={() => setToastNotice(null)}
+              className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors shrink-0 ml-2 cursor-pointer"
+              title="닫기"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Timetable Criteria & Refresh Banner */}
+        <CacheInfoBanner
+          meta={meta}
+          onRefresh={() => handleRefreshSchedule(true)}
+          isRefreshing={isRefreshing}
+        />
 
         {/* Route Filter Navigation Pills */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 mb-5">
@@ -178,7 +279,7 @@ export default function YonseiTimetablePage() {
       {selectedRoute && (
         <RouteDetailModal
           route={selectedRoute}
-          allRoutes={YONSEI_ROUTES}
+          allRoutes={routes}
           direction={direction}
           onDirectionChange={setDirection}
           onClose={() => setSelectedRoute(null)}

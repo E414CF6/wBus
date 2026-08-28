@@ -1,6 +1,7 @@
 {
-  "updatedAt": "2026-08-12T10:37:08.496Z",
+  "updatedAt": "2026-08-28T03:51:14.515Z",
   "sourceUrl": "http://its.wonju.go.kr/bus/bus04.do",
+  "totalRoutes": 5,
   "routes": [
     {
       "id": "30",

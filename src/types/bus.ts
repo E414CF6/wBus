@@ -23,9 +23,31 @@ export interface BusRoute {
 export interface RouteDataset {
   updatedAt: string;
   sourceUrl: string;
+  totalRoutes: number;
   routes: BusRoute[];
+}
+
+export interface CacheMetadata {
+  filePath?: string;
+  exists: boolean;
+  sizeBytes?: number;
+  updatedAt: string | null;
+  totalRoutes: number;
+  minRefreshIntervalDays: number;
+  canRefresh: boolean;
+  nextRefreshAvailableAt: string | null;
+}
+
+export interface ApiResponse<T> {
+  success: boolean;
+  refreshed?: boolean;
+  message?: string;
+  data?: T;
+  meta?: CacheMetadata;
+  error?: string;
+  elapsedMs?: number;
 }
 
 export type DayMode = "AUTO" | "WEEKDAY" | "VACATION";
 
-export type DepartureDirection = "DEST" | "ORIGIN"; // DEST = 연세대/회촌 출발(하교), ORIGIN = 장양리/시내 출발(등교)
+export type DepartureDirection = "DEST" | "ORIGIN";

@@ -39,4 +39,6 @@ next-env.d.ts
 *.iml
 
 # legacy folder
-Legacy/
+Legacy
+/Legacy
+/Legacy/
