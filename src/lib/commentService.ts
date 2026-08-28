@@ -3,20 +3,14 @@ import { CommentItem, CommentsDataset } from "@/types/comment";
 
 const BLOB_COMMENTS_PATH = "comments.json";
 const TMP_COMMENTS_PATH = "/tmp/comments.json";
+export const COMMENT_DISPLAY_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours (1 day)
 
-// Default initial sample comments for Yonsei students
+// Default initial sample comments
 const INITIAL_COMMENTS: CommentItem[] = [
   {
     id: "c-init-1",
-    author: "정문러",
-    content: "30번 터미널 갈 때 상지대 경유 시간표 확인 필수예요!",
-    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 mins ago
-    routeNo: "30",
-  },
-  {
-    id: "c-init-2",
-    author: "매지학사",
-    content: "34-1번 회촌에서 탈 때 5분 정도 여유 두고 나가는 게 좋습니다.",
+    author: "고양이",
+    content: "34-1번 탈 때 6분 정도 이후에 학관에 도착해요.",
     createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(), // 3 hours ago
     routeNo: "34-1",
   },
@@ -92,7 +86,10 @@ function saveToTmp(comments: CommentItem[]): void {
   }
 }
 
-export async function getComments(): Promise<CommentItem[]> {
+/**
+ * Loads all stored comments from storage/memory.
+ */
+export async function getAllStoredComments(): Promise<CommentItem[]> {
   if (inMemoryComments) {
     return inMemoryComments;
   }
@@ -116,6 +113,24 @@ export async function getComments(): Promise<CommentItem[]> {
   return inMemoryComments;
 }
 
+/**
+ * Retrieves comments.
+ * By default (onlyRecent = true), returns only comments written within the last 24 hours.
+ */
+export async function getComments(onlyRecent = true): Promise<CommentItem[]> {
+  const allComments = await getAllStoredComments();
+
+  if (!onlyRecent) {
+    return allComments;
+  }
+
+  const cutoff = Date.now() - COMMENT_DISPLAY_DURATION_MS;
+  return allComments.filter((c) => {
+    const time = new Date(c.createdAt).getTime();
+    return !isNaN(time) && time >= cutoff;
+  });
+}
+
 export async function addComment({
   author,
   content,
@@ -134,7 +149,7 @@ export async function addComment({
   }
 
   const cleanAuthor = author?.trim() || "익명 연세인";
-  const currentList = await getComments();
+  const currentList = await getAllStoredComments();
 
   const newComment: CommentItem = {
     id: `c-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -144,11 +159,11 @@ export async function addComment({
     routeNo: routeNo ? routeNo.slice(0, 10) : undefined,
   };
 
-  // Keep up to 100 recent comments
-  const updatedList = [newComment, ...currentList].slice(0, 100);
+  // Permanently save new comment at the top of the archive (up to 5000 items)
+  const updatedList = [newComment, ...currentList].slice(0, 5000);
   inMemoryComments = updatedList;
 
-  // Persist asynchronously
+  // Persist asynchronously to storage
   saveToTmp(updatedList);
   saveToBlob(updatedList).catch(() => {});
 
@@ -156,7 +171,7 @@ export async function addComment({
 }
 
 export async function deleteComment(id: string): Promise<boolean> {
-  const currentList = await getComments();
+  const currentList = await getAllStoredComments();
   const nextList = currentList.filter((c) => c.id !== id);
   inMemoryComments = nextList;
 

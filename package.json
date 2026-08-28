@@ -6,8 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit",
-    "upload": "node scripts/upload-to-blob.mjs"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@vercel/blob": "^2.8.0",

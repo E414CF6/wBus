@@ -1,14 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getComments, addComment, deleteComment } from "@/lib/commentService";
+import {
+  getComments,
+  getAllStoredComments,
+  addComment,
+  deleteComment,
+} from "@/lib/commentService";
 
-export async function GET() {
+export const dynamic = "force-dynamic";
+
+export async function GET(request: NextRequest) {
   try {
-    const comments = await getComments();
+    const showAll = request.nextUrl.searchParams.get("all") === "true";
+    const comments = await getComments(!showAll);
+    const allStored = await getAllStoredComments();
+
     return NextResponse.json(
-      { success: true, comments },
+      {
+        success: true,
+        comments,
+        totalStoredCount: allStored.length,
+        isFiltered24h: !showAll,
+      },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=10, stale-while-revalidate=60",
+          "Cache-Control":
+            "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+          Pragma: "no-cache",
+          Expires: "0",
         },
       }
     );

@@ -11,6 +11,8 @@ import {
   Trash2,
   CheckCircle2,
   Sparkles,
+  Clock,
+  Archive,
 } from "lucide-react";
 
 interface CommentsModalProps {
@@ -40,6 +42,11 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [commentSuccess, setCommentSuccess] = useState(false);
 
+  // Archive toggle (defaults to 24h recent view)
+  const [viewMode, setViewMode] = useState<"RECENT_24H" | "ARCHIVE">("RECENT_24H");
+  const [archiveComments, setArchiveComments] = useState<CommentItem[]>([]);
+  const [isLoadingArchive, setIsLoadingArchive] = useState(false);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -55,6 +62,27 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
+
+  // Fetch archive if user switches to ARCHIVE mode
+  useEffect(() => {
+    if (viewMode === "ARCHIVE" && archiveComments.length === 0) {
+      const fetchArchive = async () => {
+        setIsLoadingArchive(true);
+        try {
+          const res = await fetch(`/api/comments?all=true&t=${Date.now()}`);
+          const json = await res.json();
+          if (json.success && Array.isArray(json.comments)) {
+            setArchiveComments(json.comments);
+          }
+        } catch {
+          // Ignore
+        } finally {
+          setIsLoadingArchive(false);
+        }
+      };
+      fetchArchive();
+    }
+  }, [viewMode, archiveComments.length]);
 
   if (!isOpen || !mounted) return null;
 
@@ -79,7 +107,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     }
   };
 
-  const displayedComments = comments.filter((c) => {
+  const currentSourceList = viewMode === "ARCHIVE" ? archiveComments : comments;
+
+  const displayedComments = currentSourceList.filter((c) => {
     if (filterRouteTag === "ALL") return true;
     return c.routeNo === filterRouteTag;
   });
@@ -103,8 +133,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
               <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-tight">
                 연세인 한줄 댓글 & 버스 팁
               </h2>
-              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                버스 지연 정보, 막차 팁, 실시간 도로 소식을 나눠보세요
+              <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1">
+                <Clock className="w-3 h-3 text-blue-500" />
+                <span>최근 24시간 동안 등록된 실시간 댓글이 표시됩니다</span>
               </p>
             </div>
           </div>
@@ -183,8 +214,9 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
             )}
           </form>
 
-          {/* Filter Pills for Comments List */}
-          <div className="flex items-center justify-between gap-2 pt-2">
+          {/* View Mode & Filter Row */}
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+            {/* Route Filter Pills */}
             <div className="flex items-center gap-1">
               {["ALL", "30", "34", "34-1"].map((tag) => (
                 <button
@@ -197,21 +229,51 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                       : "bg-slate-100 dark:bg-white/5 text-slate-500 hover:text-slate-800 dark:hover:text-white"
                   }`}
                 >
-                  {tag === "ALL" ? `전체 (${comments.length})` : `${tag}번`}
+                  {tag === "ALL"
+                    ? `전체 (${currentSourceList.length})`
+                    : `${tag}번`}
                 </button>
               ))}
             </div>
-            <span className="text-[10px] font-semibold text-slate-400 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-500" />
-              <span>실시간 소통</span>
-            </span>
+
+            {/* View Mode Switcher: 24h Recent vs Archive */}
+            <div className="inline-flex p-0.5 rounded-xl bg-slate-100 dark:bg-white/[0.06] text-[11px] font-black border border-slate-200/80 dark:border-white/10 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setViewMode("RECENT_24H")}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  viewMode === "RECENT_24H"
+                    ? "bg-blue-600 text-white shadow-xs font-black"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                최근 24시간
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("ARCHIVE")}
+                className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${
+                  viewMode === "ARCHIVE"
+                    ? "bg-slate-800 text-white dark:bg-white/20 shadow-xs font-black"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                }`}
+              >
+                전체 기록
+              </button>
+            </div>
           </div>
 
           {/* Comments List */}
           <div className="space-y-2">
-            {displayedComments.length === 0 ? (
+            {isLoadingArchive ? (
+              <div className="py-8 text-center text-slate-400 text-xs animate-pulse">
+                전체 댓글 기록을 불러오는 중...
+              </div>
+            ) : displayedComments.length === 0 ? (
               <div className="py-12 text-center text-slate-400 dark:text-slate-500 text-xs">
-                등록된 한줄 댓글이 없습니다. 첫 댓글을 남겨보세요!
+                {viewMode === "RECENT_24H"
+                  ? "최근 24시간 동안 등록된 댓글이 없습니다. 첫 댓글을 남겨보세요!"
+                  : "등록된 댓글이 없습니다."}
               </div>
             ) : (
               displayedComments.map((item) => (
@@ -253,7 +315,12 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-3 sm:p-4 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/90 dark:bg-white/[0.03] flex items-center justify-end shrink-0">
+        <div className="p-3 sm:p-4 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/90 dark:bg-white/[0.03] flex items-center justify-between shrink-0">
+          <span className="text-[11px] text-slate-400 font-medium">
+            {viewMode === "RECENT_24H"
+              ? `최근 24시간 활성 댓글 (${comments.length}건)`
+              : `전체 저장된 댓글 (${archiveComments.length}건)`}
+          </span>
           <button
             type="button"
             onClick={onClose}
@@ -265,6 +332,4 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
       </div>
     </div>
   );
-
-  return createPortal(modalContent, document.body);
 };
