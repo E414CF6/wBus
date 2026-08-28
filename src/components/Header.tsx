@@ -41,7 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
                             </span>
                         </div>
                         <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                            30 · 34 · 34-1 시내버스 시간표
+                            연세대학교 미래캠퍼스 버스 시간표
                         </p>
                     </div>
                 </div>
@@ -94,21 +94,21 @@ export const Header: React.FC<HeaderProps> = ({
                         type="button"
                         onClick={onOpenNoticeModal}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/25 text-xs font-black transition-all cursor-pointer active:scale-95 shadow-2xs"
-                        title="원주시 교통정보센터 공지사항"
+                        title="Notice"
                     >
                         <Megaphone className="w-3.5 h-3.5"/>
-                        <span className="hidden md:inline">교통 공지</span>
+                        <span className="hidden md:inline">Notice</span>
                     </button>
 
-                    {/* Quick Realtime Talk Trigger */}
+                    {/* Quick Live Chat Trigger */}
                     <button
                         type="button"
                         onClick={onOpenCommentsModal}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 border border-blue-500/25 text-xs font-black transition-all cursor-pointer active:scale-95 shadow-2xs"
-                        title="실시간 버스 톡 & 메모"
+                        title="Live Chat"
                     >
                         <MessageSquare className="w-3.5 h-3.5"/>
-                        <span>실시간 톡</span>
+                        <span className="hidden md:inline">Live Chat</span>
                         {commentCount > 0 && (
                             <span
                                 className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[10px] font-black shadow-2xs">

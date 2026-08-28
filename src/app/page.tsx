@@ -338,7 +338,7 @@ export default function YonseiTimetablePage() {
                 type="button"
                 onClick={() => setIsCommentsModalOpen(true)}
                 className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer border border-white/20"
-                title="실시간 버스 톡 & 메모"
+                title="Live Chat"
             >
                 <div className="relative">
                     <MessageSquare className="w-4 h-4"/>
@@ -346,7 +346,6 @@ export default function YonseiTimetablePage() {
                         <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-400 animate-ping"/>
                     )}
                 </div>
-                <span>실시간 톡</span>
                 {comments.length > 0 && (
                     <span className="px-2 py-0.5 rounded-full bg-white text-blue-600 text-[11px] font-black shadow-xs">
                         {comments.length}
