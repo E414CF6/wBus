@@ -1,7 +1,7 @@
 import { RouteDataset } from "@/types/bus";
 
-export const VERCEL_BLOB_PATH = "yonseiSchedule.json";
-export const LEGACY_BLOB_PATH = "scheduleCache.json";
+export const VERCEL_BLOB_PATH = "cache.json";
+export const FALLBACK_BLOB_PATHS = ["cache.json", "yonseiSchedule.json", "scheduleCache.json"];
 
 function getBlobBaseUrl(): string | undefined {
   if (process.env.NEXT_PUBLIC_STATIC_API_URL?.startsWith("http")) {
@@ -25,8 +25,7 @@ export async function loadFromVercelBlob(): Promise<RouteDataset | null> {
   // 1. Try reading via @vercel/blob SDK head() (Supports Vercel OIDC or BLOB_READ_WRITE_TOKEN)
   try {
     const { head } = await import("@vercel/blob");
-    // Try primary path first, then fallback to legacy path if not found
-    for (const blobPath of [VERCEL_BLOB_PATH, LEGACY_BLOB_PATH]) {
+    for (const blobPath of FALLBACK_BLOB_PATHS) {
       try {
         const blobResult = await head(blobPath);
         if (blobResult && blobResult.url) {
@@ -44,7 +43,7 @@ export async function loadFromVercelBlob(): Promise<RouteDataset | null> {
           }
         }
       } catch {
-        // Try next path
+        // Try next fallback path
       }
     }
   } catch (err) {
@@ -57,7 +56,7 @@ export async function loadFromVercelBlob(): Promise<RouteDataset | null> {
   // 2. Try fetching from direct Blob Base URL
   const baseUrl = getBlobBaseUrl();
   if (baseUrl) {
-    for (const blobPath of [VERCEL_BLOB_PATH, LEGACY_BLOB_PATH]) {
+    for (const blobPath of FALLBACK_BLOB_PATHS) {
       try {
         const fetchUrl = `${baseUrl}/${blobPath}${cacheBuster}`;
         console.log(`[Blob] Fetching direct Blob URL: ${fetchUrl}`);
@@ -84,7 +83,7 @@ export async function loadFromVercelBlob(): Promise<RouteDataset | null> {
 }
 
 /**
- * Saves timetable dataset to Vercel Blob via @vercel/blob SDK (using OIDC or BLOB_READ_WRITE_TOKEN).
+ * Saves timetable dataset to Vercel Blob via @vercel/blob SDK as cache.json.
  */
 export async function saveToVercelBlob(data: RouteDataset): Promise<boolean> {
   const jsonStr = JSON.stringify(data, null, 2);

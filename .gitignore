@@ -37,8 +37,3 @@ next-env.d.ts
 # intellij idea
 .idea
 *.iml
-
-# legacy folder
-Legacy
-/Legacy
-/Legacy/

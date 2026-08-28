@@ -21,7 +21,7 @@ function getLocalFilePath(): string {
 
 function loadFromFile(): RouteDataset | null {
   // Check /tmp first for serverless environment
-  const tmpPath = "/tmp/yonseiRoutes.json";
+  const tmpPath = "/tmp/cache.json";
   if (fs.existsSync(tmpPath)) {
     try {
       const raw = fs.readFileSync(tmpPath, "utf-8");
@@ -99,7 +99,7 @@ async function saveCache(data: RouteDataset): Promise<void> {
 
   // 3. Save to /tmp/ for serverless container caching
   try {
-    fs.writeFileSync("/tmp/yonseiRoutes.json", jsonStr, "utf-8");
+    fs.writeFileSync("/tmp/cache.json", jsonStr, "utf-8");
   } catch {
     // Ignore in read-only environment
   }

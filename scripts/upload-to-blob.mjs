@@ -15,7 +15,7 @@ import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 
 const DATA_FILE = join(process.cwd(), "src", "data", "yonseiRoutes.json");
-const BLOB_PATH = "yonseiSchedule.json";
+const BLOB_PATH = "cache.json";
 
 async function upload() {
   if (!existsSync(DATA_FILE)) {
