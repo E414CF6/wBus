@@ -20,9 +20,7 @@ export const CacheInfoBanner: React.FC<CacheInfoBannerProps> = ({
   isRefreshing,
   commentsCount,
 }) => {
-  if (!meta) return null;
-
-  const formattedDate = meta.updatedAt
+  const formattedDate = meta?.updatedAt
     ? new Date(meta.updatedAt).toLocaleString("ko-KR", {
         year: "numeric",
         month: "2-digit",
@@ -32,7 +30,7 @@ export const CacheInfoBanner: React.FC<CacheInfoBannerProps> = ({
       })
     : "-";
 
-  const cooldown = formatCooldownRemaining(meta.updatedAt, 24);
+  const cooldown = formatCooldownRemaining(meta?.updatedAt, 24);
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 px-1 mb-4 text-xs text-slate-500 dark:text-slate-400 select-none">
@@ -65,10 +63,10 @@ export const CacheInfoBanner: React.FC<CacheInfoBannerProps> = ({
         <button
           type="button"
           onClick={onOpenCommentsModal}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 font-black transition-all cursor-pointer active:scale-95 text-[11px] border border-slate-200/80 dark:border-white/10"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 font-black transition-all cursor-pointer active:scale-95 text-[11px] border border-blue-500/20 shadow-2xs"
           title="연세인 한줄 댓글 및 버스 팁 보기"
         >
-          <MessageSquare className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+          <MessageSquare className="w-3.5 h-3.5" />
           <span>한줄 댓글</span>
           {commentsCount > 0 && (
             <span className="inline-flex items-center px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[10px] font-bold">
@@ -81,7 +79,7 @@ export const CacheInfoBanner: React.FC<CacheInfoBannerProps> = ({
         <button
           type="button"
           onClick={onOpenRefreshModal}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-black transition-all cursor-pointer active:scale-95 text-[11px] border border-blue-500/20"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 font-black transition-all cursor-pointer active:scale-95 text-[11px] border border-slate-200/80 dark:border-white/10"
           title="시간표 갱신 확인"
         >
           <RefreshCw

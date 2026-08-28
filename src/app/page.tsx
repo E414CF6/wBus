@@ -14,7 +14,7 @@ import { CacheInfoBanner } from "@/components/CacheInfoBanner";
 import { RefreshConfirmModal } from "@/components/RefreshConfirmModal";
 import { CommentsModal } from "@/components/CommentsModal";
 import { Footer } from "@/components/Footer";
-import { Bus, CheckCircle2, Info, X } from "lucide-react";
+import { Bus, CheckCircle2, Info, MessageSquare, X } from "lucide-react";
 
 export default function YonseiTimetablePage() {
   const [routes, setRoutes] = useState<BusRoute[]>(() => YONSEI_DATA.routes);
@@ -271,6 +271,8 @@ export default function YonseiTimetablePage() {
           onDayModeChange={setDayMode}
           isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
           currentTime={currentTime}
+          onOpenCommentsModal={() => setIsCommentsModalOpen(true)}
+          commentsCount={comments.length}
         />
 
         {/* Wonju ITS Live Notice Banner */}
@@ -385,6 +387,22 @@ export default function YonseiTimetablePage() {
           ))}
         </div>
       </div>
+
+      {/* Floating Action Button (FAB) for Comments */}
+      <button
+        type="button"
+        onClick={() => setIsCommentsModalOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer border border-white/20"
+        title="연세인 한줄 댓글 보기 및 작성"
+      >
+        <MessageSquare className="w-4 h-4" />
+        <span>한줄 댓글</span>
+        {comments.length > 0 && (
+          <span className="px-2 py-0.5 rounded-full bg-white text-blue-600 text-[11px] font-black shadow-xs">
+            {comments.length}
+          </span>
+        )}
+      </button>
 
       {/* Detailed Timetable Modal */}
       {selectedRoute && (

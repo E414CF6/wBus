@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { GraduationCap, Sparkles, Clock, Bus } from "lucide-react";
+import { GraduationCap, Sparkles, Clock, Bus, MessageSquare } from "lucide-react";
 import { DayMode } from "@/types/bus";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -10,6 +10,8 @@ interface HeaderProps {
   onDayModeChange: (mode: DayMode) => void;
   isTodayWeekendOrHoliday: boolean;
   currentTime: Date;
+  onOpenCommentsModal?: () => void;
+  commentsCount?: number;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -17,6 +19,8 @@ export const Header: React.FC<HeaderProps> = ({
   onDayModeChange,
   isTodayWeekendOrHoliday,
   currentTime,
+  onOpenCommentsModal,
+  commentsCount = 0,
 }) => {
   const timeFormatted = currentTime.toLocaleTimeString("ko-KR", {
     hour: "2-digit",
@@ -40,8 +44,25 @@ export const Header: React.FC<HeaderProps> = ({
               <span>연세대학교 미래캠퍼스</span>
             </div>
 
-            {/* Right Group: Live Clock & Theme Toggle */}
+            {/* Right Group: Live Clock, Comment Button & Theme Toggle */}
             <div className="flex items-center gap-2">
+              {onOpenCommentsModal && (
+                <button
+                  type="button"
+                  onClick={onOpenCommentsModal}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-xs font-black border border-blue-500/20 shadow-2xs transition-all cursor-pointer active:scale-95"
+                  title="연세인 한줄 댓글 보기"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  <span className="hidden xs:inline">한줄 댓글</span>
+                  {commentsCount > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-blue-600 text-white text-[10px] font-bold">
+                      {commentsCount}
+                    </span>
+                  )}
+                </button>
+              )}
+
               <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-white/80 dark:bg-white/5 text-xs font-mono font-bold text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 shadow-2xs">
                 <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-pulse" />
                 <span>{timeFormatted}</span>
