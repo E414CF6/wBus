@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BusRoute, CacheMetadata, DayMode } from "@/types/bus";
 import { CommentItem } from "@/types/comment";
-import { YONSEI_DATA, TARGET_ROUTE_NUMBERS } from "@/data/yonseiRoutes";
+import { TARGET_ROUTE_NUMBERS } from "@/data/yonseiRoutes";
 import { isWeekend, selectRouteVariant } from "@/lib/timeUtils";
 import { Header } from "@/components/Header";
 import { RouteCard } from "@/components/RouteCard";
@@ -17,15 +17,9 @@ import { Footer } from "@/components/Footer";
 import { Bus, CheckCircle2, Info, MessageSquare, X } from "lucide-react";
 
 export default function YonseiTimetablePage() {
-  const [routes, setRoutes] = useState<BusRoute[]>(() => YONSEI_DATA.routes);
-  const [meta, setMeta] = useState<CacheMetadata | null>(() => ({
-    exists: true,
-    updatedAt: YONSEI_DATA.updatedAt,
-    totalRoutes: YONSEI_DATA.totalRoutes,
-    minRefreshIntervalDays: 1,
-    canRefresh: true,
-    nextRefreshAvailableAt: null,
-  }));
+  const [routes, setRoutes] = useState<BusRoute[]>([]);
+  const [meta, setMeta] = useState<CacheMetadata | null>(null);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Modals state
@@ -65,7 +59,7 @@ export default function YonseiTimetablePage() {
       if (savedMeta) {
         const parsedMeta = JSON.parse(savedMeta);
         if (parsedMeta && parsedMeta.updatedAt) {
-          setMeta((prev) => ({ ...prev, ...parsedMeta }));
+          setMeta((prev) => (prev ? { ...prev, ...parsedMeta } : parsedMeta));
         }
       }
     } catch {
@@ -75,6 +69,7 @@ export default function YonseiTimetablePage() {
 
   // Fetch latest schedule data on mount
   const fetchScheduleData = useCallback(async () => {
+    setIsLoadingSchedule(true);
     try {
       const res = await fetch(`/api/schedule?t=${Date.now()}`, {
         cache: "no-store",
@@ -96,6 +91,8 @@ export default function YonseiTimetablePage() {
       }
     } catch (err) {
       console.warn("Failed to fetch current schedule:", err);
+    } finally {
+      setIsLoadingSchedule(false);
     }
   }, []);
 
@@ -374,18 +371,33 @@ export default function YonseiTimetablePage() {
         </div>
 
         {/* Route Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {displayedRoutes.map((route) => (
-            <RouteCard
-              key={route.id}
-              route={route}
-              currentTime={currentTime}
-              onOpenModal={setSelectedRoute}
-              isBookmarked={bookmarks.includes(route.routeNo)}
-              onToggleBookmark={toggleBookmark}
-            />
-          ))}
-        </div>
+        {isLoadingSchedule && displayedRoutes.length === 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="glass-panel rounded-3xl p-6 space-y-4 animate-pulse"
+              >
+                <div className="h-8 w-1/3 bg-slate-200 dark:bg-white/10 rounded-xl" />
+                <div className="h-4 w-2/3 bg-slate-200 dark:bg-white/10 rounded-md" />
+                <div className="h-24 w-full bg-slate-200 dark:bg-white/10 rounded-2xl" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {displayedRoutes.map((route) => (
+              <RouteCard
+                key={route.id}
+                route={route}
+                currentTime={currentTime}
+                onOpenModal={setSelectedRoute}
+                isBookmarked={bookmarks.includes(route.routeNo)}
+                onToggleBookmark={toggleBookmark}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Floating Action Button (FAB) for Comments */}

@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import { CacheMetadata, RouteDataset } from "@/types/bus";
-import { YONSEI_DATA } from "@/data/yonseiRoutes";
 import { scrapeWonjuItsYonsei } from "./itsScraper";
 import { loadFromVercelBlob, saveToVercelBlob } from "./blobService";
 
@@ -16,12 +15,26 @@ let inMemoryCache: {
   timestamp: number;
 } | null = null;
 
-function getLocalFilePath(): string {
-  return path.join(process.cwd(), "src", "data", "yonseiRoutes.json");
+function getLocalCachePath(): string {
+  return path.join(process.cwd(), ".cache", "cache.json");
 }
 
-function loadFromFile(): RouteDataset | null {
-  // Check /tmp first for serverless environment
+function loadFromLocalFile(): RouteDataset | null {
+  // 1. Check local .cache directory
+  const localCachePath = getLocalCachePath();
+  if (fs.existsSync(localCachePath)) {
+    try {
+      const raw = fs.readFileSync(localCachePath, "utf-8");
+      const parsed: RouteDataset = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.routes) && parsed.routes.length > 0) {
+        return parsed;
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  // 2. Check /tmp directory for serverless container caching
   const tmpPath = "/tmp/cache.json";
   if (fs.existsSync(tmpPath)) {
     try {
@@ -35,28 +48,12 @@ function loadFromFile(): RouteDataset | null {
     }
   }
 
-  // Check static file in project
-  const localPath = getLocalFilePath();
-  if (fs.existsSync(localPath)) {
-    try {
-      const raw = fs.readFileSync(localPath, "utf-8");
-      const parsed: RouteDataset = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.routes) && parsed.routes.length > 0) {
-        return parsed;
-      }
-    } catch {
-      // Ignore
-    }
-  }
-
   return null;
 }
 
-export function getCacheMetadata(overrideData?: RouteDataset): CacheMetadata {
-  const target =
-    overrideData || inMemoryCache?.data || loadFromFile() || YONSEI_DATA;
-  const updatedAt = target.updatedAt || new Date().toISOString();
-  const totalRoutes = target.routes ? target.routes.length : 0;
+export function getCacheMetadata(data?: RouteDataset | null): CacheMetadata {
+  const updatedAt = data?.updatedAt || new Date().toISOString();
+  const totalRoutes = data?.routes ? data.routes.length : 0;
 
   let canRefresh = true;
   let nextRefreshAvailableAt: string | null = null;
@@ -71,7 +68,7 @@ export function getCacheMetadata(overrideData?: RouteDataset): CacheMetadata {
   }
 
   return {
-    exists: true,
+    exists: totalRoutes > 0,
     updatedAt,
     totalRoutes,
     minRefreshIntervalDays: MIN_REFRESH_INTERVAL_DAYS,
@@ -84,35 +81,35 @@ async function saveCache(data: RouteDataset): Promise<void> {
   const jsonStr = JSON.stringify(data, null, 2);
   const meta = getCacheMetadata(data);
 
-  // 1. Update in-memory cache with immediate current timestamp
+  // 1. Update in-memory cache
   inMemoryCache = {
     data,
     meta,
     timestamp: Date.now(),
   };
 
-  // 2. Save to Vercel Blob (Supports OIDC or token authentication)
+  // 2. Save to Vercel Blob (OIDC or Token)
   try {
     await saveToVercelBlob(data);
   } catch (err) {
     console.warn("[ScheduleService] Vercel Blob save skipped:", err);
   }
 
-  // 3. Save to /tmp/ for serverless container caching
+  // 3. Save to local .cache/cache.json
   try {
-    fs.writeFileSync("/tmp/cache.json", jsonStr, "utf-8");
-  } catch {
-    // Ignore in read-only environment
-  }
-
-  // 4. Save to local file if writable
-  try {
-    const localPath = getLocalFilePath();
+    const localPath = getLocalCachePath();
     const dir = path.dirname(localPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(localPath, jsonStr, "utf-8");
+  } catch {
+    // Ignore in read-only environment
+  }
+
+  // 4. Save to /tmp/cache.json for serverless container caching
+  try {
+    fs.writeFileSync("/tmp/cache.json", jsonStr, "utf-8");
   } catch {
     // Ignore
   }
@@ -121,7 +118,7 @@ async function saveCache(data: RouteDataset): Promise<void> {
 export async function getOrFetchSchedule(
   force = false
 ): Promise<{ data: RouteDataset; meta: CacheMetadata }> {
-  // 1. Check in-memory cache (with TTL)
+  // 1. Check in-memory cache (with 30s TTL)
   if (!force && inMemoryCache && Date.now() - inMemoryCache.timestamp < IN_MEMORY_TTL_MS) {
     return {
       data: inMemoryCache.data,
@@ -130,7 +127,7 @@ export async function getOrFetchSchedule(
   }
 
   if (!force) {
-    // 2. Check Vercel Blob (OIDC or Token)
+    // 2. Check Vercel Blob (OIDC / Token)
     try {
       const blobData = await loadFromVercelBlob();
       if (blobData) {
@@ -142,8 +139,8 @@ export async function getOrFetchSchedule(
       console.warn("[ScheduleService] Vercel Blob load fallback:", err);
     }
 
-    // 3. Check local/tmp file
-    const fromFile = loadFromFile();
+    // 3. Check local .cache/cache.json or /tmp/cache.json
+    const fromFile = loadFromLocalFile();
     if (fromFile) {
       const meta = getCacheMetadata(fromFile);
       inMemoryCache = { data: fromFile, meta, timestamp: Date.now() };
@@ -151,10 +148,23 @@ export async function getOrFetchSchedule(
     }
   }
 
-  // 4. Fallback to bundled dataset
-  const meta = getCacheMetadata(YONSEI_DATA);
-  inMemoryCache = { data: YONSEI_DATA, meta, timestamp: Date.now() };
-  return { data: YONSEI_DATA, meta };
+  // 4. If no cache found anywhere (e.g. first local run), scrape live from Wonju ITS (0.4s)
+  console.log("[ScheduleService] No cache found. Fetching initial timetable from Wonju ITS...");
+  try {
+    const freshData = await scrapeWonjuItsYonsei();
+    await saveCache(freshData);
+    const meta = getCacheMetadata(freshData);
+    return { data: freshData, meta };
+  } catch (err) {
+    console.error("[ScheduleService] Initial scrape failed:", err);
+    const emptyDataset: RouteDataset = {
+      updatedAt: new Date().toISOString(),
+      sourceUrl: "",
+      totalRoutes: 0,
+      routes: [],
+    };
+    return { data: emptyDataset, meta: getCacheMetadata(emptyDataset) };
+  }
 }
 
 export async function refreshSchedule(force = true): Promise<{
@@ -170,7 +180,6 @@ export async function refreshSchedule(force = true): Promise<{
     console.log("[ScheduleService] Triggering Wonju ITS scraper for timetable update...");
     try {
       const newData = await scrapeWonjuItsYonsei();
-      // Ensure updatedAt is set to current timestamp
       newData.updatedAt = new Date().toISOString();
       await saveCache(newData);
       const updatedMeta = getCacheMetadata(newData);

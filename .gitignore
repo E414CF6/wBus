@@ -37,3 +37,6 @@ next-env.d.ts
 # intellij idea
 .idea
 *.iml
+
+# local cache
+.cache/
