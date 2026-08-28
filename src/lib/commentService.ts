@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {CommentItem, CommentsDataset} from "@/types/comment";
+import {getRandomNickname} from "@/data/nicknames";
 
 const BLOB_COMMENTS_PATH = "comments.json";
 export const COMMENT_DISPLAY_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours (1 day)
@@ -186,11 +187,11 @@ export async function addComment({
     if (!cleanContent) {
         throw new Error("댓글 내용을 입력해주세요.");
     }
-    if (cleanContent.length > 150) {
-        throw new Error("댓글은 최대 150자까지 작성할 수 있습니다.");
+    if (cleanContent.length > 1000) {
+        throw new Error("댓글은 최대 1000자까지 작성할 수 있습니다.");
     }
 
-    const cleanAuthor = author?.trim() || "익명";
+    const cleanAuthor = (author?.trim() && author.trim() !== "익명") ? author.trim() : getRandomNickname();
     const currentList = await getAllStoredComments();
 
     const newComment: CommentItem = {

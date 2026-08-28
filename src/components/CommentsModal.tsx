@@ -20,6 +20,7 @@ import {
 
 import {CommentItem} from "@/types/comment";
 import {formatRelativeTime} from "@lib/timeUtils";
+import {getRandomNickname} from "@/data/nicknames";
 
 interface CommentsModalProps {
     isOpen: boolean;
@@ -37,20 +38,6 @@ interface CommentsModalProps {
     initialRouteTag?: string;
 }
 
-const RANDOM_NICKNAMES = [
-    "매지호 오리",
-    "학관 셔틀러",
-    "34번 막차요정",
-    "독수리 기숙사생",
-    "백양로 산책러",
-    "공학관 야행성",
-    "미래캠 버스마스터",
-    "키스로드 낭만파",
-    "세연학사 통학생",
-    "정의관 열공러",
-    "창조관 실험맨",
-    "매지리 카페투어",
-];
 
 const PRESET_CHIPS = [
     {label: "🚌 지금 만차예요", text: "지금 버스 만차예요! 뒤차 타시는 걸 추천해요.", category: "제보"},
@@ -118,16 +105,18 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
         setMounted(true);
         // Load saved nickname & liked comments
         try {
-            const savedNick = localStorage.getItem("wbus_chat_nickname");
-            if (savedNick) {
-                setNewAuthor(savedNick);
+            let savedNick = localStorage.getItem("wbus_chat_nickname");
+            if (!savedNick || !savedNick.trim() || savedNick.trim() === "익명") {
+                savedNick = getRandomNickname();
+                localStorage.setItem("wbus_chat_nickname", savedNick);
             }
+            setNewAuthor(savedNick);
             const savedLikes = localStorage.getItem("wbus_liked_comments");
             if (savedLikes) {
                 setLikedCommentIds(new Set(JSON.parse(savedLikes)));
             }
         } catch {
-            // Ignore
+            setNewAuthor(getRandomNickname());
         }
     }, []);
 
@@ -170,8 +159,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
     };
 
     const handleRandomNickname = () => {
-        const randomIndex = Math.floor(Math.random() * RANDOM_NICKNAMES.length);
-        const name = RANDOM_NICKNAMES[randomIndex];
+        const name = getRandomNickname(newAuthor);
         setNewAuthor(name);
         try {
             localStorage.setItem("wbus_chat_nickname", name);
@@ -218,7 +206,17 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
 
         setIsSubmitting(true);
         try {
-            const author = newAuthor.trim() || "익명";
+            let author = newAuthor.trim();
+            if (!author || author === "익명") {
+                author = getRandomNickname();
+                setNewAuthor(author);
+                try {
+                    localStorage.setItem("wbus_chat_nickname", author);
+                } catch {
+                    // Ignore
+                }
+            }
+
             await onAddComment({
                 author,
                 content: contentTrimmed,
@@ -610,7 +608,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                                 type="text"
                                 value={newAuthor}
                                 onChange={(e) => handleAuthorChange(e.target.value)}
-                                placeholder="닉네임 (기본: 익명)"
+                                placeholder="닉네임"
                                 maxLength={15}
                                 className="w-28 sm:w-32 px-2.5 py-1 text-xs rounded-xl bg-white dark:bg-[#1c2230] border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-slate-200 outline-none focus:border-blue-500 font-bold"
                             />
@@ -688,13 +686,13 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                                 type="text"
                                 value={newContent}
                                 onChange={(e) => setNewContent(e.target.value)}
-                                placeholder="메시지를 입력하세요... (최대 150자, 24시간 동안 유지)"
-                                maxLength={150}
+                                placeholder="메시지를 입력하세요..."
+                                maxLength={1000}
                                 className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-[#1c2230] border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:border-blue-500 font-medium shadow-2xs"
                             />
                             <span
                                 className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none font-mono">
-                                {newContent.length}/150
+                                {newContent.length}/1000
                             </span>
                         </div>
                         <button
@@ -711,7 +709,7 @@ export const CommentsModal: React.FC<CommentsModalProps> = ({
                         <div
                             className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold animate-fadeIn">
                             <CheckCircle2 className="w-3.5 h-3.5"/>
-                            <span>메시지가 성공적으로 전송되었습니다! (24시간 유지)</span>
+                            <span>메시지가 성공적으로 전송되었습니다!</span>
                         </div>
                     )}
                 </form>
