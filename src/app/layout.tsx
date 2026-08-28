@@ -1,92 +1,47 @@
+import type { Metadata, Viewport } from "next";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
-import "maplibre-gl/dist/maplibre-gl.css";
 
-import {APP_CONFIG, SITE_CONFIG} from "@shared/config/env";
-
-import {AppMapContextProvider} from "@shared/context/AppMapContext";
-
-import {Analytics} from "@vercel/analytics/react";
-import {SpeedInsights} from "@vercel/speed-insights/next";
-
-import type {Metadata, Viewport} from "next";
-
-import {ThemeProvider} from "next-themes";
-import {Geist, Geist_Mono} from "next/font/google";
-
-import React from "react";
-
-// Google Fonts (Geist Sans, Geist Mono)
-const geistSans = Geist({
-    variable: "--font-geist-sans", subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-    variable: "--font-geist-mono", subsets: ["latin"],
-});
-
-// Page Metadata
 export const metadata: Metadata = {
-    metadataBase: new URL(SITE_CONFIG.METADATA.BASE_URL),
-
-    title: {
-        default: APP_CONFIG.NAME, template: `${APP_CONFIG.NAME} · %s`,
-    }, description: SITE_CONFIG.METADATA.DESCRIPTION,
-
-    alternates: {
-        canonical: "/",
-    },
-
-    openGraph: {
-        type: "website",
-        url: SITE_CONFIG.METADATA.BASE_URL,
-        siteName: APP_CONFIG.NAME,
-        title: APP_CONFIG.NAME,
-        description: SITE_CONFIG.METADATA.DESCRIPTION,
-        images: [{
-            url: SITE_CONFIG.METADATA.SOCIAL_IMAGE, width: 1200, height: 630, alt: APP_CONFIG.NAME,
-        },],
-    },
-
-    twitter: {
-        card: "summary_large_image",
-        title: APP_CONFIG.NAME,
-        description: SITE_CONFIG.METADATA.DESCRIPTION,
-        images: [SITE_CONFIG.METADATA.SOCIAL_IMAGE],
-    },
-
-    icons: {
-        icon: "/favicon.ico", apple: "/apple-touch-icon.png",
-    },
+  title: "연세대학교 버스 시간표 | 원주 미래캠퍼스 시내버스",
+  description: "연세대학교 미래캠퍼스(원주) 30번, 34번, 34-1번 실시간 다음 버스 및 운행 시간표",
+  keywords: [
+    "연세대학교",
+    "미래캠퍼스",
+    "원주",
+    "버스시간표",
+    "30번",
+    "34번",
+    "34-1번",
+    "매지리",
+    "회촌",
+  ],
+  authors: [{ name: "wBus" }],
 };
 
 export const viewport: Viewport = {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: true,
-    viewportFit: "cover",
-    themeColor: "#003876",
-    colorScheme: "light",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#090d16" },
+  ],
 };
 
-// RootLayout is the main layout part that wraps around all pages.
-// It includes global styles, the MapContextProvider for map context, and analytics components.
 export default function RootLayout({
-                                       children,
-                                   }: {
-    children: React.ReactNode;
-}) {
-    return (<html lang="ko" suppressHydrationWarning>
-    <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-    >
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        {/* Provides global map context via AppMapContextProvider */}
-        <AppMapContextProvider>{children}</AppMapContextProvider>
-    </ThemeProvider>
-    {/* Vercel SpeedInsights and Analytics components */}
-    <SpeedInsights/>
-    <Analytics/>
-    </body>
-    </html>);
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="ko" suppressHydrationWarning>
+      <body className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 transition-colors duration-200">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+        </ThemeProvider>
+      </body>
+    </html>
+  );
 }

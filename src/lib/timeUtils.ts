@@ -1,0 +1,121 @@
+import { BusRoute, TimetableEntry } from "@/types/bus";
+
+/**
+ * Parses "HH:mm" or "H:mm" to total minutes since 00:00.
+ * Returns null if invalid or format is "-".
+ */
+export function parseTimeToMinutes(timeStr: string | undefined | null): number | null {
+  if (!timeStr || timeStr === "-" || timeStr.trim() === "") return null;
+  const parts = timeStr.trim().split(":");
+  if (parts.length !== 2) return null;
+  const hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+  if (isNaN(hours) || isNaN(minutes)) return null;
+  return hours * 60 + minutes;
+}
+
+/**
+ * Formats total minutes to "HH:mm".
+ */
+export function formatMinutesToTime(minutes: number): string {
+  const h = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+}
+
+/**
+ * Checks if a given date is weekend (Saturday or Sunday).
+ */
+export function isWeekend(date: Date = new Date()): boolean {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+}
+
+export interface DepartureInfo {
+  entry: TimetableEntry;
+  timeStr: string;
+  minutes: number;
+  waitMins: number;
+}
+
+/**
+ * Finds the next upcoming departure and subsequent upcoming departures
+ * from a list of timetable entries based on current time.
+ */
+export function getUpcomingDepartures(
+  timetable: TimetableEntry[],
+  direction: "DEST" | "ORIGIN",
+  currentDate: Date = new Date()
+): {
+  nextDeparture: DepartureInfo | null;
+  subsequentDepartures: DepartureInfo[];
+  allValidDepartures: TimetableEntry[];
+} {
+  const currentMins = currentDate.getHours() * 60 + currentDate.getMinutes();
+
+  // Filter valid entries for this direction
+  const allValidDepartures = (timetable || []).filter((item) => {
+    const raw = direction === "DEST" ? item.destDepTime : item.originDepTime;
+    return raw && raw !== "-" && raw.trim() !== "";
+  });
+
+  const parsedList: DepartureInfo[] = [];
+
+  for (const item of allValidDepartures) {
+    const timeStr = direction === "DEST" ? item.destDepTime : item.originDepTime;
+    const mins = parseTimeToMinutes(timeStr);
+    if (mins !== null && mins >= currentMins) {
+      parsedList.push({
+        entry: item,
+        timeStr,
+        minutes: mins,
+        waitMins: mins - currentMins,
+      });
+    }
+  }
+
+  // Sort by minutes ascending
+  parsedList.sort((a, b) => a.minutes - b.minutes);
+
+  const nextDeparture = parsedList.length > 0 ? parsedList[0] : null;
+  const subsequentDepartures = parsedList.slice(1, 5);
+
+  return {
+    nextDeparture,
+    subsequentDepartures,
+    allValidDepartures,
+  };
+}
+
+/**
+ * Filters the active route variant for a route number (e.g. 30, 34, 34-1)
+ * based on the active holiday/weekday mode.
+ */
+export function selectRouteVariant(
+  routes: BusRoute[],
+  routeNo: string,
+  isHolidayOrVacation: boolean
+): BusRoute | null {
+  const matches = routes.filter((r) => r.routeNo === routeNo);
+  if (!matches.length) return null;
+
+  if (routeNo === "30") {
+    return matches[0];
+  }
+
+  if (isHolidayOrVacation) {
+    const vacationMatch = matches.find(
+      (r) =>
+        r.dayType === "방학,휴일" ||
+        r.dayType.includes("방학") ||
+        r.dayType.includes("휴일") ||
+        r.dayType.includes("토요일") ||
+        r.dayType.includes("공휴일") ||
+        r.dayType === "통상"
+    );
+    return vacationMatch || matches[0];
+  } else {
+    const weekdayMatch = matches.find((r) => r.dayType === "평일" || r.dayType === "통상");
+    return weekdayMatch || matches[0];
+  }
+}

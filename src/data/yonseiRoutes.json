@@ -1,0 +1,1147 @@
+{
+  "updatedAt": "2026-08-12T10:37:08.496Z",
+  "sourceUrl": "http://its.wonju.go.kr/bus/bus04.do",
+  "routes": [
+    {
+      "id": "30",
+      "rawNo": "30",
+      "routeNo": "30",
+      "dayType": "통상",
+      "origin": "장양리",
+      "destination": "연세대",
+      "firstBus": "06:10",
+      "lastBus": "23:00",
+      "runCount": "32회",
+      "interval": "평균 30분",
+      "timetable": [
+        {
+          "seq": 1,
+          "originDepTime": "6:10",
+          "destDepTime": "7:05",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 2,
+          "originDepTime": "6:40",
+          "destDepTime": "7:45",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 3,
+          "originDepTime": "7:10",
+          "destDepTime": "8:15",
+          "type": "공통",
+          "notes": "연대발)상지대 경유 * 주말, 일ㆍ공휴일, 상지대방학 : 상지대 교내 미경유"
+        },
+        {
+          "seq": 4,
+          "originDepTime": "7:35",
+          "destDepTime": "8:55",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 5,
+          "originDepTime": "8:05",
+          "destDepTime": "9:15",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 6,
+          "originDepTime": "-",
+          "destDepTime": "9:35",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 7,
+          "originDepTime": "8:40",
+          "destDepTime": "9:55",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 8,
+          "originDepTime": "9:20",
+          "destDepTime": "10:25",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 9,
+          "originDepTime": "10:05",
+          "destDepTime": "11:10",
+          "type": "공통",
+          "notes": "연대발)상지대 경유 * 주말, 일ㆍ공휴일, 상지대방학 : 상지대 교내 미경유"
+        },
+        {
+          "seq": 10,
+          "originDepTime": "10:30",
+          "destDepTime": "11:35",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 11,
+          "originDepTime": "10:50",
+          "destDepTime": "12:00",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 12,
+          "originDepTime": "11:15",
+          "destDepTime": "12:25",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 13,
+          "originDepTime": "11:40",
+          "destDepTime": "12:50",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 14,
+          "originDepTime": "12:10",
+          "destDepTime": "13:15",
+          "type": "공통",
+          "notes": "연대발)상지대 경유 * 주말, 일ㆍ공휴일, 상지대방학 : 상지대 교내 미경유"
+        },
+        {
+          "seq": 15,
+          "originDepTime": "12:50",
+          "destDepTime": "13:55",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 16,
+          "originDepTime": "13:15",
+          "destDepTime": "14:20",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 17,
+          "originDepTime": "13:40",
+          "destDepTime": "14:45",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 18,
+          "originDepTime": "14:05",
+          "destDepTime": "15:10",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 19,
+          "originDepTime": "14:30",
+          "destDepTime": "15:35",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 20,
+          "originDepTime": "15:00",
+          "destDepTime": "16:10",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 21,
+          "originDepTime": "15:35",
+          "destDepTime": "16:50",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 22,
+          "originDepTime": "16:05",
+          "destDepTime": "17:20",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 23,
+          "originDepTime": "16:30",
+          "destDepTime": "17:45",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 24,
+          "originDepTime": "17:00",
+          "destDepTime": "18:20",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 25,
+          "originDepTime": "17:30",
+          "destDepTime": "18:55",
+          "type": "공통",
+          "notes": "장양리발)상지대 경유 * 주말, 일ㆍ공휴일, 상지대방학 : 상지대 교내 미경유"
+        },
+        {
+          "seq": 26,
+          "originDepTime": "18:00",
+          "destDepTime": "19:20",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 27,
+          "originDepTime": "18:30",
+          "destDepTime": "19:40",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 28,
+          "originDepTime": "19:00",
+          "destDepTime": "20:05",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 29,
+          "originDepTime": "19:25",
+          "destDepTime": "20:30",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 30,
+          "originDepTime": "20:10",
+          "destDepTime": "21:15",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 31,
+          "originDepTime": "21:10",
+          "destDepTime": "22:10",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 32,
+          "originDepTime": "22:00",
+          "destDepTime": "23:00",
+          "type": "공통",
+          "notes": "연대발)원주역 미경유"
+        },
+        {
+          "seq": 33,
+          "originDepTime": "23:00",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": "원주역 미경유"
+        }
+      ]
+    },
+    {
+      "id": "34(평일)",
+      "rawNo": "34(평일)",
+      "routeNo": "34",
+      "dayType": "평일",
+      "origin": "장양리",
+      "destination": "연세대",
+      "firstBus": "06:25",
+      "lastBus": "21:05",
+      "runCount": "25.5회",
+      "interval": "평균40분",
+      "timetable": [
+        {
+          "seq": 1,
+          "originDepTime": "통학1번",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 2,
+          "originDepTime": "통학11번",
+          "destDepTime": "8:45",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 3,
+          "originDepTime": "-",
+          "destDepTime": "6:32",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 4,
+          "originDepTime": "6:25",
+          "destDepTime": "7:40",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 5,
+          "originDepTime": "6:45",
+          "destDepTime": "8:15",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 6,
+          "originDepTime": "7:15",
+          "destDepTime": "8:35",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 7,
+          "originDepTime": "8:15",
+          "destDepTime": "9:33",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 8,
+          "originDepTime": "8:42",
+          "destDepTime": "10:08",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 9,
+          "originDepTime": "9:37",
+          "destDepTime": "10:58",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 10,
+          "originDepTime": "10:30",
+          "destDepTime": "11:48",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 11,
+          "originDepTime": "10:50",
+          "destDepTime": "12:18",
+          "type": "공통",
+          "notes": "연세대발)원주역"
+        },
+        {
+          "seq": 12,
+          "originDepTime": "11:20",
+          "destDepTime": "12:43",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 13,
+          "originDepTime": "11:55",
+          "destDepTime": "13:18",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 14,
+          "originDepTime": "12:20",
+          "destDepTime": "13:48",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 15,
+          "originDepTime": "13:00",
+          "destDepTime": "14:18",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 16,
+          "originDepTime": "13:25",
+          "destDepTime": "14:43",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 17,
+          "originDepTime": "13:55",
+          "destDepTime": "15:15",
+          "type": "공통",
+          "notes": "연세대발)원주역"
+        },
+        {
+          "seq": 18,
+          "originDepTime": "14:42",
+          "destDepTime": "16:13",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 19,
+          "originDepTime": "15:17",
+          "destDepTime": "16:38",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 20,
+          "originDepTime": "16:20",
+          "destDepTime": "17:43",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 21,
+          "originDepTime": "16:55",
+          "destDepTime": "18:23",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 22,
+          "originDepTime": "18:02",
+          "destDepTime": "19:28",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 23,
+          "originDepTime": "18:25",
+          "destDepTime": "19:53",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 24,
+          "originDepTime": "18:50",
+          "destDepTime": "20:13",
+          "type": "공통",
+          "notes": "연세대발)원주역"
+        },
+        {
+          "seq": 25,
+          "originDepTime": "19:30",
+          "destDepTime": "20:53",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 26,
+          "originDepTime": "20:35",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 27,
+          "originDepTime": "20:55",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 28,
+          "originDepTime": "21:05",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "34(방학,휴일)",
+      "rawNo": "34(방학,휴일)",
+      "routeNo": "34",
+      "dayType": "방학,휴일",
+      "origin": "장양리",
+      "destination": "연세대",
+      "firstBus": "06:30",
+      "lastBus": "21:10",
+      "runCount": "21회",
+      "interval": "평균 42분",
+      "timetable": [
+        {
+          "seq": 1,
+          "originDepTime": "-",
+          "destDepTime": "6:33",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 2,
+          "originDepTime": "-",
+          "destDepTime": "6:50",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 3,
+          "originDepTime": "6:30",
+          "destDepTime": "7:45",
+          "type": "공통",
+          "notes": "연세대발)원주역"
+        },
+        {
+          "seq": 4,
+          "originDepTime": "7:17",
+          "destDepTime": "8:43",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 5,
+          "originDepTime": "8:10",
+          "destDepTime": "9:38",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 6,
+          "originDepTime": "9:05",
+          "destDepTime": "10:28",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 7,
+          "originDepTime": "10:05",
+          "destDepTime": "11:28",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 8,
+          "originDepTime": "10:30",
+          "destDepTime": "12:03",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 9,
+          "originDepTime": "11:02",
+          "destDepTime": "12:28",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 10,
+          "originDepTime": "11:52",
+          "destDepTime": "13:18",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 11,
+          "originDepTime": "12:20",
+          "destDepTime": "13:43",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 12,
+          "originDepTime": "13:05",
+          "destDepTime": "14:23",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 13,
+          "originDepTime": "13:40",
+          "destDepTime": "15:05",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 14,
+          "originDepTime": "14:30",
+          "destDepTime": "16:00",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 15,
+          "originDepTime": "15:20",
+          "destDepTime": "16:43",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 16,
+          "originDepTime": "15:40",
+          "destDepTime": "16:55",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 17,
+          "originDepTime": "16:25",
+          "destDepTime": "17:53",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 18,
+          "originDepTime": "17:35",
+          "destDepTime": "18:53",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 19,
+          "originDepTime": "18:00",
+          "destDepTime": "19:18",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 20,
+          "originDepTime": "18:22",
+          "destDepTime": "19:50",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 21,
+          "originDepTime": "19:35",
+          "destDepTime": "21:03",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 22,
+          "originDepTime": "21:00",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 23,
+          "originDepTime": "21:10",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "34-1(평일)",
+      "rawNo": "34-1(평일)",
+      "routeNo": "34-1",
+      "dayType": "평일",
+      "origin": "장양리",
+      "destination": "회촌",
+      "firstBus": "06:05",
+      "lastBus": "20:22",
+      "runCount": "33회",
+      "interval": "평균25분",
+      "timetable": [
+        {
+          "seq": 1,
+          "originDepTime": "-",
+          "destDepTime": "6:33",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 2,
+          "originDepTime": "6:05",
+          "destDepTime": "7:38",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 3,
+          "originDepTime": "6:35",
+          "destDepTime": "8:13",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 4,
+          "originDepTime": "7:05",
+          "destDepTime": "8:48",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 5,
+          "originDepTime": "7:27",
+          "destDepTime": "9:08",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 6,
+          "originDepTime": "7:50",
+          "destDepTime": "9:30",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 7,
+          "originDepTime": "8:37",
+          "destDepTime": "10:08",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 8,
+          "originDepTime": "8:55",
+          "destDepTime": "10:33",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 9,
+          "originDepTime": "9:25",
+          "destDepTime": "11:03",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 10,
+          "originDepTime": "9:50",
+          "destDepTime": "11:25",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 11,
+          "originDepTime": "10:10",
+          "destDepTime": "11:43",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 12,
+          "originDepTime": "10:40",
+          "destDepTime": "12:23",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 13,
+          "originDepTime": "11:10",
+          "destDepTime": "12:53",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 14,
+          "originDepTime": "11:42",
+          "destDepTime": "13:28",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 15,
+          "originDepTime": "12:07",
+          "destDepTime": "13:58",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 16,
+          "originDepTime": "12:32",
+          "destDepTime": "14:18",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 17,
+          "originDepTime": "13:12",
+          "destDepTime": "14:53",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 18,
+          "originDepTime": "13:45",
+          "destDepTime": "15:23",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 19,
+          "originDepTime": "14:07",
+          "destDepTime": "15:38",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 20,
+          "originDepTime": "14:30",
+          "destDepTime": "16:13",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 21,
+          "originDepTime": "15:05",
+          "destDepTime": "16:48",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 22,
+          "originDepTime": "15:30",
+          "destDepTime": "17:08",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 23,
+          "originDepTime": "15:50",
+          "destDepTime": "17:43",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 24,
+          "originDepTime": "16:10",
+          "destDepTime": "18:00",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 25,
+          "originDepTime": "16:30",
+          "destDepTime": "18:23",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 26,
+          "originDepTime": "17:10",
+          "destDepTime": "18:48",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 27,
+          "originDepTime": "17:25",
+          "destDepTime": "19:08",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 28,
+          "originDepTime": "17:50",
+          "destDepTime": "19:28",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 29,
+          "originDepTime": "18:15",
+          "destDepTime": "19:53",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 30,
+          "originDepTime": "18:37",
+          "destDepTime": "20:28",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 31,
+          "originDepTime": "19:17",
+          "destDepTime": "20:58",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 32,
+          "originDepTime": "19:40",
+          "destDepTime": "21:18",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 33,
+          "originDepTime": "20:00",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 34,
+          "originDepTime": "20:10",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 35,
+          "originDepTime": "20:22",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        }
+      ]
+    },
+    {
+      "id": "34-1(방학,휴일)",
+      "rawNo": "34-1(방학,휴일)",
+      "routeNo": "34-1",
+      "dayType": "방학,휴일",
+      "origin": "장양리",
+      "destination": "회촌",
+      "firstBus": "06:10",
+      "lastBus": "20:47",
+      "runCount": "31.5회",
+      "interval": "평균 30분",
+      "timetable": [
+        {
+          "seq": 1,
+          "originDepTime": "-",
+          "destDepTime": "6:45",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 2,
+          "originDepTime": "6:10",
+          "destDepTime": "7:48",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 3,
+          "originDepTime": "6:42",
+          "destDepTime": "8:18",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 4,
+          "originDepTime": "7:05",
+          "destDepTime": "8:48",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 5,
+          "originDepTime": "7:30",
+          "destDepTime": "9:13",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 6,
+          "originDepTime": "7:55",
+          "destDepTime": "9:38",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 7,
+          "originDepTime": "8:25",
+          "destDepTime": "10:03",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 8,
+          "originDepTime": "8:52",
+          "destDepTime": "10:30",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 9,
+          "originDepTime": "9:20",
+          "destDepTime": "11:03",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 10,
+          "originDepTime": "9:50",
+          "destDepTime": "11:28",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 11,
+          "originDepTime": "10:20",
+          "destDepTime": "12:03",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 12,
+          "originDepTime": "10:50",
+          "destDepTime": "12:28",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 13,
+          "originDepTime": "11:15",
+          "destDepTime": "12:53",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 14,
+          "originDepTime": "11:40",
+          "destDepTime": "13:18",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 15,
+          "originDepTime": "12:05",
+          "destDepTime": "13:58",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 16,
+          "originDepTime": "12:50",
+          "destDepTime": "14:28",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 17,
+          "originDepTime": "13:17",
+          "destDepTime": "15:05",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 18,
+          "originDepTime": "13:52",
+          "destDepTime": "15:33",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 19,
+          "originDepTime": "14:17",
+          "destDepTime": "16:00",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 20,
+          "originDepTime": "14:42",
+          "destDepTime": "16:20",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 21,
+          "originDepTime": "15:07",
+          "destDepTime": "16:53",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 22,
+          "originDepTime": "15:30",
+          "destDepTime": "17:23",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 23,
+          "originDepTime": "16:10",
+          "destDepTime": "17:58",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 24,
+          "originDepTime": "16:40",
+          "destDepTime": "18:15",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 25,
+          "originDepTime": "17:05",
+          "destDepTime": "18:53",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 26,
+          "originDepTime": "17:47",
+          "destDepTime": "19:28",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 27,
+          "originDepTime": "18:10",
+          "destDepTime": "19:58",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 28,
+          "originDepTime": "18:35",
+          "destDepTime": "20:13",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 29,
+          "originDepTime": "18:55",
+          "destDepTime": "20:28",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 30,
+          "originDepTime": "19:20",
+          "destDepTime": "21:03",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 31,
+          "originDepTime": "20:05",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 32,
+          "originDepTime": "20:20",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 33,
+          "originDepTime": "20:35",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        },
+        {
+          "seq": 34,
+          "originDepTime": "20:47",
+          "destDepTime": "-",
+          "type": "공통",
+          "notes": ""
+        }
+      ]
+    }
+  ]
+}

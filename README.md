@@ -1,204 +1,66 @@
-# wBus: Real-Time Bus Tracking & Timetable Platform
+# 🚌 연세대학교 미래캠퍼스 시내버스 시간표 (Yonsei Bus Timetable)
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
-[![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
-[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
-[![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
-[![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
-
-**wBus** is a modern, full-stack real-time bus tracking and timetable web application built for **Wonju City (원주시),
-South Korea**. It integrates a resilient data processing pipeline with a high-performance Next.js 16 frontend to deliver
-live bus locations, interactive route maps, municipal announcements, and comprehensive timetables.
+원주 연세대학교 미래캠퍼스 (매지리)를 운행하는 시내버스 (**30번**, **34번**, **34-1번**)의 실시간 다음 버스 및 전체 운행 시간표를 제공하는 가볍고 빠른 웹 애플리케이션입니다.
 
 ---
 
-## ✨ Key Features
+## ✨ 주요 기능
 
-### 🎓 Dedicated Yonsei University Mode
+1. **실시간 다음 버스 출발 카운트다운**
+    - 현재 기기 시각을 기준으로 각 노선의 가장 빠른 출발 예정 시간 및 남은 시간 (분)을 실시간 계산
+    - 남은 시간에 따른 시각적 알림 (5분 이내 긴급 알림, 15분 이내 여유, 15분 초과 등)
+    - 이어지는 다음 출발 시각 (최대 4대) 타임라인 표시
 
-- **Campus Departure Focus**: Tailored schedule views for routes **30**, **34**, and **34-1**.
-- **No Depot Distractions**: Filters out irrelevant depot departure times (Jangyang-ri), displaying strictly **Yonsei
-  University departures** (Routes 30 & 34) and **Hoechon departures** (Route 34-1).
-- **Spotlight Departure Card**: Computes and highlights the soonest upcoming campus departure with live countdown timers
-  (`N minutes remaining`).
-- **Single-Column Focused Modal**: Detailed modal view featuring arrival seq, campus departure times, notes, and
-  one-click CSV schedule export.
+2. **양방향 출발 시간표 지원**
+    - **연세대·회촌 출발 (시내/터미널/원주역 방면)**: 하교 및 외출 시 사용
+    - **장양리 출발 (연세대/회촌 방면)**: 등교 및 귀교 시 사용
 
-### 🗺️ Lazy-Loaded Interactive Real-Time Map
+3. **스마트 운행 모드 (평일 vs 방학·휴일)**
+    - **자동 모드**: 오늘 요일 (주말/공휴일 여부)을 자동 감지하여 해당 시간표 적용
+    - **평일 / 방학·휴일 원클릭 전환**: 학기 중과 방학 시간표를 1초 만에 미리보기
 
-- **On-Demand Loading**: MapLibre GL map engine and live telemetry streams are mounted **only** when the user activates
-  the *Real-time Map* tab.
-- **Zero Overhead**: Browsing timetables generates **zero** background map tile or SSE telemetry requests, significantly
-  optimizing bandwidth and battery life.
-- **Polyline Snapping & Animation**: Bus GPS coordinates snap onto OSRM route polylines with smooth 3-second animated
-  marker transitions.
+4. **상세 시간표 모달 (Dual-Column Hourly Grid)**
+    - **30번**: 매일 운행 단일 열
+    - **34번 / 34-1번**: 평일 vs 방학·휴일 시간대별 나란히 비교
+    - 현재 시간대 자동 하이라이트 및 다음 버스 뱃지 표시
+    - 실시간 검색 기능 (출발 시각, '원주역', '상지대' 등 비고 검색)
+    - 주요 경유지 롤링 티커 & 비고/각주 (①, ②) 인터랙티브 바
 
-### 📅 Comprehensive City-Wide Timetables
-
-- Searchable timetable directory covering all Wonju city bus routes.
-- Multi-day filters (*Weekdays*, *Saturdays*, *Sundays/Holidays*).
-- Route bookmarking saved to local browser storage.
-- Real-time map navigation directly from schedule cards.
-
-### 📢 Wonju ITS Notice Center Integration
-
-- Direct integration with Wonju City Intelligent Transportation System (ITS) announcements.
-- Integrated banner and detail modal for viewing official municipal transit notices.
-
-### ⚡ Resilient Data Pipeline & Caching
-
-- **Multi-Tier Caching**: L1 In-Memory Cache + L2 Redis Cache + CDN / Static File fallbacks.
-- **Network Resiliency**: Includes request coalescing (preventing cache stampedes), circuit breaking, and graceful
-  static cache fallbacks when government servers (`its.wonju.go.kr`) experience network timeouts.
+5. **초경량 & 모던 UX/UI**
+    - MapLibre, Redis, GeoJSON 등 무거운 라이브러리를 제거하여 번들 크기 최소화 & 0초 초기 로딩
+    - 다크 모드 / 라이트 모드 (시스템 설정 연동)
+    - 반응형 디자인 (모바일, 태블릿, 데스크톱 최적화)
 
 ---
 
-## 🏗️ Architecture & Project Structure
+## 🛠️ 기술 스택
 
-The project follows **Feature-Sliced Design (FSD)** principles for strict modularity and clear code boundaries:
-
-```
-src/
-├── app/                  # Next.js App Router (pages, API endpoints, layouts)
-│   └── api/              # Server-side API endpoints (/api/bus, /api/notice, etc.)
-├── entities/             # Domain entities & data access models
-│   ├── bus/              #   Bus items, telemetry types & utilities
-│   ├── route/            #   Route information, polyline hooks & mappings
-│   └── station/          #   Bus stop & station location definitions
-├── features/             # Business logic & use-case hooks
-│   ├── live-tracking/    #   Live telemetry hooks (SSE / SWR polling)
-│   └── map-view/         #   Map view state & persistence
-├── shared/               # Cross-cutting infrastructure & design system
-│   ├── api/              #   HTTP client with retries & timeout handling
-│   ├── cache/            #   CacheManager (LRU & request deduplication)
-│   ├── config/           #   Centralized environment variables & locale strings
-│   ├── context/          #   Global map context provider
-│   ├── lib/              #   Bus service layer, data scrapers & time math utilities
-│   ├── types/            #   TypeScript interfaces & data types
-│   └── ui/               #   Unified bottom navigation bar, splash screen & common UI
-└── widgets/              # Composite UI blocks
-    ├── MapContainer/     #   MapLibre GL wrapper, route polylines & live markers
-    ├── NoticeWidget/     #   Wonju ITS notice banner & modal
-    ├── TimetableWidget/  #   City-wide timetable grid, search, filter & modals
-    └── YonseiTimetableWidget/ # Dedicated Yonsei University timetable suite
-```
-
-**Dependency Hierarchy:** `widgets → features → entities → shared`.
+- **Framework**: Next.js 16 (App Router, Turbopack)
+- **UI & Styling**: React 19, Tailwind CSS v4, Lucide React
+- **Theme**: next-themes
+- **Language**: TypeScript
 
 ---
 
-## 🔄 Data Pipeline & Telemetry Flow
+## 🚀 실행 방법
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          EXTERNAL DATA SOURCES                          │
-│  apis.data.go.kr (TAGO API)    its.wonju.go.kr    Vercel Blob / Static  │
-│  (Live Bus Telemetry)          (ITS Schedules)    (GeoJSON & Maps)      │
-└───────────┬──────────────────────────┬─────────────────────┬────────────┘
-            │                          │                     │
-       ┌────▼────┐               ┌─────▼───────┐        ┌────▼─────┐
-       │  Redis  │               │ Local Cache │        │ Browser  │
-       │ (3s-1h) │               │ (Blob/JSON) │        │ Storage  │
-       └────┬────┘               └─────┬───────┘        └──────────┘
-            │                          │
-       ┌────▼──────────────────────────▼──────────────────────────────────┐
-       │                       API ROUTES (Server)                        │
-       │  GET  /api/bus                   → Timetable Cache & Meta        │
-       │  POST /api/bus/refresh           → ITS Scraper + Blob Update     │
-       │  GET  /api/bus/stream            → SSE Telemetry Stream          │
-       │  GET  /api/notice                → Wonju ITS Announcements       │
-       └───────────────────────────────┬──────────────────────────────────┘
-                                       │
-       ┌───────────────────────────────▼──────────────────────────────────┐
-       │                    CLIENT (Lazy SSE + SWR)                       │
-       │  Timetable View: Zero background telemetry overhead              │
-       │  Map View: SSE stream (/api/bus/stream) + MapLibre Renderer     │
-       └──────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 🛠️ Technology Stack
-
-| Category                     | Technology                                           |
-|:-----------------------------|:-----------------------------------------------------|
-| **Framework**                | Next.js 16 (App Router, Turbopack)                   |
-| **UI Library**               | React 19                                             |
-| **Language**                 | TypeScript 5 (Strict Mode)                           |
-| **Styling**                  | Tailwind CSS 4, Vanilla CSS Design System            |
-| **Map Rendering**            | MapLibre GL JS via `react-map-gl`                    |
-| **Live Telemetry**           | Server-Sent Events (`EventSource`) with SWR Fallback |
-| **Data Scraping & Pipeline** | Node.js Fetch, Cheerio, OSRM Polyline Snapping       |
-| **Cache & Storage**          | Upstash Redis, Vercel Blob, Memory LRU Cache         |
-
----
-
-## 🚀 Quick Start & Local Development
-
-### 1. Environment Setup
-
-Copy `.env.local.example` to create your local `.env.local` configuration file:
+### 1. 의존성 설치
 
 ```bash
-cp .env.local.example .env.local
+npm install
 ```
 
-Configure your environment variables inside `.env.local`:
-
-```dotenv
-# Korea Public Data Portal Key (apis.data.go.kr)
-DATA_GO_KR_SERVICE_KEY="YOUR_DECODED_SERVICE_KEY"
-
-# Redis Cache Connection (Optional; falls back to in-memory cache)
-REDIS_URL="redis://localhost:6379"
-
-# Remote static data toggle (Set "false" to use local public/data directory)
-NEXT_PUBLIC_USE_REMOTE_STATIC_DATA="false"
-NEXT_PUBLIC_STATIC_API_URL="/data"
-```
-
-### 2. Run Data Pipeline
-
-To fetch route polylines, snap paths via OSRM, and scrape official schedules:
-
-```bash
-npm run polyline
-```
-
-Or run individual sub-tasks:
-
-```bash
-# Scrape Wonju ITS timetable schedules only
-npm run schedule
-```
-
-### 3. Start Development Server
-
-Run the development server with Turbopack:
+### 2. 개발 서버 실행
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+브라우저에서 `http://localhost:3000`으로 접속합니다.
 
----
+### 3. 프로덕션 빌드 & 실행
 
-## 📜 Available Scripts
-
-| Command             | Description                                          |
-|:--------------------|:-----------------------------------------------------|
-| `npm run dev`       | Starts the Next.js development server with Turbopack |
-| `npm run build`     | Compiles the production build                        |
-| `npm run start`     | Starts the production server                         |
-| `npm run typecheck` | Runs TypeScript type checking without emitting files |
-| `npm run lint`      | Runs ESLint code style and quality check             |
-| `npm run polyline`  | Runs full polyline processing pipeline               |
-| `npm run schedule`  | Scrapes official timetables from Wonju ITS           |
-| `npm run upload`    | Uploads static asset files to Vercel Blob storage    |
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License**. See the [LICENSE](./LICENSE) file for full details.
+```bash
+npm run build
+npm run start
+```
