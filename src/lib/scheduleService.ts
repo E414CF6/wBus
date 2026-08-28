@@ -8,6 +8,7 @@ import { loadFromVercelBlob, saveToVercelBlob } from "./blobService";
 export const MIN_REFRESH_INTERVAL_DAYS = 1;
 export const MIN_REFRESH_INTERVAL_MS =
   MIN_REFRESH_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
+const IN_MEMORY_TTL_MS = 30 * 1000; // 30 seconds
 
 let inMemoryCache: {
   data: RouteDataset;
@@ -83,7 +84,7 @@ async function saveCache(data: RouteDataset): Promise<void> {
   const jsonStr = JSON.stringify(data, null, 2);
   const meta = getCacheMetadata(data);
 
-  // 1. Update in-memory cache
+  // 1. Update in-memory cache with immediate current timestamp
   inMemoryCache = {
     data,
     meta,
@@ -120,8 +121,8 @@ async function saveCache(data: RouteDataset): Promise<void> {
 export async function getOrFetchSchedule(
   force = false
 ): Promise<{ data: RouteDataset; meta: CacheMetadata }> {
-  // 1. Check in-memory cache
-  if (!force && inMemoryCache) {
+  // 1. Check in-memory cache (with TTL)
+  if (!force && inMemoryCache && Date.now() - inMemoryCache.timestamp < IN_MEMORY_TTL_MS) {
     return {
       data: inMemoryCache.data,
       meta: inMemoryCache.meta,
@@ -169,12 +170,15 @@ export async function refreshSchedule(force = true): Promise<{
     console.log("[ScheduleService] Triggering Wonju ITS scraper for timetable update...");
     try {
       const newData = await scrapeWonjuItsYonsei();
+      // Ensure updatedAt is set to current timestamp
+      newData.updatedAt = new Date().toISOString();
       await saveCache(newData);
+      const updatedMeta = getCacheMetadata(newData);
       return {
         refreshed: true,
         message: "원주시 교통정보센터(ITS)에서 최신 시간표를 성공적으로 가져왔습니다.",
         data: newData,
-        meta: getCacheMetadata(newData),
+        meta: updatedMeta,
       };
     } catch (err) {
       console.warn(

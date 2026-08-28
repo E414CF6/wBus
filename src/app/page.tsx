@@ -47,22 +47,62 @@ export default function YonseiTimetablePage() {
     return () => clearInterval(timer);
   }, []);
 
-  // Load bookmarks from localStorage
+  // Load bookmarks & cached meta from localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("yonsei_bus_bookmarks");
-      if (saved) {
-        setBookmarks(JSON.parse(saved));
+      const savedBookmarks = localStorage.getItem("yonsei_bus_bookmarks");
+      if (savedBookmarks) {
+        setBookmarks(JSON.parse(savedBookmarks));
+      }
+      const savedMeta = localStorage.getItem("yonsei_last_meta");
+      if (savedMeta) {
+        const parsedMeta = JSON.parse(savedMeta);
+        if (parsedMeta && parsedMeta.updatedAt) {
+          setMeta((prev) => ({ ...prev, ...parsedMeta }));
+        }
       }
     } catch {
       // Ignore
     }
   }, []);
 
+  // Fetch latest schedule data on mount
+  const fetchScheduleData = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/schedule?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
+      const json = await res.json();
+      if (json.success) {
+        if (json.data && Array.isArray(json.data.routes)) {
+          setRoutes(json.data.routes);
+        }
+        if (json.meta) {
+          setMeta(json.meta);
+          try {
+            localStorage.setItem("yonsei_last_meta", JSON.stringify(json.meta));
+          } catch {
+            // Ignore
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch current schedule:", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchScheduleData();
+  }, [fetchScheduleData]);
+
   // Load comments from API
   const fetchComments = useCallback(async () => {
     try {
-      const res = await fetch("/api/comments");
+      const res = await fetch(`/api/comments?t=${Date.now()}`, {
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
       const json = await res.json();
       if (json.success && Array.isArray(json.comments)) {
         setComments(json.comments);
@@ -96,11 +136,15 @@ export default function YonseiTimetablePage() {
     setToastNotice(null);
     try {
       const endpoint = force
-        ? "/api/schedule/refresh?force=true"
-        : "/api/schedule";
+        ? `/api/schedule/refresh?force=true&t=${Date.now()}`
+        : `/api/schedule?t=${Date.now()}`;
       const method = force ? "POST" : "GET";
 
-      const res = await fetch(endpoint, { method });
+      const res = await fetch(endpoint, {
+        method,
+        cache: "no-store",
+        headers: { "Cache-Control": "no-cache" },
+      });
       const json = await res.json();
 
       if (!json.success) {
@@ -112,6 +156,11 @@ export default function YonseiTimetablePage() {
       }
       if (json.meta) {
         setMeta(json.meta);
+        try {
+          localStorage.setItem("yonsei_last_meta", JSON.stringify(json.meta));
+        } catch {
+          // Ignore
+        }
       }
 
       if (force) {

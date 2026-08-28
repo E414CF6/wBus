@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { refreshSchedule } from "@/lib/scheduleService";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   try {
@@ -19,7 +22,10 @@ export async function POST(request: NextRequest) {
       },
       {
         headers: {
-          "Cache-Control": "no-store, no-cache, must-revalidate",
+          "Cache-Control":
+            "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0",
+          Pragma: "no-cache",
+          Expires: "0",
         },
       }
     );
