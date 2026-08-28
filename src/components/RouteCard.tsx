@@ -1,14 +1,13 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { BusRoute, DepartureDirection } from "@/types/bus";
+import { BusRoute } from "@/types/bus";
 import { ROUTE_CONFIG } from "@/data/yonseiRoutes";
 import { getUpcomingDepartures } from "@/lib/timeUtils";
 import { Clock, ChevronRight, Sparkles, AlertCircle, Star } from "lucide-react";
 
 interface RouteCardProps {
   route: BusRoute;
-  direction: DepartureDirection;
   currentTime: Date;
   onOpenModal: (route: BusRoute) => void;
   isBookmarked?: boolean;
@@ -17,7 +16,6 @@ interface RouteCardProps {
 
 export const RouteCard: React.FC<RouteCardProps> = ({
   route,
-  direction,
   currentTime,
   onOpenModal,
   isBookmarked = false,
@@ -33,20 +31,16 @@ export const RouteCard: React.FC<RouteCardProps> = ({
   };
 
   const isHoechon = route.routeNo === "34-1";
-  const directionTitle =
-    direction === "DEST"
-      ? isHoechon
-        ? "회촌 출발 (시내/터미널 방면)"
-        : "연세대 출발 (시내/터미널 방면)"
-      : "장양리 출발 (연세대/회촌 방면)";
+  const directionTitle = isHoechon
+    ? "회촌 출발 (연세대 · 시내 방면)"
+    : "연세대 출발 (시내 · 터미널 방면)";
 
-  const departureShortLabel =
-    direction === "DEST" ? (isHoechon ? "회촌발" : "연세대발") : "장양리발";
+  const departureShortLabel = isHoechon ? "회촌발" : "연세대발";
 
-  // Calculate upcoming departures for the selected direction
+  // Calculate upcoming departures for outbound ("DEST") direction
   const { nextDeparture, subsequentDepartures, allValidDepartures } = useMemo(() => {
-    return getUpcomingDepartures(route.timetable, direction, currentTime);
-  }, [route.timetable, direction, currentTime]);
+    return getUpcomingDepartures(route.timetable, "DEST", currentTime);
+  }, [route.timetable, currentTime]);
 
   const isVacationSchedule = useMemo(() => {
     const d = route.dayType || "";

@@ -1,16 +1,14 @@
 "use client";
 
 import React from "react";
-import { GraduationCap, Sparkles, Clock, ArrowRightLeft } from "lucide-react";
-import { DayMode, DepartureDirection } from "@/types/bus";
+import { GraduationCap, Sparkles, Clock, Bus } from "lucide-react";
+import { DayMode } from "@/types/bus";
 import { ThemeToggle } from "./ThemeToggle";
 
 interface HeaderProps {
   dayMode: DayMode;
   onDayModeChange: (mode: DayMode) => void;
   isTodayWeekendOrHoliday: boolean;
-  direction: DepartureDirection;
-  onDirectionChange: (dir: DepartureDirection) => void;
   currentTime: Date;
 }
 
@@ -18,8 +16,6 @@ export const Header: React.FC<HeaderProps> = ({
   dayMode,
   onDayModeChange,
   isTodayWeekendOrHoliday,
-  direction,
-  onDirectionChange,
   currentTime,
 }) => {
   const timeFormatted = currentTime.toLocaleTimeString("ko-KR", {
@@ -59,43 +55,20 @@ export const Header: React.FC<HeaderProps> = ({
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
               연세대학교 시내버스 시간표
             </h1>
-            <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mt-1 max-w-xl">
-              30번 · 34번 · 34-1번 실시간 다음 버스 및 전체 운행 시간표
+            <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 mt-1 max-w-xl flex items-center gap-1.5">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+              <span>
+                <strong>연세대 · 회촌 출발 → 시내 방면</strong> (터미널 · 원주역 · 남부시장) 전용 시간표
+              </span>
             </p>
           </div>
 
-          {/* Direction & Day Mode Controls Row */}
+          {/* Day Mode Controls Row */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-200/60 dark:border-white/10">
-            {/* Direction Switcher (하교/시내행 vs 등교/연대행) */}
-            <div className="flex items-center gap-2">
-              <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 shrink-0 flex items-center gap-1">
-                <ArrowRightLeft className="w-3 h-3 text-blue-500" />
-                <span>출발 방향:</span>
-              </span>
-              <div className="inline-flex p-0.5 rounded-xl bg-white/85 dark:bg-[#141824]/90 text-[11px] font-black border border-slate-200/80 dark:border-white/10 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => onDirectionChange("DEST")}
-                  className={`px-3 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer ${
-                    direction === "DEST"
-                      ? "bg-[#003876] text-white shadow-xs font-black"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  연세대·회촌 출발 (시내 방면)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDirectionChange("ORIGIN")}
-                  className={`px-3 py-1.5 rounded-lg transition-all active:scale-95 cursor-pointer ${
-                    direction === "ORIGIN"
-                      ? "bg-[#003876] text-white shadow-xs font-black"
-                      : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                  }`}
-                >
-                  장양리 출발 (연세대 방면)
-                </button>
-              </div>
+            {/* Direction Indicator Badge */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600/10 dark:bg-blue-500/15 border border-blue-500/20 text-xs font-black text-blue-700 dark:text-blue-300">
+              <Bus className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span>연세대·회촌 출발 (시내 방면)</span>
             </div>
 
             {/* Day Mode Switcher (자동 / 평일 / 방학·휴일) */}

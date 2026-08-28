@@ -2,16 +2,14 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { BusRoute, DepartureDirection } from "@/types/bus";
+import { BusRoute } from "@/types/bus";
 import { ROUTE_CONFIG } from "@/data/yonseiRoutes";
 import { parseTimeToMinutes } from "@/lib/timeUtils";
-import { Clock, Info, Palmtree, Search, Sun, X, ArrowRightLeft } from "lucide-react";
+import { Clock, Info, Palmtree, Search, Sun, X, Bus } from "lucide-react";
 
 interface RouteDetailModalProps {
   route: BusRoute | null;
   allRoutes: BusRoute[];
-  direction: DepartureDirection;
-  onDirectionChange: (dir: DepartureDirection) => void;
   onClose: () => void;
   currentTime?: Date;
 }
@@ -37,8 +35,6 @@ const getFootnoteSymbol = (num: number) => {
 export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
   route,
   allRoutes,
-  direction,
-  onDirectionChange,
   onClose,
   currentTime,
 }) => {
@@ -147,13 +143,13 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
   }, [route, weekdayRoute, vacationRoute]);
 
   // Group departure times into Hourly Rows (Hour | Weekday Minutes | Vacation Minutes)
+  // Strictly outbound ("DEST" - 연세대/회촌 출발 → 시내 방면)
   const dualHourlyTimetable = useMemo(() => {
     if (!route || !weekdayRoute || !vacationRoute) return [];
 
     const getValidEntries = (r: BusRoute) => {
       return (r.timetable || []).filter((item) => {
-        const timeVal =
-          direction === "DEST" ? item.destDepTime : item.originDepTime;
+        const timeVal = item.destDepTime;
         return timeVal && timeVal !== "-" && timeVal.trim() !== "";
       });
     };
@@ -165,8 +161,7 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
       if (!tableSearch) return entries;
       const q = tableSearch.toLowerCase();
       return entries.filter((item) => {
-        const timeVal =
-          direction === "DEST" ? item.destDepTime : item.originDepTime;
+        const timeVal = item.destDepTime;
         return (
           timeVal.includes(q) ||
           (item.type && item.type.toLowerCase().includes(q)) ||
@@ -191,8 +186,7 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
       isVacation: boolean
     ) => {
       for (const item of entries) {
-        const timeVal =
-          direction === "DEST" ? item.destDepTime : item.originDepTime;
+        const timeVal = item.destDepTime;
         const parts = timeVal.trim().split(":");
         if (parts.length < 2) continue;
 
@@ -232,8 +226,7 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
     // Identify next bus sequence for Weekday
     let nextWeekdaySeq = -1;
     for (const item of filteredW) {
-      const timeVal =
-        direction === "DEST" ? item.destDepTime : item.originDepTime;
+      const timeVal = item.destDepTime;
       const mins = parseTimeToMinutes(timeVal);
       if (mins !== null && mins >= currentMins) {
         nextWeekdaySeq = item.seq;
@@ -244,8 +237,7 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
     // Identify next bus sequence for Vacation
     let nextVacationSeq = -1;
     for (const item of filteredV) {
-      const timeVal =
-        direction === "DEST" ? item.destDepTime : item.originDepTime;
+      const timeVal = item.destDepTime;
       const mins = parseTimeToMinutes(timeVal);
       if (mins !== null && mins >= currentMins) {
         nextVacationSeq = item.seq;
@@ -279,7 +271,6 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
     route,
     weekdayRoute,
     vacationRoute,
-    direction,
     tableSearch,
     currentMins,
     currentHourStr,
@@ -289,12 +280,9 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
   if (!route || !mounted) return null;
 
   const isHoechon = route.routeNo === "34-1";
-  const modalTitle =
-    direction === "DEST"
-      ? isHoechon
-        ? "회촌 출발 시간표 (시내 방면)"
-        : "연세대 출발 시간표 (시내 방면)"
-      : "장양리 출발 시간표 (연세대/회촌 방면)";
+  const modalTitle = isHoechon
+    ? "회촌 출발 시간표 (시내 방면)"
+    : "연세대 출발 시간표 (시내 방면)";
 
   const modalContent = (
     <div
@@ -326,21 +314,6 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Direction Switcher inside Modal */}
-            <button
-              type="button"
-              onClick={() =>
-                onDirectionChange(direction === "DEST" ? "ORIGIN" : "DEST")
-              }
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-300 text-xs font-bold border border-blue-200/80 dark:border-blue-500/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all cursor-pointer active:scale-95"
-              title="방향 전환"
-            >
-              <ArrowRightLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">
-                {direction === "DEST" ? "장양리발 보기" : "연세대발 보기"}
-              </span>
-            </button>
-
             {/* Close button */}
             <button
               type="button"
@@ -348,7 +321,7 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
               className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-all cursor-pointer active:scale-95"
               aria-label="닫기"
             >
-              <X className="h-4 w-4" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { BusRoute, CacheMetadata, DayMode, DepartureDirection } from "@/types/bus";
+import { BusRoute, CacheMetadata, DayMode } from "@/types/bus";
 import { CommentItem } from "@/types/comment";
 import { YONSEI_DATA, TARGET_ROUTE_NUMBERS } from "@/data/yonseiRoutes";
 import { isWeekend, selectRouteVariant } from "@/lib/timeUtils";
@@ -12,6 +12,7 @@ import { NoticeBanner } from "@/components/NoticeBanner";
 import { NoticeModal } from "@/components/NoticeModal";
 import { CacheInfoBanner } from "@/components/CacheInfoBanner";
 import { RefreshConfirmModal } from "@/components/RefreshConfirmModal";
+import { CommentsModal } from "@/components/CommentsModal";
 import { Footer } from "@/components/Footer";
 import { Bus, CheckCircle2, Info, X } from "lucide-react";
 
@@ -26,9 +27,10 @@ export default function YonseiTimetablePage() {
     nextRefreshAvailableAt: null,
   }));
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isRefreshModalOpen, setIsRefreshModalOpen] = useState(false);
 
-  // Notice Modal State
+  // Modals state
+  const [isRefreshModalOpen, setIsRefreshModalOpen] = useState(false);
+  const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
   const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
 
@@ -40,7 +42,6 @@ export default function YonseiTimetablePage() {
 
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
   const [dayMode, setDayMode] = useState<DayMode>("AUTO");
-  const [direction, setDirection] = useState<DepartureDirection>("DEST");
   const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string>("ALL");
   const [bookmarks, setBookmarks] = useState<string[]>([]);
@@ -269,8 +270,6 @@ export default function YonseiTimetablePage() {
           dayMode={dayMode}
           onDayModeChange={setDayMode}
           isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-          direction={direction}
-          onDirectionChange={setDirection}
           currentTime={currentTime}
         />
 
@@ -308,10 +307,11 @@ export default function YonseiTimetablePage() {
           </div>
         )}
 
-        {/* Timetable Criteria & Refresh Banner */}
+        {/* Timetable Criteria & Action Banner (Separate Comments & Refresh) */}
         <CacheInfoBanner
           meta={meta}
           onOpenRefreshModal={() => setIsRefreshModalOpen(true)}
+          onOpenCommentsModal={() => setIsCommentsModalOpen(true)}
           isRefreshing={isRefreshing}
           commentsCount={comments.length}
         />
@@ -365,13 +365,9 @@ export default function YonseiTimetablePage() {
             </button>
           </div>
 
-          <div className="text-xs font-extrabold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-            <Bus className="w-3.5 h-3.5 text-blue-500" />
-            <span>
-              {direction === "DEST"
-                ? "연세대·회촌 → 시내"
-                : "장양리(시내) → 연세대"}
-            </span>
+          <div className="text-xs font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 bg-blue-50/80 dark:bg-blue-950/40 px-3 py-1.5 rounded-xl border border-blue-200/60 dark:border-blue-500/20">
+            <Bus className="w-3.5 h-3.5" />
+            <span>연세대 · 회촌 출발 → 시내 방면</span>
           </div>
         </div>
 
@@ -381,7 +377,6 @@ export default function YonseiTimetablePage() {
             <RouteCard
               key={route.id}
               route={route}
-              direction={direction}
               currentTime={currentTime}
               onOpenModal={setSelectedRoute}
               isBookmarked={bookmarks.includes(route.routeNo)}
@@ -396,20 +391,24 @@ export default function YonseiTimetablePage() {
         <RouteDetailModal
           route={selectedRoute}
           allRoutes={routes}
-          direction={direction}
-          onDirectionChange={setDirection}
           onClose={() => setSelectedRoute(null)}
           currentTime={currentTime}
         />
       )}
 
-      {/* Refresh Confirmation & One-Line Comments Modal */}
+      {/* Dedicated Timetable Refresh Modal */}
       <RefreshConfirmModal
         isOpen={isRefreshModalOpen}
         onClose={() => setIsRefreshModalOpen(false)}
         meta={meta}
         onConfirmRefresh={handleRefreshSchedule}
         isRefreshing={isRefreshing}
+      />
+
+      {/* Dedicated One-Line Comments Modal */}
+      <CommentsModal
+        isOpen={isCommentsModalOpen}
+        onClose={() => setIsCommentsModalOpen(false)}
         comments={comments}
         onAddComment={handleAddComment}
         onDeleteComment={handleDeleteComment}
