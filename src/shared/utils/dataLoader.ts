@@ -8,36 +8,57 @@ import {API_CONFIG} from "@shared/config/env";
  */
 export async function loadStaticData<T>(fileName: string): Promise<T> {
     const isServer = typeof window === "undefined";
-    const useRemote = API_CONFIG.STATIC.USE_REMOTE;
-
-    // Remove leading slash if present
     const cleanFileName = fileName.startsWith("/") ? fileName.slice(1) : fileName;
 
-    // Server-side Local Filesystem Access
-    if (isServer && !useRemote) {
+    // Server-side: Try reading from local filesystem or Remote Blob URL if configured
+    if (isServer) {
+        // 1. If explicit remote static URL is configured, try fetching first
+        if (
+            API_CONFIG.STATIC.USE_REMOTE &&
+            API_CONFIG.STATIC.BASE_URL &&
+            API_CONFIG.STATIC.BASE_URL.startsWith("http")
+        ) {
+            try {
+                const url = `${API_CONFIG.STATIC.BASE_URL}/${cleanFileName}`;
+                return await fetchAPI<T>(url);
+            } catch (err) {
+                console.warn(
+                    `[loadStaticData] Remote fetch failed for ${cleanFileName}, falling back to local filesystem:`,
+                    err
+                );
+            }
+        }
+
+        // 2. Read from local project directory /tmp
         try {
-            // Dynamic import 'fs' to ensure this code path is dead-code eliminated 
-            // or ignored by bundlers for client-side builds.
             const {readFile} = await import("fs/promises");
+            const {existsSync} = await import("fs");
             const {join} = await import("path");
 
-            const filePath = join(process.cwd(), "public", "data", cleanFileName);
-            const content = await readFile(filePath, "utf-8");
+            const pathsToTry = [
+                join(process.cwd(), "public", "data", cleanFileName),
+                join(process.cwd(), ".cache", cleanFileName),
+                join("/tmp", cleanFileName),
+            ];
 
-            return JSON.parse(content) as T;
-        } catch (error) {
-            // Re-throw as HttpError 404 if file not found to match fetch behavior
-            if (error instanceof Error && 'code' in error && (error as Error & { code?: string }).code === 'ENOENT') {
-                throw new HttpError(`File not found: data/${cleanFileName}`, 404);
+            for (const filePath of pathsToTry) {
+                if (existsSync(/*turbopackIgnore: true*/ filePath)) {
+                    const content = await readFile(/*turbopackIgnore: true*/ filePath, "utf-8");
+                    return JSON.parse(content) as T;
+                }
             }
+        } catch (error) {
             console.error(`[loadStaticData] FS Read Error: data/${cleanFileName}`, error);
-            throw error;
         }
     }
 
-    // Client-side or Server-side Remote
+    // Client-side (Browser)
     let url: string;
-    if (useRemote && API_CONFIG.STATIC.BASE_URL) {
+    if (
+        API_CONFIG.STATIC.USE_REMOTE &&
+        API_CONFIG.STATIC.BASE_URL &&
+        API_CONFIG.STATIC.BASE_URL.startsWith("http")
+    ) {
         url = `${API_CONFIG.STATIC.BASE_URL}/${cleanFileName}`;
     } else {
         url = `/data/${cleanFileName}`;
