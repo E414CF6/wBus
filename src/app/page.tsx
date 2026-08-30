@@ -7,6 +7,7 @@ import BottomNav, {DayMode, NavTab, TimetableSubTab} from "@shared/ui/BottomNav"
 import Splash from "@shared/ui/Splash";
 import {TimetableWidget} from "@widgets/TimetableWidget";
 import {ChatView} from "@components/ChatView";
+import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
 import {CommentItem} from "@/types/comment";
 
 import dynamic from "next/dynamic";
@@ -295,6 +296,14 @@ export default function HomePage() {
                 {/* 1. Real-time Map View Container (Lazy mounted ONLY when map is activated by user) */}
                 {hasVisitedMap && (
                     <div className={`relative flex-1 overflow-hidden ${activeTab === "map" ? "block" : "hidden"}`}>
+                        {/* Map Top Floating Header & Fast Route Switcher */}
+                        <MapRouteHeader
+                            selectedRoute={activeRoute}
+                            onSelectRoute={handleRouteChange}
+                            runningBuses={liveBusData.sortedList}
+                            allRoutes={allRoutes}
+                        />
+
                         <MapWrapper onReady={handleMapReady}>
                             <RouteLayer
                                 routeName={activeRoute}

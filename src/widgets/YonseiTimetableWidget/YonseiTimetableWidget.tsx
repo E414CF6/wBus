@@ -2,8 +2,8 @@
 
 import React, {useCallback, useEffect, useMemo, useState} from "react";
 import {BusRoute, CacheMetadata, RouteDataset} from "@/types/bus";
-import {RouteCard} from "@/components/RouteCard";
-import {RouteDetailModal} from "@/components/RouteDetailModal";
+import {YonseiRouteCard} from "./YonseiRouteCard";
+import {YonseiRouteDetailModal} from "./YonseiRouteDetailModal";
 import {NoticeBanner} from "@/components/NoticeBanner";
 import {NoticeModal} from "@/components/NoticeModal";
 import {CacheInfoBanner} from "@/components/CacheInfoBanner";
@@ -191,11 +191,12 @@ export default function YonseiTimetableWidget({
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                     {activeRoutes.map((route) => (
-                        <RouteCard
+                        <YonseiRouteCard
                             key={route.id}
                             route={route}
                             currentTime={currentTime}
-                            onOpenModal={setSelectedRoute}
+                            onSelectRoute={setSelectedRoute}
+                            onSelectMapRoute={onSelectMapRoute}
                         />
                     ))}
                 </div>
@@ -213,10 +214,11 @@ export default function YonseiTimetableWidget({
 
             {/* Detailed Timetable Modal */}
             {selectedRoute && (
-                <RouteDetailModal
+                <YonseiRouteDetailModal
                     route={selectedRoute}
-                    allRoutes={routes}
+                    allYonseiRoutes={routes}
                     onClose={() => setSelectedRoute(null)}
+                    onSelectMapRoute={onSelectMapRoute}
                     currentTime={currentTime}
                 />
             )}

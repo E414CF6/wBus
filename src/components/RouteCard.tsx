@@ -1,7 +1,7 @@
 "use client";
 
 import React, {useMemo} from "react";
-import {AlertCircle, ArrowRight, Clock, Sparkles} from "lucide-react";
+import {AlertCircle, ArrowRight, Clock, MapPin, Sparkles} from "lucide-react";
 
 import {BusRoute} from "@/types/bus";
 
@@ -12,12 +12,14 @@ interface RouteCardProps {
     route: BusRoute;
     currentTime: Date;
     onOpenModal: (route: BusRoute) => void;
+    onSelectMapRoute?: (routeName: string) => void;
 }
 
 export const RouteCard: React.FC<RouteCardProps> = ({
                                                         route,
                                                         currentTime,
                                                         onOpenModal,
+                                                        onSelectMapRoute,
                                                     }) => {
     const config = ROUTE_CONFIG[route.routeNo] || {
         name: `${route.routeNo}번`,
@@ -67,7 +69,7 @@ export const RouteCard: React.FC<RouteCardProps> = ({
             className="backdrop-blur-2xl bg-white/75 dark:bg-[#111622]/80 border border-slate-200/80 dark:border-white/10 rounded-3xl p-5 sm:p-6 flex flex-col justify-between relative group hover:border-blue-500/60 dark:hover:border-blue-400/60 transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer select-none active:scale-[0.99]"
         >
             <div>
-                {/* Top Row: Route Badge + Departure Title & Direction Subtitle */}
+                {/* Top Row: Route Badge + Departure Title & Direction Subtitle + Actions */}
                 <div className="flex items-center justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                         <div
@@ -86,21 +88,37 @@ export const RouteCard: React.FC<RouteCardProps> = ({
                         </div>
                     </div>
 
-                    <span
-                        className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${
-                            route.routeNo === "30"
-                                ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
-                                : isVacationSchedule
-                                    ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30"
-                                    : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30"
-                        }`}
-                    >
-              {route.routeNo === "30"
-                  ? "매일 운행"
-                  : isVacationSchedule
-                      ? "방학 · 휴일"
-                      : "평일"}
-            </span>
+                    <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        {onSelectMapRoute && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSelectMapRoute(route.routeNo);
+                                }}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-200/70 dark:border-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                title="실시간 지도"
+                            >
+                                <MapPin className="h-3 w-3 shrink-0"/>
+                                <span className="sm:inline">실시간 지도</span>
+                            </button>
+                        )}
+                        <span
+                            className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${
+                                route.routeNo === "30"
+                                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
+                                    : isVacationSchedule
+                                        ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30"
+                                        : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30"
+                            }`}
+                        >
+                          {route.routeNo === "30"
+                              ? "매일 운행"
+                              : isVacationSchedule
+                                  ? "방학 · 휴일"
+                                  : "평일"}
+                        </span>
+                    </div>
                 </div>
 
                 {/* Next Upcoming Departure Spotlight Card */}

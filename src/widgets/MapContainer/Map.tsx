@@ -9,6 +9,7 @@ import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 
 import maplibregl from "maplibre-gl";
+import {useTheme} from "next-themes";
 import React, {useCallback, useEffect, useMemo, useRef} from "react";
 import MapGL, {MapRef, NavigationControl} from "react-map-gl/maplibre";
 
@@ -31,10 +32,11 @@ export default function Map({onReady, children}: MapProps) {
     const mapRef = useRef<MapRef>(null);
     const {setMap} = useAppMapContext();
     const readyOnceRef = useRef(false);
+    const {resolvedTheme} = useTheme();
 
     // Load saved view state (center/zoom) or default from config
     const initialView = useMemo(() => getInitialMapView(), []);
-    const mapStyleUrl = useMemo(() => getMapStyleUrl(), []);
+    const mapStyleUrl = useMemo(() => getMapStyleUrl(resolvedTheme), [resolvedTheme]);
 
     const handleLoad = useCallback(() => {
         if (readyOnceRef.current) return;

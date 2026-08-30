@@ -2,7 +2,7 @@
 
 import {createPortal} from "react-dom";
 import React, {useEffect, useMemo, useState} from "react";
-import {Clock, Info, Palmtree, Sun, X} from "lucide-react";
+import {Clock, Info, MapPin, Palmtree, Sun, X} from "lucide-react";
 
 import {BusRoute} from "@/types/bus";
 
@@ -13,6 +13,7 @@ interface RouteDetailModalProps {
     route: BusRoute | null;
     allRoutes: BusRoute[];
     onClose: () => void;
+    onSelectMapRoute?: (routeName: string) => void;
     currentTime?: Date;
 }
 
@@ -38,6 +39,7 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
                                                                       route,
                                                                       allRoutes,
                                                                       onClose,
+                                                                      onSelectMapRoute,
                                                                       currentTime,
                                                                   }) => {
     const [mounted, setMounted] = useState(false);
@@ -391,6 +393,20 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                        {onSelectMapRoute && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onClose();
+                                    onSelectMapRoute(route.routeNo);
+                                }}
+                                className="flex items-center space-x-1 sm:space-x-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold shadow-md shadow-blue-600/20 transition-all cursor-pointer active:scale-95"
+                            >
+                                <MapPin className="h-3.5 w-3.5"/>
+                                <span className="hidden sm:inline">실시간 지도</span>
+                                <span className="sm:hidden text-[11px]">지도</span>
+                            </button>
+                        )}
                         {/* Close button */}
                         <button
                             type="button"
@@ -607,7 +623,7 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
                                     </button>
                                 )}
                                 <div className="text-[10px] sm:text-[11px] font-semibold text-slate-400">
-                                    클릭 시 해당 시간 강조
+                                    클릭 시 해당 시각 강조
                                 </div>
                             </div>
                         </div>

@@ -7,6 +7,8 @@ import {useAppMapContext} from "@shared/context/AppMapContext";
 import type {BusItem} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
 import {BusListItem} from "@widgets/BusListSheet/BusListItem";
+import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
+import {YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 import {
     Bus,
     Calendar,
@@ -83,6 +85,7 @@ export default function BottomNav({
     const [mounted, setMounted] = useState(false);
     const [localIsDark, setLocalIsDark] = useState(false);
     const [isBusListOpen, setIsBusListOpen] = useState(false);
+    const [isRoutePickerOpen, setIsRoutePickerOpen] = useState(false);
 
     useEffect(() => {
         setMounted(true);
@@ -94,10 +97,11 @@ export default function BottomNav({
         }
     }, [mounted, resolvedTheme]);
 
-    // Close bus list sheet when switching away from map tab
+    // Close bus list sheet and route picker when switching away from map tab
     useEffect(() => {
         if (activeTab !== "map") {
             setIsBusListOpen(false);
+            setIsRoutePickerOpen(false);
         }
     }, [activeTab]);
 
@@ -135,304 +139,314 @@ export default function BottomNav({
         {id: "chat", label: UI_TEXT.BOTTOM_NAV.TAB_CHAT, icon: MessageSquare},
     ];
 
+    const isYonseiSelected = YONSEI_ROUTE_SET.has(selectedRoute);
+
     return (
-        <div
-            className={`fixed bottom-[calc(env(safe-area-inset-bottom,0)+1rem)] left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-3 max-w-[95vw] ${className}`}
-        >
-            {/* Expandable Floating Running Bus List Sheet (Map Tab) */}
-            {activeTab === "map" && isBusListOpen && (
-                <div
-                    className="w-full max-w-sm backdrop-blur-2xl bg-white/90 dark:bg-[#121212]/90 border border-black/10 dark:border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.7)] rounded-[28px] overflow-hidden transition-all duration-300 animate-fadeIn">
-                    <div
-                        className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
-                        <div className="flex items-center space-x-2">
-                            <div
-                                className="flex items-center justify-center w-7 h-7 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                                <Bus className="w-4 h-4"/>
-                            </div>
-                            <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
-                                {UI_TEXT.BOTTOM_NAV.RUNNING_LIST_TITLE(selectedRoute, runningBuses.length)}
-                            </span>
-                        </div>
-                        <button
-                            type="button"
-                            onClick={() => setIsBusListOpen(false)}
-                            className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
-                        >
-                            <X className="w-4 h-4"/>
-                        </button>
-                    </div>
+        <>
+            {/* Route Selection Modal Sheet (Search, Categories, Grid) */}
+            <RouteSelectModal
+                isOpen={isRoutePickerOpen}
+                onClose={() => setIsRoutePickerOpen(false)}
+                allRoutes={allRoutes}
+                selectedRoute={selectedRoute}
+                onSelectRoute={(route) => {
+                    onSelectRoute?.(route);
+                    setIsRoutePickerOpen(false);
+                }}
+            />
 
-                    <ul className="text-xs sm:text-sm text-black dark:text-white max-h-[35svh] overflow-y-auto p-2.5 space-y-1.5 custom-scrollbar">
-                        {runningBuses.length === 0 ? (
-                            <li className="text-center py-6 text-gray-400 text-xs font-medium italic">
-                                {UI_TEXT.BUS_LIST.NO_RUNNING_DESC}
-                            </li>
-                        ) : (
-                            runningBuses.map((bus) => (
-                                <BusListItem
-                                    key={`${selectedRoute}-${bus.vehicleno}`}
-                                    bus={bus}
-                                    routeName={selectedRoute}
-                                    getDirection={getDirection || (() => 0)}
-                                    onClick={(lat, lng) => handleDefaultBusClick(lat, lng)}
-                                />
-                            ))
-                        )}
-                    </ul>
-                </div>
-            )}
-
-            {/* Unified Bottom Floating Pill Navigation Bar */}
-            <nav
-                aria-label={UI_TEXT.ACCESSIBILITY.MAIN_NAV}
-                className="
-          flex items-center gap-1 sm:gap-1.5 p-1.5 px-2.5 sm:px-3
-          bg-white/85 dark:bg-[#111111]/85 backdrop-blur-3xl
-          border border-black/8 dark:border-white/10
-          shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)]
-          rounded-full transition-all duration-300 max-w-full overflow-x-auto custom-scrollbar-hidden
-        "
+            <div
+                className={`fixed bottom-[calc(env(safe-area-inset-bottom,0)+1rem)] left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-3 max-w-[95vw] ${className}`}
             >
-                {/* Brand Logo & Title */}
-                <div className="flex items-center gap-2 pl-1 pr-1 select-none shrink-0">
+                {/* Expandable Floating Running Bus List Sheet (Map Tab) */}
+                {activeTab === "map" && isBusListOpen && (
                     <div
-                        className="flex items-center justify-center w-7.5 h-7.5 rounded-full bg-black dark:bg-white text-white dark:text-black shrink-0">
-                        <MapIcon className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden="true"/>
-                    </div>
-                    <span
-                        className="hidden xs:inline-block text-sm sm:text-base font-black text-black dark:text-white tracking-tight shrink-0">
-                        {APP_CONFIG.NAME}
-                    </span>
-                </div>
-
-                {/* Divider */}
-                <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
-
-                {/* Main Nav Tabs */}
-                <div className="flex items-center gap-1 shrink-0">
-                    {tabs.map((tab) => {
-                        const Icon = tab.icon;
-                        const isActive = activeTab === tab.id;
-
-                        return (
-                            <button
-                                key={tab.id}
-                                type="button"
-                                onClick={() => onTabChange(tab.id)}
-                                className={`
-                  flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-full text-xs sm:text-sm font-extrabold tracking-tight
-                  transition-all duration-200 cursor-pointer select-none active:scale-95
-                  ${
-                                    isActive
-                                        ? "bg-black dark:bg-white text-white dark:text-black shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]"
-                                        : "text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
-                                }
-                `}
-                                aria-current={isActive ? "page" : undefined}
-                            >
-                                <div className="relative">
-                                    <Icon
-                                        className={`w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4] ${isActive ? "animate-pulse" : ""}`}
-                                    />
-                                    {tab.id === "chat" && commentCount > 0 && !isActive && (
-                                        <span
-                                            className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500 animate-pulse"/>
-                                    )}
+                        className="w-full max-w-sm backdrop-blur-2xl bg-white/90 dark:bg-[#121212]/90 border border-black/10 dark:border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.7)] rounded-[28px] overflow-hidden transition-all duration-300 animate-fadeIn"
+                    >
+                        <div
+                            className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]"
+                        >
+                            <div className="flex items-center space-x-2">
+                                <div
+                                    className="flex items-center justify-center w-7 h-7 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                                >
+                                    <Bus className="w-4 h-4"/>
                                 </div>
-                                <span className="whitespace-nowrap">{tab.label}</span>
-                                {tab.id === "chat" && commentCount > 0 && (
-                                    <span
-                                        className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                                            isActive
-                                                ? "bg-blue-500 text-white"
-                                                : "bg-blue-600/10 text-blue-600 dark:text-blue-400"
-                                        }`}
-                                    >
-                                        {commentCount}
-                                    </span>
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* Dynamic Options for Timetable (Schedule Tab) */}
-                {activeTab === "schedule" && (
-                    <>
-                        {/* Divider */}
-                        <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0 animate-fadeIn"/>
-
-                        {/* Timetable Sub-tab Toggle Pills (Yonsei vs All) */}
-                        <div className="flex items-center gap-1 shrink-0 animate-fadeIn">
+                                <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
+                                    {UI_TEXT.BOTTOM_NAV.RUNNING_LIST_TITLE(selectedRoute, runningBuses.length)}
+                                </span>
+                            </div>
                             <button
                                 type="button"
-                                onClick={() => onScheduleSubTabChange?.("yonsei")}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                                    scheduleSubTab === "yonsei"
-                                        ? "bg-[#003876] text-white shadow-md shadow-[#003876]/25 scale-[1.02]"
-                                        : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200 border border-black/5 dark:border-white/10"
-                                }`}
+                                onClick={() => setIsBusListOpen(false)}
+                                className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
                             >
-                                <GraduationCap className="w-3.5 h-3.5"/>
-                                <span className="whitespace-nowrap">{UI_TEXT.BOTTOM_NAV.TAB_YONSEI}</span>
+                                <X className="w-4 h-4"/>
                             </button>
+                        </div>
 
+                        <ul className="text-xs sm:text-sm text-black dark:text-white max-h-[35svh] overflow-y-auto p-2.5 space-y-1.5 custom-scrollbar">
+                            {runningBuses.length === 0 ? (
+                                <li className="text-center py-6 text-gray-400 text-xs font-medium italic">
+                                    {UI_TEXT.BUS_LIST.NO_RUNNING_DESC}
+                                </li>
+                            ) : (
+                                runningBuses.map((bus) => (
+                                    <BusListItem
+                                        key={`${selectedRoute}-${bus.vehicleno}`}
+                                        bus={bus}
+                                        routeName={selectedRoute}
+                                        getDirection={getDirection || (() => 0)}
+                                        onClick={(lat, lng) => handleDefaultBusClick(lat, lng)}
+                                    />
+                                ))
+                            )}
+                        </ul>
+                    </div>
+                )}
+
+                {/* Unified Bottom Floating Pill Navigation Bar */}
+                <nav
+                    aria-label={UI_TEXT.ACCESSIBILITY.MAIN_NAV}
+                    className="flex items-center gap-1 sm:gap-1.5 p-1.5 px-2.5 sm:px-3 bg-white/85 dark:bg-[#111111]/85 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full overflow-x-auto custom-scrollbar-hidden"
+                >
+                    {/* Brand Logo & Title */}
+                    <div className="flex items-center gap-2 pl-1 pr-1 select-none shrink-0">
+                        <div
+                            className="flex items-center justify-center w-7.5 h-7.5 rounded-full bg-black dark:bg-white text-white dark:text-black shrink-0"
+                        >
+                            <MapIcon className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden="true"/>
+                        </div>
+                        <span
+                            className="hidden xs:inline-block text-sm sm:text-base font-black text-black dark:text-white tracking-tight shrink-0"
+                        >
+                            {APP_CONFIG.NAME}
+                        </span>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+
+                    {/* Main Nav Tabs */}
+                    <div className="flex items-center gap-1 shrink-0">
+                        {tabs.map((tab) => {
+                            const Icon = tab.icon;
+                            const isActive = activeTab === tab.id;
+
+                            return (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => onTabChange(tab.id)}
+                                    className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-2 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                                        isActive
+                                            ? "bg-black dark:bg-white text-white dark:text-black shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]"
+                                            : "text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
+                                    }`}
+                                    aria-current={isActive ? "page" : undefined}
+                                >
+                                    <div className="relative">
+                                        <Icon
+                                            className={`w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4] ${isActive ? "animate-pulse" : ""}`}
+                                        />
+                                        {tab.id === "chat" && commentCount > 0 && !isActive && (
+                                            <span
+                                                className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500 animate-pulse"/>
+                                        )}
+                                    </div>
+                                    <span className="whitespace-nowrap">{tab.label}</span>
+                                    {tab.id === "chat" && commentCount > 0 && (
+                                        <span
+                                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                                                isActive
+                                                    ? "bg-blue-500 text-white"
+                                                    : "bg-blue-600/10 text-blue-600 dark:text-blue-400"
+                                            }`}
+                                        >
+                                            {commentCount}
+                                        </span>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Dynamic Options for Timetable (Schedule Tab) */}
+                    {activeTab === "schedule" && (
+                        <>
+                            {/* Divider */}
+                            <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0 animate-fadeIn"/>
+
+                            {/* Timetable Sub-tab Toggle Pills (Yonsei vs All) */}
+                            <div className="flex items-center gap-1 shrink-0 animate-fadeIn">
+                                <button
+                                    type="button"
+                                    onClick={() => onScheduleSubTabChange?.("yonsei")}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                                        scheduleSubTab === "yonsei"
+                                            ? "bg-[#003876] text-white shadow-md shadow-[#003876]/25 scale-[1.02]"
+                                            : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200 border border-black/5 dark:border-white/10"
+                                    }`}
+                                >
+                                    <GraduationCap className="w-3.5 h-3.5"/>
+                                    <span className="whitespace-nowrap">{UI_TEXT.BOTTOM_NAV.TAB_YONSEI}</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => onScheduleSubTabChange?.("all")}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                                        scheduleSubTab === "all"
+                                            ? "bg-black dark:bg-white text-white dark:text-black shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]"
+                                            : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200 border border-black/5 dark:border-white/10"
+                                    }`}
+                                >
+                                    <Bus className="w-3.5 h-3.5"/>
+                                    <span className="whitespace-nowrap">{UI_TEXT.BOTTOM_NAV.TAB_ALL}</span>
+                                </button>
+                            </div>
+
+                            {/* Yonsei-specific Day Mode Toggle (Auto / Weekday / Vacation) */}
+                            {scheduleSubTab === "yonsei" && onDayModeChange && (
+                                <>
+                                    {/* Divider */}
+                                    <div
+                                        className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0 animate-fadeIn"/>
+
+                                    <div className="flex items-center gap-1 shrink-0 animate-fadeIn">
+                                        <button
+                                            type="button"
+                                            onClick={() => onDayModeChange("AUTO")}
+                                            className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                                                dayMode === "AUTO"
+                                                    ? "bg-blue-600 text-white shadow-xs scale-[1.02]"
+                                                    : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/10"
+                                            }`}
+                                            title={`자동 감지 (${isTodayWeekendOrHoliday ? "휴일" : "평일"})`}
+                                        >
+                                            <Sparkles className="w-3 h-3"/>
+                                            <span className="whitespace-nowrap">자동</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => onDayModeChange("WEEKDAY")}
+                                            className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                                                dayMode === "WEEKDAY"
+                                                    ? "bg-amber-600 text-white shadow-xs scale-[1.02]"
+                                                    : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/10"
+                                            }`}
+                                            title="평일 시간표"
+                                        >
+                                            <GraduationCap className="w-3 h-3"/>
+                                            <span className="whitespace-nowrap">평일</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => onDayModeChange("VACATION")}
+                                            className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                                                dayMode === "VACATION"
+                                                    ? "bg-indigo-600 text-white shadow-xs scale-[1.02]"
+                                                    : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/10"
+                                            }`}
+                                            title="방학·휴일 시간표"
+                                        >
+                                            <Bus className="w-3 h-3"/>
+                                            <span className="whitespace-nowrap">방학·휴일</span>
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </>
+                    )}
+
+                    {/* Dynamic Options for Real-time Map (Map Tab) */}
+                    {activeTab === "map" && (
+                        <>
+                            {/* Divider */}
+                            <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0 animate-fadeIn"/>
+
+                            {/* Enhanced Route Selector Button (Opens RouteSelectModal) */}
                             <button
                                 type="button"
-                                onClick={() => onScheduleSubTabChange?.("all")}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                                    scheduleSubTab === "all"
-                                        ? "bg-black dark:bg-white text-white dark:text-black shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]"
-                                        : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200 border border-black/5 dark:border-white/10"
+                                onClick={() => setIsRoutePickerOpen(true)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${
+                                    isYonseiSelected
+                                        ? "bg-[#003876]/15 dark:bg-[#003876]/35 hover:bg-[#003876]/25 border border-[#003876]/40 text-[#003876] dark:text-blue-300"
+                                        : "bg-blue-600/10 dark:bg-blue-500/15 hover:bg-blue-600/20 dark:hover:bg-blue-500/25 border border-blue-500/30 text-blue-700 dark:text-blue-300"
                                 }`}
+                                title="노선 선택 (검색/목록)"
                             >
                                 <Bus className="w-3.5 h-3.5"/>
-                                <span className="whitespace-nowrap">{UI_TEXT.BOTTOM_NAV.TAB_ALL}</span>
+                                <span className="whitespace-nowrap font-black">{selectedRoute || "노선"}번</span>
+                                <ChevronDown className="w-3.5 h-3.5 opacity-70"/>
                             </button>
-                        </div>
 
-                        {/* Yonsei-specific Day Mode Toggle (Auto / Weekday / Vacation) */}
-                        {scheduleSubTab === "yonsei" && onDayModeChange && (
-                            <>
-                                {/* Divider */}
-                                <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0 animate-fadeIn"/>
+                            {/* Running Bus List Toggle Button */}
+                            <button
+                                type="button"
+                                onClick={() => setIsBusListOpen(!isBusListOpen)}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn ${
+                                    isBusListOpen
+                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                                        : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200 border border-black/5 dark:border-white/10"
+                                }`}
+                                title={UI_TEXT.NAV.BUS_LIST_LABEL}
+                            >
+                                <Bus className="w-3.5 h-3.5"/>
+                                <span className="whitespace-nowrap">
+                                    {UI_TEXT.BOTTOM_NAV.RUNNING_LIST_BTN(runningBuses.length)}
+                                </span>
+                            </button>
+                        </>
+                    )}
 
-                                <div className="flex items-center gap-1 shrink-0 animate-fadeIn">
+                    {/* Dynamic Options for Chat Tab (Route Filter Quick Switch) */}
+                    {activeTab === "chat" && onChatFilterRouteChange && (
+                        <>
+                            {/* Divider */}
+                            <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0 animate-fadeIn"/>
+
+                            <div className="flex items-center gap-1 shrink-0 animate-fadeIn">
+                                {CHAT_ROUTES.map((route) => (
                                     <button
+                                        key={route}
                                         type="button"
-                                        onClick={() => onDayModeChange("AUTO")}
-                                        className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                                            dayMode === "AUTO"
+                                        onClick={() => onChatFilterRouteChange(route)}
+                                        className={`px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                                            chatFilterRoute === route
                                                 ? "bg-blue-600 text-white shadow-xs scale-[1.02]"
                                                 : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/10"
                                         }`}
-                                        title={`자동 감지 (${isTodayWeekendOrHoliday ? "휴일" : "평일"})`}
                                     >
-                                        <Sparkles className="w-3 h-3"/>
-                                        <span className="whitespace-nowrap">자동</span>
+                                        <span className="whitespace-nowrap">
+                                            {route === "ALL" ? UI_TEXT.BOTTOM_NAV.CHAT_ALL_FILTER : `${route}번`}
+                                        </span>
                                     </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => onDayModeChange("WEEKDAY")}
-                                        className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                                            dayMode === "WEEKDAY"
-                                                ? "bg-amber-600 text-white shadow-xs scale-[1.02]"
-                                                : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/10"
-                                        }`}
-                                        title="평일 시간표"
-                                    >
-                                        <GraduationCap className="w-3 h-3"/>
-                                        <span className="whitespace-nowrap">평일</span>
-                                    </button>
-
-                                    <button
-                                        type="button"
-                                        onClick={() => onDayModeChange("VACATION")}
-                                        className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                                            dayMode === "VACATION"
-                                                ? "bg-indigo-600 text-white shadow-xs scale-[1.02]"
-                                                : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/10"
-                                        }`}
-                                        title="방학·휴일 시간표"
-                                    >
-                                        <Bus className="w-3 h-3"/>
-                                        <span className="whitespace-nowrap">방학·휴일</span>
-                                    </button>
-                                </div>
-                            </>
-                        )}
-                    </>
-                )}
-
-                {/* Dynamic Options for Real-time Map (Map Tab) */}
-                {activeTab === "map" && (
-                    <>
-                        {/* Divider */}
-                        <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0 animate-fadeIn"/>
-
-                        {/* Route Selector Dropdown */}
-                        <div
-                            className="relative flex items-center bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] rounded-full px-3 py-1.5 border border-black/5 dark:border-white/10 transition-colors shrink-0 animate-fadeIn">
-                            <select
-                                value={selectedRoute}
-                                onChange={(e) => onSelectRoute?.(e.target.value)}
-                                className="appearance-none bg-transparent font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white pr-5 cursor-pointer focus:outline-none tracking-tight"
-                            >
-                                {allRoutes.filter(Boolean).map((route) => (
-                                    <option key={route} value={route}
-                                            className="text-black bg-white dark:bg-[#111111] dark:text-white">
-                                        {UI_TEXT.BOTTOM_NAV.ROUTE_OPTION(route)}
-                                    </option>
                                 ))}
-                            </select>
-                            <ChevronDown className="w-3.5 h-3.5 absolute right-2.5 pointer-events-none text-slate-400"/>
-                        </div>
-
-                        {/* Running Bus List Toggle Button */}
-                        <button
-                            type="button"
-                            onClick={() => setIsBusListOpen(!isBusListOpen)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn ${
-                                isBusListOpen
-                                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-                                    : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200 border border-black/5 dark:border-white/10"
-                            }`}
-                            title={UI_TEXT.NAV.BUS_LIST_LABEL}
-                        >
-                            <Bus className="w-3.5 h-3.5"/>
-                            <span className="whitespace-nowrap">
-                                {UI_TEXT.BOTTOM_NAV.RUNNING_LIST_BTN(runningBuses.length)}
-                            </span>
-                        </button>
-                    </>
-                )}
-
-                {/* Dynamic Options for Chat Tab (Route Filter Quick Switch) */}
-                {activeTab === "chat" && onChatFilterRouteChange && (
-                    <>
-                        {/* Divider */}
-                        <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0 animate-fadeIn"/>
-
-                        <div className="flex items-center gap-1 shrink-0 animate-fadeIn">
-                            {CHAT_ROUTES.map((route) => (
-                                <button
-                                    key={route}
-                                    type="button"
-                                    onClick={() => onChatFilterRouteChange(route)}
-                                    className={`px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-black transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                                        chatFilterRoute === route
-                                            ? "bg-blue-600 text-white shadow-xs scale-[1.02]"
-                                            : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/10"
-                                    }`}
-                                >
-                                    {route === "ALL" ? "전체" : `${route}번`}
-                                </button>
-                            ))}
-                        </div>
-                    </>
-                )}
-
-                {/* Divider */}
-                <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
-
-                {/* Theme Switcher Button */}
-                <button
-                    type="button"
-                    onClick={toggleTheme}
-                    className="flex items-center justify-center w-7.5 h-7.5 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.08] text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-all duration-200 active:scale-90 shrink-0 cursor-pointer"
-                    aria-label={UI_TEXT.BOTTOM_NAV.TOGGLE_THEME}
-                >
-                    {!mounted ? (
-                        <div className="w-4 h-4 rounded-full border border-gray-300 animate-pulse"/>
-                    ) : localIsDark ? (
-                        <Sun className="w-4 h-4" strokeWidth={2.5}/>
-                    ) : (
-                        <Moon className="w-4 h-4" strokeWidth={2.5}/>
+                            </div>
+                        </>
                     )}
-                </button>
-            </nav>
-        </div>
+
+                    {/* Divider before Theme Switcher */}
+                    <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+
+                    {/* Theme Toggle Button */}
+                    <button
+                        type="button"
+                        onClick={toggleTheme}
+                        aria-label={UI_TEXT.NAV.THEME_TOGGLE_LABEL}
+                        className="p-2 rounded-full text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0"
+                    >
+                        {localIsDark ? (
+                            <Moon className="w-4 h-4 text-blue-400 stroke-[2.2] animate-fadeIn"/>
+                        ) : (
+                            <Sun className="w-4 h-4 text-amber-500 stroke-[2.2] animate-fadeIn"/>
+                        )}
+                    </button>
+                </nav>
+            </div>
+        </>
     );
 }
