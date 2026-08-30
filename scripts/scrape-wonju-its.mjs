@@ -4,7 +4,7 @@ import {dirname, join} from 'path';
 const BASE_URL = 'http://its.wonju.go.kr';
 const LIST_URL = `${BASE_URL}/bus/bus04.do`;
 const DETAIL_URL = `${BASE_URL}/bus/bus04Detail.do`;
-const PRIMARY_CACHE_PATH = join(process.cwd(), 'public', 'data', 'scheduleCache.json');
+const PRIMARY_CACHE_PATH = join(process.cwd(), 'public', 'data', 'schedule.json');
 
 const HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -20,7 +20,7 @@ async function fetchList(onlyYonsei = false) {
     const html = await res.text();
 
     // Extract CSRF token
-    const csrfMatch = html.match(/name=["']CSRFToken["']\s+value=["']([^"']+)["']/);
+    const csrfMatch = html.match(/name=['"]CSRFToken['"]\s+value=['"]([^'"]+)['"]/);
     const csrfToken = csrfMatch ? csrfMatch[1] : '';
 
     // Extract cookies if any set
@@ -28,7 +28,7 @@ async function fetchList(onlyYonsei = false) {
     const cookieStr = rawCookies.map(c => c.split(';')[0]).join('; ');
 
     // Match table rows
-    const rowRegex = /<tr[^>]*>\s*<td[^>]*onclick=["']goDetail\(['"]([^'"]+)['"]\);["'][^>]*>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/gs;
+    const rowRegex = /<tr[^>]*>\s*<td[^>]*onclick=['"]goDetail\(['"]([^'"]+)['"]\);['"][^>]*>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/gs;
 
     const routes = [];
     let match;
@@ -49,14 +49,13 @@ async function fetchList(onlyYonsei = false) {
         const runCount = match[7].replace(/<[^>]+>/g, '').trim();
         const interval = match[8].replace(/<[^>]+>/g, '').trim();
 
+        // Standardize route number
         let routeNo = rawNo;
         let dayType = '매일';
-        const parenMatch = rawNo.match(/^([^(]+)(?:\(([^)]+)\))?/);
+        const parenMatch = rawNo.match(/^(.*?)\((.*?)\)$/);
         if (parenMatch) {
             routeNo = parenMatch[1].trim();
-            if (parenMatch[2]) {
-                dayType = parenMatch[2].trim();
-            }
+            dayType = parenMatch[2].trim();
         }
 
         routes.push({
@@ -80,23 +79,20 @@ async function fetchList(onlyYonsei = false) {
 async function fetchDetail(detailId, csrfToken, cookieStr) {
     const formData = new URLSearchParams();
     formData.append('CSRFToken', csrfToken);
-    formData.append('no', detailId);
-
-    const reqHeaders = {
-        ...HEADERS,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Referer': LIST_URL,
-        'Origin': BASE_URL,
-        'Cookie': cookieStr,
-        'X-CSRF-TOKEN': csrfToken
-    };
+    formData.append('route_id', detailId);
 
     const res = await fetch(DETAIL_URL, {
-        method: 'POST', headers: reqHeaders, body: formData.toString(), signal: AbortSignal.timeout(6000)
+        method: 'POST', headers: {
+            ...HEADERS,
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Cookie': cookieStr,
+            'Origin': BASE_URL,
+            'Referer': LIST_URL
+        }, body: formData.toString(), signal: AbortSignal.timeout(8000)
     });
 
     if (!res.ok) {
-        throw new Error(`Failed to fetch detail for ${detailId} (Status: ${res.status})`);
+        throw new Error(`Detail HTTP error ${res.status}`);
     }
 
     const html = await res.text();
@@ -156,7 +152,7 @@ async function runScraper(options = {onlyYonsei: false}) {
 
     const jsonStr = JSON.stringify(cacheData, null, 2);
 
-    const targetPaths = [join(process.cwd(), '.cache', 'scheduleCache.json'), join(process.cwd(), '.cache', 'cache.json'), PRIMARY_CACHE_PATH, '/tmp/scheduleCache.json', '/tmp/cache.json'];
+    const targetPaths = [PRIMARY_CACHE_PATH, '/tmp/schedule.json'];
 
     for (const targetPath of targetPaths) {
         try {

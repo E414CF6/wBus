@@ -1,28 +1,31 @@
 #!/usr/bin/env node
 
 /**
- * Integrated Data Pipeline Script
+ * Polyline & Segment Snapping Pipeline Script
  *
  * Consolidates TAGO API route collection, OSRM snapping with fallback,
- * segment-based GeoJSON polyline generation, schedule scraping, and static packaging.
+ * and segment-based GeoJSON polyline generation.
+ *
+ * Pipeline Flow:
+ *   1. Generates & caches all outputs in `scripts/cache/`
+ *   2. Synchronizes polyline artifacts (`routeMap.json`, `stationMap.json`, `segment.json`, `route/*.json`)
+ *      into `public/data/` while leaving other files (e.g. `schedule.json`, `style.json`) intact.
  *
  * Features:
  *   - Independent UP (ud=1) and DOWN (ud=0) route snapping and polyline assembly
  *   - OSRM route snapping with automatic straight-line fallback if OSRM is unavailable
  *   - Segment hashing (MD5) matching wBus polylineService schema
+ *   - Cache-first output strategy for safe atomic publishing to public/data
  *   - Complete telemetry and error reporting
  *
  * Usage:
- *   node scripts/generate-polyline-segment.mjs route [--route <no>] [--city-code 32020] [--station-map-only] [--osrm-only]
- *   node scripts/generate-polyline-segment.mjs schedule
- *   node scripts/generate-polyline-segment.mjs all
+ *   node scripts/generate-polyline-segment.mjs [--route <no>] [--city-code 32020] [--station-map-only] [--osrm-only] [--no-sync]
  */
 
 import crypto from "crypto";
 import dotenv from "dotenv";
-import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from "fs";
+import {copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from "fs";
 import {join} from "path";
-import {runScraper} from "./scrape-wonju-its.mjs";
 
 // Load environment variables (.env.local priority, fallback to .env)
 dotenv.config({path: join(process.cwd(), ".env.local")});
@@ -100,8 +103,7 @@ function calculateBearing(p1, p2) {
     const toRad = (deg) => (deg * Math.PI) / 180;
     const toDeg = (rad) => (rad * 180) / Math.PI;
     const y = Math.sin(toRad(p2[0] - p1[0])) * Math.cos(toRad(p2[1]));
-    const x = Math.cos(toRad(p1[1])) * Math.sin(toRad(p2[1])) -
-        Math.sin(toRad(p1[1])) * Math.cos(toRad(p2[1])) * Math.cos(toRad(p2[0] - p1[0]));
+    const x = Math.cos(toRad(p1[1])) * Math.sin(toRad(p2[1])) - Math.sin(toRad(p1[1])) * Math.cos(toRad(p2[1])) * Math.cos(toRad(p2[0] - p1[0]));
     return Math.round((toDeg(Math.atan2(y, x)) + 360) % 360);
 }
 
@@ -201,34 +203,22 @@ async function smartSnapStops(stops, osrmHost) {
 
         if (candidates.length > 0) {
             const scored = candidates.map(c => ({
-                ...c,
-                score: scoreCandidate(c, stop.name || "", prevRoad, nextRoad, corridorRoads)
+                ...c, score: scoreCandidate(c, stop.name || "", prevRoad, nextRoad, corridorRoads)
             })).sort((a, b) => b.score - a.score);
 
             const best = scored[0];
             snappedStops.push({
-                rawCoord,
-                coord: best.location,
-                name: best.name,
-                distance: best.distance,
-                stopName: stop.name
+                rawCoord, coord: best.location, name: best.name, distance: best.distance, stopName: stop.name
             });
         } else {
             snappedStops.push({
-                rawCoord,
-                coord: rawCoord,
-                name: "",
-                distance: 0,
-                stopName: stop.name
+                rawCoord, coord: rawCoord, name: "", distance: 0, stopName: stop.name
             });
         }
     }
 
     return snappedStops;
 }
-
-// Maximum allowed ratio of OSRM segment distance to straight-line distance.
-const MAX_DETOUR_RATIO = 1.7;
 
 // OSRM Route Snapper for a list of coordinates
 async function fetchOsrmRoute(coords, osrmRouteUrl = DEFAULT_OSRM_URL, snapRadius = OSRM_SNAP_RADIUS) {
@@ -292,11 +282,7 @@ async function processDirectionLeg(dirStops, stationMap, osrmUrl = DEFAULT_OSRM_
         }
         if (lat > 0 && lon > 0) {
             stopsWithCoords.push({
-                id: rawId,
-                name: String(s.nodenm ?? s.name ?? ""),
-                ord: Number(s.nodeord ?? s.ord ?? 0),
-                lat,
-                lon,
+                id: rawId, name: String(s.nodenm ?? s.name ?? ""), ord: Number(s.nodeord ?? s.ord ?? 0), lat, lon,
             });
         }
     }
@@ -377,24 +363,71 @@ async function processDirectionLeg(dirStops, stationMap, osrmUrl = DEFAULT_OSRM_
     return {segmentHashes, segmentsMap, totalDist};
 }
 
+// Synchronize cached polyline files from scripts/cache to public/data
+function syncCacheToPublic(cacheDir, publicDir) {
+    if (!existsSync(publicDir)) mkdirSync(publicDir, {recursive: true});
+
+    const singleFiles = ["routeMap.json", "stationMap.json", "segment.json"];
+    let copiedFiles = 0;
+
+    for (const fileName of singleFiles) {
+        const src = join(cacheDir, fileName);
+        const dest = join(publicDir, fileName);
+        if (existsSync(src)) {
+            copyFileSync(src, dest);
+            copiedFiles++;
+        }
+    }
+
+    // Sync route/*.json
+    const cacheRouteDir = join(cacheDir, "route");
+    const publicRouteDir = join(publicDir, "route");
+    if (existsSync(cacheRouteDir)) {
+        if (!existsSync(publicRouteDir)) mkdirSync(publicRouteDir, {recursive: true});
+        const routeFiles = readdirSync(cacheRouteDir).filter(f => f.endsWith(".json"));
+        for (const file of routeFiles) {
+            copyFileSync(join(cacheRouteDir, file), join(publicRouteDir, file));
+            copiedFiles++;
+        }
+    }
+
+    console.log(`[Polly Sync] Copied ${copiedFiles} cached files to ${publicDir}`);
+}
+
 // Main Pipeline Logic
 async function runRoutePipeline(options) {
+    const scriptsCacheDir = options.cacheDir || join(process.cwd(), "scripts", "cache");
     const outputDir = options.outputDir || join(process.cwd(), "public", "data");
-    const rawDir = join(outputDir, "cache");
-    const derivedDir = join(outputDir, "polylines");
+    const routesCacheFile = join(scriptsCacheDir, "routes.json");
+    const cacheDerivedDir = join(scriptsCacheDir, "route");
 
-    if (!existsSync(rawDir)) mkdirSync(rawDir, {recursive: true});
-    if (!existsSync(derivedDir)) mkdirSync(derivedDir, {recursive: true});
+    if (!existsSync(scriptsCacheDir)) mkdirSync(scriptsCacheDir, {recursive: true});
+    if (!existsSync(cacheDerivedDir)) mkdirSync(cacheDerivedDir, {recursive: true});
 
-    console.log(`[Polly] Starting Route Processing (Output: ${outputDir})...`);
+    console.log(`[Polly] Starting Polyline Pipeline (Cache: ${scriptsCacheDir} -> Target: ${outputDir})...`);
+
+    // Load existing routes cache if present
+    let routesCache = {};
+    if (existsSync(routesCacheFile)) {
+        try {
+            const raw = JSON.parse(readFileSync(routesCacheFile, "utf-8"));
+            if (Array.isArray(raw)) {
+                raw.forEach(r => {
+                    if (r.route_id) routesCache[r.route_id] = r;
+                });
+            } else if (raw && typeof raw === "object") {
+                routesCache = raw;
+            }
+        } catch {
+            routesCache = {};
+        }
+    }
 
     let targetRoutes = [];
     if (!options.osrmOnly) {
         console.log("[Polly Phase 1] Fetching Route List from TAGO API...");
         const allRoutes = await fetchTago("getRouteNoList", {
-            cityCode: options.cityCode || DEFAULT_CITY_CODE,
-            numOfRows: 2048,
-            pageNo: 1,
+            cityCode: options.cityCode || DEFAULT_CITY_CODE, numOfRows: 2048, pageNo: 1,
         });
 
         targetRoutes = allRoutes.filter(r => {
@@ -406,7 +439,6 @@ async function runRoutePipeline(options) {
 
         console.log(`[Polly Phase 1] Found ${targetRoutes.length} matching routes.`);
 
-        const routeDetailsMap = {};
         const routeMapping = {};
         const allStopsMap = {};
 
@@ -419,9 +451,7 @@ async function runRoutePipeline(options) {
 
                 try {
                     const stopItems = await fetchTago("getRouteAcctoThrghSttnList", {
-                        cityCode: options.cityCode || DEFAULT_CITY_CODE,
-                        routeId,
-                        numOfRows: 2048,
+                        cityCode: options.cityCode || DEFAULT_CITY_CODE, routeId, numOfRows: 2048,
                     });
 
                     if (stopItems.length === 0) return;
@@ -436,34 +466,18 @@ async function runRoutePipeline(options) {
                         updowncd: Number(item.updowncd ?? 0),
                     })).sort((a, b) => a.nodeord - b.nodeord);
 
-                    // Save raw cache file
-                    const rawData = {
-                        route_id: routeId,
-                        route_no: routeNo,
-                        fetched_at: new Date().toISOString(),
-                        stops,
+                    // Update single cached routes object
+                    routesCache[routeId] = {
+                        route_id: routeId, route_no: routeNo, fetched_at: new Date().toISOString(), stops,
                     };
-                    writeFileSync(join(rawDir, `${routeNo}_${routeId}.json`), JSON.stringify(rawData, null, 2));
 
                     // Aggregate mapping metadata
                     if (!routeMapping[routeNo]) routeMapping[routeNo] = [];
                     if (!routeMapping[routeNo].includes(routeId)) routeMapping[routeNo].push(routeId);
 
-                    routeDetailsMap[routeId] = {
-                        routeno: routeNo,
-                        sequence: stops.map(s => ({
-                            nodeid: s.nodeid,
-                            nodeord: s.nodeord,
-                            updowncd: s.updowncd,
-                        }))
-                    };
-
                     stops.forEach(s => {
                         allStopsMap[s.nodeid] = {
-                            nodenm: s.nodenm,
-                            nodeno: s.nodeno,
-                            gpslati: s.gpslati,
-                            gpslong: s.gpslong,
+                            nodenm: s.nodenm, nodeno: s.nodeno, gpslati: s.gpslati, gpslong: s.gpslong,
                         };
                     });
                 } catch (err) {
@@ -472,30 +486,35 @@ async function runRoutePipeline(options) {
             }));
             process.stdout.write(`Progress: ${Math.min(i + CONCURRENCY_FETCH, targetRoutes.length)} / ${targetRoutes.length}\r`);
         }
-        console.log("\n[Polly Phase 1] Saved raw route files.");
 
-        // Save mapping JSON files
+        // Save consolidated scripts/cache/routes.json
+        writeFileSync(routesCacheFile, JSON.stringify(routesCache, null, 2));
+        console.log(`\n[Polly Phase 1] Saved ${Object.keys(routesCache).length} routes to ${routesCacheFile}`);
+
+        // Save mapping JSON files into cache directory
         const timestamp = new Date().toISOString();
-        writeFileSync(join(outputDir, "routeMap.json"), JSON.stringify({
-            lastUpdated: timestamp,
-            route_numbers: routeMapping
+        writeFileSync(join(scriptsCacheDir, "routeMap.json"), JSON.stringify({
+            lastUpdated: timestamp, route_numbers: routeMapping
         }, null, 2));
-        writeFileSync(join(outputDir, "routeDetails.json"), JSON.stringify({
-            lastUpdated: timestamp,
-            route_details: routeDetailsMap
+        writeFileSync(join(scriptsCacheDir, "stationMap.json"), JSON.stringify({
+            lastUpdated: timestamp, stations: allStopsMap
         }, null, 2));
-        writeFileSync(join(outputDir, "stationMap.json"), JSON.stringify({
-            lastUpdated: timestamp,
-            stations: allStopsMap
-        }, null, 2));
-        console.log("[Polly Phase 1] Generated routeMap.json, routeDetails.json, stationMap.json.");
+        console.log("[Polly Phase 1] Generated cache/routeMap.json, cache/stationMap.json.");
     }
 
-    if (options.stationMapOnly) return;
+    if (options.stationMapOnly) {
+        if (!options.noSync) {
+            syncCacheToPublic(scriptsCacheDir, outputDir);
+        }
+        return;
+    }
 
-    // Load station map for stop coordinate resolution
+    // Load station map for stop coordinate resolution (check cache first, fallback to public/data)
     let stationMap = {};
-    const stationMapFile = join(outputDir, "stationMap.json");
+    const cacheStationMapFile = join(scriptsCacheDir, "stationMap.json");
+    const publicStationMapFile = join(outputDir, "stationMap.json");
+    const stationMapFile = existsSync(cacheStationMapFile) ? cacheStationMapFile : publicStationMapFile;
+
     if (existsSync(stationMapFile)) {
         try {
             stationMap = JSON.parse(readFileSync(stationMapFile, "utf-8")).stations || {};
@@ -505,18 +524,16 @@ async function runRoutePipeline(options) {
     }
 
     // Phase 2: Independent UP/DOWN Snapping & Segment Generation
-    console.log("[Polly Phase 2] Processing UP and DOWN polylines...");
-    const rawFiles = readdirSync(rawDir).filter(f => f.endsWith(".json"));
+    console.log("[Polly Phase 2] Processing UP and DOWN polylines from scripts/cache/routes.json...");
+    const cachedRoutesList = Object.values(routesCache);
     const masterSegmentsMap = {};
     let processedCount = 0;
 
-    for (const file of rawFiles) {
-        if (options.routeFilter && !file.startsWith(options.routeFilter)) continue;
+    for (const raw of cachedRoutesList) {
+        if (options.routeFilter && raw.route_no !== options.routeFilter && !raw.route_no.startsWith(options.routeFilter)) continue;
+        if (!raw.stops || raw.stops.length < 2) continue;
 
         try {
-            const raw = JSON.parse(readFileSync(join(rawDir, file), "utf-8"));
-            if (!raw.stops || raw.stops.length < 2) continue;
-
             const stops = raw.stops;
             const upStops = stops.filter(s => Number(s.updowncd ?? s.ud) === 1);
             const downStops = stops.filter(s => Number(s.updowncd ?? s.ud) === 0);
@@ -574,17 +591,21 @@ async function runRoutePipeline(options) {
                 })),
             };
 
-            writeFileSync(join(derivedDir, `${raw.route_id}.json`), JSON.stringify(polylineData, null, 2));
+            // Write route file to cache
+            writeFileSync(join(cacheDerivedDir, `${raw.route_id}.json`), JSON.stringify(polylineData, null, 2));
             processedCount++;
-            console.log(`[Polly Phase 2] (${processedCount}/${rawFiles.length}) Processed ${raw.route_no} (${raw.route_id}): UP=${upRes.segmentHashes.length} segs, DOWN=${downRes.segmentHashes.length} segs`);
+            console.log(`[Polly Phase 2] (${processedCount}/${cachedRoutesList.length}) Processed ${raw.route_no} (${raw.route_id}): UP=${upRes.segmentHashes.length} segs, DOWN=${downRes.segmentHashes.length} segs`);
         } catch (err) {
-            console.error(`[Polly Phase 2] Error processing ${file}:`, err.message);
+            console.error(`[Polly Phase 2] Error processing route ${raw.route_no} (${raw.route_id}):`, err.message);
         }
     }
 
-    // Existing segments.json preservation & merge (newly generated segments take precedence)
+    // Existing segment.json preservation & merge (cache first, then public/data)
     let finalSegmentsMap = {...masterSegmentsMap};
-    const existingSegmentsPath = join(derivedDir, "segments.json");
+    const cacheSegmentsPath = join(scriptsCacheDir, "segment.json");
+    const publicSegmentsPath = join(outputDir, "segment.json");
+    const existingSegmentsPath = existsSync(cacheSegmentsPath) ? cacheSegmentsPath : publicSegmentsPath;
+
     if (existsSync(existingSegmentsPath)) {
         try {
             const existing = JSON.parse(readFileSync(existingSegmentsPath, "utf-8"));
@@ -594,21 +615,29 @@ async function runRoutePipeline(options) {
         }
     }
 
-    writeFileSync(existingSegmentsPath, JSON.stringify(finalSegmentsMap, null, 2));
-    console.log(`[Polly Phase 2] Complete. Processed ${processedCount} routes. Saved segments.json with ${Object.keys(finalSegmentsMap).length} segments.`);
+    // Save segment.json to cache
+    writeFileSync(cacheSegmentsPath, JSON.stringify(finalSegmentsMap, null, 2));
+    console.log(`[Polly Phase 2] Complete. Processed ${processedCount} routes. Saved cache/segment.json with ${Object.keys(finalSegmentsMap).length} segments.`);
+
+    // Phase 3: Synchronize cache output into public/data
+    if (!options.noSync) {
+        console.log("[Polly Phase 3] Synchronizing cached polyline artifacts to public/data...");
+        syncCacheToPublic(scriptsCacheDir, outputDir);
+    }
 }
 
 // CLI Command Handler
 async function main() {
     const args = process.argv.slice(2);
-    const command = args[0] || "all";
 
     const options = {
         cityCode: DEFAULT_CITY_CODE,
         routeFilter: null,
         stationMapOnly: args.includes("--station-map-only"),
         osrmOnly: args.includes("--osrm-only"),
+        noSync: args.includes("--no-sync"),
         osrmUrl: DEFAULT_OSRM_URL,
+        cacheDir: join(process.cwd(), "scripts", "cache"),
         outputDir: join(process.cwd(), "public", "data"),
     };
 
@@ -622,16 +651,8 @@ async function main() {
         options.cityCode = args[cityIdx + 1];
     }
 
-    if (command === "route" || command === "all") {
-        await runRoutePipeline(options);
-    }
-
-    if (command === "schedule" || command === "all") {
-        console.log("[Polly] Running Schedule Scraper...");
-        await runScraper();
-    }
-
-    console.log("[Polly] Data Pipeline Complete!");
+    await runRoutePipeline(options);
+    console.log("[Polly] Polyline Pipeline Finished Successfully!");
 }
 
 main().catch(err => {
