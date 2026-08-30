@@ -1,11 +1,45 @@
 import {getEnv, getEnvArray, getEnvBoolean, getEnvBounds, getEnvNumber} from "@shared/utils/parser";
 import {UI_TEXT} from "@shared/config/locale";
 
-const RAW_POSITION = getEnv(process.env.NEXT_PUBLIC_MAP_DEFAULT_POSITION, "37.3421,127.91976");
-const [defaultLat, defaultLng] = RAW_POSITION.split(",").map(Number);
+/**
+ * Common Static Data File & Folder Names
+ */
+export const STATIC_FILE_NAMES = {
+    ROUTE_MAP: "routeMap.json",
+    STATION_MAP: "stationMap.json",
+    SCHEDULE_CACHE: "scheduleCache.json",
+    CACHE_JSON: "cache.json",
+    CONFIG: "config.json",
+    SEGMENTS: "segments.json",
+    POLYLINES_DIR: "polylines",
+    CACHE_DIR: "cache",
+} as const;
 
-const RAW_STATIC_API_URL = getEnv(process.env.NEXT_PUBLIC_STATIC_API_URL, "NOT_SET");
-const STATIC_BASE_URL = RAW_STATIC_API_URL !== "NOT_SET" ? RAW_STATIC_API_URL.replace(/\/+$/, "") : "";
+/**
+ * Resolves the public base URL for Vercel Blob store.
+ * Supports explicit CDN base URL, OIDC/Token store ID extraction, or fallback.
+ */
+export function getBlobBaseUrl(): string | undefined {
+    const customUrl = process.env.NEXT_PUBLIC_STATIC_API_URL || process.env.NEXT_PUBLIC_BLOB_BASE_URL;
+    if (customUrl && customUrl.startsWith("http")) {
+        return customUrl.replace(/\/+$/, "");
+    }
+
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!token) return undefined;
+
+    const match = token.match(/^vercel_blob_rw_([^_]+)_/);
+    if (match) {
+        return `https://${match[1].toLowerCase()}.public.blob.vercel-storage.com`;
+    }
+
+    return undefined;
+}
+
+// Default Geolocation Coordinates (Wonju City Hall / Central Station Area)
+const DEFAULT_CENTER_COORDINATES = "37.3421,127.91976";
+const RAW_POSITION = getEnv(process.env.NEXT_PUBLIC_MAP_DEFAULT_POSITION, DEFAULT_CENTER_COORDINATES);
+const [defaultLat, defaultLng] = RAW_POSITION.split(",").map(Number);
 
 export const APP_CONFIG = {
     NAME: getEnv(process.env.NEXT_PUBLIC_APP_NAME, UI_TEXT.METADATA.TITLE),
@@ -27,17 +61,21 @@ export const API_CONFIG = {
         DATA_DELAY_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_DATA_DELAY, 0),
     },
     STATIC: {
-        BASE_URL: STATIC_BASE_URL,
+        BASE_URL: getBlobBaseUrl() || "",
         USE_REMOTE: getEnvBoolean(process.env.NEXT_PUBLIC_USE_REMOTE_STATIC_DATA, true),
         REVALIDATE_SEC: 3600,
         PATHS: {
-            POLYLINES: "polylines",
-            MAP_STYLE: "config.json",
-            ROUTE_MAP: "routeMap.json",
-            STATION_MAP: "stationMap.json",
+            POLYLINES: STATIC_FILE_NAMES.POLYLINES_DIR,
+            MAP_STYLE: STATIC_FILE_NAMES.CONFIG,
+            ROUTE_MAP: STATIC_FILE_NAMES.ROUTE_MAP,
+            STATION_MAP: STATIC_FILE_NAMES.STATION_MAP,
+            SCHEDULE_CACHE: STATIC_FILE_NAMES.SCHEDULE_CACHE,
         },
     },
-    MAP_STYLE_FALLBACK: getEnv(process.env.NEXT_PUBLIC_MAP_FALLBACK_API_URL, "https://tiles.openfreemap.org/styles/liberty"),
+    MAP_STYLE_FALLBACK: getEnv(
+        process.env.NEXT_PUBLIC_MAP_FALLBACK_API_URL,
+        "https://tiles.openfreemap.org/styles/liberty"
+    ),
 } as const;
 
 export const MAP_SETTINGS = {
@@ -57,8 +95,8 @@ export const MAP_SETTINGS = {
     },
     MARKERS: {
         BUS: {
-            ICON_SIZE: [29, 43] as [number, number]
-        }
+            ICON_SIZE: [29, 43] as [number, number],
+        },
     },
     ALWAYS_UPWARD_NODE_IDS: getEnvArray(process.env.NEXT_PUBLIC_ALWAYS_UPWARD_NODE_IDS, ","),
     DEFAULT_ROUTE: getEnv(process.env.NEXT_PUBLIC_DEFAULT_ROUTE, "30"),

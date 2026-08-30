@@ -1,25 +1,15 @@
 import {RouteDataset} from "@/types/bus";
+import {getBlobBaseUrl, STATIC_FILE_NAMES} from "@shared/config/env";
 
-export const VERCEL_BLOB_PATH = "cache.json";
-export const FALLBACK_BLOB_PATHS = ["cache.json", "scheduleCache.json"];
-
-function getBlobBaseUrl(): string | undefined {
-    if (process.env.NEXT_PUBLIC_STATIC_API_URL?.startsWith("http")) {
-        return process.env.NEXT_PUBLIC_STATIC_API_URL.replace(/\/+$/, "");
-    }
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    if (!token) return undefined;
-    const match = token.match(/^vercel_blob_rw_([^_]+)_/);
-    if (match) {
-        return `https://${match[1].toLowerCase()}.public.blob.vercel-storage.com`;
-    }
-    return undefined;
-}
+export const VERCEL_BLOB_PATH = STATIC_FILE_NAMES.CACHE_JSON;
+export const FALLBACK_BLOB_PATHS = [STATIC_FILE_NAMES.CACHE_JSON, STATIC_FILE_NAMES.SCHEDULE_CACHE];
 
 /**
- * Loads timetable dataset from Vercel Blob via OIDC / @vercel/blob SDK or public Blob URL.
+ * Loads timetable dataset from Vercel Blob via OIDC / @vercel/blob SDK or direct public Blob URL.
  */
-export async function loadFromVercelBlob<T = RouteDataset>(customPaths: string[] = FALLBACK_BLOB_PATHS): Promise<T | null> {
+export async function loadFromVercelBlob<T = RouteDataset>(
+    customPaths: string[] = FALLBACK_BLOB_PATHS
+): Promise<T | null> {
     const cacheBuster = `?t=${Date.now()}`;
 
     // 1. Try reading via @vercel/blob SDK head() (Supports Vercel OIDC or BLOB_READ_WRITE_TOKEN)
@@ -28,7 +18,7 @@ export async function loadFromVercelBlob<T = RouteDataset>(customPaths: string[]
         for (const blobPath of customPaths) {
             try {
                 const blobResult = await head(blobPath);
-                if (blobResult && blobResult.url) {
+                if (blobResult?.url) {
                     const fetchUrl = `${blobResult.url}${cacheBuster}`;
                     console.log(`[Blob] Fetching timetable from Vercel Blob: ${fetchUrl}`);
                     const res = await fetch(fetchUrl, {cache: "no-store"});
@@ -48,7 +38,10 @@ export async function loadFromVercelBlob<T = RouteDataset>(customPaths: string[]
             }
         }
     } catch (err) {
-        console.warn("[Blob] SDK head() failed or not available in this environment:", err instanceof Error ? err.message : err);
+        console.warn(
+            "[Blob] SDK head() failed or not available in this environment:",
+            err instanceof Error ? err.message : err
+        );
     }
 
     // 2. Try fetching from direct Blob Base URL
@@ -81,7 +74,10 @@ export async function loadFromVercelBlob<T = RouteDataset>(customPaths: string[]
 /**
  * Saves timetable dataset to Vercel Blob via @vercel/blob SDK as cache.json or custom path.
  */
-export async function saveToVercelBlob(data: unknown, blobPath: string = VERCEL_BLOB_PATH): Promise<boolean> {
+export async function saveToVercelBlob(
+    data: unknown,
+    blobPath: string = VERCEL_BLOB_PATH
+): Promise<boolean> {
     const jsonStr = JSON.stringify(data, null, 2);
     try {
         const {put} = await import("@vercel/blob");
@@ -94,7 +90,10 @@ export async function saveToVercelBlob(data: unknown, blobPath: string = VERCEL_
         console.log(`[Blob] Successfully saved to Vercel Blob: ${result.url}`);
         return true;
     } catch (err) {
-        console.warn("[Blob] Could not save to Vercel Blob (OIDC or BLOB_READ_WRITE_TOKEN required):", err instanceof Error ? err.message : err);
+        console.warn(
+            "[Blob] Failed to save to Vercel Blob (check BLOB_READ_WRITE_TOKEN):",
+            err instanceof Error ? err.message : err
+        );
         return false;
     }
 }

@@ -1,21 +1,9 @@
+import {getBlobBaseUrl} from "@shared/config/env";
 import {head} from "@vercel/blob";
 import {NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 3600;
-
-function getBlobBaseUrl(): string | undefined {
-    if (process.env.NEXT_PUBLIC_STATIC_API_URL?.startsWith("http")) {
-        return process.env.NEXT_PUBLIC_STATIC_API_URL.replace(/\/+$/, "");
-    }
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    if (!token) return undefined;
-    const match = token.match(/^vercel_blob_rw_([^_]+)_/);
-    if (match) {
-        return `https://${match[1].toLowerCase()}.public.blob.vercel-storage.com`;
-    }
-    return undefined;
-}
 
 export async function GET(
     _request: Request,
