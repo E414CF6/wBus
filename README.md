@@ -1,4 +1,4 @@
-# wBus: Real-Time Bus Tracking & Timetable Platform
+# wBus
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)

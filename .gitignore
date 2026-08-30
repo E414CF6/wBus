@@ -38,7 +38,5 @@ next-env.d.ts
 .idea
 *.iml
 
-# local cache & generated data (uploaded to Vercel Blob / Remote Storage)
-.cache/
-public/data/*
-!public/data/.gitkeep
+# local cache
+scripts/cache/
