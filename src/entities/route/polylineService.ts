@@ -144,7 +144,7 @@ async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
     try {
         segmentsData = await getSegmentsJSON();
     } catch {
-        // Fallback for missing segments.json
+        // Fallback for missing segment.json
     }
 
     const assemblePolyline = (segmentIds: string[]): [number, number][] => {

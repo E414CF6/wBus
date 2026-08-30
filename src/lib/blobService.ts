@@ -1,8 +1,8 @@
 import {RouteDataset} from "@/types/bus";
 import {getBlobBaseUrl, STATIC_FILE_NAMES} from "@shared/config/env";
 
-export const VERCEL_BLOB_PATH = STATIC_FILE_NAMES.CACHE_JSON;
-export const FALLBACK_BLOB_PATHS = [STATIC_FILE_NAMES.CACHE_JSON, STATIC_FILE_NAMES.SCHEDULE_CACHE];
+export const VERCEL_BLOB_PATH = STATIC_FILE_NAMES.SCHEDULE;
+export const FALLBACK_BLOB_PATHS = [STATIC_FILE_NAMES.SCHEDULE, "scheduleCache.json", "cache.json"];
 
 /**
  * Loads timetable dataset from Vercel Blob via OIDC / @vercel/blob SDK or direct public Blob URL.
@@ -72,7 +72,7 @@ export async function loadFromVercelBlob<T = RouteDataset>(
 }
 
 /**
- * Saves timetable dataset to Vercel Blob via @vercel/blob SDK as cache.json or custom path.
+ * Saves timetable dataset to Vercel Blob via @vercel/blob SDK as schedule.json or custom path.
  */
 export async function saveToVercelBlob(
     data: unknown,

@@ -5,16 +5,16 @@ import {scrapeWonjuBusDataset, scrapeWonjuItsYonsei} from "@/lib/itsScraper";
 import fs from "fs";
 import path from "path";
 
-const LOCAL_CACHE_PATH = path.join(process.cwd(), ".cache", "scheduleCache.json");
+const LOCAL_DATA_PATH = path.join(process.cwd(), "public", "data", "schedule.json");
 export const MIN_REFRESH_INTERVAL_DAYS = 1;
 export const MIN_REFRESH_INTERVAL_MS = MIN_REFRESH_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
 
 function getLocalFilePath(): string {
-    return LOCAL_CACHE_PATH;
+    return LOCAL_DATA_PATH;
 }
 
 export async function loadCacheData(): Promise<BusCacheData | null> {
-    // 1. Try loading from Vercel Blob first (cache.json or scheduleCache.json)
+    // 1. Try loading from Vercel Blob first (schedule.json)
     try {
         const blobData = await loadFromVercelBlob<BusCacheData>();
         if (blobData && Array.isArray(blobData.routes) && blobData.routes.length > 0) {
@@ -26,8 +26,8 @@ export async function loadCacheData(): Promise<BusCacheData | null> {
         }
     }
 
-    // 2. Check serverless container /tmp/ scheduleCache.json & /tmp/cache.json
-    for (const tmpPath of ["/tmp/cache.json", "/tmp/scheduleCache.json"]) {
+    // 2. Check serverless container /tmp/ schedule.json
+    for (const tmpPath of ["/tmp/schedule.json", "/tmp/scheduleCache.json", "/tmp/cache.json"]) {
         if (fs.existsSync(/*turbopackIgnore: true*/ tmpPath)) {
             try {
                 const raw = fs.readFileSync(/*turbopackIgnore: true*/ tmpPath, "utf-8");
@@ -41,22 +41,17 @@ export async function loadCacheData(): Promise<BusCacheData | null> {
         }
     }
 
-    // 3. Check .cache/scheduleCache.json, .cache/cache.json, public/data/scheduleCache.json
-    for (const localCandidate of [
-        getLocalFilePath(),
-        path.join(process.cwd(), ".cache", "cache.json"),
-        path.join(process.cwd(), "public", "data", "scheduleCache.json"),
-    ]) {
-        if (fs.existsSync(/*turbopackIgnore: true*/ localCandidate)) {
-            try {
-                const raw = fs.readFileSync(/*turbopackIgnore: true*/ localCandidate, "utf-8");
-                const data: BusCacheData = JSON.parse(raw);
-                if (data && Array.isArray(data.routes) && data.routes.length > 0) {
-                    return data;
-                }
-            } catch (err) {
-                console.warn(`[BusService] Error reading ${localCandidate}:`, err);
+    // 3. Check public/data/schedule.json
+    const localDataPath = getLocalFilePath();
+    if (fs.existsSync(/*turbopackIgnore: true*/ localDataPath)) {
+        try {
+            const raw = fs.readFileSync(/*turbopackIgnore: true*/ localDataPath, "utf-8");
+            const data: BusCacheData = JSON.parse(raw);
+            if (data && Array.isArray(data.routes) && data.routes.length > 0) {
+                return data;
             }
+        } catch (err) {
+            console.warn(`[BusService] Error reading ${localDataPath}:`, err);
         }
     }
 
@@ -116,38 +111,30 @@ export function getCacheMetadata(overrideData?: BusCacheData): CacheMetadata {
 export async function saveCacheData(data: BusCacheData): Promise<void> {
     const jsonStr = JSON.stringify(data, null, 2);
 
-    // 1. Save to Vercel Blob (both cache.json and scheduleCache.json)
+    // 1. Save to Vercel Blob
     try {
-        await saveToVercelBlob(data, "scheduleCache.json");
-        await saveToVercelBlob(data, "cache.json");
+        await saveToVercelBlob(data, "schedule.json");
     } catch (err) {
         console.warn("[BusService] Failed to save to Vercel Blob:", err);
     }
 
-    // 2. Save locally to .cache/scheduleCache.json, .cache/cache.json, public/data/scheduleCache.json
-    for (const targetPath of [
-        getLocalFilePath(),
-        path.join(process.cwd(), ".cache", "cache.json"),
-        path.join(process.cwd(), "public", "data", "scheduleCache.json"),
-    ]) {
-        try {
-            const dir = path.dirname(targetPath);
-            if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
-                fs.mkdirSync(/*turbopackIgnore: true*/ dir, {recursive: true});
-            }
-            fs.writeFileSync(/*turbopackIgnore: true*/ targetPath, jsonStr, "utf-8");
-        } catch (err) {
-            console.warn(`[BusService] Failed to write local cache file (${targetPath}):`, err);
+    // 2. Save locally to public/data/schedule.json
+    try {
+        const targetPath = getLocalFilePath();
+        const dir = path.dirname(targetPath);
+        if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
+            fs.mkdirSync(/*turbopackIgnore: true*/ dir, {recursive: true});
         }
+        fs.writeFileSync(/*turbopackIgnore: true*/ targetPath, jsonStr, "utf-8");
+    } catch (err) {
+        console.warn(`[BusService] Failed to write local cache file (${getLocalFilePath()}):`, err);
     }
 
     // 3. Save to serverless container /tmp directory as well
-    for (const tmpPath of ["/tmp/cache.json", "/tmp/scheduleCache.json"]) {
-        try {
-            fs.writeFileSync(/*turbopackIgnore: true*/ tmpPath, jsonStr, "utf-8");
-        } catch {
-            // Ignore /tmp write errors in constrained envs
-        }
+    try {
+        fs.writeFileSync(/*turbopackIgnore: true*/ "/tmp/schedule.json", jsonStr, "utf-8");
+    } catch {
+        // Ignore /tmp write errors in constrained envs
     }
 }
 
@@ -173,7 +160,6 @@ export async function refreshBusData(force = false): Promise<{
 }> {
     const currentData = await loadCacheData();
 
-    // In Next.js App Router (Node.js runtime), run the scraper directly for all routes
     try {
         const scraped = await scrapeWonjuBusDataset();
         if (scraped && scraped.routes && scraped.routes.length > 0) {
@@ -221,4 +207,12 @@ export async function refreshBusData(force = false): Promise<{
         data: currentData,
         meta: getCacheMetadata(currentData || undefined),
     };
+}
+
+export async function refreshCache(): Promise<BusCacheData> {
+    const res = await refreshBusData(true);
+    if (res.data) return res.data;
+    const current = await loadCacheData();
+    if (current) return current;
+    throw new Error(res.message);
 }

@@ -1,4 +1,4 @@
-import {fetchAPI, HttpError} from "@shared/api/fetchAPI";
+import {fetchAPI} from "@shared/api/fetchAPI";
 import {API_CONFIG} from "@shared/config/env";
 
 /**
@@ -29,7 +29,7 @@ export async function loadStaticData<T>(fileName: string): Promise<T> {
             }
         }
 
-        // 2. Read from local project directory /tmp
+        // 2. Read from local project directory public/data or /tmp
         try {
             const {readFile} = await import("fs/promises");
             const {existsSync} = await import("fs");
@@ -37,7 +37,6 @@ export async function loadStaticData<T>(fileName: string): Promise<T> {
 
             const pathsToTry = [
                 join(process.cwd(), "public", "data", cleanFileName),
-                join(process.cwd(), ".cache", cleanFileName),
                 join("/tmp", cleanFileName),
             ];
 

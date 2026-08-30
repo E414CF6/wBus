@@ -27,15 +27,15 @@ export async function getRouteMap(): Promise<Record<string, string[]>> {
 }
 
 export async function getSegmentsJSON(): Promise<SegmentsJSON> {
-    return segmentsCache.getOrFetch("segments.json", async () => {
-        return loadStaticData<SegmentsJSON>(`${API_CONFIG.STATIC.PATHS.POLYLINES}/segments.json`);
+    return segmentsCache.getOrFetch("segment.json", async () => {
+        return loadStaticData<SegmentsJSON>(API_CONFIG.STATIC.PATHS.SEGMENTS);
     });
 }
 
 export async function getPolyline(routeKey: string): Promise<GeoPolyline | null> {
     return polylineCache.getOrFetch(routeKey, async () => {
         try {
-            return await loadStaticData<GeoPolyline>(`${API_CONFIG.STATIC.PATHS.POLYLINES}/${routeKey}.json`);
+            return await loadStaticData<GeoPolyline>(`${API_CONFIG.STATIC.PATHS.ROUTE_DIR}/${routeKey}.json`);
         } catch (error) {
             if (error instanceof HttpError && error.status === 404) {
                 if (APP_CONFIG.IS_DEV) {

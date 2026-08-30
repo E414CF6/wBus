@@ -35,7 +35,7 @@ const INITIAL_COMMENTS: CommentItem[] = [{
 let inMemoryComments: CommentItem[] | null = null;
 
 function getLocalCachePath(): string {
-    return path.join(process.cwd(), ".cache", "comments.json");
+    return path.join(process.cwd(), "public", "data", "comments.json");
 }
 
 async function loadFromBlob(): Promise<CommentItem[] | null> {
@@ -76,7 +76,7 @@ async function saveToBlob(comments: CommentItem[]): Promise<void> {
 }
 
 function loadFromLocalFile(): CommentItem[] | null {
-    // 1. Check .cache/comments.json
+    // 1. Check public/data/comments.json
     const localPath = getLocalCachePath();
     if (fs.existsSync(localPath)) {
         try {
@@ -112,7 +112,7 @@ function saveToLocalFile(comments: CommentItem[]): void {
     };
     const jsonStr = JSON.stringify(dataset, null, 2);
 
-    // 1. Save to .cache/comments.json
+    // 1. Save to public/data/comments.json
     try {
         const localPath = getLocalCachePath();
         const dir = path.dirname(localPath);
@@ -121,7 +121,7 @@ function saveToLocalFile(comments: CommentItem[]): void {
         }
         fs.writeFileSync(localPath, jsonStr, "utf-8");
     } catch {
-        // Ignore
+        // Read-only serverless environment fallback
     }
 
     // 2. Save to /tmp/comments.json
@@ -132,50 +132,32 @@ function saveToLocalFile(comments: CommentItem[]): void {
     }
 }
 
-/**
- * Loads all stored comments from storage/memory.
- */
-export async function getAllStoredComments(forceReload = false): Promise<CommentItem[]> {
-    if (!forceReload && inMemoryComments) {
+export async function getComments(forceFresh = false): Promise<CommentItem[]> {
+    if (!forceFresh && inMemoryComments !== null) {
         return inMemoryComments;
     }
 
-    // 1. Try Vercel Blob
+    // 1. Try loading from Vercel Blob
     const blobComments = await loadFromBlob();
-    if (blobComments) {
+    if (blobComments !== null) {
         inMemoryComments = blobComments;
         return inMemoryComments;
     }
 
-    // 2. Try Local File (.cache / /tmp)
-    const fileComments = loadFromLocalFile();
-    if (fileComments) {
-        inMemoryComments = fileComments;
+    // 2. Try loading from local public/data/comments.json or /tmp/comments.json
+    const localComments = loadFromLocalFile();
+    if (localComments !== null) {
+        inMemoryComments = localComments;
         return inMemoryComments;
     }
 
-    // 3. Fallback to initial comments
+    // 3. Fallback to default initial comments and seed
     inMemoryComments = INITIAL_COMMENTS;
+    saveToLocalFile(inMemoryComments);
     return inMemoryComments;
 }
 
-/**
- * Retrieves comments.
- */
-export async function getComments(forceReload = false): Promise<CommentItem[]> {
-    return getAllStoredComments(forceReload);
-}
-
-export async function addComment({
-                                     author,
-                                     content,
-                                     routeNo,
-                                     category,
-                                     parentId,
-                                     replyToAuthor,
-                                     authorTag,
-                                     replyToAuthorTag,
-                                 }: {
+export async function addComment(params: {
     author?: string;
     content: string;
     routeNo?: string;
@@ -185,95 +167,77 @@ export async function addComment({
     authorTag?: string;
     replyToAuthorTag?: string;
 }): Promise<CommentItem> {
-    const cleanContent = content.trim();
-    if (!cleanContent) {
-        throw new Error("댓글 내용을 입력해주세요.");
-    }
-    if (cleanContent.length > 1000) {
-        throw new Error("댓글은 최대 1000자까지 작성할 수 있습니다.");
-    }
+    const current = await getComments(true);
 
-    const cleanAuthor = (author?.trim() && author.trim() !== "익명") ? author.trim() : getRandomNickname();
-    const cleanAuthorTag = authorTag ? (authorTag.startsWith("#") ? authorTag : `#${authorTag}`).slice(0, 10) : generateUserTag();
-    const currentList = await getAllStoredComments();
+    const generatedTag = params.authorTag || generateUserTag();
+    const finalAuthor = params.author?.trim() || getRandomNickname();
 
     const newComment: CommentItem = {
         id: `c-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-        author: cleanAuthor.slice(0, 20),
-        authorTag: cleanAuthorTag,
-        content: cleanContent,
-        category: category ? category.slice(0, 10) : "잡담",
+        author: finalAuthor,
+        authorTag: generatedTag,
+        content: params.content.trim(),
+        category: params.category || "일반",
         createdAt: new Date().toISOString(),
-        routeNo: routeNo ? routeNo.slice(0, 10) : undefined,
+        routeNo: params.routeNo || "ALL",
         likes: 0,
-        parentId: parentId || undefined,
-        replyToAuthor: replyToAuthor ? replyToAuthor.slice(0, 20) : undefined,
-        replyToAuthorTag: replyToAuthorTag ? (replyToAuthorTag.startsWith("#") ? replyToAuthorTag : `#${replyToAuthorTag}`).slice(0, 10) : undefined,
+        parentId: params.parentId,
+        replyToAuthor: params.replyToAuthor,
+        replyToAuthorTag: params.replyToAuthorTag,
     };
 
-    // Permanently save new comment at the top of the archive (up to 5000 items)
-    const updatedList = [newComment, ...currentList].slice(0, 5000);
-    inMemoryComments = updatedList;
+    const updated = [newComment, ...current];
+    inMemoryComments = updated;
 
-    // Persist asynchronously to storage
-    saveToLocalFile(updatedList);
-    saveToBlob(updatedList).catch(() => {
-    });
+    await Promise.allSettled([saveToBlob(updated), Promise.resolve(saveToLocalFile(updated)),]);
 
     return newComment;
 }
 
 export async function likeComment(id: string): Promise<CommentItem | null> {
-    const currentList = await getAllStoredComments();
-    let updatedComment: CommentItem | null = null;
+    const current = await getComments(true);
+    let targetComment: CommentItem | null = null;
 
-    const nextList = currentList.map((c) => {
+    const updated = current.map((c) => {
         if (c.id === id) {
-            updatedComment = {
-                ...c, likes: (c.likes || 0) + 1,
-            };
-            return updatedComment;
+            targetComment = {...c, likes: (c.likes || 0) + 1};
+            return targetComment;
         }
         return c;
     });
 
-    if (!updatedComment) {
-        return null;
-    }
+    if (!targetComment) return null;
 
-    inMemoryComments = nextList;
-    saveToLocalFile(nextList);
-    saveToBlob(nextList).catch(() => {
-    });
+    inMemoryComments = updated;
+    await Promise.allSettled([saveToBlob(updated), Promise.resolve(saveToLocalFile(updated)),]);
 
-    return updatedComment;
+    return targetComment;
 }
 
 export async function deleteComment(id: string, authorTag?: string): Promise<CommentItem | null> {
-    const currentList = await getAllStoredComments();
-    let updatedComment: CommentItem | null = null;
+    const current = await getComments(true);
+    let targetComment: CommentItem | null = null;
 
-    const nextList = currentList.map((c) => {
+    const updated = current.map((c) => {
         if (c.id === id) {
+            // If authorTag provided, verify ownership
             if (authorTag && c.authorTag && c.authorTag !== authorTag) {
-                return c;
+                throw new Error("작성자만 삭제할 수 있습니다.");
             }
-            updatedComment = {
-                ...c, isDeleted: true,
+            targetComment = {
+                ...c,
+                isDeleted: true,
+                content: "삭제된 댓글입니다.",
             };
-            return updatedComment;
+            return targetComment;
         }
         return c;
     });
 
-    if (!updatedComment) {
-        return null;
-    }
+    if (!targetComment) return null;
 
-    inMemoryComments = nextList;
-    saveToLocalFile(nextList);
-    saveToBlob(nextList).catch(() => {
-    });
+    inMemoryComments = updated;
+    await Promise.allSettled([saveToBlob(updated), Promise.resolve(saveToLocalFile(updated)),]);
 
-    return updatedComment;
+    return targetComment;
 }

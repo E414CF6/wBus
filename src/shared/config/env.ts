@@ -7,12 +7,11 @@ import {UI_TEXT} from "@shared/config/locale";
 export const STATIC_FILE_NAMES = {
     ROUTE_MAP: "routeMap.json",
     STATION_MAP: "stationMap.json",
-    SCHEDULE_CACHE: "scheduleCache.json",
-    CACHE_JSON: "cache.json",
-    CONFIG: "config.json",
-    SEGMENTS: "segments.json",
-    POLYLINES_DIR: "polylines",
-    CACHE_DIR: "cache",
+    SCHEDULE: "schedule.json",
+    STYLE: "style.json",
+    STYLE_DARK: "style-dark.json",
+    SEGMENTS: "segment.json",
+    ROUTE_DIR: "route",
 } as const;
 
 /**
@@ -65,16 +64,22 @@ export const API_CONFIG = {
         USE_REMOTE: getEnvBoolean(process.env.NEXT_PUBLIC_USE_REMOTE_STATIC_DATA, true),
         REVALIDATE_SEC: 3600,
         PATHS: {
-            POLYLINES: STATIC_FILE_NAMES.POLYLINES_DIR,
-            MAP_STYLE: STATIC_FILE_NAMES.CONFIG,
+            ROUTE_DIR: STATIC_FILE_NAMES.ROUTE_DIR,
+            SEGMENTS: STATIC_FILE_NAMES.SEGMENTS,
+            MAP_STYLE: STATIC_FILE_NAMES.STYLE,
+            MAP_STYLE_DARK: STATIC_FILE_NAMES.STYLE_DARK,
             ROUTE_MAP: STATIC_FILE_NAMES.ROUTE_MAP,
             STATION_MAP: STATIC_FILE_NAMES.STATION_MAP,
-            SCHEDULE_CACHE: STATIC_FILE_NAMES.SCHEDULE_CACHE,
+            SCHEDULE: STATIC_FILE_NAMES.SCHEDULE,
         },
     },
     MAP_STYLE_FALLBACK: getEnv(
         process.env.NEXT_PUBLIC_MAP_FALLBACK_API_URL,
-        "https://tiles.openfreemap.org/styles/liberty"
+        "https://tiles.openfreemap.org/styles/bright"
+    ),
+    MAP_STYLE_DARK_FALLBACK: getEnv(
+        process.env.NEXT_PUBLIC_MAP_DARK_FALLBACK_API_URL,
+        "https://tiles.openfreemap.org/styles/dark"
     ),
 } as const;
 
@@ -100,6 +105,13 @@ export const MAP_SETTINGS = {
     },
     ALWAYS_UPWARD_NODE_IDS: getEnvArray(process.env.NEXT_PUBLIC_ALWAYS_UPWARD_NODE_IDS, ","),
     DEFAULT_ROUTE: getEnv(process.env.NEXT_PUBLIC_DEFAULT_ROUTE, "30"),
+    BUS_COLOR_BY_TYPE: {
+        EXPRESS: "#f97316",
+        GENERAL: "#3b82f6",
+        VILLAGE: "#10b981",
+        CIRCUIT: "#8b5cf6",
+        DEFAULT: "#6b7280",
+    },
 } as const;
 
 export const UI_CONFIG = {

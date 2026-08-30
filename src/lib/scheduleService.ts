@@ -15,31 +15,26 @@ let inMemoryCache: {
 } | null = null;
 
 function getLocalCachePath(): string {
-    return path.join(process.cwd(), ".cache", "scheduleCache.json");
+    return path.join(process.cwd(), "public", "data", "schedule.json");
 }
 
 function loadFromLocalFile(): RouteDataset | null {
-    // 1. Check local .cache directory
-    for (const p of [
-        path.join(process.cwd(), ".cache", "scheduleCache.json"),
-        path.join(process.cwd(), ".cache", "cache.json"),
-        path.join(process.cwd(), "public", "data", "scheduleCache.json"),
-    ]) {
-        if (fs.existsSync(/*turbopackIgnore: true*/ p)) {
-            try {
-                const raw = fs.readFileSync(/*turbopackIgnore: true*/ p, "utf-8");
-                const parsed: RouteDataset = JSON.parse(raw);
-                if (parsed && Array.isArray(parsed.routes) && parsed.routes.length > 0) {
-                    return parsed;
-                }
-            } catch {
-                // Ignore
+    // 1. Check public/data directory
+    const publicDataPath = getLocalCachePath();
+    if (fs.existsSync(/*turbopackIgnore: true*/ publicDataPath)) {
+        try {
+            const raw = fs.readFileSync(/*turbopackIgnore: true*/ publicDataPath, "utf-8");
+            const parsed: RouteDataset = JSON.parse(raw);
+            if (parsed && Array.isArray(parsed.routes) && parsed.routes.length > 0) {
+                return parsed;
             }
+        } catch {
+            // Ignore
         }
     }
 
     // 2. Check /tmp directory for serverless container caching
-    for (const tmpPath of ["/tmp/scheduleCache.json", "/tmp/cache.json"]) {
+    for (const tmpPath of ["/tmp/schedule.json", "/tmp/scheduleCache.json", "/tmp/cache.json"]) {
         if (fs.existsSync(/*turbopackIgnore: true*/ tmpPath)) {
             try {
                 const raw = fs.readFileSync(/*turbopackIgnore: true*/ tmpPath, "utf-8");
@@ -93,38 +88,30 @@ async function saveCache(data: RouteDataset): Promise<void> {
         timestamp: Date.now(),
     };
 
-    // 2. Save to Vercel Blob (both cache.json & scheduleCache.json)
+    // 2. Save to Vercel Blob
     try {
-        await saveToVercelBlob(data, "cache.json");
-        await saveToVercelBlob(data, "scheduleCache.json");
+        await saveToVercelBlob(data, "schedule.json");
     } catch (err) {
         console.warn("[ScheduleService] Vercel Blob save skipped:", err);
     }
 
-    // 3. Save to local .cache/scheduleCache.json and .cache/cache.json
-    for (const p of [
-        path.join(process.cwd(), ".cache", "scheduleCache.json"),
-        path.join(process.cwd(), ".cache", "cache.json"),
-        path.join(process.cwd(), "public", "data", "scheduleCache.json"),
-    ]) {
-        try {
-            const dir = path.dirname(p);
-            if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
-                fs.mkdirSync(/*turbopackIgnore: true*/ dir, {recursive: true});
-            }
-            fs.writeFileSync(/*turbopackIgnore: true*/ p, jsonStr, "utf-8");
-        } catch {
-            // Ignore in read-only environment
+    // 3. Save to public/data/schedule.json
+    try {
+        const p = getLocalCachePath();
+        const dir = path.dirname(p);
+        if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
+            fs.mkdirSync(/*turbopackIgnore: true*/ dir, {recursive: true});
         }
+        fs.writeFileSync(/*turbopackIgnore: true*/ p, jsonStr, "utf-8");
+    } catch {
+        // Ignore in read-only environment
     }
 
     // 4. Save to /tmp for serverless container caching
-    for (const tmpPath of ["/tmp/scheduleCache.json", "/tmp/cache.json"]) {
-        try {
-            fs.writeFileSync(/*turbopackIgnore: true*/ tmpPath, jsonStr, "utf-8");
-        } catch {
-            // Ignore
-        }
+    try {
+        fs.writeFileSync(/*turbopackIgnore: true*/ "/tmp/schedule.json", jsonStr, "utf-8");
+    } catch {
+        // Ignore
     }
 }
 
@@ -150,7 +137,7 @@ export async function getOrFetchSchedule(force = false): Promise<{ data: RouteDa
             console.warn("[ScheduleService] Vercel Blob load fallback:", err);
         }
 
-        // 3. Check local .cache or /tmp
+        // 3. Check local public/data or /tmp
         const fromFile = loadFromLocalFile();
         if (fromFile) {
             const meta = getCacheMetadata(fromFile);
