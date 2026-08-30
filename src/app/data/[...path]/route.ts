@@ -1,14 +1,11 @@
-import {getBlobBaseUrl} from "@shared/config/env";
+import {API_CONFIG, getBlobBaseUrl} from "@shared/config/env";
 import {head} from "@vercel/blob";
 import {NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
-export async function GET(
-    _request: Request,
-    {params}: { params: Promise<{ path: string[] }> }
-) {
+export async function GET(_request: Request, {params}: { params: Promise<{ path: string[] }> }) {
     const {path} = await params;
     if (!path || path.length === 0) {
         return NextResponse.json({error: "Path is required"}, {status: 400});
@@ -22,9 +19,7 @@ export async function GET(
     }
 
     const headers: Record<string, string> = {
-        "Content-Type": relativePath.endsWith(".geojson")
-            ? "application/geo+json; charset=utf-8"
-            : "application/json; charset=utf-8",
+        "Content-Type": relativePath.endsWith(".geojson") ? "application/geo+json; charset=utf-8" : "application/json; charset=utf-8",
         "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400",
     };
 
@@ -34,10 +29,13 @@ export async function GET(
         const {existsSync} = await import("fs");
         const {join} = await import("path");
 
-        const localPath = join(process.cwd(), "public", "data", relativePath);
-        if (existsSync(/*turbopackIgnore: true*/ localPath)) {
-            const content = await readFile(/*turbopackIgnore: true*/ localPath, "utf-8");
-            return new NextResponse(content, {status: 200, headers});
+        const localPaths = [join(process.cwd(), "public", "data", relativePath), join(process.cwd(), "public", relativePath),];
+
+        for (const localPath of localPaths) {
+            if (existsSync(/*turbopackIgnore: true*/ localPath)) {
+                const content = await readFile(/*turbopackIgnore: true*/ localPath, "utf-8");
+                return new NextResponse(content, {status: 200, headers});
+            }
         }
     } catch {
         // Fallback to Vercel Blob
@@ -45,14 +43,21 @@ export async function GET(
 
     // 2. Fetch from Vercel Blob via SDK head() (Supports Vercel OIDC or Token)
     try {
-        const blobInfo = await head(relativePath);
-        if (blobInfo?.url) {
-            const blobRes = await fetch(blobInfo.url, {
-                next: {revalidate: 3600},
-            });
-            if (blobRes.ok) {
-                const data = await blobRes.text();
-                return new NextResponse(data, {status: 200, headers});
+        const blobPathsToTry = [relativePath, `data/${relativePath}`];
+        for (const candidatePath of blobPathsToTry) {
+            try {
+                const blobInfo = await head(candidatePath);
+                if (blobInfo?.url) {
+                    const blobRes = await fetch(blobInfo.url, {
+                        next: {revalidate: 3600},
+                    });
+                    if (blobRes.ok) {
+                        const data = await blobRes.text();
+                        return new NextResponse(data, {status: 200, headers});
+                    }
+                }
+            } catch {
+                // Continue to next candidate path
             }
         }
     } catch {
@@ -62,17 +67,42 @@ export async function GET(
     // 3. Fetch via Direct Blob Storage Base URL
     const baseUrl = getBlobBaseUrl();
     if (baseUrl) {
+        const candidateUrls = [`${baseUrl}/${relativePath}`, `${baseUrl}/data/${relativePath}`,];
+        for (const directUrl of candidateUrls) {
+            try {
+                const res = await fetch(directUrl, {
+                    next: {revalidate: 3600},
+                });
+                if (res.ok) {
+                    const data = await res.text();
+                    return new NextResponse(data, {status: 200, headers});
+                }
+            } catch {
+                // Continue
+            }
+        }
+    }
+
+    // 4. Fallback for map style files if not found in Blob or local filesystem
+    if (relativePath === "style-dark.json" || relativePath.endsWith("/style-dark.json")) {
         try {
-            const directUrl = `${baseUrl}/${relativePath}`;
-            const res = await fetch(directUrl, {
-                next: {revalidate: 3600},
-            });
-            if (res.ok) {
-                const data = await res.text();
+            const fallbackRes = await fetch(API_CONFIG.MAP_STYLE_DARK_FALLBACK, {next: {revalidate: 86400}});
+            if (fallbackRes.ok) {
+                const data = await fallbackRes.text();
                 return new NextResponse(data, {status: 200, headers});
             }
         } catch {
-            // Failed
+            // Ignore
+        }
+    } else if (relativePath === "style.json" || relativePath.endsWith("/style.json")) {
+        try {
+            const fallbackRes = await fetch(API_CONFIG.MAP_STYLE_FALLBACK, {next: {revalidate: 86400}});
+            if (fallbackRes.ok) {
+                const data = await fallbackRes.text();
+                return new NextResponse(data, {status: 200, headers});
+            }
+        } catch {
+            // Ignore
         }
     }
 
