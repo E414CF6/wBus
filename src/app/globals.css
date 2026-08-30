@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
 
 /* Enable class-based dark mode in Tailwind v4 */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -6,13 +7,17 @@
 :root {
     --background: #f8fafc;
     --foreground: #0f172a;
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
 }
 
+/* Class-based dark mode to match next-themes (attribute="class") */
 .dark {
     --background: #090d16;
     --foreground: #f8fafc;
 }
 
+/* Base Styles */
 html,
 body {
     margin: 0;
@@ -25,7 +30,55 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom Scrollbars */
+/* MapLibre Map Overrides */
+.maplibregl-map {
+    z-index: 0;
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    background: var(--background);
+}
+
+/* Bus Route Labels */
+.bus-route-label {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: white;
+    font-weight: 700;
+    text-align: center;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    margin: 0 !important;
+    font-size: 32px !important;
+    white-space: nowrap;
+}
+
+/* Custom Popup Styling */
+.maplibregl-popup-content {
+    padding: 0 !important;
+    border-radius: 28px !important;
+    border: 1px solid rgba(0, 0, 0, 0.04) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    margin: 0 !important;
+    font-family: inherit;
+}
+
+.dark .maplibregl-popup-content {
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+    background: rgba(17, 17, 17, 0.85) !important;
+}
+
+/* Remove popup tip */
+.maplibregl-popup-tip {
+    display: none !important;
+}
+
+/* Scrollbar Customization */
 * {
     scrollbar-width: thin;
     scrollbar-color: #cbd5e1 transparent;
@@ -53,48 +106,50 @@ body {
     background: #334155;
 }
 
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(6px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+/* Bus Marker & Route Styles */
+.bus-marker-with-label {
+    display: inline-block;
+    width: max-content;
+    min-width: 100%;
+    padding-right: 4px;
 }
 
-@keyframes slideUpFade {
+@keyframes marqueeScroll {
     0% {
-        opacity: 0;
-        transform: translateY(24px) scale(0.97);
-    }
-    70% {
-        opacity: 1;
-        transform: translateY(-2px) scale(1.005);
+        transform: translateX(0);
     }
     100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateX(-50%);
     }
 }
 
-.animate-fadeIn {
-    animation: fadeIn 0.25s ease-out forwards;
+.marquee-scroll {
+    display: flex;
+    width: max-content;
+    animation: marqueeScroll 4s linear infinite;
 }
 
-.animate-slideUp {
-    animation: slideUpFade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+@media (prefers-reduced-motion: reduce) {
+    .bus-marker-with-label {
+        animation: none;
+    }
+
+    .marquee-scroll {
+        animation: none;
+    }
 }
 
-.animate-marquee-fast {
-    display: inline-flex;
-    white-space: nowrap;
-    animation: marquee 12s linear infinite;
+@keyframes polylineDashFlow {
+    0% {
+        stroke-dashoffset: 0;
+    }
+    100% {
+        stroke-dashoffset: -24;
+    }
 }
 
-.animate-marquee-fast:hover {
-    animation-play-state: paused;
+.polyline-animated path {
+    animation: polylineDashFlow 1s linear infinite;
 }
 
 /* Glassmorphism utility */
@@ -108,4 +163,78 @@ body {
 .dark .glass-panel {
     background: rgba(18, 22, 34, 0.85);
     border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Utilities & Animations */
+@layer utilities {
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(6px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes slideUpFade {
+        0% {
+            opacity: 0;
+            transform: translateY(24px) scale(0.97);
+        }
+        70% {
+            opacity: 1;
+            transform: translateY(-2px) scale(1.005);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .animate-fadeIn {
+        animation: fadeIn 0.25s ease-out forwards;
+    }
+
+    .animate-slideUp {
+        animation: slideUpFade 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes marquee {
+        0% {
+            transform: translateX(0%);
+        }
+        100% {
+            transform: translateX(-50%);
+        }
+    }
+
+    .animate-marquee {
+        display: inline-flex;
+        white-space: nowrap;
+        animation: marquee 16s linear infinite;
+    }
+
+    .animate-marquee-fast {
+        display: inline-flex;
+        white-space: nowrap;
+        animation: marquee 10s linear infinite;
+    }
+
+    .animate-marquee:hover,
+    .animate-marquee-fast:hover,
+    .group:hover .animate-marquee,
+    .group:hover .animate-marquee-fast {
+        animation-play-state: paused;
+    }
 }

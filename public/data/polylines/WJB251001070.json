@@ -1,0 +1,26 @@
+{
+  "route_id": "WJB251001070",
+  "route_no": "공차",
+  "stops_count": 2,
+  "total_dist": 0,
+  "up_segments": [],
+  "down_segments": [],
+  "stops": [
+    {
+      "id": "WJB251054029",
+      "name": "치악체육관",
+      "ord": 1,
+      "ud": 0,
+      "lat": 37.338178,
+      "lon": 127.940161
+    },
+    {
+      "id": "WJB251063041",
+      "name": "태장2동",
+      "ord": 2,
+      "ud": 1,
+      "lat": 37.384175,
+      "lon": 127.947292
+    }
+  ]
+}

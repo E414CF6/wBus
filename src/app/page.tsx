@@ -1,140 +1,100 @@
 "use client";
 
-import {BusRoute, CacheMetadata, DayMode} from "@/types/bus";
+import {useBusRouteMap} from "@entities/route/hooks";
+import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
+import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
+import BottomNav, {DayMode, NavTab, TimetableSubTab} from "@shared/ui/BottomNav";
+import Splash from "@shared/ui/Splash";
+import {TimetableWidget} from "@widgets/TimetableWidget";
+import {ChatView} from "@components/ChatView";
 import {CommentItem} from "@/types/comment";
 
-import {TARGET_ROUTE_NUMBERS} from "@data/yonseiRoutes";
-
-import {isWeekend, selectRouteVariant} from "@lib/timeUtils";
-
-import {RouteCard} from "@components/RouteCard";
-import {RouteDetailModal} from "@components/RouteDetailModal";
-import {NoticeBanner} from "@components/NoticeBanner";
-import {NoticeModal} from "@components/NoticeModal";
-import {CacheInfoBanner} from "@components/CacheInfoBanner";
-import {CommentsModal} from "@components/CommentsModal";
-import {ChatView} from "@components/ChatView";
-import {BottomNav, NavTab} from "@components/BottomNav";
-import {Footer} from "@components/Footer";
-
+import dynamic from "next/dynamic";
 import React, {useCallback, useEffect, useMemo, useState} from "react";
-import {CheckCircle2, Info, X} from "lucide-react";
 
-export default function YonseiTimetablePage() {
+/**
+ * Dynamically import MapWrapper & RouteLayer with SSR disabled.
+ * MapLibre references `window` at module level, so the map subtree must be kept out of SSR.
+ */
+const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
+    ssr: false,
+});
+const RouteLayer = dynamic(() => import("@widgets/MapContainer/RouteLayer"), {
+    ssr: false,
+});
+
+/**
+ * Unified wBus Application Page.
+ * Integrates:
+ * 1. Bus Timetables ('시간표' - Yonsei 30,34,34-1 & All Wonju routes)
+ * 2. Real-time Bus Map ('실시간 지도' - MapLibre live bus GPS tracking & routes)
+ * 3. Real-time Chat ('실시간톡' - Live comments, tips, delay reports, and Q&A)
+ */
+export default function HomePage() {
     const [activeTab, setActiveTab] = useState<NavTab>("schedule");
-    const [chatFilterRoute, setChatFilterRoute] = useState<string>("ALL");
+    const [timetableSubTab, setTimetableSubTab] = useState<TimetableSubTab>("yonsei");
+    const [dayMode, setDayMode] = useState<DayMode>("AUTO");
+    const [isSplashVisible, setIsSplashVisible] = useState(false);
+    const [selectedRoute, setSelectedRoute] = useState<string>(MAP_SETTINGS.DEFAULT_ROUTE);
 
-    const [routes, setRoutes] = useState<BusRoute[]>([]);
-    const [meta, setMeta] = useState<CacheMetadata | null>(null);
-    const [isLoadingSchedule, setIsLoadingSchedule] = useState(true);
-    const [isRefreshing, setIsRefreshing] = useState(false);
+    // Track whether user has activated the real-time map view
+    const [hasVisitedMap, setHasVisitedMap] = useState<boolean>(false);
 
-    // Modals state
-    const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
-    const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
-    const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
-
+    // Chat / Comments State
     const [comments, setComments] = useState<CommentItem[]>([]);
     const [isRefreshingComments, setIsRefreshingComments] = useState<boolean>(false);
-    const [toastNotice, setToastNotice] = useState<{
-        type: "success" | "info" | "error";
-        message: string;
-    } | null>(null);
+    const [chatFilterRoute, setChatFilterRoute] = useState<string>("ALL");
 
+    // Live clock for holiday / weekend detection
     const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
-    const [dayMode, setDayMode] = useState<DayMode>("AUTO");
-    const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
-
-    // Update live clock for departure time calculations every 10 seconds
     useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentTime(new Date());
-        }, 10000);
+        const timer = setInterval(() => setCurrentTime(new Date()), 10000);
         return () => clearInterval(timer);
     }, []);
 
-    // Restore active tab from URL param or localStorage on mount
+    const isTodayWeekendOrHoliday = useMemo(() => {
+        const day = currentTime.getDay();
+        return day === 0 || day === 6;
+    }, [currentTime]);
+
+    // Restore saved tab and preferences from localStorage / URL on mount
     useEffect(() => {
         try {
             const params = new URLSearchParams(window.location.search);
             const urlTab = params.get("tab") as NavTab | null;
-            if (urlTab === "schedule" || urlTab === "chat") {
+            if (urlTab === "map" || urlTab === "schedule" || urlTab === "chat") {
                 setActiveTab(urlTab);
+                if (urlTab === "map") {
+                    setHasVisitedMap(true);
+                    setIsSplashVisible(true);
+                }
                 return;
             }
 
-            const savedTab = localStorage.getItem("wbus_active_tab") as NavTab | null;
-            if (savedTab === "schedule" || savedTab === "chat") {
-                setActiveTab(savedTab);
-            }
-        } catch {
-            // Ignore
-        }
-    }, []);
-
-    const handleTabChange = useCallback((tab: NavTab) => {
-        setActiveTab(tab);
-        try {
-            localStorage.setItem("wbus_active_tab", tab);
-            const url = new URL(window.location.href);
-            if (tab === "chat") {
-                url.searchParams.set("tab", "chat");
-            } else {
-                url.searchParams.delete("tab");
-            }
-            window.history.replaceState({}, "", url.toString());
-        } catch {
-            // Ignore
-        }
-    }, []);
-
-    // Load cached meta from localStorage
-    useEffect(() => {
-        try {
-            const savedMeta = localStorage.getItem("yonsei_last_meta");
-            if (savedMeta) {
-                const parsedMeta = JSON.parse(savedMeta);
-                if (parsedMeta && parsedMeta.updatedAt) {
-                    setMeta((prev) => (prev ? {...prev, ...parsedMeta} : parsedMeta));
+            const savedTab = localStorage.getItem(STORAGE_KEYS.ACTIVE_TAB);
+            if (savedTab === "map" || savedTab === "schedule" || savedTab === "chat") {
+                setActiveTab(savedTab as NavTab);
+                if (savedTab === "map") {
+                    setHasVisitedMap(true);
+                    setIsSplashVisible(true);
                 }
             }
-        } catch {
-            // Ignore
-        }
-    }, []);
 
-    // Fetch latest schedule data on mount
-    const fetchScheduleData = useCallback(async () => {
-        setIsLoadingSchedule(true);
-        try {
-            const res = await fetch(`/api/schedule?t=${Date.now()}`, {
-                cache: "no-store",
-                headers: {"Cache-Control": "no-cache"},
-            });
-            const json = await res.json();
-            if (json.success) {
-                if (json.data && Array.isArray(json.data.routes)) {
-                    setRoutes(json.data.routes);
-                }
-                if (json.meta) {
-                    setMeta(json.meta);
-                    try {
-                        localStorage.setItem("yonsei_last_meta", JSON.stringify(json.meta));
-                    } catch {
-                        // Ignore
-                    }
-                }
+            const savedSubTab = localStorage.getItem(STORAGE_KEYS.TIMETABLE_SUBTAB) as TimetableSubTab | null;
+            if (savedSubTab === "yonsei" || savedSubTab === "all") {
+                setTimetableSubTab(savedSubTab);
             }
-        } catch (err) {
-            console.warn("Failed to fetch current schedule:", err);
-        } finally {
-            setIsLoadingSchedule(false);
+
+            const savedRoute = localStorage.getItem(STORAGE_KEYS.ROUTE_ID);
+            if (savedRoute) {
+                setSelectedRoute(savedRoute);
+            }
+        } catch (e) {
+            if (APP_CONFIG.IS_DEV) {
+                console.warn("[HomePage] Failed to load preferences from localStorage", e);
+            }
         }
     }, []);
-
-    useEffect(() => {
-        fetchScheduleData();
-    }, [fetchScheduleData]);
 
     // Load comments from API
     const fetchComments = useCallback(async (force = false) => {
@@ -152,7 +112,7 @@ export default function YonseiTimetablePage() {
                 setComments(json.comments);
             }
         } catch (err) {
-            console.warn("Failed to fetch comments:", err);
+            console.warn("[HomePage] Failed to fetch comments:", err);
         } finally {
             setIsRefreshingComments(false);
         }
@@ -161,62 +121,6 @@ export default function YonseiTimetablePage() {
     useEffect(() => {
         fetchComments(false);
     }, [fetchComments]);
-
-    // Fetch or refresh schedule from Wonju ITS API
-    const handleRefreshSchedule = async (force = true) => {
-        setIsRefreshing(true);
-        setToastNotice(null);
-        try {
-            const endpoint = force
-                ? `/api/schedule/refresh?force=true&t=${Date.now()}`
-                : `/api/schedule?t=${Date.now()}`;
-            const method = force ? "POST" : "GET";
-
-            const res = await fetch(endpoint, {
-                method,
-                cache: "no-store",
-                headers: {"Cache-Control": "no-cache"},
-            });
-            const json = await res.json();
-
-            if (!json.success) {
-                throw new Error(json.error || "시간표 정보를 불러오는 데 실패했습니다.");
-            }
-
-            if (json.data && Array.isArray(json.data.routes)) {
-                setRoutes(json.data.routes);
-            }
-            if (json.meta) {
-                setMeta(json.meta);
-                try {
-                    localStorage.setItem("yonsei_last_meta", JSON.stringify(json.meta));
-                } catch {
-                    // Ignore
-                }
-            }
-
-            if (force) {
-                setToastNotice({
-                    type: json.refreshed ? "success" : "info",
-                    message:
-                        json.message ||
-                        (json.refreshed
-                            ? "최신 시간표를 성공적으로 가져왔습니다."
-                            : "기존 저장된 최신 시간표를 유지합니다."),
-                });
-            }
-        } catch (err) {
-            setToastNotice({
-                type: "error",
-                message:
-                    err instanceof Error
-                        ? err.message
-                        : "시간표 갱신 중 오류가 발생했습니다.",
-            });
-        } finally {
-            setIsRefreshing(false);
-        }
-    };
 
     const handleAddComment = async (data: {
         author?: string;
@@ -266,7 +170,7 @@ export default function YonseiTimetablePage() {
                 );
             }
         } catch (err) {
-            console.warn("Failed to like comment:", err);
+            console.warn("[HomePage] Failed to like comment:", err);
         }
     };
 
@@ -286,190 +190,172 @@ export default function YonseiTimetablePage() {
                 throw new Error(json.error || "댓글 삭제에 실패했습니다.");
             }
         } catch (err) {
-            console.warn("Failed to delete comment:", err);
+            console.warn("[HomePage] Failed to delete comment:", err);
             throw err;
         }
     };
 
-    const handleOpenNoticeModal = (noticeId?: string) => {
-        setSelectedNoticeId(noticeId || null);
-        setIsNoticeModalOpen(true);
-    };
-
-    // Check if today is actual weekend
-    const isTodayWeekendOrHoliday = useMemo(() => {
-        return isWeekend(currentTime);
-    }, [currentTime]);
-
-    // Effective holiday flag taking DayMode into account
-    const effectiveIsHoliday = useMemo(() => {
-        if (dayMode === "WEEKDAY") return false;
-        if (dayMode === "VACATION") return true;
-        return isTodayWeekendOrHoliday;
-    }, [dayMode, isTodayWeekendOrHoliday]);
-
-    // Pair each target routeNo (30, 34, 34-1) with its matching active schedule variant
-    const activeRoutes = useMemo(() => {
-        const list: BusRoute[] = [];
-        for (const rNo of TARGET_ROUTE_NUMBERS) {
-            const route = selectRouteVariant(routes, rNo, effectiveIsHoliday);
-            if (route) {
-                list.push(route);
+    const handleScheduleSubTabChange = useCallback((subTab: TimetableSubTab) => {
+        setTimetableSubTab(subTab);
+        if (typeof window !== "undefined") {
+            try {
+                localStorage.setItem(STORAGE_KEYS.TIMETABLE_SUBTAB, subTab);
+            } catch (e) {
+                if (APP_CONFIG.IS_DEV) {
+                    console.warn("[handleScheduleSubTabChange] Failed to save subtab preference", e);
+                }
             }
         }
-        return list;
-    }, [routes, effectiveIsHoliday]);
+    }, []);
+
+    const isMapActive = activeTab === "map";
+
+    // Only fetch route map & telemetry when real-time map is active or visited
+    const routeMap = useBusRouteMap(hasVisitedMap && isMapActive);
+    const allRoutes = useMemo(() => (routeMap ? Object.keys(routeMap) : ["30", "34", "34-1"]), [routeMap]);
+    const activeRoute = useMemo(() => {
+        if (!routeMap) return selectedRoute;
+        if (routeMap[selectedRoute]) return selectedRoute;
+
+        return routeMap[MAP_SETTINGS.DEFAULT_ROUTE] ? MAP_SETTINGS.DEFAULT_ROUTE : Object.keys(routeMap)[0] ?? selectedRoute;
+    }, [routeMap, selectedRoute]);
+
+    // Live telemetry for active map route
+    const liveBusData = useBusSortedList(activeRoute, hasVisitedMap && isMapActive);
+
+    // Handle tab change and persist to localStorage
+    const handleTabChange = useCallback((tab: NavTab) => {
+        setActiveTab(tab);
+        if (tab === "map") {
+            setHasVisitedMap(true);
+        }
+        if (typeof window !== "undefined") {
+            try {
+                localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, tab);
+                const url = new URL(window.location.href);
+                if (tab === "chat") {
+                    url.searchParams.set("tab", "chat");
+                } else if (tab === "map") {
+                    url.searchParams.set("tab", "map");
+                } else {
+                    url.searchParams.delete("tab");
+                }
+                window.history.replaceState({}, "", url.toString());
+            } catch (e) {
+                if (APP_CONFIG.IS_DEV) {
+                    console.warn("[handleTabChange] Failed to save tab preference to localStorage", e);
+                }
+            }
+        }
+    }, []);
+
+    // Persist route selection to localStorage
+    const handleRouteChange = useCallback((route: string) => {
+        setSelectedRoute(route);
+        if (typeof window !== "undefined") {
+            try {
+                localStorage.setItem(STORAGE_KEYS.ROUTE_ID, route);
+            } catch (e) {
+                if (APP_CONFIG.IS_DEV) {
+                    console.warn("[handleRouteChange] Failed to save route preference to localStorage", e);
+                }
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!routeMap) return;
+        if (!activeRoute || activeRoute === selectedRoute) return;
+        if (typeof window === "undefined") return;
+        try {
+            localStorage.setItem(STORAGE_KEYS.ROUTE_ID, activeRoute);
+        } catch (e) {
+            if (APP_CONFIG.IS_DEV) {
+                console.warn("[handleRouteChange] Failed to save route preference to localStorage", e);
+            }
+        }
+    }, [routeMap, activeRoute, selectedRoute]);
+
+    const handleMapReady = useCallback(() => {
+        setIsSplashVisible(false);
+    }, []);
+
+    const handleSelectMapRoute = useCallback((routeName: string) => {
+        handleRouteChange(routeName);
+        setHasVisitedMap(true);
+        handleTabChange("map");
+    }, [handleRouteChange, handleTabChange]);
 
     return (
-        <main
-            className={`w-full items-center px-3 sm:px-6 lg:px-8 ${
-                activeTab === "chat"
-                    ? "h-[100dvh] max-h-[100dvh] pt-2 sm:pt-4 pb-[calc(env(safe-area-inset-bottom,0)+4.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+5rem)] flex flex-col overflow-hidden"
-                    : "min-h-screen py-6 sm:py-10 pb-28 sm:pb-32 flex flex-col justify-center"
-            }`}>
-            {/* Centered Dashboard Container */}
+        <>
+            <Splash isVisible={isSplashVisible}/>
+
             <div
-                className={`w-full max-w-6xl flex flex-col ${
-                    activeTab === "chat"
-                        ? "flex-1 min-h-0 gap-2.5 sm:gap-3"
-                        : "gap-4 sm:gap-6 my-auto"
-                }`}>
-                {/* Toast Message Notification */}
-                {toastNotice && (
-                    <div
-                        className={`p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between transition-all animate-fadeIn shadow-sm shrink-0 ${
-                            toastNotice.type === "success"
-                                ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
-                                : toastNotice.type === "error"
-                                    ? "bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200"
-                                    : "bg-blue-50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-500/40 text-blue-800 dark:text-blue-200"
-                        }`}
-                    >
-                        <div className="flex items-center space-x-2.5">
-                            {toastNotice.type === "success" ? (
-                                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"/>
-                            ) : (
-                                <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"/>
-                            )}
-                            <span className="text-xs sm:text-sm font-semibold">
-                                {toastNotice.message}
-                            </span>
-                        </div>
-                        <button
-                            onClick={() => setToastNotice(null)}
-                            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors shrink-0 ml-2 cursor-pointer"
-                            title="닫기"
-                        >
-                            <X className="h-4 w-4"/>
-                        </button>
+                className="fixed inset-0 flex flex-col w-full h-[100dvh] overflow-hidden bg-slate-50 dark:bg-[#0b0f19]">
+                {/* 1. Real-time Map View Container (Lazy mounted ONLY when map is activated by user) */}
+                {hasVisitedMap && (
+                    <div className={`relative flex-1 overflow-hidden ${activeTab === "map" ? "block" : "hidden"}`}>
+                        <MapWrapper onReady={handleMapReady}>
+                            <RouteLayer
+                                routeName={activeRoute}
+                                onRouteChange={handleRouteChange}
+                            />
+                        </MapWrapper>
                     </div>
                 )}
 
-                {/* TAB 1: Schedule View */}
+                {/* 2. Schedule Timetable View (Yonsei 30,34,34-1 & All Wonju routes) */}
                 {activeTab === "schedule" && (
-                    <div className="space-y-4 sm:space-y-5 animate-fadeIn">
-                        {/* Wonju ITS Live Notice Banner (Date-sorted, latest first) */}
-                        <NoticeBanner onOpenNoticeModal={handleOpenNoticeModal}/>
-
-                        {/* 3 Route Cards Grid (30, 34, 34-1) */}
-                        {isLoadingSchedule && activeRoutes.length === 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                                {[1, 2, 3].map((i) => (
-                                    <div
-                                        key={i}
-                                        className="glass-panel rounded-3xl p-6 space-y-4 animate-pulse"
-                                    >
-                                        <div className="h-8 w-1/3 bg-slate-200 dark:bg-white/10 rounded-xl"/>
-                                        <div className="h-4 w-2/3 bg-slate-200 dark:bg-white/10 rounded-md"/>
-                                        <div className="h-24 w-full bg-slate-200 dark:bg-white/10 rounded-2xl"/>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                                {activeRoutes.map((route) => (
-                                    <RouteCard
-                                        key={route.id}
-                                        route={route}
-                                        currentTime={currentTime}
-                                        onOpenModal={setSelectedRoute}
-                                    />
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Timetable Criteria & Refresh Banner (Above Footer) */}
-                        <CacheInfoBanner
-                            meta={meta}
-                            onRefresh={() => handleRefreshSchedule(true)}
-                            isRefreshing={isRefreshing}
-                        />
-
-                        {/* Minimal Footer for Schedule Tab */}
-                        <Footer/>
+                    <div
+                        className="flex-1 overflow-y-auto w-full px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-28 sm:pb-32 flex flex-col items-center">
+                        <div className="w-full max-w-6xl flex-1 flex flex-col justify-center">
+                            <TimetableWidget
+                                subTab={timetableSubTab}
+                                onSubTabChange={handleScheduleSubTabChange}
+                                onSelectMapRoute={handleSelectMapRoute}
+                                dayMode={dayMode}
+                                onDayModeChange={setDayMode}
+                            />
+                        </div>
                     </div>
                 )}
 
-                {/* TAB 2: Independent Full Chat / Talk View */}
+                {/* 3. Real-time Chat View */}
                 {activeTab === "chat" && (
-                    <ChatView
-                        comments={comments}
-                        onAddComment={handleAddComment}
-                        onLikeComment={handleLikeComment}
-                        onDeleteComment={handleDeleteComment}
-                        onRefresh={fetchComments}
-                        isRefreshing={isRefreshingComments}
-                        filterRoute={chatFilterRoute}
-                        onFilterRouteChange={setChatFilterRoute}
-                    />
+                    <div
+                        className="flex-1 overflow-hidden w-full max-w-6xl mx-auto px-3 sm:px-6 pt-2 sm:pt-4 pb-[calc(env(safe-area-inset-bottom,0)+4.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+5rem)] flex flex-col">
+                        <ChatView
+                            comments={comments}
+                            onAddComment={handleAddComment}
+                            onLikeComment={handleLikeComment}
+                            onDeleteComment={handleDeleteComment}
+                            onRefresh={fetchComments}
+                            isRefreshing={isRefreshingComments}
+                            filterRoute={chatFilterRoute}
+                            onFilterRouteChange={setChatFilterRoute}
+                        />
+                    </div>
                 )}
+
+                {/* Unified Bottom Floating Pill Navigation Bar */}
+                <BottomNav
+                    activeTab={activeTab}
+                    onTabChange={handleTabChange}
+                    scheduleSubTab={timetableSubTab}
+                    onScheduleSubTabChange={handleScheduleSubTabChange}
+                    dayMode={dayMode}
+                    onDayModeChange={setDayMode}
+                    isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                    allRoutes={allRoutes}
+                    selectedRoute={activeRoute}
+                    onSelectRoute={handleRouteChange}
+                    runningBuses={liveBusData.sortedList}
+                    getDirection={liveBusData.getDirection}
+                    chatFilterRoute={chatFilterRoute}
+                    onChatFilterRouteChange={setChatFilterRoute}
+                    commentCount={comments.length}
+                />
             </div>
-
-            {/* Floating Pill Bottom Navigation Bar */}
-            <BottomNav
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                dayMode={dayMode}
-                onDayModeChange={setDayMode}
-                isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-                chatFilterRoute={chatFilterRoute}
-                onChatFilterRouteChange={setChatFilterRoute}
-                commentCount={comments.length}
-            />
-
-            {/* Detailed Timetable Modal */}
-            {selectedRoute && (
-                <RouteDetailModal
-                    route={selectedRoute}
-                    allRoutes={routes}
-                    onClose={() => setSelectedRoute(null)}
-                    currentTime={currentTime}
-                />
-            )}
-
-            {/* Optional Fallback Comments Modal (Kept for compatibility) */}
-            {isCommentsModalOpen && (
-                <CommentsModal
-                    isOpen={isCommentsModalOpen}
-                    onClose={() => setIsCommentsModalOpen(false)}
-                    comments={comments}
-                    onAddComment={handleAddComment}
-                    onLikeComment={handleLikeComment}
-                    onDeleteComment={handleDeleteComment}
-                    onRefresh={fetchComments}
-                    isRefreshing={isRefreshingComments}
-                />
-            )}
-
-            {/* Wonju ITS Notice Center Modal */}
-            <NoticeModal
-                isOpen={isNoticeModalOpen}
-                onClose={() => {
-                    setIsNoticeModalOpen(false);
-                    setSelectedNoticeId(null);
-                }}
-                initialNoticeId={selectedNoticeId}
-            />
-        </main>
+        </>
     );
 }

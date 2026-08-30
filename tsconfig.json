@@ -26,6 +26,21 @@
       "@/*": [
         "./src/*"
       ],
+      "@app/*": [
+        "./src/app/*"
+      ],
+      "@widgets/*": [
+        "./src/widgets/*"
+      ],
+      "@features/*": [
+        "./src/features/*"
+      ],
+      "@entities/*": [
+        "./src/entities/*"
+      ],
+      "@shared/*": [
+        "./src/shared/*"
+      ],
       "@components/*": [
         "./src/components/*"
       ],

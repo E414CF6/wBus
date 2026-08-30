@@ -1,7 +1,7 @@
 import {RouteDataset} from "@/types/bus";
 
 export const VERCEL_BLOB_PATH = "cache.json";
-export const FALLBACK_BLOB_PATHS = ["cache.json"];
+export const FALLBACK_BLOB_PATHS = ["cache.json", "scheduleCache.json"];
 
 function getBlobBaseUrl(): string | undefined {
     if (process.env.NEXT_PUBLIC_STATIC_API_URL?.startsWith("http")) {
@@ -19,13 +19,13 @@ function getBlobBaseUrl(): string | undefined {
 /**
  * Loads timetable dataset from Vercel Blob via OIDC / @vercel/blob SDK or public Blob URL.
  */
-export async function loadFromVercelBlob(): Promise<RouteDataset | null> {
+export async function loadFromVercelBlob<T = RouteDataset>(customPaths: string[] = FALLBACK_BLOB_PATHS): Promise<T | null> {
     const cacheBuster = `?t=${Date.now()}`;
 
     // 1. Try reading via @vercel/blob SDK head() (Supports Vercel OIDC or BLOB_READ_WRITE_TOKEN)
     try {
         const {head} = await import("@vercel/blob");
-        for (const blobPath of FALLBACK_BLOB_PATHS) {
+        for (const blobPath of customPaths) {
             try {
                 const blobResult = await head(blobPath);
                 if (blobResult && blobResult.url) {
@@ -33,10 +33,13 @@ export async function loadFromVercelBlob(): Promise<RouteDataset | null> {
                     console.log(`[Blob] Fetching timetable from Vercel Blob: ${fetchUrl}`);
                     const res = await fetch(fetchUrl, {cache: "no-store"});
                     if (res.ok) {
-                        const data = await res.json();
-                        if (data && Array.isArray(data.routes) && data.routes.length > 0) {
-                            console.log(`[Blob] Loaded ${data.routes.length} routes from Vercel Blob (${blobPath}).`);
-                            return data;
+                        const data = (await res.json()) as T;
+                        if (data && typeof data === "object" && "routes" in (data as Record<string, unknown>)) {
+                            const routes = (data as { routes?: unknown[] }).routes;
+                            if (Array.isArray(routes) && routes.length > 0) {
+                                console.log(`[Blob] Loaded ${routes.length} routes from Vercel Blob (${blobPath}).`);
+                                return data;
+                            }
                         }
                     }
                 }
@@ -51,16 +54,19 @@ export async function loadFromVercelBlob(): Promise<RouteDataset | null> {
     // 2. Try fetching from direct Blob Base URL
     const baseUrl = getBlobBaseUrl();
     if (baseUrl) {
-        for (const blobPath of FALLBACK_BLOB_PATHS) {
+        for (const blobPath of customPaths) {
             try {
                 const fetchUrl = `${baseUrl}/${blobPath}${cacheBuster}`;
                 console.log(`[Blob] Fetching direct Blob URL: ${fetchUrl}`);
                 const res = await fetch(fetchUrl, {cache: "no-store"});
                 if (res.ok) {
-                    const data = await res.json();
-                    if (data && Array.isArray(data.routes) && data.routes.length > 0) {
-                        console.log(`[Blob] Loaded ${data.routes.length} routes from direct Blob URL (${blobPath}).`);
-                        return data;
+                    const data = (await res.json()) as T;
+                    if (data && typeof data === "object" && "routes" in (data as Record<string, unknown>)) {
+                        const routes = (data as { routes?: unknown[] }).routes;
+                        if (Array.isArray(routes) && routes.length > 0) {
+                            console.log(`[Blob] Loaded ${routes.length} routes from direct Blob URL (${blobPath}).`);
+                            return data;
+                        }
                     }
                 }
             } catch (err) {
@@ -73,14 +79,17 @@ export async function loadFromVercelBlob(): Promise<RouteDataset | null> {
 }
 
 /**
- * Saves timetable dataset to Vercel Blob via @vercel/blob SDK as cache.json.
+ * Saves timetable dataset to Vercel Blob via @vercel/blob SDK as cache.json or custom path.
  */
-export async function saveToVercelBlob(data: RouteDataset): Promise<boolean> {
+export async function saveToVercelBlob(data: unknown, blobPath: string = VERCEL_BLOB_PATH): Promise<boolean> {
     const jsonStr = JSON.stringify(data, null, 2);
     try {
         const {put} = await import("@vercel/blob");
-        const result = await put(VERCEL_BLOB_PATH, jsonStr, {
-            access: "public", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true,
+        const result = await put(blobPath, jsonStr, {
+            access: "public",
+            contentType: "application/json",
+            addRandomSuffix: false,
+            allowOverwrite: true,
         });
         console.log(`[Blob] Successfully saved to Vercel Blob: ${result.url}`);
         return true;

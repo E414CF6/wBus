@@ -10,16 +10,16 @@ const HEADERS = {
     "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
 };
 
-const TARGET_RAW_NOS = ["30", "34(평일)", "34(방학,휴일)", "34-1(평일)", "34-1(방학,휴일)",];
+const TARGET_RAW_NOS = ["30", "34(평일)", "34(방학,휴일)", "34-1(평일)", "34-1(방학,휴일)"];
 
-/**
- * Scrapes route list from Wonju ITS and filters Yonsei University routes.
- */
-async function fetchList(): Promise<{
-    csrfToken: string; cookieStr: string; routes: BusRoute[];
+export async function fetchList(filterYonseiOnly = false): Promise<{
+    csrfToken: string;
+    cookieStr: string;
+    routes: BusRoute[];
 }> {
     const res = await fetch(LIST_URL, {
-        headers: HEADERS, signal: AbortSignal.timeout(8000),
+        headers: HEADERS,
+        signal: AbortSignal.timeout(8000),
     });
 
     if (!res.ok) {
@@ -37,7 +37,7 @@ async function fetchList(): Promise<{
     const cookieStr = rawCookies.map((c) => c.split(";")[0]).join("; ");
 
     // Match table rows
-    const rowRegex = /<tr[^>]*>[\s\S]*?<td[^>]*onclick=["']goDetail\(['"]([^'"]+)['"]\);["'][^>]*>(.*?)<\/td>[\s\S]*?<td>(.*?)<\/td>[\s\S]*?<td>(.*?)<\/td>[\s\S]*?<td>(.*?)<\/td>[\s\S]*?<td>(.*?)<\/td>[\s\S]*?<td>(.*?)<\/td>[\s\S]*?<td>(.*?)<\/td>[\s\S]*?<\/tr>/g;
+    const rowRegex = /<tr[^>]*>\s*<td[^>]*onclick=["']goDetail\(['"]([^'"]+)['"]\);["'][^>]*>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/gs;
 
     const routes: BusRoute[] = [];
     let match: RegExpExecArray | null;
@@ -46,12 +46,13 @@ async function fetchList(): Promise<{
         const detailId = match[1].trim();
         const rawNo = match[2].replace(/<[^>]+>/g, "").trim();
 
-        // Check if this route is one of Yonsei target routes
-        const isTarget = TARGET_RAW_NOS.includes(rawNo) || rawNo.startsWith("30") || rawNo.startsWith("34");
+        if (filterYonseiOnly) {
+            const isTarget = TARGET_RAW_NOS.includes(rawNo) || rawNo.startsWith("30") || rawNo.startsWith("34");
+            if (!isTarget) continue;
+        }
 
-        if (!isTarget) continue;
-
-        const cleanStationName = (name: string) => name ? name.replace(/장양리시내버스공영(정류장)?/g, "장양리") : name;
+        const cleanStationName = (name: string) =>
+            name ? name.replace(/장양리시내버스공영(정류장)?/g, "장양리") : name;
 
         const origin = cleanStationName(match[3].replace(/<[^>]+>/g, "").trim());
         const destination = cleanStationName(match[4].replace(/<[^>]+>/g, "").trim());
@@ -88,10 +89,11 @@ async function fetchList(): Promise<{
     return {csrfToken, cookieStr, routes};
 }
 
-/**
- * Scrapes timetable details for a specific route ID from Wonju ITS.
- */
-async function fetchDetail(detailId: string, csrfToken: string, cookieStr: string): Promise<TimetableEntry[]> {
+export async function fetchDetail(
+    detailId: string,
+    csrfToken: string,
+    cookieStr: string
+): Promise<TimetableEntry[]> {
     const formData = new URLSearchParams();
     formData.append("CSRFToken", csrfToken);
     formData.append("no", detailId);
@@ -106,7 +108,10 @@ async function fetchDetail(detailId: string, csrfToken: string, cookieStr: strin
     };
 
     const res = await fetch(DETAIL_URL, {
-        method: "POST", headers: reqHeaders, body: formData.toString(), signal: AbortSignal.timeout(6000),
+        method: "POST",
+        headers: reqHeaders,
+        body: formData.toString(),
+        signal: AbortSignal.timeout(6000),
     });
 
     if (!res.ok) {
@@ -125,7 +130,9 @@ async function fetchDetail(detailId: string, csrfToken: string, cookieStr: strin
     let trMatch: RegExpExecArray | null;
     while ((trMatch = trRegex.exec(tbodyHtml)) !== null) {
         const trContent = trMatch[1];
-        const tdMatches = [...trContent.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi),].map((m) => m[1].replace(/<[^>]+>/g, "").trim());
+        const tdMatches = [...trContent.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) =>
+            m[1].replace(/<[^>]+>/g, "").trim()
+        );
 
         if (tdMatches.length >= 4) {
             const seq = parseInt(tdMatches[0], 10) || timetable.length + 1;
@@ -142,30 +149,72 @@ async function fetchDetail(detailId: string, csrfToken: string, cookieStr: strin
 }
 
 /**
- * Executes Wonju ITS scraping for Yonsei routes and returns a RouteDataset.
+ * Scrapes all routes from Wonju ITS in concurrent batches (Default batch size: 8).
  */
-export async function scrapeWonjuItsYonsei(): Promise<RouteDataset> {
+export async function scrapeWonjuBusDataset(batchSize = 8): Promise<RouteDataset> {
     const startTime = Date.now();
-    console.log("[ITS Scraper] Starting scrape for Yonsei University bus routes...");
+    console.log("[ITS Scraper] Starting full scrape for all Wonju city bus routes...");
 
-    const {csrfToken, cookieStr, routes} = await fetchList();
-    console.log(`[ITS Scraper] Found ${routes.length} Yonsei routes. Crawling timetable details...`);
+    const {csrfToken, cookieStr, routes} = await fetchList(false);
+    console.log(`[ITS Scraper] Found ${routes.length} total routes in Wonju ITS. Crawling timetables in batches of ${batchSize}...`);
 
-    await Promise.all(routes.map(async (route) => {
-        try {
-            route.timetable = await fetchDetail(route.id, csrfToken, cookieStr);
-        } catch (err) {
-            console.error(`[ITS Scraper] Failed to fetch timetable for ${route.id}:`, err instanceof Error ? err.message : err);
-            route.timetable = [];
-        }
-    }));
+    for (let i = 0; i < routes.length; i += batchSize) {
+        const batch = routes.slice(i, i + batchSize);
+        await Promise.all(
+            batch.map(async (route) => {
+                try {
+                    route.timetable = await fetchDetail(route.id, csrfToken, cookieStr);
+                } catch (err) {
+                    console.error(`[ITS Scraper] Failed to fetch timetable for route ${route.routeNo} (${route.id}):`, err instanceof Error ? err.message : err);
+                    route.timetable = [];
+                }
+            })
+        );
+    }
 
     const dataset: RouteDataset = {
-        updatedAt: new Date().toISOString(), sourceUrl: LIST_URL, totalRoutes: routes.length, routes,
+        updatedAt: new Date().toISOString(),
+        sourceUrl: LIST_URL,
+        totalRoutes: routes.length,
+        routes,
     };
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`[ITS Scraper] Successfully scraped ${routes.length} routes in ${elapsed}s.`);
+    console.log(`[ITS Scraper] Successfully scraped all ${routes.length} routes in ${elapsed}s.`);
+
+    return dataset;
+}
+
+/**
+ * Scrapes only Yonsei University routes (30, 34, 34-1) quickly (< 1s).
+ */
+export async function scrapeWonjuItsYonsei(): Promise<RouteDataset> {
+    const startTime = Date.now();
+    console.log("[ITS Scraper] Starting fast scrape for Yonsei University bus routes...");
+
+    const {csrfToken, cookieStr, routes} = await fetchList(true);
+    console.log(`[ITS Scraper] Found ${routes.length} Yonsei routes. Crawling timetable details...`);
+
+    await Promise.all(
+        routes.map(async (route) => {
+            try {
+                route.timetable = await fetchDetail(route.id, csrfToken, cookieStr);
+            } catch (err) {
+                console.error(`[ITS Scraper] Failed to fetch timetable for ${route.id}:`, err instanceof Error ? err.message : err);
+                route.timetable = [];
+            }
+        })
+    );
+
+    const dataset: RouteDataset = {
+        updatedAt: new Date().toISOString(),
+        sourceUrl: LIST_URL,
+        totalRoutes: routes.length,
+        routes,
+    };
+
+    const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`[ITS Scraper] Successfully scraped ${routes.length} Yonsei routes in ${elapsed}s.`);
 
     return dataset;
 }
