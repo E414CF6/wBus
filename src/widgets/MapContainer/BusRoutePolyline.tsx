@@ -1,6 +1,6 @@
 "use client";
 
-import {getRouteIdColor} from "@entities/route/routeColor";
+import {buildSegmentedRouteGeoJson} from "@entities/route/polylineService";
 import {useBusData} from "@features/live-tracking/useBusData";
 import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
@@ -15,7 +15,7 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
 
     // Filter to render all available route IDs for this route number
     const validRouteIds = useMemo(() => {
-        const available = routeIds.filter(id => {
+        const available = routeIds.filter((id) => {
             const data = polylineMap.get(id);
             return data && (data.upPolyline.length > 0 || data.downPolyline.length > 0);
         });
@@ -30,7 +30,10 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
     }, [routeIds, polylineMap, activeRouteId]);
 
     const bbox = useMemo(() => {
-        let minLat = Infinity, minLng = Infinity, maxLat = -Infinity, maxLng = -Infinity;
+        let minLat = Infinity,
+            minLng = Infinity,
+            maxLat = -Infinity,
+            maxLng = -Infinity;
         let hasBounds = false;
         for (const id of validRouteIds) {
             const data = polylineMap.get(id);
@@ -43,53 +46,15 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
                 hasBounds = true;
             }
         }
-        return hasBounds ? [[minLat, minLng], [maxLat, maxLng]] as [[number, number], [number, number]] : null;
+        return hasBounds
+            ? ([[minLat, minLng], [maxLat, maxLng]] as [[number, number], [number, number]])
+            : null;
     }, [validRouteIds, polylineMap]);
 
+    // Build smart segmented GeoJSON: Overlapping parts in unified blue, unique branch parts in distinct colors
     const activeGeoJson = useMemo(() => {
-        if (validRouteIds.length === 0) return null;
-        const features: GeoJSON.Feature[] = [];
-
-        for (const id of validRouteIds) {
-            const data = polylineMap.get(id);
-            if (!data) continue;
-
-            const colorConfig = getRouteIdColor(id, routeIds, routeName);
-            const color = colorConfig.main;
-
-            if (data.upPolyline.length >= 2) {
-                features.push({
-                    type: "Feature",
-                    geometry: {
-                        type: "LineString",
-                        coordinates: data.upPolyline.map((c) => [c[1], c[0]])
-                    },
-                    properties: {
-                        route_id: id,
-                        direction: "up",
-                        color
-                    }
-                });
-            }
-
-            if (data.downPolyline.length >= 2) {
-                features.push({
-                    type: "Feature",
-                    geometry: {
-                        type: "LineString",
-                        coordinates: data.downPolyline.map((c) => [c[1], c[0]])
-                    },
-                    properties: {
-                        route_id: id,
-                        direction: "down",
-                        color
-                    }
-                });
-            }
-        }
-
-        return {type: "FeatureCollection" as const, features};
-    }, [validRouteIds, polylineMap, routeIds, routeName]);
+        return buildSegmentedRouteGeoJson(validRouteIds, polylineMap);
+    }, [validRouteIds, polylineMap]);
 
     // Fit map to bounds of routes
     useEffect(() => {
@@ -100,10 +65,16 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
         lastBoundsKeyRef.current = key;
 
         const [[s, w], [n, e]] = bbox;
-        map.fitBounds([[w, s], [e, n]], {
-            padding: 32,
-            duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
-        });
+        map.fitBounds(
+            [
+                [w, s],
+                [e, n],
+            ],
+            {
+                padding: 32,
+                duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
+            }
+        );
     }, [map, bbox]);
 
     if (validRouteIds.length === 0 || !activeGeoJson) return null;
@@ -124,7 +95,7 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
                     "line-join": "round",
                 }}
             />
-            {/* Main bus route polyline layer with color driven by route ID */}
+            {/* Main bus route polyline layer with color driven by segment property (blue for shared, branch color for distinct parts) */}
             <Layer
                 id="polyline-active-layer"
                 type="line"
@@ -164,4 +135,3 @@ export default function BusRoutePolyline({routeName}: { routeName: string }) {
         </Source>
     );
 }
-

@@ -41,7 +41,6 @@ export interface MultiPolylineData {
     bounds: [[number, number], [number, number]] | null;
 }
 
-
 const processedCache = new CacheManager<PolylineData>(50);
 
 async function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordinate[], data: GeoPolyline): Promise<StopIndexMap | undefined> {
@@ -268,6 +267,198 @@ export async function fetchRoutePolylines(routeIds: string[]): Promise<Map<strin
     return map;
 }
 
+// ----------------------------------------------------------------------
+// Smart Polyline Segmentation & Color Assignment
+// ----------------------------------------------------------------------
+
+export const SHARED_BLUE_COLOR = "#2563eb"; // Blue (공통 중복 구간)
+
+export const BRANCH_PALETTE = [
+    "#059669", // Emerald (분기 1)
+    "#d97706", // Amber (분기 2)
+    "#7c3aed", // Purple (분기 3)
+    "#e11d48", // Rose (분기 4)
+    "#0891b2", // Cyan (분기 5)
+    "#ea580c", // Orange (분기 6)
+    "#db2777", // Pink (분기 7)
+];
+
+/**
+ * Checks if a given coordinate point is within maxDistMeters of any segment in polyline.
+ */
+export function isPointNearPolyline(point: Coordinate, polyline: Coordinate[], maxDistMeters = 30): boolean {
+    if (!polyline || polyline.length < 2) return false;
+    const [pLat, pLng] = point;
+    const maxDegLat = maxDistMeters / 111000;
+    const maxDegLng = maxDistMeters / 88000;
+    const maxDistSq = maxDegLat * maxDegLat;
+
+    for (let i = 0; i < polyline.length - 1; i++) {
+        const [aLat, aLng] = polyline[i];
+        const [bLat, bLng] = polyline[i + 1];
+
+        // Bounding box quick check
+        const minLat = Math.min(aLat, bLat) - maxDegLat;
+        const maxLat = Math.max(aLat, bLat) + maxDegLat;
+        const minLng = Math.min(aLng, bLng) - maxDegLng;
+        const maxLng = Math.max(aLng, bLng) + maxDegLng;
+
+        if (pLat < minLat || pLat > maxLat || pLng < minLng || pLng > maxLng) {
+            continue;
+        }
+
+        const dLat = bLat - aLat;
+        const dLng = bLng - aLng;
+        const lenSq = dLat * dLat + dLng * dLng;
+        if (lenSq === 0) {
+            const distSq = (pLat - aLat) ** 2 + (pLng - aLng) ** 2;
+            if (distSq <= maxDistSq) return true;
+            continue;
+        }
+
+        const t = Math.max(0, Math.min(1, ((pLat - aLat) * dLat + (pLng - aLng) * dLng) / lenSq));
+        const projLat = aLat + t * dLat;
+        const projLng = aLng + t * dLng;
+        const distSq = (pLat - projLat) ** 2 + (pLng - projLng) ** 2;
+        if (distSq <= maxDistSq) return true;
+    }
+
+    return false;
+}
+
+/**
+ * Builds a clean GeoJSON FeatureCollection where:
+ * - Overlapping/shared route segments across sub-routes are styled in unified blue (#2563eb) without duplicates.
+ * - Diverging/unique branch segments receive distinct palette colors (#059669, #d97706, etc.).
+ */
+export function buildSegmentedRouteGeoJson(
+    validRouteIds: string[],
+    polylineMap: Map<string, PolylineData>
+): GeoJSON.FeatureCollection | null {
+    if (validRouteIds.length === 0) return null;
+    const features: GeoJSON.Feature[] = [];
+
+    // Single route ID case: Entire route in unified blue
+    if (validRouteIds.length === 1) {
+        const id = validRouteIds[0];
+        const data = polylineMap.get(id);
+        if (!data) return null;
+
+        if (data.upPolyline.length >= 2) {
+            features.push({
+                type: "Feature",
+                geometry: {
+                    type: "LineString",
+                    coordinates: data.upPolyline.map((c) => [c[1], c[0]])
+                },
+                properties: {
+                    route_id: id,
+                    direction: "up",
+                    color: SHARED_BLUE_COLOR,
+                    is_shared: true
+                }
+            });
+        }
+        if (data.downPolyline.length >= 2) {
+            features.push({
+                type: "Feature",
+                geometry: {
+                    type: "LineString",
+                    coordinates: data.downPolyline.map((c) => [c[1], c[0]])
+                },
+                properties: {
+                    route_id: id,
+                    direction: "down",
+                    color: SHARED_BLUE_COLOR,
+                    is_shared: true
+                }
+            });
+        }
+        return {type: "FeatureCollection" as const, features};
+    }
+
+    // Multiple route IDs: Segment into shared (blue) vs distinct branch colors
+    const directions: Array<"up" | "down"> = ["up", "down"];
+
+    for (const dir of directions) {
+        const polylineKey = dir === "up" ? "upPolyline" : "downPolyline";
+
+        for (let rIdx = 0; rIdx < validRouteIds.length; rIdx++) {
+            const rId = validRouteIds[rIdx];
+            const rData = polylineMap.get(rId);
+            if (!rData) continue;
+            const poly = rData[polylineKey];
+            if (poly.length < 2) continue;
+
+            const otherPolylines = validRouteIds
+                .filter((_, idx) => idx !== rIdx)
+                .map(id => polylineMap.get(id)?.[polylineKey])
+                .filter((p): p is Coordinate[] => Boolean(p && p.length >= 2));
+
+            // Classify each edge along this route variant
+            const edgeInfos: Array<{ isShared: boolean; color: string }> = [];
+            for (let i = 0; i < poly.length - 1; i++) {
+                const mid: Coordinate = [(poly[i][0] + poly[i + 1][0]) / 2, (poly[i][1] + poly[i + 1][1]) / 2];
+                let isShared = false;
+                for (const otherPoly of otherPolylines) {
+                    if (isPointNearPolyline(mid, otherPoly, 25)) {
+                        isShared = true;
+                        break;
+                    }
+                }
+
+                let color = SHARED_BLUE_COLOR;
+                if (!isShared) {
+                    // Unique to this route ID
+                    color = BRANCH_PALETTE[(rIdx > 0 ? rIdx - 1 : 0) % BRANCH_PALETTE.length];
+                }
+                edgeInfos.push({isShared, color});
+            }
+
+            // Group contiguous edges of same color into LineString features
+            let currentGroupCoords: [number, number][] = [[poly[0][1], poly[0][0]]];
+            let currentColor = edgeInfos[0]?.color ?? SHARED_BLUE_COLOR;
+            let currentShared = edgeInfos[0]?.isShared ?? false;
+
+            for (let i = 0; i < edgeInfos.length; i++) {
+                currentGroupCoords.push([poly[i + 1][1], poly[i + 1][0]]);
+
+                const isLast = i === edgeInfos.length - 1;
+                const nextInfo = !isLast ? edgeInfos[i + 1] : null;
+
+                if (isLast || nextInfo?.color !== currentColor) {
+                    // Only emit shared segment for the primary route (rIdx === 0) to avoid drawing duplicate overlapping blue lines
+                    const shouldEmit = !currentShared || rIdx === 0;
+
+                    if (shouldEmit && currentGroupCoords.length >= 2) {
+                        features.push({
+                            type: "Feature",
+                            geometry: {
+                                type: "LineString",
+                                coordinates: currentGroupCoords
+                            },
+                            properties: {
+                                route_id: rId,
+                                direction: dir,
+                                color: currentColor,
+                                is_shared: currentShared
+                            }
+                        });
+                    }
+
+                    if (!isLast && nextInfo) {
+                        currentGroupCoords = [[poly[i + 1][1], poly[i + 1][0]]];
+                        currentColor = nextInfo.color;
+                        currentShared = nextInfo.isShared;
+                    }
+                }
+            }
+        }
+    }
+
+    return {type: "FeatureCollection" as const, features};
+}
+
 export function createMultiPolylineData(polylineMap: Map<string, PolylineData>, activeRouteIds?: string[]): MultiPolylineData {
     const segmentMap = new Map<string, PolylineSegment>();
     const activeSet = new Set(activeRouteIds ?? []);
@@ -321,57 +512,4 @@ export function createMultiPolylineData(polylineMap: Map<string, PolylineData>, 
         inactiveDownSegments: inactiveDown,
         bounds
     };
-}
-
-export const PALETTE = [
-    {up: "#2563eb", down: "#dc2626"}, // 0: Blue / Red (Standard)
-    {up: "#7c3aed", down: "#ea580c"}, // 1: Violet / Orange
-    {up: "#0d9488", down: "#db2777"}, // 2: Teal / Pink
-    {up: "#059669", down: "#e11d48"}, // 3: Emerald / Rose
-] as const;
-
-export function areCoordinatesEqual(c1: Coordinate[], c2: Coordinate[]): boolean {
-    if (c1.length !== c2.length) return false;
-    const steps = [0, Math.floor(c1.length / 4), Math.floor(c1.length / 2), Math.floor(c1.length * 3 / 4), c1.length - 1];
-    for (const idx of steps) {
-        if (idx < c1.length) {
-            const p1 = c1[idx];
-            const p2 = c2[idx];
-            if (!p1 || !p2 || Math.abs(p1[0] - p2[0]) > 0.0001 || Math.abs(p1[1] - p2[1]) > 0.0001) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-export function areGeometriesEqual(g1: PolylineData, g2: PolylineData): boolean {
-    return areCoordinatesEqual(g1.upPolyline, g2.upPolyline) &&
-        areCoordinatesEqual(g1.downPolyline, g2.downPolyline);
-}
-
-export function getRouteIdColorMapping(routeIds: string[], polylineMap: Map<string, PolylineData>): Record<string, number> {
-    const uniqueGeometries: PolylineData[] = [];
-    const routeIdToColorIndex: Record<string, number> = {};
-
-    for (const id of routeIds) {
-        const data = polylineMap.get(id);
-        if (!data) continue;
-
-        let matchIdx = uniqueGeometries.findIndex(g => areGeometriesEqual(g, data));
-        if (matchIdx === -1) {
-            matchIdx = uniqueGeometries.length;
-            uniqueGeometries.push(data);
-        }
-        routeIdToColorIndex[id] = matchIdx;
-    }
-
-    // If all variations have the same geometry, fall back to color index 0 for all
-    if (uniqueGeometries.length <= 1) {
-        for (const id of routeIds) {
-            routeIdToColorIndex[id] = 0;
-        }
-    }
-
-    return routeIdToColorIndex;
 }
