@@ -201,7 +201,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     ];
 
     const modalContent = (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3.5 sm:p-4">
             {/* Backdrop Blur Overlay */}
             <div
                 className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity duration-300 animate-fadeIn"
@@ -209,21 +209,16 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                 aria-hidden="true"
             />
 
-            {/* Main Modal Dialog Container */}
+            {/* Main Modal Dialog Container (Fixed height & Margins on all viewports) */}
             <div
-                className="relative w-full max-w-2xl bg-white/95 dark:bg-[#12131a]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 shadow-[0_24px_70px_rgba(0,0,0,0.35)] dark:shadow-[0_24px_70px_rgba(0,0,0,0.85)] rounded-t-[32px] sm:rounded-[32px] overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[82vh] z-10 transition-all duration-300 transform animate-slideUp sm:animate-scaleUp"
+                className="relative w-full max-w-2xl h-[78dvh] sm:h-[82dvh] max-h-[78dvh] sm:max-h-[82dvh] bg-white/95 dark:bg-[#12131a]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 shadow-[0_24px_70px_rgba(0,0,0,0.35)] dark:shadow-[0_24px_70px_rgba(0,0,0,0.85)] rounded-[28px] sm:rounded-[32px] overflow-hidden flex flex-col z-10 transition-all duration-300 transform animate-scaleUp"
                 role="dialog"
                 aria-modal="true"
                 aria-label="실시간 노선 선택기"
             >
-                {/* Mobile Drag Indicator Pill */}
-                <div className="sm:hidden flex justify-center pt-2.5 pb-1">
-                    <div className="w-10 h-1 rounded-full bg-black/20 dark:bg-white/20"/>
-                </div>
-
                 {/* Header Bar */}
                 <div
-                    className="flex items-center justify-between px-4 sm:px-6 pt-3 pb-3 border-b border-black/5 dark:border-white/5 shrink-0">
+                    className="flex items-center justify-between px-4 sm:px-6 pt-3.5 pb-3 border-b border-black/5 dark:border-white/5 shrink-0">
                     <div className="flex items-center gap-3">
                         <div
                             className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/25">
