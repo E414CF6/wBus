@@ -2,9 +2,8 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
-import {Bus, Check, Clock, GraduationCap, Grid, LayoutList, MapPin, Search, Star, X,} from "lucide-react";
-import {getRouteColor} from "@entities/route/routeColor";
-import {getRouteMeta, RouteCategory, RouteMeta, YONSEI_ROUTE_SET,} from "@entities/route/routeMetadata";
+import {Bus, Check, Clock, GraduationCap, Grid, LayoutList, MapPin, Search, Star, X} from "lucide-react";
+import {getRouteMeta, RouteCategory, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 
 // ----------------------------------------------------------------------
 // Types & Constants
@@ -464,7 +463,6 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                 const isSelected = route === selectedRoute;
                                 const isYonsei = meta.isYonsei;
                                 const isBookmarked = bookmarks.includes(route);
-                                const colorConfig = getRouteColor(route);
 
                                 return (
                                     <div
@@ -531,9 +529,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                 title={isBookmarked ? "즐겨찾기 해제" : "즐겨찾기 등록"}
                                                 aria-label={isBookmarked ? "즐겨찾기 해제" : "즐겨찾기 등록"}
                                             >
-                                                <Star
-                                                    className={`w-4 h-4 ${isBookmarked ? "fill-amber-500" : ""}`}
-                                                />
+                                                <Star className={`w-4 h-4 ${isBookmarked ? "fill-amber-500" : ""}`}/>
                                             </button>
 
                                             {isSelected && (

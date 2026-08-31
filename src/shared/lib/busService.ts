@@ -139,24 +139,19 @@ export async function saveCacheData(data: BusCacheData): Promise<void> {
 }
 
 export async function getOrFetchBusData(force = false): Promise<{
-    data: BusCacheData | null;
-    meta: CacheMetadata;
+    data: BusCacheData | null; meta: CacheMetadata;
 }> {
     const data = await loadCacheData();
     if (data && (!force || data.routes.length > 0)) {
         return {
-            data,
-            meta: getCacheMetadata(data),
+            data, meta: getCacheMetadata(data),
         };
     }
     return refreshBusData(force);
 }
 
-export async function refreshBusData(force = false): Promise<{
-    refreshed: boolean;
-    message: string;
-    data: BusCacheData | null;
-    meta: CacheMetadata;
+export async function refreshBusData(_force = false): Promise<{
+    refreshed: boolean; message: string; data: BusCacheData | null; meta: CacheMetadata;
 }> {
     const currentData = await loadCacheData();
 

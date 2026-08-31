@@ -41,9 +41,6 @@
       "@shared/*": [
         "./src/shared/*"
       ],
-      "@components/*": [
-        "./src/components/*"
-      ],
       "@lib/*": [
         "./src/lib/*"
       ],

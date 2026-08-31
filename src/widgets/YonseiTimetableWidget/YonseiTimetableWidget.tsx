@@ -1,15 +1,14 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useState} from "react";
-import {BusRoute, CacheMetadata, RouteDataset} from "@/types/bus";
+import {BusRoute, CacheMetadata, RouteDataset} from "@shared/types/bus";
 import {YonseiRouteCard} from "./YonseiRouteCard";
 import {YonseiRouteDetailModal} from "./YonseiRouteDetailModal";
-import {NoticeBanner} from "@/components/NoticeBanner";
-import {NoticeModal} from "@/components/NoticeModal";
-import {CacheInfoBanner} from "@/components/CacheInfoBanner";
-import {Footer} from "@/components/Footer";
+import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
+import {CacheInfoBanner} from "@widgets/TimetableWidget/CacheInfoBanner";
+import {Footer} from "@shared/ui/Footer";
 import {TARGET_ROUTE_NUMBERS} from "@/data/yonseiRoutes";
-import {selectRouteVariant} from "@/lib/timeUtils";
+import {selectRouteVariant} from "@shared/lib/timeUtils";
 import {CheckCircle2, Info, X} from "lucide-react";
 
 interface YonseiTimetableWidgetProps {
@@ -21,9 +20,9 @@ interface YonseiTimetableWidgetProps {
 
 export default function YonseiTimetableWidget({
                                                   onSelectMapRoute,
-                                                  isEmbedded = false,
+                                                  isEmbedded: _isEmbedded = false,
                                                   dayMode: externalDayMode,
-                                                  onDayModeChange,
+                                                  onDayModeChange: _onDayModeChange,
                                               }: YonseiTimetableWidgetProps) {
     const [routes, setRoutes] = useState<BusRoute[]>([]);
     const [meta, setMeta] = useState<CacheMetadata | null>(null);
@@ -32,7 +31,7 @@ export default function YonseiTimetableWidget({
     const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
 
     // Internal dayMode if not controlled externally
-    const [internalDayMode, setInternalDayMode] = useState<"AUTO" | "WEEKDAY" | "VACATION">("AUTO");
+    const [internalDayMode] = useState<"AUTO" | "WEEKDAY" | "VACATION">("AUTO");
     const dayMode = externalDayMode ?? internalDayMode;
 
     // Toast notification state
@@ -172,7 +171,7 @@ export default function YonseiTimetableWidget({
             )}
 
             {/* Wonju ITS Live Notice Banner */}
-            <NoticeBanner onOpenNoticeModal={handleOpenNoticeModal}/>
+            <NoticeBanner onClick={handleOpenNoticeModal}/>
 
             {/* 3 Route Cards Grid (30, 34, 34-1) */}
             {isLoading && activeRoutes.length === 0 ? (

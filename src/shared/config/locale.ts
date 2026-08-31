@@ -76,6 +76,12 @@ const YONSEI_STRINGS = {
     NEXT_BUS_BADGE: "다음",
     FOOTNOTE_TITLE: "각주 안내 (비고)",
     FOOTNOTE_SCROLL_HINT: "좌우로 스크롤하여 확인",
+    FOOTNOTE_ALL: "전체 보기",
+    FOOTNOTE_CLEAR: "강조 해제",
+    FOOTNOTE_ACTIVE_DESC: (symbol: string, text: string) => `${symbol} "${text}" 비고 적용 시간 강조 중`,
+    FOOTNOTE_COUNT_SUFFIX: (count: number) => `${count}회`,
+    FOOTNOTE_TOOLTIP_ACTIVE: "클릭하여 이 비고 시간만 강조",
+    FOOTNOTE_TOOLTIP_CLEAR: "클릭하여 각주 강조 해제",
 
     REFRESH_SUCCESS: "시간표 데이터가 원주시 ITS에서 새로 수집되어 갱신되었습니다.",
     REFRESH_INFO: "최소 갱신 시간이 지나지 않아 기존 저장소 JSON 데이터를 사용합니다.",
@@ -228,8 +234,7 @@ export const UI_TEXT = {
         THEME_TOGGLE_LABEL: "화면 테마 변경",
     },
 
-    TIMETABLE: TIMETABLE_STRINGS,
-    TIMETABLE_HEADER: TIMETABLE_STRINGS,
+    TIMETABLE: TIMETABLE_STRINGS, TIMETABLE_HEADER: TIMETABLE_STRINGS,
 
     BOTTOM_NAV: {
         TAB_SCHEDULE: "시간표",
@@ -245,8 +250,7 @@ export const UI_TEXT = {
         PICK_ROUTE_TITLE: "노선 선택",
     },
 
-    YONSEI: YONSEI_STRINGS,
-    YONSEI_TIMETABLE: YONSEI_STRINGS,
+    YONSEI: YONSEI_STRINGS, YONSEI_TIMETABLE: YONSEI_STRINGS,
 
     BUS_SERVICE: {
         DATA_UPDATED: "시간표 데이터가 업데이트되었습니다.",
@@ -297,13 +301,11 @@ export const UI_TEXT = {
     },
 
     MAP: {
-        BUS_LOCATION_TITLE: "실시간 버스 위치",
-        BUS_LOCATION_DESC: "지도에서 실시간으로 버스 위치를 확인하세요.",
+        BUS_LOCATION_TITLE: "실시간 버스 위치", BUS_LOCATION_DESC: "지도에서 실시간으로 버스 위치를 확인하세요.",
     },
 
     STOP_POPUP: {
-        STATION_ID_LABEL: "정류장 ID",
-        STATION_ID_FALLBACK: "N/A",
+        STATION_ID_LABEL: "정류장 ID", STATION_ID_FALLBACK: "N/A",
     },
 
     ERROR: {
@@ -319,8 +321,7 @@ export const UI_TEXT = {
     },
 
     METADATA: {
-        TITLE: "wBus",
-        DESC: "원주 시내버스 실시간 도착 정보 & 시간표",
+        TITLE: "wBus", DESC: "원주 시내버스 실시간 도착 정보 & 시간표",
     },
 
     NOTICE: {

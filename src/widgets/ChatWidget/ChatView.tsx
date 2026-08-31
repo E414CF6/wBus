@@ -91,7 +91,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                                       onRefresh,
                                                       isRefreshing = false,
                                                       filterRoute = "ALL",
-                                                      onFilterRouteChange,
+                                                      onFilterRouteChange: _onFilterRouteChange,
                                                   }) => {
     const [newContent, setNewContent] = useState("");
     const [newAuthor, setNewAuthor] = useState("");
@@ -108,8 +108,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
     // States
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [commentSuccess, setCommentSuccess] = useState(false);
-    const [autoRefresh, setAutoRefresh] = useState(true);
-    const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
+    const [autoRefresh, _setAutoRefresh] = useState(true);
+    const [_lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
     const [likedCommentIds, setLikedCommentIds] = useState<Set<string>>(new Set());
     const [myCommentIds, setMyCommentIds] = useState<Set<string>>(new Set());
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -241,8 +241,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
             authorTag: comment.authorTag,
             content: comment.isDeleted ? "삭제된 메시지" : comment.content,
         });
-        if (comment.routeNo) {
+        if (comment.routeNo && comment.routeNo !== "ALL") {
             setSelectedRouteTag(comment.routeNo);
+        } else {
+            setSelectedRouteTag("ALL");
         }
         if (inputRef.current) {
             inputRef.current.focus();
@@ -440,7 +442,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         <div className="w-full flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 animate-fadeIn">
             {/* 1. Header Card with Title, Filters & Controls */}
             <div
-                className="shrink-0 backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl p-3.5 sm:p-4 border border-slate-200/80 dark:border-whitㅌe/10 shadow-sm space-y-3">
+                className="shrink-0 backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl p-3.5 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-sm space-y-3">
                 {/* Top Info Bar */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
@@ -619,7 +621,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                                                         {comment.category}
                                                                     </span>
                                                                 )}
-                                                                {comment.routeNo && (
+                                                                {comment.routeNo && comment.routeNo !== "ALL" && (
                                                                     <span
                                                                         className="px-1.5 py-0.2 rounded-md bg-blue-600/10 text-blue-600 dark:text-blue-400 text-[10px] font-black">
                                                                         {comment.routeNo}번

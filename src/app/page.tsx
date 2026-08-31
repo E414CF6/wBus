@@ -6,7 +6,7 @@ import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 import BottomNav, {DayMode, NavTab, TimetableSubTab} from "@shared/ui/BottomNav";
 import Splash from "@shared/ui/Splash";
 import {TimetableWidget} from "@widgets/TimetableWidget";
-import {ChatView} from "@components/ChatView";
+import {ChatView} from "@widgets/ChatWidget";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
 import {CommentItem} from "@/types/comment";
 

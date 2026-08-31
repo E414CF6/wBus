@@ -5,7 +5,7 @@ import {createPortal} from "react-dom";
 import {BusRoute} from "@shared/types/bus";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 import {UI_TEXT} from "@shared/config/locale";
-import {Clock, Info, MapPin, Palmtree, Search, Sun, X} from "lucide-react";
+import {Clock, Info, MapPin, Palmtree, RotateCcw, Search, Sparkles, Sun, X} from "lucide-react";
 
 interface YonseiRouteDetailModalProps {
     route: BusRoute | null;
@@ -264,6 +264,42 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
         return weekdayRoute.id === vacationRoute.id;
     }, [route, weekdayRoute, vacationRoute]);
 
+    // Calculate occurrences of each footnote number in the current route
+    const footnoteCounts = useMemo(() => {
+        const counts = new Map<number, number>();
+        for (const hourRow of dualHourlyTimetable) {
+            for (const item of hourRow.weekdayMinutes) {
+                if (item.footnoteNumber) {
+                    counts.set(item.footnoteNumber, (counts.get(item.footnoteNumber) || 0) + 1);
+                }
+            }
+            if (!isSingleSchedule) {
+                for (const item of hourRow.vacationMinutes) {
+                    if (item.footnoteNumber) {
+                        counts.set(item.footnoteNumber, (counts.get(item.footnoteNumber) || 0) + 1);
+                    }
+                }
+            }
+        }
+        return counts;
+    }, [dualHourlyTimetable, isSingleSchedule]);
+
+    // Active selected footnote details
+    const selectedFootnoteInfo = useMemo(() => {
+        if (!selectedFootnote) return null;
+        for (const [noteText, num] of footnoteMap.entries()) {
+            if (num === selectedFootnote) {
+                return {
+                    num,
+                    symbol: getFootnoteSymbol(num),
+                    noteText,
+                    count: footnoteCounts.get(num) || 0,
+                };
+            }
+        }
+        return null;
+    }, [selectedFootnote, footnoteMap, footnoteCounts]);
+
     if (!route || !mounted) return null;
 
     const targetRouteNo = route.routeNo;
@@ -275,6 +311,87 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
         if (no === "34") return "from-blue-600 to-indigo-600 shadow-blue-500/20";
         if (no === "34-1") return "from-indigo-600 to-purple-600 shadow-indigo-500/20";
         return "from-[#003876] to-blue-700 shadow-blue-900/30";
+    };
+
+    // Render individual minute badge with footnote highlight and dimming logic
+    const renderMinuteBadge = (item: MinuteItem, isVacationCol = false) => {
+        const isFootnoteActive = selectedFootnote !== null;
+        const isMatchingFootnote = isFootnoteActive && item.footnoteNumber === selectedFootnote;
+        const isDimmed = isFootnoteActive && !isMatchingFootnote;
+        const hasFootnote = Boolean(item.footnoteNumber);
+
+        let chipStyle = "";
+        if (isMatchingFootnote) {
+            chipStyle =
+                "bg-amber-400 dark:bg-amber-500 text-slate-950 dark:text-black border-amber-500 dark:border-amber-400 ring-2 ring-amber-400/90 dark:ring-amber-300 shadow-lg scale-105 sm:scale-110 z-10 font-black animate-pulse";
+        } else if (isDimmed) {
+            chipStyle =
+                "opacity-25 dark:opacity-20 hover:opacity-80 transition-opacity bg-slate-100 dark:bg-white/5 text-slate-400 border-slate-200/40 dark:border-white/5";
+        } else if (item.isNextBus) {
+            chipStyle = isVacationCol
+                ? "bg-indigo-600 text-white border-indigo-600 shadow-md scale-105"
+                : "bg-blue-600 text-white border-blue-600 shadow-md scale-105";
+        } else {
+            chipStyle = isVacationCol
+                ? "bg-indigo-50/80 dark:bg-indigo-950/40 text-indigo-950 dark:text-indigo-200 border-indigo-200/60 dark:border-indigo-500/20 hover:border-indigo-400/60"
+                : "bg-blue-50/80 dark:bg-blue-950/40 text-blue-950 dark:text-blue-200 border-blue-200/60 dark:border-blue-500/20 hover:border-blue-400/60";
+        }
+
+        const handleItemClick = () => {
+            if (item.footnoteNumber) {
+                setSelectedFootnote(
+                    selectedFootnote === item.footnoteNumber ? null : item.footnoteNumber
+                );
+            }
+        };
+
+        const tooltip = item.notes
+            ? `${item.destDepTime} 출발 (비고: ${item.notes}) - ${
+                isMatchingFootnote
+                    ? UI_TEXT.YONSEI.FOOTNOTE_TOOLTIP_CLEAR
+                    : UI_TEXT.YONSEI.FOOTNOTE_TOOLTIP_ACTIVE
+            }`
+            : `${item.destDepTime} 출발`;
+
+        return (
+            <button
+                key={item.seq}
+                type="button"
+                onClick={handleItemClick}
+                title={tooltip}
+                className={`inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-xl font-mono text-[11px] sm:text-xs font-bold border transition-all active:scale-95 ${
+                    hasFootnote ? "cursor-pointer" : "cursor-default"
+                } ${chipStyle}`}
+            >
+                <span className="font-extrabold">{item.minuteStr}</span>
+                {item.isNextBus && (
+                    <span
+                        className={`text-[8px] sm:text-[9px] px-0.5 sm:px-1 py-0.2 rounded font-sans font-black ${
+                            isMatchingFootnote
+                                ? "bg-amber-900/30 text-amber-950 dark:text-black"
+                                : "bg-white/20 text-white"
+                        }`}
+                    >
+                        {UI_TEXT.YONSEI.NEXT_BUS_BADGE}
+                    </span>
+                )}
+                {item.footnoteSymbol && (
+                    <span
+                        className={`text-xs font-black font-mono ml-0.5 ${
+                            isMatchingFootnote
+                                ? "text-amber-950 dark:text-black font-black"
+                                : item.isNextBus
+                                    ? isVacationCol
+                                        ? "text-indigo-200"
+                                        : "text-amber-200"
+                                    : "text-amber-600 dark:text-amber-400"
+                        }`}
+                    >
+                        {item.footnoteSymbol}
+                    </span>
+                )}
+            </button>
+        );
     };
 
     const modalContent = (
@@ -333,7 +450,7 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                     </div>
                 </div>
 
-                {/* Full-width Via Marquee Strip (좌우를 가득 채우는 주요 경유지 바) */}
+                {/* Full-width Via Marquee Strip */}
                 {viaStops && (
                     <div
                         className="w-full px-3.5 sm:px-6 py-1.5 sm:py-2 bg-slate-100/90 dark:bg-white/[0.03] border-b border-slate-200/70 dark:border-white/10 flex items-center gap-2 sm:gap-2.5 overflow-hidden shrink-0">
@@ -376,6 +493,35 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                         <span>{UI_TEXT.YONSEI.HOURS_DISPLAYED(dualHourlyTimetable.length)}</span>
                     </div>
                 </div>
+
+                {/* Active Footnote Highlight Filter Banner */}
+                {selectedFootnoteInfo && (
+                    <div
+                        className="px-3.5 sm:px-6 py-2 bg-amber-500/15 dark:bg-amber-500/20 border-b border-amber-400/40 dark:border-amber-500/30 flex items-center justify-between gap-2 shrink-0 animate-fadeIn">
+                        <div
+                            className="flex items-center gap-2 min-w-0 text-xs font-bold text-amber-950 dark:text-amber-200 truncate">
+                            <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0"/>
+                            <span className="truncate">
+                                <span className="font-mono font-black mr-1 text-amber-700 dark:text-amber-300">
+                                    {selectedFootnoteInfo.symbol}
+                                </span>
+                                &quot;{selectedFootnoteInfo.noteText}&quot; 각주 적용 시간표 강조 중
+                            </span>
+                            <span
+                                className="px-1.5 py-0.2 rounded-md bg-amber-500/20 text-amber-900 dark:text-amber-300 text-[10px] font-black shrink-0">
+                                {UI_TEXT.YONSEI.FOOTNOTE_COUNT_SUFFIX(selectedFootnoteInfo.count)}
+                            </span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedFootnote(null)}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 text-[11px] font-black transition-all cursor-pointer shrink-0 active:scale-95"
+                        >
+                            <RotateCcw className="w-3 h-3"/>
+                            <span>{UI_TEXT.YONSEI.FOOTNOTE_CLEAR}</span>
+                        </button>
+                    </div>
+                )}
 
                 {/* Timetable Table Header */}
                 <div
@@ -465,47 +611,7 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                                     className="text-slate-300 dark:text-slate-600 italic text-[11px]">-</span>
                                             ) : (
                                                 <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                                                    {weekdayMinutes.map((item) => (
-                                                        <div
-                                                            key={item.seq}
-                                                            className={`inline-flex items-center gap-1 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl font-mono text-xs font-bold border transition-all active:scale-95 ${
-                                                                item.isNextBus
-                                                                    ? "bg-blue-600 text-white border-blue-600 shadow-md scale-105"
-                                                                    : "bg-blue-50/80 dark:bg-blue-950/40 text-blue-950 dark:text-blue-200 border-blue-200/60 dark:border-blue-500/20 hover:border-blue-400/60"
-                                                            }`}
-                                                        >
-                                                            <span
-                                                                className="font-extrabold text-xs sm:text-[13px]">{item.minuteStr}</span>
-                                                            {item.isNextBus && (
-                                                                <span
-                                                                    className="text-[8px] sm:text-[9px] px-1 py-0.2 rounded bg-white/20 text-white font-sans font-black">
-                                                                    {UI_TEXT.YONSEI.NEXT_BUS_BADGE}
-                                                                </span>
-                                                            )}
-                                                            {item.footnoteSymbol && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        if (item.footnoteNumber) {
-                                                                            setSelectedFootnote(
-                                                                                selectedFootnote === item.footnoteNumber
-                                                                                    ? null
-                                                                                    : item.footnoteNumber
-                                                                            );
-                                                                        }
-                                                                    }}
-                                                                    title={item.notes}
-                                                                    className={`text-xs font-black font-mono ml-0.5 cursor-pointer hover:scale-125 transition-transform ${
-                                                                        item.isNextBus
-                                                                            ? "text-amber-200"
-                                                                            : "text-amber-600 dark:text-amber-400"
-                                                                    }`}
-                                                                >
-                                                                    {item.footnoteSymbol}
-                                                                </button>
-                                                            )}
-                                                        </div>
-                                                    ))}
+                                                    {weekdayMinutes.map((item) => renderMinuteBadge(item, false))}
                                                 </div>
                                             )}
                                         </div>
@@ -520,46 +626,7 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                                         className="text-slate-300 dark:text-slate-600 italic text-[11px]">-</span>
                                                 ) : (
                                                     <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-                                                        {weekdayMinutes.map((item) => (
-                                                            <div
-                                                                key={item.seq}
-                                                                className={`inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-xl font-mono text-[11px] sm:text-xs font-bold border transition-all active:scale-95 ${
-                                                                    item.isNextBus
-                                                                        ? "bg-blue-600 text-white border-blue-600 shadow-md scale-105"
-                                                                        : "bg-blue-50/80 dark:bg-blue-950/40 text-blue-950 dark:text-blue-200 border-blue-200/60 dark:border-blue-500/20"
-                                                                }`}
-                                                            >
-                                                                <span className="font-extrabold">{item.minuteStr}</span>
-                                                                {item.isNextBus && (
-                                                                    <span
-                                                                        className="text-[8px] sm:text-[9px] px-0.5 sm:px-1 py-0.2 rounded bg-white/20 text-white font-sans font-black">
-                                                                        {UI_TEXT.YONSEI.NEXT_BUS_BADGE}
-                                                                    </span>
-                                                                )}
-                                                                {item.footnoteSymbol && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            if (item.footnoteNumber) {
-                                                                                setSelectedFootnote(
-                                                                                    selectedFootnote === item.footnoteNumber
-                                                                                        ? null
-                                                                                        : item.footnoteNumber
-                                                                                );
-                                                                            }
-                                                                        }}
-                                                                        title={item.notes}
-                                                                        className={`text-xs font-black font-mono ml-0.5 cursor-pointer hover:scale-125 transition-transform ${
-                                                                            item.isNextBus
-                                                                                ? "text-amber-200"
-                                                                                : "text-amber-600 dark:text-amber-400"
-                                                                        }`}
-                                                                    >
-                                                                        {item.footnoteSymbol}
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        ))}
+                                                        {weekdayMinutes.map((item) => renderMinuteBadge(item, false))}
                                                     </div>
                                                 )}
                                             </div>
@@ -571,46 +638,7 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                                         className="text-slate-300 dark:text-slate-600 italic text-[11px]">-</span>
                                                 ) : (
                                                     <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
-                                                        {vacationMinutes.map((item) => (
-                                                            <div
-                                                                key={item.seq}
-                                                                className={`inline-flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-md sm:rounded-xl font-mono text-[11px] sm:text-xs font-bold border transition-all active:scale-95 ${
-                                                                    item.isNextBus
-                                                                        ? "bg-indigo-600 text-white border-indigo-600 shadow-md scale-105"
-                                                                        : "bg-indigo-50/80 dark:bg-indigo-950/40 text-indigo-950 dark:text-indigo-200 border-indigo-200/60 dark:border-indigo-500/20"
-                                                                }`}
-                                                            >
-                                                                <span className="font-extrabold">{item.minuteStr}</span>
-                                                                {item.isNextBus && (
-                                                                    <span
-                                                                        className="text-[8px] sm:text-[9px] px-0.5 sm:px-1 py-0.2 rounded bg-white/20 text-white font-sans font-black">
-                                                                        {UI_TEXT.YONSEI.NEXT_BUS_BADGE}
-                                                                    </span>
-                                                                )}
-                                                                {item.footnoteSymbol && (
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            if (item.footnoteNumber) {
-                                                                                setSelectedFootnote(
-                                                                                    selectedFootnote === item.footnoteNumber
-                                                                                        ? null
-                                                                                        : item.footnoteNumber
-                                                                                );
-                                                                            }
-                                                                        }}
-                                                                        title={item.notes}
-                                                                        className={`text-xs font-black font-mono ml-0.5 cursor-pointer hover:scale-125 transition-transform ${
-                                                                            item.isNextBus
-                                                                                ? "text-indigo-200"
-                                                                                : "text-amber-600 dark:text-amber-400"
-                                                                        }`}
-                                                                    >
-                                                                        {item.footnoteSymbol}
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        ))}
+                                                        {vacationMinutes.map((item) => renderMinuteBadge(item, true))}
                                                     </div>
                                                 )}
                                             </div>
@@ -622,7 +650,7 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                     )}
                 </div>
 
-                {/* Footnote Strip Box (비고가 길어지지 않게 1줄 가로 스크롤 스트립) */}
+                {/* Footnote Strip Box */}
                 {footnoteMap.size > 0 && (
                     <div
                         className="p-3 sm:p-4 bg-slate-100/90 dark:bg-white/[0.04] border-t border-slate-200/80 dark:border-white/10 text-xs shrink-0">
@@ -633,9 +661,20 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                 <Info className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"/>
                                 <span>{UI_TEXT.YONSEI.FOOTNOTE_TITLE}</span>
                             </div>
-                            <div
-                                className="text-[10px] sm:text-[11px] font-semibold text-slate-400 dark:text-slate-400">
-                                {UI_TEXT.YONSEI.FOOTNOTE_SCROLL_HINT} →
+                            <div className="flex items-center gap-2">
+                                {selectedFootnote !== null && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setSelectedFootnote(null)}
+                                        className="text-[10px] sm:text-[11px] font-black text-amber-700 dark:text-amber-300 hover:underline cursor-pointer"
+                                    >
+                                        {UI_TEXT.YONSEI.FOOTNOTE_CLEAR}
+                                    </button>
+                                )}
+                                <span
+                                    className="text-[10px] sm:text-[11px] font-semibold text-slate-400 dark:text-slate-400">
+                                    {UI_TEXT.YONSEI.FOOTNOTE_SCROLL_HINT} →
+                                </span>
                             </div>
                         </div>
 
@@ -644,14 +683,22 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                             className="flex items-center gap-2 overflow-x-auto custom-scrollbar py-1 scroll-smooth touch-pan-x overscroll-x-contain">
                             {Array.from(footnoteMap.entries()).map(([noteText, num]) => {
                                 const isHighlighted = selectedFootnote === num;
+                                const count = footnoteCounts.get(num) || 0;
+
                                 return (
-                                    <div
+                                    <button
                                         key={num}
+                                        type="button"
                                         onClick={() => setSelectedFootnote(isHighlighted ? null : num)}
+                                        title={
+                                            isHighlighted
+                                                ? UI_TEXT.YONSEI.FOOTNOTE_TOOLTIP_CLEAR
+                                                : UI_TEXT.YONSEI.FOOTNOTE_TOOLTIP_ACTIVE
+                                        }
                                         className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border shrink-0 transition-all cursor-pointer select-none active:scale-95 ${
                                             isHighlighted
-                                                ? "bg-amber-100 dark:bg-amber-950/70 border-amber-400 dark:border-amber-500 shadow-sm ring-1 ring-amber-400"
-                                                : "bg-white dark:bg-[#181d2a] border-slate-200/80 dark:border-white/10 hover:border-blue-400/60"
+                                                ? "bg-amber-100 dark:bg-amber-950/80 border-amber-500 dark:border-amber-400 text-amber-950 dark:text-amber-100 shadow-md ring-2 ring-amber-400"
+                                                : "bg-white dark:bg-[#181d2a] border-slate-200/80 dark:border-white/10 hover:border-blue-400/60 text-slate-700 dark:text-slate-200"
                                         }`}
                                     >
                                         <span
@@ -659,10 +706,21 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                             {getFootnoteSymbol(num)}
                                         </span>
                                         <span
-                                            className="text-slate-700 dark:text-slate-200 font-bold text-[11px] sm:text-xs whitespace-nowrap">
+                                            className="font-bold text-[11px] sm:text-xs whitespace-nowrap">
                                             {noteText}
                                         </span>
-                                    </div>
+                                        {count > 0 && (
+                                            <span
+                                                className={`text-[10px] font-black px-1.5 py-0.2 rounded-md ${
+                                                    isHighlighted
+                                                        ? "bg-amber-500/20 text-amber-900 dark:text-amber-200"
+                                                        : "bg-slate-100 dark:bg-white/5 text-slate-400"
+                                                }`}
+                                            >
+                                                {UI_TEXT.YONSEI.FOOTNOTE_COUNT_SUFFIX(count)}
+                                            </span>
+                                        )}
+                                    </button>
                                 );
                             })}
                         </div>
@@ -674,4 +732,3 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
 
     return createPortal(modalContent, document.body);
 };
-

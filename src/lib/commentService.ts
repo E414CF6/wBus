@@ -39,6 +39,19 @@ const INITIAL_COMMENTS: CommentItem[] = [{
 
 let inMemoryComments: CommentItem[] | null = null;
 
+function sanitizeComment(c: CommentItem): CommentItem {
+    if (c.routeNo === "ALL" || c.routeNo === "" || !c.routeNo) {
+        const copy = {...c};
+        delete copy.routeNo;
+        return copy;
+    }
+    return c;
+}
+
+function sanitizeComments(comments: CommentItem[]): CommentItem[] {
+    return comments.map(sanitizeComment);
+}
+
 function getLocalCachePath(): string {
     return path.join(process.cwd(), "public", "data", "comments.json");
 }
@@ -55,15 +68,15 @@ async function loadFromUpstash(): Promise<CommentItem[] | null> {
         if (!raw) return null;
 
         if (Array.isArray(raw)) {
-            return raw;
+            return sanitizeComments(raw);
         }
         if (typeof raw === "object" && "comments" in raw && Array.isArray((raw as CommentsDataset).comments)) {
-            return (raw as CommentsDataset).comments;
+            return sanitizeComments((raw as CommentsDataset).comments);
         }
         if (typeof raw === "string") {
             const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) return parsed;
-            if (parsed && Array.isArray(parsed.comments)) return parsed.comments;
+            if (Array.isArray(parsed)) return sanitizeComments(parsed);
+            if (parsed && Array.isArray(parsed.comments)) return sanitizeComments(parsed.comments);
         }
     } catch (err) {
         console.warn("[Comments] Failed to read from Upstash Redis:", err);
@@ -77,7 +90,7 @@ async function saveToUpstash(comments: CommentItem[]): Promise<void> {
 
     try {
         const dataset: CommentsDataset = {
-            updatedAt: new Date().toISOString(), comments,
+            updatedAt: new Date().toISOString(), comments: sanitizeComments(comments),
         };
         await redis.set(UPSTASH_COMMENTS_KEY, dataset);
     } catch (err) {
@@ -99,24 +112,23 @@ async function loadFromBlob(): Promise<CommentItem[] | null> {
             if (res.ok) {
                 const data: CommentsDataset = await res.json();
                 if (data && Array.isArray(data.comments)) {
-                    return data.comments;
+                    return sanitizeComments(data.comments);
                 }
             }
         }
     } catch {
-        // Fall through
+        // Blob token not configured or file doesn't exist yet
     }
     return null;
 }
 
 async function saveToBlob(comments: CommentItem[]): Promise<void> {
-    const dataset: CommentsDataset = {
-        updatedAt: new Date().toISOString(), comments,
-    };
-    const jsonStr = JSON.stringify(dataset, null, 2);
-
     try {
         const {put} = await import("@vercel/blob");
+        const dataset: CommentsDataset = {
+            updatedAt: new Date().toISOString(), comments: sanitizeComments(comments),
+        };
+        const jsonStr = JSON.stringify(dataset, null, 2);
         await put(BLOB_COMMENTS_PATH, jsonStr, {
             access: "public", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true,
         });
@@ -136,7 +148,7 @@ function loadFromLocalFile(): CommentItem[] | null {
             const raw = fs.readFileSync(localPath, "utf-8");
             const parsed: CommentsDataset = JSON.parse(raw);
             if (parsed && Array.isArray(parsed.comments)) {
-                return parsed.comments;
+                return sanitizeComments(parsed.comments);
             }
         } catch {
             // Ignore
@@ -150,7 +162,7 @@ function loadFromLocalFile(): CommentItem[] | null {
             const raw = fs.readFileSync(tmpPath, "utf-8");
             const parsed: CommentsDataset = JSON.parse(raw);
             if (parsed && Array.isArray(parsed.comments)) {
-                return parsed.comments;
+                return sanitizeComments(parsed.comments);
             }
         } catch {
             // Ignore
@@ -161,7 +173,7 @@ function loadFromLocalFile(): CommentItem[] | null {
 
 function saveToLocalFile(comments: CommentItem[]): void {
     const dataset: CommentsDataset = {
-        updatedAt: new Date().toISOString(), comments,
+        updatedAt: new Date().toISOString(), comments: sanitizeComments(comments),
     };
     const jsonStr = JSON.stringify(dataset, null, 2);
 
@@ -190,32 +202,32 @@ function saveToLocalFile(comments: CommentItem[]): void {
  */
 export async function getComments(forceFresh = false): Promise<CommentItem[]> {
     if (!forceFresh && inMemoryComments !== null) {
-        return inMemoryComments;
+        return sanitizeComments(inMemoryComments);
     }
 
     // 1. Try loading from Upstash Redis (Highest priority)
     const upstashComments = await loadFromUpstash();
     if (upstashComments !== null) {
-        inMemoryComments = upstashComments;
+        inMemoryComments = sanitizeComments(upstashComments);
         return inMemoryComments;
     }
 
     // 2. Try loading from Vercel Blob
     const blobComments = await loadFromBlob();
     if (blobComments !== null) {
-        inMemoryComments = blobComments;
+        inMemoryComments = sanitizeComments(blobComments);
         return inMemoryComments;
     }
 
     // 3. Try loading from local public/data/comments.json or /tmp/comments.json
     const localComments = loadFromLocalFile();
     if (localComments !== null) {
-        inMemoryComments = localComments;
+        inMemoryComments = sanitizeComments(localComments);
         return inMemoryComments;
     }
 
     // 4. Fallback to default initial comments and seed
-    inMemoryComments = INITIAL_COMMENTS;
+    inMemoryComments = sanitizeComments(INITIAL_COMMENTS);
     saveToLocalFile(inMemoryComments);
     saveToUpstash(inMemoryComments).catch(() => {
     });
@@ -236,6 +248,8 @@ export async function addComment(params: {
 
     const generatedTag = params.authorTag || generateUserTag();
     const finalAuthor = params.author?.trim() || getRandomNickname();
+    const rawRouteNo = params.routeNo?.trim();
+    const finalRouteNo = rawRouteNo && rawRouteNo !== "ALL" ? rawRouteNo : undefined;
 
     const newComment: CommentItem = {
         id: `c-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
@@ -243,8 +257,7 @@ export async function addComment(params: {
         authorTag: generatedTag,
         content: params.content.trim(),
         category: params.category || "잡담",
-        createdAt: new Date().toISOString(),
-        routeNo: params.routeNo || "ALL",
+        createdAt: new Date().toISOString(), ...(finalRouteNo ? {routeNo: finalRouteNo} : {}),
         likes: 0,
         parentId: params.parentId,
         replyToAuthor: params.replyToAuthor,
@@ -279,14 +292,14 @@ export async function likeComment(id: string): Promise<CommentItem | null> {
     return targetComment;
 }
 
-export async function deleteComment(id: string, authorTag?: string): Promise<CommentItem | null> {
+export async function deleteComment(id: string, userTag?: string): Promise<CommentItem | null> {
     const current = await getComments(true);
     let targetComment: CommentItem | null = null;
 
     const updated = current.map((c) => {
         if (c.id === id) {
-            if (authorTag && c.authorTag && c.authorTag !== authorTag) {
-                throw new Error("작성자만 삭제할 수 있습니다.");
+            if (userTag && c.authorTag && c.authorTag !== userTag) {
+                return c;
             }
             targetComment = {
                 ...c, isDeleted: true, content: "삭제된 메시지입니다.",

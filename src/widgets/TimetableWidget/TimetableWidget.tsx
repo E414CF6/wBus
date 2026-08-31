@@ -29,8 +29,8 @@ const DEFAULT_BOOKMARK_ROUTES = ["30", "34", "34-1"];
 
 export default function TimetableWidget({
                                             subTab: externalSubTab,
-                                            onSubTabChange: externalOnSubTabChange,
-                                            initialRoute,
+                                            onSubTabChange: _onSubTabChange,
+                                            initialRoute: _initialRoute,
                                             onSelectMapRoute,
                                             dayMode,
                                             onDayModeChange,

@@ -20,22 +20,24 @@ export interface BusRoute {
     timetable: TimetableEntry[];
 }
 
-export interface CacheMetadata {
-    filePath: string;
-    exists: boolean;
-    sizeBytes: number;
-    updatedAt: string | null;
-    totalRoutes: number;
-    minRefreshIntervalDays: number;
-    canRefresh: boolean;
-    nextRefreshAvailableAt: string | null;
-}
-
 export interface BusCacheData {
     updatedAt: string;
     sourceUrl: string;
     totalRoutes: number;
     routes: BusRoute[];
+}
+
+export type RouteDataset = BusCacheData;
+
+export interface CacheMetadata {
+    filePath?: string;
+    exists: boolean;
+    sizeBytes?: number;
+    updatedAt: string | null;
+    totalRoutes: number;
+    minRefreshIntervalDays: number;
+    canRefresh: boolean;
+    nextRefreshAvailableAt: string | null;
 }
 
 export interface ApiResponse<T> {
@@ -47,3 +49,7 @@ export interface ApiResponse<T> {
     error?: string;
     elapsedMs?: number;
 }
+
+export type DayMode = "AUTO" | "WEEKDAY" | "VACATION";
+
+export type DepartureDirection = "DEST" | "ORIGIN";

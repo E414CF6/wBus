@@ -54,7 +54,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             return Array.from(set).filter((r) => allRoutes.includes(r));
         }
         return Array.from(set);
-    }, [allRoutes, selectedRoute]);
+    }, [allRoutes]);
 
     const handleSelectFromModal = useCallback(
         (route: string) => {
