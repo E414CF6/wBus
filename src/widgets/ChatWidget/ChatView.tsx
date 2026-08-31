@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useEffect, useMemo, useRef, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {
     ArrowDown,
     Ban,
@@ -103,7 +103,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     // Filters
     const [filterCategory, setFilterCategory] = useState<string>("ALL");
-    const [searchQuery, setSearchQuery] = useState<string>("");
+    const [searchQuery, setSearchQuery] = useState<string>("ALL".length ? "" : "");
 
     // States
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -121,17 +121,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
     const listContainerRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+    const isNearBottomRef = useRef<boolean>(true);
+    const hasInitiallyScrolledRef = useRef<boolean>(false);
 
-    const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
-        if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({behavior, block: "end"});
-        } else if (listContainerRef.current) {
+    const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
+        if (listContainerRef.current) {
             listContainerRef.current.scrollTo({
                 top: listContainerRef.current.scrollHeight,
                 behavior,
             });
+        } else if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({behavior, block: "end"});
         }
-    };
+    }, []);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -183,10 +185,21 @@ export const ChatView: React.FC<ChatViewProps> = ({
             setUserTag(generateUserTag());
         }
 
-        setTimeout(() => {
+        // Scroll to bottom upon initial mount
+        const timer1 = setTimeout(() => {
             scrollToBottom("auto");
-        }, 100);
-    }, []);
+            hasInitiallyScrolledRef.current = true;
+        }, 50);
+        const timer2 = setTimeout(() => {
+            scrollToBottom("auto");
+            hasInitiallyScrolledRef.current = true;
+        }, 200);
+
+        return () => {
+            clearTimeout(timer1);
+            clearTimeout(timer2);
+        };
+    }, [scrollToBottom]);
 
     // Auto-refresh interval (every 15s)
     useEffect(() => {
@@ -279,8 +292,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const {scrollTop, scrollHeight, clientHeight} = e.currentTarget;
-        const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-        setShowScrollBottom(!isNearBottom);
+        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+        const isNear = distanceFromBottom < 80;
+        isNearBottomRef.current = isNear;
+        setShowScrollBottom(!isNear);
     };
 
     const handleSubmit = async (e?: React.FormEvent) => {
@@ -322,7 +337,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
             setTimeout(() => {
                 scrollToBottom("smooth");
-            }, 100);
+            }, 80);
 
             setTimeout(() => setCommentSuccess(false), 2500);
         } catch {
@@ -332,12 +347,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
         }
     };
 
-    // When comments update, mark latest comment and scroll if needed
+    // When comments update, mark latest comment and auto-scroll if near bottom or initial
     useEffect(() => {
         if (comments.length > 0) {
             setLatestCreatedId(comments[0].id);
+            if (isNearBottomRef.current || !hasInitiallyScrolledRef.current) {
+                setTimeout(() => {
+                    scrollToBottom(hasInitiallyScrolledRef.current ? "smooth" : "auto");
+                    hasInitiallyScrolledRef.current = true;
+                }, 80);
+            }
         }
-    }, [comments]);
+    }, [comments, scrollToBottom]);
 
     const handleLike = async (id: string) => {
         if (likedCommentIds.has(id)) return;
@@ -497,7 +518,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                         {searchQuery && (
                             <button
                                 onClick={() => setSearchQuery("")}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
                             >
                                 <X className="w-3 h-3"/>
                             </button>
@@ -526,11 +547,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
             {/* 2. Full-Width Message Feed Container (Screen-fitted responsive flex height) */}
             <div
-                ref={listContainerRef}
-                onScroll={handleScroll}
-                className="flex-1 min-h-0 relative backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl p-3.5 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-sm flex flex-col overflow-hidden"
+                className="flex-1 min-h-0 relative backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-sm flex flex-col overflow-hidden"
             >
-                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-4 pr-1 sm:pr-1.5">
+                {/* Scrollable Messages Area */}
+                <div
+                    ref={listContainerRef}
+                    onScroll={handleScroll}
+                    className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-4 p-3.5 sm:p-4 pr-1.5 sm:pr-2"
+                >
                     {filteredRoots.length === 0 ? (
                         <div className="py-24 text-center space-y-3">
                             <div
@@ -781,10 +805,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                                                         ) : (
                                                                             reply.replyToAuthor && (
                                                                                 <span
-                                                                                    className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-1.5 py-0.2 rounded-md">
-                                                                                    <CornerDownRight
-                                                                                        className="w-2.5 h-2.5"/>
-                                                                                    @{reply.replyToAuthor}
+                                                                                    className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-1.5 py-0.2 rounded">
+                                                                                    <span>@{reply.replyToAuthor}</span>
                                                                                     {reply.replyToAuthorTag && (
                                                                                         <span
                                                                                             className="font-mono text-[9px] opacity-75">
@@ -886,11 +908,11 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     <button
                         type="button"
                         onClick={() => scrollToBottom("smooth")}
-                        className="sticky bottom-2 ml-auto z-20 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-600 dark:bg-blue-500 text-white text-xs font-black shadow-lg hover:shadow-xl backdrop-blur-md transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer animate-fadeIn border border-white/20"
-                        title="최신 메시지로 이동"
+                        className="absolute bottom-3 right-4 sm:right-5 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white text-xs font-black shadow-lg shadow-blue-500/25 hover:shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer animate-fadeIn border border-white/20"
+                        title="아래로 스크롤"
                     >
                         <ArrowDown className="w-3.5 h-3.5 animate-bounce"/>
-                        <span>최신 메시지</span>
+                        <span>아래로 스크롤</span>
                     </button>
                 )}
             </div>

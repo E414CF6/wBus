@@ -10,7 +10,7 @@ export const metadata: Metadata = {
         default: "wBus", template: "wBus · %s",
     },
     description: "원주시 및 연세대 미래캠퍼스 실시간 버스 위치 및 버스 시간표",
-    keywords: ["연세대학교", "미래캠퍼스", "원주", "원주버스", "버스시간표", "실시간버스", "wBus", "30번", "34번", "34-1번"],
+    keywords: ["연세대학교", "미래캠퍼스", "원주", "원주버스", "버스시간표", "실시간버스", "wBus", "30번", "34번", "34-1번",],
     authors: [{name: "wBus"}],
     icons: {
         icon: "/favicon.ico", apple: "/apple-touch-icon.png",
@@ -24,7 +24,7 @@ export const viewport: Viewport = {
     userScalable: false,
     viewportFit: "cover",
     themeColor: [{media: "(prefers-color-scheme: light)", color: "#f8fafc"}, {
-        media: "(prefers-color-scheme: dark)", color: "#090d16"
+        media: "(prefers-color-scheme: dark)", color: "#0b0f19"
     },],
 };
 
@@ -35,7 +35,7 @@ export default function RootLayout({
 }>) {
     return (<html lang="ko" suppressHydrationWarning>
     <body
-        className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 transition-colors duration-200">
+        className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-900 dark:text-slate-100 transition-colors duration-200">
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <AppMapContextProvider>
             {children}

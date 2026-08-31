@@ -2,7 +2,7 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
-import {Bus, Check, Clock, GraduationCap, Grid, LayoutList, MapPin, Search, Star, X} from "lucide-react";
+import {Bus, Check, Clock, GraduationCap, MapPin, Search, Star, X} from "lucide-react";
 import {getRouteMeta, RouteCategory, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 
 // ----------------------------------------------------------------------
@@ -18,11 +18,8 @@ interface RouteSelectModalProps {
     recentRoutes?: string[];
 }
 
-type ViewMode = "cards" | "grid";
-
 const RECENT_ROUTES_STORAGE_KEY = "wbus_recent_map_routes";
 const BOOKMARKS_STORAGE_KEY = "wonju_bus_bookmarks";
-const VIEW_MODE_STORAGE_KEY = "wbus_route_modal_view_mode";
 const DEFAULT_BOOKMARK_ROUTES = ["30", "34", "34-1"];
 
 function sortRoutes(routes: string[]): string[] {
@@ -44,7 +41,6 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                                   }) => {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<RouteCategory>("ALL");
-    const [viewMode, setViewMode] = useState<ViewMode>("cards");
     const [bookmarks, setBookmarks] = useState<string[]>(DEFAULT_BOOKMARK_ROUTES);
     const [recentRoutes, setRecentRoutes] = useState<string[]>([]);
     const [mounted, setMounted] = useState(false);
@@ -61,10 +57,6 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             const savedRecent = localStorage.getItem(RECENT_ROUTES_STORAGE_KEY);
             if (savedRecent) {
                 setRecentRoutes(JSON.parse(savedRecent));
-            }
-            const savedViewMode = localStorage.getItem(VIEW_MODE_STORAGE_KEY) as ViewMode | null;
-            if (savedViewMode === "cards" || savedViewMode === "grid") {
-                setViewMode(savedViewMode);
             }
         } catch {
             // Ignore localStorage parse errors
@@ -104,16 +96,6 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         },
         [onSelectRoute, onClose]
     );
-
-    // Handle view mode change & persist
-    const handleViewModeChange = useCallback((mode: ViewMode) => {
-        setViewMode(mode);
-        try {
-            localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
-        } catch {
-            // Ignore
-        }
-    }, []);
 
     // Reset state & auto-focus on open
     useEffect(() => {
@@ -264,37 +246,6 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1.5 sm:gap-2">
-                        {/* View Mode Toggle Button */}
-                        <div
-                            className="flex items-center p-0.5 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] border border-black/5 dark:border-white/10">
-                            <button
-                                type="button"
-                                onClick={() => handleViewModeChange("cards")}
-                                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                    viewMode === "cards"
-                                        ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs"
-                                        : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                                }`}
-                                title="상세 카드 보기"
-                                aria-label="상세 카드 보기"
-                            >
-                                <LayoutList className="w-4 h-4"/>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => handleViewModeChange("grid")}
-                                className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                    viewMode === "grid"
-                                        ? "bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-xs"
-                                        : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
-                                }`}
-                                title="컴팩트 그리드 보기"
-                                aria-label="컴팩트 그리드 보기"
-                            >
-                                <Grid className="w-4 h-4"/>
-                            </button>
-                        </div>
-
                         {/* Close Button */}
                         <button
                             type="button"
@@ -429,7 +380,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                     </div>
                 )}
 
-                {/* Route List Display Section (Cards Mode vs Grid Mode) */}
+                {/* Route List Display Section (Card Format Only) */}
                 <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-2 sm:pt-3 custom-scrollbar">
                     {filteredRoutes.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-14 text-center text-slate-400">
@@ -455,8 +406,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                 </button>
                             )}
                         </div>
-                    ) : viewMode === "cards" ? (
-                        /* Detail Cards Mode */
+                    ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                             {filteredRoutes.map((route) => {
                                 const meta = routeMetaMap.get(route) || getRouteMeta(route);
@@ -540,71 +490,6 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                             )}
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        /* Compact Grid Mode */
-                        <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
-                            {filteredRoutes.map((route) => {
-                                const meta = routeMetaMap.get(route) || getRouteMeta(route);
-                                const isSelected = route === selectedRoute;
-                                const isYonsei = meta.isYonsei;
-                                const isBookmarked = bookmarks.includes(route);
-
-                                return (
-                                    <button
-                                        key={route}
-                                        type="button"
-                                        onClick={() => handleSelect(route)}
-                                        className={`relative flex flex-col items-center justify-center py-3 px-1.5 rounded-2xl font-black transition-all duration-200 cursor-pointer select-none active:scale-95 group ${
-                                            isSelected
-                                                ? isYonsei
-                                                    ? "bg-[#003876] text-white shadow-lg shadow-[#003876]/35 ring-2 ring-[#003876] scale-[1.03]"
-                                                    : "bg-blue-600 text-white shadow-lg shadow-blue-600/35 ring-2 ring-blue-600 scale-[1.03]"
-                                                : isYonsei
-                                                    ? "bg-blue-500/10 dark:bg-blue-500/15 hover:bg-blue-500/20 text-blue-800 dark:text-blue-300 border border-blue-500/30"
-                                                    : "bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.07] dark:hover:bg-white/[0.09] text-slate-800 dark:text-slate-100 border border-black/5 dark:border-white/5"
-                                        }`}
-                                    >
-                                        {/* Yonsei Route Special Tag */}
-                                        {isYonsei && (
-                                            <span
-                                                className={`absolute -top-1.5 px-1.5 py-0.2 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                                                    isSelected
-                                                        ? "bg-amber-400 text-slate-900 shadow-xs"
-                                                        : "bg-[#003876] text-white"
-                                                }`}
-                                            >
-                                                연세대
-                                            </span>
-                                        )}
-
-                                        {/* Bookmarked Star Indicator */}
-                                        {isBookmarked && !isYonsei && (
-                                            <div className="absolute top-1.5 left-1.5">
-                                                <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400"/>
-                                            </div>
-                                        )}
-
-                                        {/* Selected Checkmark Indicator */}
-                                        {isSelected && (
-                                            <div className="absolute top-1.5 right-1.5">
-                                                <Check className="w-3 h-3 stroke-[3]"/>
-                                            </div>
-                                        )}
-
-                                        <span className="text-sm sm:text-base tracking-tight">{route}</span>
-                                        <span
-                                            className={`text-[10px] font-semibold mt-0.5 ${
-                                                isSelected
-                                                    ? "text-white/80"
-                                                    : "text-slate-400 dark:text-slate-500 group-hover:text-slate-600 dark:group-hover:text-slate-300"
-                                            }`}
-                                        >
-                                            번
-                                        </span>
-                                    </button>
                                 );
                             })}
                         </div>
