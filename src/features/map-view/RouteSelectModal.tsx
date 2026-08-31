@@ -481,13 +481,6 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                             >
                                                 <Star className={`w-4 h-4 ${isBookmarked ? "fill-amber-500" : ""}`}/>
                                             </button>
-
-                                            {isSelected && (
-                                                <div
-                                                    className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white shadow-xs">
-                                                    <Check className="w-3.5 h-3.5 stroke-[3]"/>
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 );
