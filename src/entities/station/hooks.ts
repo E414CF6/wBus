@@ -1,7 +1,7 @@
 import {useMemo} from "react";
 import useSWR from "swr";
 
-import type {BusStopArrival} from "@entities/station/types";
+import type {BusStop, BusStopArrival, StationLocation} from "@entities/station/types";
 import type {CachedData} from "@shared/redis/types";
 import {UI_TEXT} from "@shared/config/locale";
 
@@ -13,7 +13,7 @@ const apiFetcher = async (url: string) => {
     return data.data; // Redis cached response wrapper has .data
 };
 
-// useBusStop
+// useBusStop (stops for a specific route)
 export function useBusStop(routeName: string) {
     const {data: stops} = useSWR(routeName ? `/api/route-stops/${routeName}` : null, apiFetcher, {
         revalidateOnFocus: false, // Stops are static
@@ -21,6 +21,28 @@ export function useBusStop(routeName: string) {
     });
 
     return stops ?? [];
+}
+
+// Fetcher for all station map
+const stationMapFetcher = async (url: string): Promise<Record<string, StationLocation>> => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to fetch station map");
+    const json = await res.json();
+    return json.stations || json;
+};
+
+// useAllStations (all bus stops from stationMap.json)
+export function useAllStations(): BusStop[] {
+    const {data} = useSWR<Record<string, StationLocation>>("/data/stationMap.json", stationMapFetcher, {
+        revalidateOnFocus: false, revalidateIfStale: false, dedupingInterval: 300000,
+    });
+
+    return useMemo(() => {
+        if (!data) return [];
+        return Object.entries(data).map(([nodeid, loc]) => ({
+            nodeid, nodenm: loc.nodenm, nodeno: String(loc.nodeno ?? ""), gpslati: loc.gpslati, gpslong: loc.gpslong,
+        }));
+    }, [data]);
 }
 
 // useBusArrivalInfo
@@ -49,4 +71,3 @@ export function useBusArrivalInfo(busStopId: string | null) {
         refresh: () => void mutate(),
     }), [data, isLoading, error, mutate]);
 }
-
