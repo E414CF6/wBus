@@ -7,7 +7,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
     title: {
-        default: "wBus", template: "wBus · %s",
+        default: "wBus", template: "wBus / %s",
     },
     description: "원주시 및 연세대 미래캠퍼스 실시간 버스 위치 및 버스 시간표",
     keywords: ["연세대학교", "미래캠퍼스", "원주", "원주버스", "버스시간표", "실시간버스", "wBus", "30번", "34번", "34-1번",],
