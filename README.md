@@ -2,13 +2,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![Next.js 16](https://img.shields.io/badge/Next.js-16-black?logo=next.js)](https://nextjs.org/)
-[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
+[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)\
 [![TypeScript 5](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 
-**wBus** is a modern, full-stack real-time bus tracking and timetable web application built for **Wonju City (원주시),
-South Korea**. It integrates a resilient data processing pipeline with a high-performance Next.js 16 frontend to deliver
-live bus locations, interactive route maps, municipal announcements, and comprehensive timetables.
+**wBus** is a modern, full-stack real-time bus tracking, timetable, and community web application built for **Wonju
+City (원주시), South Korea**. It integrates a resilient transit data processing pipeline with a high-performance Next.js 16
+frontend to deliver live bus locations, interactive route maps, municipal announcements, comprehensive timetables, and a
+real-time thread-based passenger community.
 
 ---
 
@@ -33,6 +34,19 @@ live bus locations, interactive route maps, municipal announcements, and compreh
 - **Polyline Snapping & Animation**: Bus GPS coordinates snap onto OSRM route polylines with smooth 3-second animated
   marker transitions.
 
+### 💬 Real-Time Thread Community & Live Bus Chatter (실시간 톡)
+
+- **Hierarchical Threaded Conversations**: Full support for root topics and nested replies (대댓글), enabling organized,
+  Reddit/forum-style real-time discussions for transit incidents, delays, or tips.
+- **Route & Category Tagging**: Filter feeds by specific bus route numbers (e.g. 30, 34, 34-1) or categories (*제보, 꿀팁,
+  질문, 분실물, 잡담*).
+- **One-Tap Quick Report Presets**: Rapidly broadcast road congestion, full bus alerts, empty seat statuses, or
+  lost-item notices with pre-configured chips.
+- **Lightweight Anonymous Identity System**: Ephemeral yet persistent user identification via client-generated hash tags
+  (`#a1b2c3`) and fun transit-themed Korean nicknames without cumbersome login friction.
+- **Community Reactions & Moderation**: Upvoting (좋아요) system, clipboard sharing, search filtering by query or user tag,
+  and author-controlled message deletion.
+
 ### 📅 Comprehensive City-Wide Timetables
 
 - Searchable timetable directory covering all Wonju city bus routes.
@@ -47,7 +61,7 @@ live bus locations, interactive route maps, municipal announcements, and compreh
 
 ### ⚡ Resilient Data Pipeline & Caching
 
-- **Multi-Tier Caching**: L1 In-Memory Cache + L2 Redis Cache + CDN / Static File fallbacks.
+- **Multi-Tier Caching**: L1 In-Memory Cache + L2 Upstash Redis + CDN / Static File fallbacks.
 - **Network Resiliency**: Includes request coalescing (preventing cache stampedes), circuit breaking, and graceful
   static cache fallbacks when government servers (`its.wonju.go.kr`) experience network timeouts.
 
@@ -60,7 +74,17 @@ The project follows **Feature-Sliced Design (FSD)** principles for strict modula
 ```
 src/
 ├── app/                  # Next.js App Router (pages, API endpoints, layouts)
-│   └── api/              # Server-side API endpoints (/api/bus, /api/notice, etc.)
+│   ├── api/
+│   │   ├── bus/          # Telemetry & Route API endpoints (/api/bus, /api/bus/stream)
+│   │   ├── comments/     # Thread Community API (/api/comments - GET/POST/PATCH/DELETE)
+│   │   ├── notice/       # Municipal Notice API (/api/notice)
+│   │   └── schedule/     # Timetable API (/api/schedule)
+│   ├── globals.css       # Global styles & Tailwind v4 theme directives
+│   └── page.tsx          # Single-page application entry (Tab orchestrator)
+├── components/           # UI composite widgets & views
+│   ├── ChatView.tsx      # Real-time thread-based community & chat feed
+│   ├── RouteCard.tsx     # Timetable route card item
+│   └── NoticeModal.tsx   # ITS announcement dialog
 ├── entities/             # Domain entities & data access models
 │   ├── bus/              #   Bus items, telemetry types & utilities
 │   ├── route/            #   Route information, polyline hooks & mappings
@@ -71,10 +95,11 @@ src/
 ├── shared/               # Cross-cutting infrastructure & design system
 │   ├── api/              #   HTTP client with retries & timeout handling
 │   ├── cache/            #   CacheManager (LRU & request deduplication)
-│   ├── config/           #   Centralized environment variables & locale strings
+│   ├── config/           #   Centralized environment variables & storage keys
 │   ├── context/          #   Global map context provider
-│   ├── lib/              #   Bus service layer, data scrapers & time math utilities
-│   ├── types/            #   TypeScript interfaces & data types
+│   ├── lib/              #   Bus scraper, time math & comment storage service
+│   ├── redis/            #   Upstash REST client & TCP Redis cache client
+│   ├── types/            #   TypeScript interfaces (comments, bus, routes)
 │   └── ui/               #   Unified bottom navigation bar, splash screen & common UI
 └── widgets/              # Composite UI blocks
     ├── MapContainer/     #   MapLibre GL wrapper, route polylines & live markers
@@ -97,8 +122,8 @@ src/
 └───────────┬──────────────────────────┬─────────────────────┬────────────┘
             │                          │                     │
        ┌────▼────┐               ┌─────▼───────┐        ┌────▼─────┐
-       │  Redis  │               │ Local Cache │        │ Browser  │
-       │ (3s-1h) │               │ (Blob/JSON) │        │ Storage  │
+       │ Upstash │               │ Local Cache │        │ Browser  │
+       │  Redis  │               │ (Blob/JSON) │        │ Storage  │
        └────┬────┘               └─────┬───────┘        └──────────┘
             │                          │
        ┌────▼──────────────────────────▼──────────────────────────────────┐
@@ -107,12 +132,14 @@ src/
        │  POST /api/bus/refresh           → ITS Scraper + Blob Update     │
        │  GET  /api/bus/stream            → SSE Telemetry Stream          │
        │  GET  /api/notice                → Wonju ITS Announcements       │
+       │  GET/POST/PATCH/DELETE /api/comments → Live Thread Community     │
        └───────────────────────────────┬──────────────────────────────────┘
                                        │
        ┌───────────────────────────────▼──────────────────────────────────┐
        │                    CLIENT (Lazy SSE + SWR)                       │
        │  Timetable View: Zero background telemetry overhead              │
-       │  Map View: SSE stream (/api/bus/stream) + MapLibre Renderer     │
+       │  Map View: SSE stream (/api/bus/stream) + MapLibre Renderer      │
+       │  Chat View: Threaded Community Feed + Real-time Polling & Posts  │
        └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -120,16 +147,17 @@ src/
 
 ## 🛠️ Technology Stack
 
-| Category                     | Technology                                           |
-|:-----------------------------|:-----------------------------------------------------|
-| **Framework**                | Next.js 16 (App Router, Turbopack)                   |
-| **UI Library**               | React 19                                             |
-| **Language**                 | TypeScript 5 (Strict Mode)                           |
-| **Styling**                  | Tailwind CSS 4, Vanilla CSS Design System            |
-| **Map Rendering**            | MapLibre GL JS via `react-map-gl`                    |
-| **Live Telemetry**           | Server-Sent Events (`EventSource`) with SWR Fallback |
-| **Data Scraping & Pipeline** | Node.js Fetch, Cheerio, OSRM Polyline Snapping       |
-| **Cache & Storage**          | Upstash Redis, Vercel Blob, Memory LRU Cache         |
+| Category                     | Technology                                                     |
+|:-----------------------------|:---------------------------------------------------------------|
+| **Framework**                | Next.js 16 (App Router, Turbopack)                             |
+| **UI Library**               | React 19                                                       |
+| **Language**                 | TypeScript 5 (Strict Mode)                                     |
+| **Styling**                  | Tailwind CSS 4, Vanilla CSS Design System                      |
+| **Icons & Design**           | Lucide React                                                   |
+| **Map Rendering**            | MapLibre GL JS via `react-map-gl`                              |
+| **Live Telemetry & Sync**    | Server-Sent Events (`EventSource`), Dynamic Polling            |
+| **Data Scraping & Pipeline** | Node.js Fetch, Cheerio, OSRM Polyline Snapping                 |
+| **Cache & Persistence**      | Upstash Redis (@upstash/redis REST), Vercel Blob, LocalStorage |
 
 ---
 
@@ -149,8 +177,12 @@ Configure your environment variables inside `.env.local`:
 # Korea Public Data Portal Key (apis.data.go.kr)
 DATA_GO_KR_SERVICE_KEY="YOUR_DECODED_SERVICE_KEY"
 
-# Redis Cache Connection (Optional; falls back to in-memory cache)
-REDIS_URL="redis://localhost:6379"
+# Upstash Redis Serverless REST API (For Live Thread Community & Telemetry)
+UPSTASH_REDIS_REST_URL="https://your-instance.upstash.io"
+UPSTASH_REDIS_REST_TOKEN="your-upstash-token"
+
+# Optional Standard Redis URL fallback
+REDIS_URL="rediss://default:token@your-instance.upstash.io:6379"
 
 # Remote static data toggle (Set "false" to use local public/data directory)
 NEXT_PUBLIC_USE_REMOTE_STATIC_DATA="false"
