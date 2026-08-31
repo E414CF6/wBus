@@ -56,18 +56,19 @@ const MAX_DT_MS = 200;
 const CITY_BUS_BASE_VELOCITY = 0.000000075;
 
 // Velocity limits (coord-units / ms)
-// Min crawling speed (~10 km/h) & Max speed (~80 km/h)
+// Min crawling speed (~10 km/h), Max cruising (~90 km/h), Max catchup (~140 km/h)
 const MIN_MOVING_VELOCITY = 0.000000025;
-const MAX_VELOCITY = 0.00000020;
+const MAX_VELOCITY = 0.00000025;
+const MAX_CATCHUP_VELOCITY = 0.00000035;
 const STOP_THRESHOLD = 0.000000005;
 
 // Velocity smoothing factor (EMA weight on new measurement)
-const VELOCITY_SMOOTHING = 0.55;
+const VELOCITY_SMOOTHING = 0.65;
 
 // Weight given to measured velocity vs prior (starts high to adapt quickly)
-const VELOCITY_PRIOR_BLEND_MIN = 0.5;
-const VELOCITY_PRIOR_BLEND_MAX = 0.9;
-const VELOCITY_PRIOR_RAMP_SAMPLES = 3;
+const VELOCITY_PRIOR_BLEND_MIN = 0.6;
+const VELOCITY_PRIOR_BLEND_MAX = 0.95;
+const VELOCITY_PRIOR_RAMP_SAMPLES = 2;
 
 // Default estimated latency between real bus and client reception (ms)
 // Compensates for ~10s public BIS/TAGO API delay with forward linear extrapolation
@@ -80,8 +81,11 @@ const DEAD_RECKONING_CRUISE_MS = 45000;
 const DEAD_RECKONING_FADEOUT_MS = 45000;
 
 // Elastic Catch-Up time constant:
-// Soft spring convergence over ~3.5s to seamlessly close position gaps without jerky warp speeds
-const CATCHUP_TAU_MS = 3500;
+// Snappy spring convergence over ~1.0s to quickly close position gaps when new API data arrives
+const CATCHUP_TAU_MS = 1000;
+
+// Acceleration/deceleration transition easing (ms)
+const VELOCITY_TAU_MS = 250;
 
 // Angular smoothing
 const ANGULAR_LOOKAHEAD_THRESHOLD = 0.65;
@@ -172,10 +176,11 @@ function computeStopDistances(stopCoordIndices: number[], cumDist: number[]): nu
 
 /**
  * Returns speed multiplier and nearest stop index info based on proximity to stops.
+ * Bypasses deceleration/dwell for intermediate stops if target position has already moved past them.
  */
-function getStopSpeedMultiplier(markerDist: number, stopDistances: number[]): {
+function getStopSpeedMultiplier(markerDist: number, targetDist: number, stopDistances: number[]): {
     multiplier: number;
-    nearStopIdx: number | null
+    nearStopIdx: number | null;
 } {
     if (stopDistances.length === 0) return {multiplier: 1.0, nearStopIdx: null};
 
@@ -192,25 +197,30 @@ function getStopSpeedMultiplier(markerDist: number, stopDistances: number[]): {
         const stopDist = stopDistances[i];
         const delta = markerDist - stopDist; // negative = approaching, positive = leaving
 
-        if (Math.abs(delta) < STOP_DWELL_PROXIMITY) {
+        // If target is already ahead of this stop, the bus has already passed it; don't dwell or brake
+        const isTargetPast = targetDist > stopDist + STOP_ACCEL_ZONE;
+
+        if (!isTargetPast && Math.abs(delta) < STOP_DWELL_PROXIMITY) {
             nearStopIdx = i;
         }
 
         let mult = 1.0;
-        if (delta < 0) {
-            // Approaching stop
-            const distToStop = -delta;
-            if (distToStop < STOP_DECEL_ZONE) {
-                const progress = 1 - distToStop / STOP_DECEL_ZONE;
-                const eased = progress * progress * (3 - 2 * progress);
-                mult = 1.0 - eased * (1.0 - STOP_MIN_SPEED_MULT);
-            }
-        } else {
-            // Leaving stop
-            if (delta < STOP_ACCEL_ZONE) {
-                const progress = delta / STOP_ACCEL_ZONE;
-                const eased = progress * progress * (3 - 2 * progress);
-                mult = STOP_MIN_SPEED_MULT + eased * (1.0 - STOP_MIN_SPEED_MULT);
+        if (!isTargetPast) {
+            if (delta < 0) {
+                // Approaching stop
+                const distToStop = -delta;
+                if (distToStop < STOP_DECEL_ZONE) {
+                    const progress = 1 - distToStop / STOP_DECEL_ZONE;
+                    const eased = progress * progress * (3 - 2 * progress);
+                    mult = 1.0 - eased * (1.0 - STOP_MIN_SPEED_MULT);
+                }
+            } else {
+                // Leaving stop
+                if (delta < STOP_ACCEL_ZONE) {
+                    const progress = delta / STOP_ACCEL_ZONE;
+                    const eased = progress * progress * (3 - 2 * progress);
+                    mult = STOP_MIN_SPEED_MULT + eased * (1.0 - STOP_MIN_SPEED_MULT);
+                }
             }
         }
 
@@ -239,18 +249,16 @@ function blendVelocityWithPrior(measured: number, sampleCount: number): number {
 
 /**
  * Animates a bus marker along a polyline with continuous, aggressive linear interpolation,
- * forward predictive dead reckoning, and stop-aware speed modulation.
+ * forward predictive dead reckoning, fast-accelerating catch-up, and stop-aware speed modulation.
  *
  * Key behaviors:
  *  1. Forward Prediction (Future Dead Reckoning): Compensates for public BIS/TAGO API
  *     latencies (~10s) by projecting the bus marker ahead along the route in real time.
- *  2. Smooth 60fps dead reckoning: The bus continuously glides forward along the route
+ *  2. Fast Catch-Up Acceleration: When fresh API data arrives, the marker boosts velocity
+ *     swiftly to catch up to the projected location without sluggish delay.
+ *  3. Smooth 60fps dead reckoning: The bus continuously glides forward along the route
  *     between discrete API updates rather than freezing/pausing.
- *  3. Soft-spring catchup: When new GPS data arrives, the marker seamlessly adjusts its
- *     velocity over ~3.5 seconds to reconcile position without jerky sprints or abrupt halts.
- *  4. Stop-aware speed modulation: Automatically decelerates near bus stops and simulates
- *     realistic passenger dwell before accelerating out.
- *  5. Direct MapLibre marker updates for zero React re-render overhead during animation.
+ *  4. Direct MapLibre marker updates for zero React re-render overhead during animation.
  */
 export function useAnimatedPosition(
     targetPosition: Coordinate,
@@ -589,8 +597,7 @@ export function useAnimatedPosition(
             // Smooth dynamic velocity transition (bus inertia)
             const targetV = Math.max(velocityRef.current, MIN_MOVING_VELOCITY);
             const currentV = currentVelocityRef.current;
-            const velocityTau = 600; // 600ms easing for acceleration/deceleration transitions
-            const activeV = currentV + (targetV - currentV) * Math.min(clampedDt / velocityTau, 1);
+            const activeV = currentV + (targetV - currentV) * Math.min(clampedDt / VELOCITY_TAU_MS, 1);
             currentVelocityRef.current = activeV;
 
             const totalDist = cumDist[cumDist.length - 1];
@@ -607,9 +614,10 @@ export function useAnimatedPosition(
             }
 
             if (deadReckoningFactor > 0 && activeV > 0) {
-                // Stop-aware speed modulation
+                // Stop-aware speed modulation (skips deceleration/dwell for stops that bus has already passed)
                 const {multiplier: stopMult, nearStopIdx} = getStopSpeedMultiplier(
                     dist,
+                    target,
                     stopDistancesRef.current
                 );
 
@@ -632,19 +640,21 @@ export function useAnimatedPosition(
                     dist = Math.min(dist + dwellAdvance, totalDist);
                     markerDistRef.current = dist;
                 } else {
-                    // Continuous Linear Dead Reckoning + Elastic Soft-Spring Catch-Up
+                    // Continuous Linear Dead Reckoning + Fast-Accelerating Catch-Up
                     // 1. Base cruising speed along polyline
                     const baseVelocity = activeV * deadReckoningFactor * stopMult;
 
-                    // 2. Proportional correction velocity (seamlessly absorbs position errors over ~3.5s)
-                    // If marker is behind target: gently increase speed up to +70%
-                    // If marker is ahead of target: gently coast down up to -50%
+                    // 2. Responsive catch-up boost (accelerates quickly when behind target)
+                    const maxCatchupBoost = Math.max(baseVelocity * 3.5, MAX_VELOCITY * 1.5);
                     const catchupVelocity = Math.max(
-                        -baseVelocity * 0.5,
-                        Math.min(gap / CATCHUP_TAU_MS, baseVelocity * 0.7)
+                        -baseVelocity * 0.7,
+                        Math.min(gap / CATCHUP_TAU_MS, maxCatchupBoost)
                     );
 
-                    const effectiveVelocity = Math.max(0, baseVelocity + catchupVelocity);
+                    const effectiveVelocity = Math.min(
+                        MAX_CATCHUP_VELOCITY,
+                        Math.max(0, baseVelocity + catchupVelocity)
+                    );
                     const advance = effectiveVelocity * clampedDt;
 
                     if (advance > 0) {
