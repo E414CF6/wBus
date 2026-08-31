@@ -1039,6 +1039,30 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                 ))}
                             </div>
                         </div>
+
+                        {/* 5. Policy Links */}
+                        <div
+                            className="pt-2 border-t border-slate-200/60 dark:border-white/10 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+                            <span>wBus</span>
+                            <div className="flex items-center gap-3">
+                                <a
+                                    href="/terms"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-slate-700 dark:hover:text-slate-300 underline underline-offset-2 transition-colors font-semibold"
+                                >
+                                    이용약관
+                                </a>
+                                <a
+                                    href="/privacy"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-slate-700 dark:hover:text-slate-300 underline underline-offset-2 transition-colors font-semibold"
+                                >
+                                    개인정보처리방침
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 )}
 

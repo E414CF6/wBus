@@ -5,6 +5,7 @@ import {BusCacheData, BusRoute, CacheMetadata} from "@shared/types/bus";
 import {UI_TEXT} from "@shared/config/locale";
 import {STORAGE_KEYS} from "@shared/config/env";
 import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
+import {Footer} from "@shared/ui/Footer";
 import {YonseiTimetableWidget} from "@widgets/YonseiTimetableWidget";
 import {CacheInfoBanner} from "./CacheInfoBanner";
 import {BookmarkedDeparturesBanner} from "./BookmarkedDeparturesBanner";
@@ -358,6 +359,9 @@ export default function TimetableWidget({
                         onRefresh={() => fetchBusData(true)}
                         isRefreshing={isRefreshing}
                     />
+
+                    {/* Footer Links */}
+                    <Footer/>
 
                     {/* Detail Modal */}
                     {selectedRoute && (
