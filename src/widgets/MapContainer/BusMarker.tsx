@@ -111,7 +111,7 @@ const BusPopupContent = memo(
                         {UI_TEXT.BUS_ITEM.VEHICLE_NUM}
                     </span>
                     <div
-                        className="font-mono font-bold text-sm text-gray-800 dark:text-gray-200 bg-black/3 dark:bg-white/5 px-2.5 py-1 rounded-lg">
+                        className="font-mono font-bold text-sm text-gray-800 dark:text-gray-200 bg-black/3 dark:white/5 px-2.5 py-1 rounded-lg">
                         {bus.vehicleno}
                     </div>
                 </div>
@@ -158,7 +158,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
     const isLiveStream = connectionStatus === "connected";
     const effectiveAnimationDuration = isLiveStream ? 3000 : MAP_SETTINGS.ANIMATION.BUS_MOVE_MS;
     const effectivePollingIntervalMs = isLiveStream ? 3000 : API_CONFIG.LIVE.POLLING_INTERVAL_MS;
-    const effectiveDataDelayMs = isLiveStream ? 3000 : API_CONFIG.LIVE.DATA_DELAY_MS;
+    const effectiveDataDelayMs = API_CONFIG.LIVE.DATA_DELAY_MS;
 
     const routeIndicesMap = useMemo(() => {
         if (!routeInfo) return new Map();

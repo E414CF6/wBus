@@ -57,7 +57,7 @@ export const SITE_CONFIG = {
 export const API_CONFIG = {
     LIVE: {
         POLLING_INTERVAL_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_API_REFRESH_INTERVAL, 3000),
-        DATA_DELAY_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_DATA_DELAY, 0),
+        DATA_DELAY_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_DATA_DELAY, 10000),
     },
     STATIC: {
         BASE_URL: getBlobBaseUrl() || "",
@@ -73,14 +73,8 @@ export const API_CONFIG = {
             SCHEDULE: STATIC_FILE_NAMES.SCHEDULE,
         },
     },
-    MAP_STYLE_FALLBACK: getEnv(
-        process.env.NEXT_PUBLIC_MAP_FALLBACK_API_URL,
-        "https://tiles.openfreemap.org/styles/bright"
-    ),
-    MAP_STYLE_DARK_FALLBACK: getEnv(
-        process.env.NEXT_PUBLIC_MAP_DARK_FALLBACK_API_URL,
-        "https://tiles.openfreemap.org/styles/dark"
-    ),
+    MAP_STYLE_FALLBACK: getEnv(process.env.NEXT_PUBLIC_MAP_FALLBACK_API_URL, "https://tiles.openfreemap.org/styles/bright"),
+    MAP_STYLE_DARK_FALLBACK: getEnv(process.env.NEXT_PUBLIC_MAP_DARK_FALLBACK_API_URL, "https://tiles.openfreemap.org/styles/dark"),
 } as const;
 
 export const MAP_SETTINGS = {
@@ -106,11 +100,7 @@ export const MAP_SETTINGS = {
     ALWAYS_UPWARD_NODE_IDS: getEnvArray(process.env.NEXT_PUBLIC_ALWAYS_UPWARD_NODE_IDS, ","),
     DEFAULT_ROUTE: getEnv(process.env.NEXT_PUBLIC_DEFAULT_ROUTE, "30"),
     BUS_COLOR_BY_TYPE: {
-        EXPRESS: "#f97316",
-        GENERAL: "#3b82f6",
-        VILLAGE: "#10b981",
-        CIRCUIT: "#8b5cf6",
-        DEFAULT: "#6b7280",
+        EXPRESS: "#f97316", GENERAL: "#3b82f6", VILLAGE: "#10b981", CIRCUIT: "#8b5cf6", DEFAULT: "#6b7280",
     },
 } as const;
 

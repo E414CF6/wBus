@@ -70,7 +70,8 @@ const VELOCITY_PRIOR_BLEND_MAX = 0.9;
 const VELOCITY_PRIOR_RAMP_SAMPLES = 3;
 
 // Default estimated latency between real bus and client reception (ms)
-const DEFAULT_DATA_DELAY_MS = 2500;
+// Compensates for ~10s public BIS/TAGO API delay with forward linear extrapolation
+const DEFAULT_DATA_DELAY_MS = 10000;
 
 // Dead reckoning duration:
 // Full speed forward extrapolation for up to 45s between GPS updates
@@ -237,17 +238,19 @@ function blendVelocityWithPrior(measured: number, sampleCount: number): number {
 // ----------------------------------------------------------------------
 
 /**
- * Animates a bus marker along a polyline with continuous, aggressive linear interpolation
- * and stop-aware dead reckoning.
+ * Animates a bus marker along a polyline with continuous, aggressive linear interpolation,
+ * forward predictive dead reckoning, and stop-aware speed modulation.
  *
  * Key behaviors:
- *  1. Smooth 60fps dead reckoning: The bus continuously glides forward along the route
+ *  1. Forward Prediction (Future Dead Reckoning): Compensates for public BIS/TAGO API
+ *     latencies (~10s) by projecting the bus marker ahead along the route in real time.
+ *  2. Smooth 60fps dead reckoning: The bus continuously glides forward along the route
  *     between discrete API updates rather than freezing/pausing.
- *  2. Soft-spring catchup: When new GPS data arrives, the marker seamlessly adjusts its
+ *  3. Soft-spring catchup: When new GPS data arrives, the marker seamlessly adjusts its
  *     velocity over ~3.5 seconds to reconcile position without jerky sprints or abrupt halts.
- *  3. Stop-aware speed modulation: Automatically decelerates near bus stops and simulates
+ *  4. Stop-aware speed modulation: Automatically decelerates near bus stops and simulates
  *     realistic passenger dwell before accelerating out.
- *  4. Direct MapLibre marker updates for zero React re-render overhead during animation.
+ *  5. Direct MapLibre marker updates for zero React re-render overhead during animation.
  */
 export function useAnimatedPosition(
     targetPosition: Coordinate,
@@ -272,7 +275,15 @@ export function useAnimatedPosition(
                 segmentHint: snapIndexHint,
                 searchRadius: snapIndexRange,
             });
-            return {position: snapped.position, angle: targetAngle};
+            const cumDist = computeCumulativeDistances(polyline);
+            const dist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
+            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 30000));
+            const totalDist = cumDist[cumDist.length - 1] ?? dist;
+            const projDist = CITY_BUS_BASE_VELOCITY * effectiveDelay;
+            const initialDist = Math.min(dist + projDist, totalDist);
+            const {segIdx, t} = scalarToSegT(cumDist, initialDist);
+            const {position: pos, angle: pathAngle} = positionFromSegT(polyline, segIdx, t);
+            return {position: pos, angle: pathAngle || targetAngle};
         }
         return {position: targetPosition, angle: targetAngle};
     });
@@ -285,8 +296,8 @@ export function useAnimatedPosition(
     const resetKeyRef = useRef(resetKey);
 
     // ---- Animated state ----
-    const currentPosRef = useRef<Coordinate>(targetPosition);
-    const currentAngleRef = useRef<number>(targetAngle);
+    const currentPosRef = useRef<Coordinate>(state.position);
+    const currentAngleRef = useRef<number>(state.angle);
     const lastStateUpdateRef = useRef(0);
 
     // ---- Polyline / scalar state ----
@@ -361,16 +372,23 @@ export function useAnimatedPosition(
                 segmentHint: snapIndexHint,
                 searchRadius: snapIndexRange,
             });
-            nextPos = snapped.position;
-            nextAngle = snapped.angle;
-
             const cumDist = cumDistRef.current;
             const dist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
-            markerDistRef.current = dist;
-            targetDistRef.current = dist;
+            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 30000));
+            const totalDist = cumDist[cumDist.length - 1] ?? dist;
+            const projDist = CITY_BUS_BASE_VELOCITY * effectiveDelay;
+            const initialDist = Math.min(dist + projDist, totalDist);
+
+            markerDistRef.current = initialDist;
+            targetDistRef.current = initialDist;
             prevRawDistRef.current = dist;
             hasDataRef.current = true;
             lastDataTimeRef.current = performance.now();
+
+            const {segIdx, t} = scalarToSegT(cumDist, initialDist);
+            const {position: pos, angle: pathAngle} = positionFromSegT(polyline, segIdx, t);
+            nextPos = pos;
+            nextAngle = pathAngle || snapped.angle;
         }
 
         currentPosRef.current = nextPos;
@@ -386,6 +404,7 @@ export function useAnimatedPosition(
         shouldSnap,
         snapIndexHint,
         snapIndexRange,
+        dataDelayMs,
         updateMarkerDirect,
     ]);
 
@@ -408,8 +427,12 @@ export function useAnimatedPosition(
                 });
                 const cumDist = cumDistRef.current;
                 const dist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
+                const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 30000));
+                const totalDist = cumDist[cumDist.length - 1] ?? dist;
+                const projDist = CITY_BUS_BASE_VELOCITY * effectiveDelay;
+                const initialDist = Math.min(dist + projDist, totalDist);
 
-                markerDistRef.current = dist;
+                markerDistRef.current = initialDist;
                 prevRawDistRef.current = dist;
                 hasDataRef.current = true;
                 lastDataTimeRef.current = performance.now();
@@ -418,12 +441,15 @@ export function useAnimatedPosition(
                 // Start cruising immediately at normal bus speed
                 velocityRef.current = CITY_BUS_BASE_VELOCITY;
                 currentVelocityRef.current = CITY_BUS_BASE_VELOCITY;
-                targetDistRef.current = dist;
+                targetDistRef.current = initialDist;
 
-                currentPosRef.current = snapped.position;
-                currentAngleRef.current = targetAngle;
-                updateMarkerDirect(snapped.position, targetAngle);
-                setState({position: snapped.position, angle: targetAngle});
+                const {segIdx, t} = scalarToSegT(cumDist, initialDist);
+                const {position: pos, angle: pathAngle} = positionFromSegT(polyline, segIdx, t);
+
+                currentPosRef.current = pos;
+                currentAngleRef.current = pathAngle || targetAngle;
+                updateMarkerDirect(pos, pathAngle || targetAngle);
+                setState({position: pos, angle: pathAngle || targetAngle});
             } else {
                 currentPosRef.current = targetPosition;
                 currentAngleRef.current = targetAngle;
@@ -463,8 +489,12 @@ export function useAnimatedPosition(
 
             // Extreme jump / route loop restart -> re-anchor cleanly
             if (lagMeters > TELEPORT_DISTANCE_METERS) {
-                markerDistRef.current = rawDist;
-                targetDistRef.current = rawDist;
+                const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 30000));
+                const projDist = CITY_BUS_BASE_VELOCITY * effectiveDelay;
+                const initialDist = Math.min(rawDist + projDist, totalDist);
+
+                markerDistRef.current = initialDist;
+                targetDistRef.current = initialDist;
                 velocityRef.current = CITY_BUS_BASE_VELOCITY;
                 currentVelocityRef.current = CITY_BUS_BASE_VELOCITY;
                 sampleCountRef.current = 0;
@@ -472,10 +502,14 @@ export function useAnimatedPosition(
                 dwellStartTimeRef.current = 0;
                 prevRawDistRef.current = rawDist;
                 lastDataTimeRef.current = now;
-                currentPosRef.current = snapped.position;
-                currentAngleRef.current = snapped.angle;
-                updateMarkerDirect(snapped.position, snapped.angle);
-                setState({position: snapped.position, angle: snapped.angle});
+
+                const {segIdx, t} = scalarToSegT(cumDist, initialDist);
+                const {position: pos, angle: pathAngle} = positionFromSegT(polyline, segIdx, t);
+
+                currentPosRef.current = pos;
+                currentAngleRef.current = pathAngle || snapped.angle;
+                updateMarkerDirect(pos, pathAngle || snapped.angle);
+                setState({position: pos, angle: pathAngle || snapped.angle});
                 return;
             }
         }
@@ -509,7 +543,7 @@ export function useAnimatedPosition(
 
         // Forward project real-time position by data latency compensation
         const v = Math.max(velocityRef.current, MIN_MOVING_VELOCITY);
-        const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 6000));
+        const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 30000));
         const projDist = v * effectiveDelay;
 
         // Reconcile new target without snapping backwards
