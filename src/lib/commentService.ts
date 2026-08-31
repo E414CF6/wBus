@@ -2,13 +2,16 @@ import fs from "fs";
 import path from "path";
 import {CommentItem, CommentsDataset} from "@/types/comment";
 import {generateUserTag, getRandomNickname} from "@/data/nicknames";
+import {getUpstashRedis} from "@shared/redis/upstash";
 
+const UPSTASH_COMMENTS_KEY = "wbus:comments";
 const BLOB_COMMENTS_PATH = "comments.json";
 
 // Default initial sample comments for realistic board preview
 const INITIAL_COMMENTS: CommentItem[] = [{
     id: "c-init-1",
     author: "매지호오리",
+    authorTag: "#m3j9h1",
     content: "34-1번 탈 때 회촌 출발 후 5~7분 정도 뒤에 학관에 도착해요!",
     category: "꿀팁",
     createdAt: new Date(Date.now() - 1000 * 60 * 75).toISOString(), // 75 mins ago
@@ -17,6 +20,7 @@ const INITIAL_COMMENTS: CommentItem[] = [{
 }, {
     id: "c-init-2",
     author: "독수리",
+    authorTag: "#e4g8le",
     content: "오늘 34번 시내 방면 도로 원활해서 제시간에 잘 도착합니다.",
     category: "제보",
     createdAt: new Date(Date.now() - 1000 * 60 * 160).toISOString(), // ~2.5 hours ago
@@ -25,6 +29,7 @@ const INITIAL_COMMENTS: CommentItem[] = [{
 }, {
     id: "c-init-3",
     author: "학관러버",
+    authorTag: "#y0ns3i",
     content: "30번 버스는 평일과 방학/휴일 운행 시간이 동일하니 참고하세요!",
     category: "꿀팁",
     createdAt: new Date(Date.now() - 1000 * 60 * 320).toISOString(), // ~5 hours ago
@@ -38,6 +43,51 @@ function getLocalCachePath(): string {
     return path.join(process.cwd(), "public", "data", "comments.json");
 }
 
+/**
+ * 1. Upstash Redis Data Layer
+ */
+async function loadFromUpstash(): Promise<CommentItem[] | null> {
+    const redis = getUpstashRedis();
+    if (!redis) return null;
+
+    try {
+        const raw = await redis.get<CommentItem[] | CommentsDataset | string>(UPSTASH_COMMENTS_KEY);
+        if (!raw) return null;
+
+        if (Array.isArray(raw)) {
+            return raw;
+        }
+        if (typeof raw === "object" && "comments" in raw && Array.isArray((raw as CommentsDataset).comments)) {
+            return (raw as CommentsDataset).comments;
+        }
+        if (typeof raw === "string") {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed;
+            if (parsed && Array.isArray(parsed.comments)) return parsed.comments;
+        }
+    } catch (err) {
+        console.warn("[Comments] Failed to read from Upstash Redis:", err);
+    }
+    return null;
+}
+
+async function saveToUpstash(comments: CommentItem[]): Promise<void> {
+    const redis = getUpstashRedis();
+    if (!redis) return;
+
+    try {
+        const dataset: CommentsDataset = {
+            updatedAt: new Date().toISOString(), comments,
+        };
+        await redis.set(UPSTASH_COMMENTS_KEY, dataset);
+    } catch (err) {
+        console.warn("[Comments] Failed to save to Upstash Redis:", err);
+    }
+}
+
+/**
+ * 2. Vercel Blob Fallback Layer
+ */
 async function loadFromBlob(): Promise<CommentItem[] | null> {
     try {
         const {head} = await import("@vercel/blob");
@@ -75,6 +125,9 @@ async function saveToBlob(comments: CommentItem[]): Promise<void> {
     }
 }
 
+/**
+ * 3. Local File Fallback Layer
+ */
 function loadFromLocalFile(): CommentItem[] | null {
     // 1. Check public/data/comments.json
     const localPath = getLocalCachePath();
@@ -132,28 +185,40 @@ function saveToLocalFile(comments: CommentItem[]): void {
     }
 }
 
+/**
+ * Main Service Methods
+ */
 export async function getComments(forceFresh = false): Promise<CommentItem[]> {
     if (!forceFresh && inMemoryComments !== null) {
         return inMemoryComments;
     }
 
-    // 1. Try loading from Vercel Blob
+    // 1. Try loading from Upstash Redis (Highest priority)
+    const upstashComments = await loadFromUpstash();
+    if (upstashComments !== null) {
+        inMemoryComments = upstashComments;
+        return inMemoryComments;
+    }
+
+    // 2. Try loading from Vercel Blob
     const blobComments = await loadFromBlob();
     if (blobComments !== null) {
         inMemoryComments = blobComments;
         return inMemoryComments;
     }
 
-    // 2. Try loading from local public/data/comments.json or /tmp/comments.json
+    // 3. Try loading from local public/data/comments.json or /tmp/comments.json
     const localComments = loadFromLocalFile();
     if (localComments !== null) {
         inMemoryComments = localComments;
         return inMemoryComments;
     }
 
-    // 3. Fallback to default initial comments and seed
+    // 4. Fallback to default initial comments and seed
     inMemoryComments = INITIAL_COMMENTS;
     saveToLocalFile(inMemoryComments);
+    saveToUpstash(inMemoryComments).catch(() => {
+    });
     return inMemoryComments;
 }
 
@@ -177,7 +242,7 @@ export async function addComment(params: {
         author: finalAuthor,
         authorTag: generatedTag,
         content: params.content.trim(),
-        category: params.category || "일반",
+        category: params.category || "잡담",
         createdAt: new Date().toISOString(),
         routeNo: params.routeNo || "ALL",
         likes: 0,
@@ -189,7 +254,7 @@ export async function addComment(params: {
     const updated = [newComment, ...current];
     inMemoryComments = updated;
 
-    await Promise.allSettled([saveToBlob(updated), Promise.resolve(saveToLocalFile(updated)),]);
+    await Promise.allSettled([saveToUpstash(updated), saveToBlob(updated), Promise.resolve(saveToLocalFile(updated)),]);
 
     return newComment;
 }
@@ -209,7 +274,7 @@ export async function likeComment(id: string): Promise<CommentItem | null> {
     if (!targetComment) return null;
 
     inMemoryComments = updated;
-    await Promise.allSettled([saveToBlob(updated), Promise.resolve(saveToLocalFile(updated)),]);
+    await Promise.allSettled([saveToUpstash(updated), saveToBlob(updated), Promise.resolve(saveToLocalFile(updated)),]);
 
     return targetComment;
 }
@@ -220,14 +285,11 @@ export async function deleteComment(id: string, authorTag?: string): Promise<Com
 
     const updated = current.map((c) => {
         if (c.id === id) {
-            // If authorTag provided, verify ownership
             if (authorTag && c.authorTag && c.authorTag !== authorTag) {
                 throw new Error("작성자만 삭제할 수 있습니다.");
             }
             targetComment = {
-                ...c,
-                isDeleted: true,
-                content: "삭제된 댓글입니다.",
+                ...c, isDeleted: true, content: "삭제된 메시지입니다.",
             };
             return targetComment;
         }
@@ -237,7 +299,7 @@ export async function deleteComment(id: string, authorTag?: string): Promise<Com
     if (!targetComment) return null;
 
     inMemoryComments = updated;
-    await Promise.allSettled([saveToBlob(updated), Promise.resolve(saveToLocalFile(updated)),]);
+    await Promise.allSettled([saveToUpstash(updated), saveToBlob(updated), Promise.resolve(saveToLocalFile(updated)),]);
 
     return targetComment;
 }

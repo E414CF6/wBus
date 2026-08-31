@@ -6,6 +6,7 @@ import {
 } from "@shared/cache/cachePolicy";
 import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import {createClient, type RedisClientType} from "redis";
+import {getUpstashRedis} from "./upstash";
 import type {CachedData} from "./types";
 
 /**
@@ -15,8 +16,9 @@ import type {CachedData} from "./types";
  * - Live bus locations (bus:${routeId})
  * - Real-time arrival predictions (arrival:${busStopId})
  *
- * All static/slow-changing data (route stops, station maps, polylines, notices, schedules)
- * uses in-process JSON CacheManager, Vercel Blob, and CDN caching.
+ * Supports both:
+ * 1. Upstash REST API (@upstash/redis) via UPSTASH_REDIS_REST_URL & UPSTASH_REDIS_REST_TOKEN
+ * 2. Standard TCP Redis (redis) via REDIS_URL
  */
 
 export interface CacheOptions {
@@ -28,7 +30,6 @@ export interface CacheOptions {
 
 const MEMORY_CACHE_MAX_KEYS = 500;
 const REVALIDATE_COOLDOWN_MS = 1000;
-const REVALIDATE_MAX_BACKOFF_MS = 15000;
 
 let client: RedisClientType | null = null;
 let connecting: Promise<RedisClientType | null> | null = null;
@@ -58,9 +59,10 @@ export async function getRedisClient(): Promise<RedisClientType | null> {
     connecting = (async () => {
         const url = getRedisUrl();
         if (!url) {
-            if (!hasLoggedMissingRedisUrl) {
+            const upstash = getUpstashRedis();
+            if (!upstash && !hasLoggedMissingRedisUrl) {
                 hasLoggedMissingRedisUrl = true;
-                console.warn("[Redis] REDIS_URL/KV_URL is not set. Falling back to in-memory cache only.");
+                console.warn("[Redis] No REDIS_URL or Upstash REST credentials set. Falling back to in-memory cache only.");
             }
             return null;
         }
@@ -81,7 +83,6 @@ export async function getRedisClient(): Promise<RedisClientType | null> {
 
         newClient.on("error", (err) => {
             console.error("[Redis] Connection error:", err);
-            // If the socket dies, we want the next request to attempt a fresh connection
             if (!newClient.isOpen && client === newClient) {
                 client = null;
             }
@@ -92,7 +93,7 @@ export async function getRedisClient(): Promise<RedisClientType | null> {
             client = newClient as RedisClientType;
             return client;
         } catch (err) {
-            console.error("[Redis] Failed to connect. Falling back to in-memory cache.", err);
+            console.error("[Redis] Failed to connect TCP Redis. Trying Upstash fallback / Memory.", err);
             return null;
         }
     })();
@@ -101,6 +102,64 @@ export async function getRedisClient(): Promise<RedisClientType | null> {
         return await connecting;
     } finally {
         connecting = null;
+    }
+}
+
+/**
+ * Universal Redis Get Helper (Upstash REST or TCP node-redis)
+ */
+async function readFromRedisLayer(key: string): Promise<string | null> {
+    // 1. Try Upstash REST API first if configured
+    const upstash = getUpstashRedis();
+    if (upstash) {
+        try {
+            const val = await upstash.get(key);
+            if (val) {
+                return typeof val === "string" ? val : JSON.stringify(val);
+            }
+            return null;
+        } catch (e) {
+            console.warn(`[Upstash] Failed to read key '${key}':`, e);
+        }
+    }
+
+    // 2. Try TCP Redis client
+    const redis = await getRedisClient();
+    if (redis?.isOpen) {
+        try {
+            return await redis.get(key);
+        } catch (e) {
+            console.warn(`[Redis] Failed to read key '${key}':`, e);
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Universal Redis Set Helper (Upstash REST or TCP node-redis)
+ */
+async function writeToRedisLayer(key: string, value: string, expireSeconds: number): Promise<void> {
+    // 1. Write to Upstash REST API if configured
+    const upstash = getUpstashRedis();
+    if (upstash) {
+        try {
+            const parsed = JSON.parse(value);
+            await upstash.set(key, parsed, {ex: expireSeconds});
+            return;
+        } catch {
+            await upstash.set(key, value, {ex: expireSeconds}).catch(() => {
+            });
+            return;
+        }
+    }
+
+    // 2. Write to TCP Redis
+    const redis = await getRedisClient();
+    if (redis?.isOpen) {
+        await redis.set(key, value, {EX: expireSeconds}).catch((err) => {
+            console.warn(`[Redis] Failed to write key '${key}':`, err);
+        });
     }
 }
 
@@ -141,35 +200,32 @@ export async function getCachedOrFetch<T>(
             }
         }
 
-        // 2. Check L2 Redis Cache
-        const redis = await getRedisClient();
-        if (redis?.isOpen) {
+        // 2. Check L2 Redis Cache (Upstash REST or TCP Redis)
+        const raw = await readFromRedisLayer(key);
+        if (raw) {
             try {
-                const raw = await redis.get(key);
-                if (raw) {
-                    const redisEntry: CachedData<T> = JSON.parse(raw);
-                    const ageMs = now - redisEntry.timestamp;
-                    const ttlMs = ttlSeconds * 1000;
-                    const swrMs = swrSeconds * 1000;
+                const redisEntry: CachedData<T> = typeof raw === "string" ? JSON.parse(raw) : raw;
+                const ageMs = now - redisEntry.timestamp;
+                const ttlMs = ttlSeconds * 1000;
+                const swrMs = swrSeconds * 1000;
 
-                    memoryCache.set(key, redisEntry);
+                memoryCache.set(key, redisEntry);
 
-                    if (ageMs <= ttlMs) {
-                        return {
-                            ...redisEntry,
-                            meta: {status: "hit", layer: "redis", ageMs},
-                        };
-                    }
-                    if (ageMs <= ttlMs + swrMs) {
-                        triggerBackgroundRevalidate(key, fetcher, ttlSeconds, redisEntry);
-                        return {
-                            ...redisEntry,
-                            meta: {status: "stale", layer: "redis", ageMs},
-                        };
-                    }
+                if (ageMs <= ttlMs) {
+                    return {
+                        ...redisEntry,
+                        meta: {status: "hit", layer: "redis", ageMs},
+                    };
+                }
+                if (ageMs <= ttlMs + swrMs) {
+                    triggerBackgroundRevalidate(key, fetcher, ttlSeconds, redisEntry);
+                    return {
+                        ...redisEntry,
+                        meta: {status: "stale", layer: "redis", ageMs},
+                    };
                 }
             } catch (e) {
-                console.warn(`[Redis] Failed to read key '${key}':`, e);
+                console.warn(`[Redis] Failed to parse cached payload for key '${key}':`, e);
             }
         }
     }
@@ -228,13 +284,8 @@ async function fetchAndStore<T>(
 
             memoryCache.set(key, entry);
 
-            const redis = await getRedisClient();
-            if (redis?.isOpen) {
-                const expireSec = ttlSeconds + DEFAULT_STALE_WHILE_REVALIDATE_SECONDS;
-                await redis.set(key, JSON.stringify(entry), {EX: expireSec}).catch((err) => {
-                    console.warn(`[Redis] Failed to write key '${key}':`, err);
-                });
-            }
+            const expireSec = ttlSeconds + DEFAULT_STALE_WHILE_REVALIDATE_SECONDS;
+            await writeToRedisLayer(key, JSON.stringify(entry), expireSec);
 
             return entry;
         } catch (err) {
