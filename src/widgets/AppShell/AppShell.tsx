@@ -37,6 +37,13 @@ export function AppShell() {
         return "schedule";
     }, [pathname]);
 
+    // Scroll to top when changing tabs so map/chat start cleanly
+    useEffect(() => {
+        if (typeof window !== "undefined") {
+            window.scrollTo({top: 0, left: 0, behavior: "instant"});
+        }
+    }, [activeTab]);
+
     // Timetable Sub-tab & Day Mode
     const [timetableSubTab, setTimetableSubTab] = useState<TimetableSubTab>(() => {
         const querySubTab = searchParams.get("subTab");
@@ -316,12 +323,19 @@ export function AppShell() {
         }
     }, [pathname]);
 
+    const isFixedLayout = activeTab !== "schedule";
+
     return (
         <>
             <Splash isVisible={isSplashVisible}/>
 
             <div
-                className="fixed inset-0 flex flex-col w-full h-[100dvh] overflow-hidden bg-slate-50 dark:bg-[#0b0f19]">
+                className={
+                    isFixedLayout
+                        ? "fixed inset-0 flex flex-col w-full h-[100dvh] overflow-hidden bg-slate-50 dark:bg-[#0b0f19]"
+                        : "relative min-h-[100dvh] w-full flex flex-col bg-slate-50 dark:bg-[#0b0f19]"
+                }
+            >
                 {/* 1. Real-time Map View Container (Lazy mounted ONLY when map is activated by user) */}
                 {hasVisitedMap && (
                     <div className={`relative flex-1 overflow-hidden ${activeTab === "map" ? "block" : "hidden"}`}>
@@ -344,9 +358,10 @@ export function AppShell() {
 
                 {/* 2. Schedule Timetable View (Yonsei 30,34,34-1 & All Wonju routes) */}
                 {activeTab === "schedule" && (
-                    <div
-                        className="flex-1 overflow-y-auto w-full px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-28 sm:pb-32 flex flex-col items-center">
-                        <div className="w-full max-w-6xl flex-1 flex flex-col justify-center">
+                    <main
+                        className="w-full min-h-[100dvh] px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-32 sm:pb-36 flex flex-col items-center"
+                    >
+                        <div className="w-full max-w-6xl flex-1 flex flex-col">
                             <TimetableWidget
                                 subTab={timetableSubTab}
                                 onSubTabChange={handleScheduleSubTabChange}
@@ -355,13 +370,14 @@ export function AppShell() {
                                 onDayModeChange={setDayMode}
                             />
                         </div>
-                    </div>
+                    </main>
                 )}
 
                 {/* 3. Real-time Chat View */}
                 {activeTab === "chat" && (
                     <div
-                        className="flex-1 overflow-hidden w-full max-w-6xl mx-auto px-3 sm:px-6 pt-2 sm:pt-4 pb-[calc(env(safe-area-inset-bottom,0)+4.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+5rem)] flex flex-col">
+                        className="flex-1 overflow-hidden w-full max-w-6xl mx-auto px-3 sm:px-6 pt-2 sm:pt-4 pb-[calc(env(safe-area-inset-bottom,0)+4.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+5rem)] flex flex-col"
+                    >
                         <ChatView
                             comments={comments}
                             onAddComment={handleAddComment}

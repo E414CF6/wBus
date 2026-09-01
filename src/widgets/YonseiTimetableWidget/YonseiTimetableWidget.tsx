@@ -138,7 +138,7 @@ export default function YonseiTimetableWidget({
     };
 
     return (
-        <div className="w-full flex flex-col gap-4 sm:gap-6 animate-fadeIn my-auto">
+        <div className="w-full flex flex-col gap-4 sm:gap-6 animate-fadeIn">
             {/* Toast Message Notification */}
             {toastNotice && (
                 <div

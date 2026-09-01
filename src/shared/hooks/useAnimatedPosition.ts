@@ -36,14 +36,24 @@ interface UseAnimatedPositionOptions {
 }
 
 // ----------------------------------------------------------------------
-// Constants — Aggressive Real-Time Linear Interpolation & Dead Reckoning
+// Constants — Real-Time Linear Interpolation, Dead Reckoning & Safeguards
 // ----------------------------------------------------------------------
 
-// Ignore backward jumps smaller than this (GPS jitter in meters).
+// Ignore backward jumps smaller than this (GPS jitter in meters)
 const BACKWARD_JITTER_METERS = 20;
 
-// Maximum distance backward/forward to smooth instead of teleporting
-const TELEPORT_DISTANCE_METERS = 1200;
+// Scalar distance drop in meters that signals route restart / turnaround loop
+const SCALAR_LOOP_RESTART_THRESHOLD_METERS = 50;
+
+// Maximum distance (meters) the animated marker is ever allowed to extrapolate ahead of the last confirmed API position (~100m)
+const MAX_FORWARD_EXTRAPOLATION_COORD = 0.0010;
+
+// Maximum latency compensation projection allowed upon receiving fresh API data (~50m)
+const MAX_LATENCY_PROJECTION_COORD = 0.0005;
+
+// Maximum acceptable discrepancy between animated marker and API position before forcing immediate snap/re-anchor (~120m)
+const MAX_ALLOWED_DISCREPANCY_METERS = 120;
+const MAX_ALLOWED_DISCREPANCY_COORD = 0.0012;
 
 // React state update throttle — 20 Hz (50ms) for UI popup consumers
 const STATE_UPDATE_THROTTLE_MS = 50;
@@ -56,10 +66,10 @@ const MAX_DT_MS = 200;
 const CITY_BUS_BASE_VELOCITY = 0.000000075;
 
 // Velocity limits (coord-units / ms)
-// Min crawling speed (~10 km/h), Max cruising (~90 km/h), Max catchup (~140 km/h)
+// Min crawling speed (~10 km/h), Max cruising (~80 km/h), Max catchup (~85 km/h)
 const MIN_MOVING_VELOCITY = 0.000000025;
-const MAX_VELOCITY = 0.00000025;
-const MAX_CATCHUP_VELOCITY = 0.00000035;
+const MAX_VELOCITY = 0.00000020;
+const MAX_CATCHUP_VELOCITY = 0.00000022;
 const STOP_THRESHOLD = 0.000000005;
 
 // Velocity smoothing factor (EMA weight on new measurement)
@@ -71,14 +81,13 @@ const VELOCITY_PRIOR_BLEND_MAX = 0.95;
 const VELOCITY_PRIOR_RAMP_SAMPLES = 2;
 
 // Default estimated latency between real bus and client reception (ms)
-// Compensates for ~10s public BIS/TAGO API delay with forward linear extrapolation
-const DEFAULT_DATA_DELAY_MS = 10000;
+const DEFAULT_DATA_DELAY_MS = 8000;
 
 // Dead reckoning duration:
-// Full speed forward extrapolation for up to 45s between GPS updates
-const DEAD_RECKONING_CRUISE_MS = 45000;
-// Graceful deceleration coasting from 45s to 90s if no data arrives
-const DEAD_RECKONING_FADEOUT_MS = 45000;
+// Forward extrapolation for up to 30s between GPS updates (capped by MAX_FORWARD_EXTRAPOLATION_COORD)
+const DEAD_RECKONING_CRUISE_MS = 30000;
+// Graceful deceleration coasting from 30s to 60s if no data arrives
+const DEAD_RECKONING_FADEOUT_MS = 30000;
 
 // Elastic Catch-Up time constant:
 // Snappy spring convergence over ~1.0s to quickly close position gaps when new API data arrives
@@ -248,17 +257,8 @@ function blendVelocityWithPrior(measured: number, sampleCount: number): number {
 // ----------------------------------------------------------------------
 
 /**
- * Animates a bus marker along a polyline with continuous, aggressive linear interpolation,
- * forward predictive dead reckoning, fast-accelerating catch-up, and stop-aware speed modulation.
- *
- * Key behaviors:
- *  1. Forward Prediction (Future Dead Reckoning): Compensates for public BIS/TAGO API
- *     latencies (~10s) by projecting the bus marker ahead along the route in real time.
- *  2. Fast Catch-Up Acceleration: When fresh API data arrives, the marker boosts velocity
- *     swiftly to catch up to the projected location without sluggish delay.
- *  3. Smooth 60fps dead reckoning: The bus continuously glides forward along the route
- *     between discrete API updates rather than freezing/pausing.
- *  4. Direct MapLibre marker updates for zero React re-render overhead during animation.
+ * Animates a bus marker along a polyline with continuous linear interpolation,
+ * bounded dead reckoning, fast catch-up, and strict anti-drift safeguards.
  */
 export function useAnimatedPosition(
     targetPosition: Coordinate,
@@ -285,10 +285,17 @@ export function useAnimatedPosition(
             });
             const cumDist = computeCumulativeDistances(polyline);
             const dist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
-            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 30000));
+            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 8000));
             const totalDist = cumDist[cumDist.length - 1] ?? dist;
-            const projDist = CITY_BUS_BASE_VELOCITY * effectiveDelay;
-            const initialDist = Math.min(dist + projDist, totalDist);
+            const maxAllowedProj = Math.max(
+                0,
+                Math.min(
+                    CITY_BUS_BASE_VELOCITY * effectiveDelay,
+                    MAX_LATENCY_PROJECTION_COORD,
+                    totalDist - dist - STOP_DECEL_ZONE * 0.5
+                )
+            );
+            const initialDist = Math.min(dist + maxAllowedProj, totalDist);
             const {segIdx, t} = scalarToSegT(cumDist, initialDist);
             const {position: pos, angle: pathAngle} = positionFromSegT(polyline, segIdx, t);
             return {position: pos, angle: pathAngle || targetAngle};
@@ -299,6 +306,7 @@ export function useAnimatedPosition(
     // ---- Lifecycle ----
     const animFrameRef = useRef<number | null>(null);
     const isFirstDataRef = useRef(true);
+    const prevPolylineRef = useRef(polyline);
     const prevPolylineLenRef = useRef(polyline.length);
     const prevTargetRef = useRef<Coordinate>(targetPosition);
     const resetKeyRef = useRef(resetKey);
@@ -354,11 +362,15 @@ export function useAnimatedPosition(
     }, [polyline, stopCoordIndices]);
 
     // ----------------------------------------------------------------
-    // Reset on route change (resetKey)
+    // Reset on route change (resetKey or polyline change)
     // ----------------------------------------------------------------
     useEffect(() => {
-        if (resetKeyRef.current === resetKey) return;
+        const polylineChanged = prevPolylineRef.current !== polyline;
+        const resetKeyChanged = resetKeyRef.current !== resetKey;
+
+        if (!resetKeyChanged && !polylineChanged) return;
         resetKeyRef.current = resetKey;
+        prevPolylineRef.current = polyline;
 
         velocityRef.current = CITY_BUS_BASE_VELOCITY;
         currentVelocityRef.current = CITY_BUS_BASE_VELOCITY;
@@ -380,12 +392,20 @@ export function useAnimatedPosition(
                 segmentHint: snapIndexHint,
                 searchRadius: snapIndexRange,
             });
-            const cumDist = cumDistRef.current;
+            const cumDist = cumDistRef.current.length >= 2 ? cumDistRef.current : computeCumulativeDistances(polyline);
+            cumDistRef.current = cumDist;
             const dist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
-            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 30000));
+            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 8000));
             const totalDist = cumDist[cumDist.length - 1] ?? dist;
-            const projDist = CITY_BUS_BASE_VELOCITY * effectiveDelay;
-            const initialDist = Math.min(dist + projDist, totalDist);
+            const maxAllowedProj = Math.max(
+                0,
+                Math.min(
+                    CITY_BUS_BASE_VELOCITY * effectiveDelay,
+                    MAX_LATENCY_PROJECTION_COORD,
+                    totalDist - dist - STOP_DECEL_ZONE * 0.5
+                )
+            );
+            const initialDist = Math.min(dist + maxAllowedProj, totalDist);
 
             markerDistRef.current = initialDist;
             targetDistRef.current = initialDist;
@@ -433,12 +453,20 @@ export function useAnimatedPosition(
                     segmentHint: snapIndexHint,
                     searchRadius: snapIndexRange,
                 });
-                const cumDist = cumDistRef.current;
+                const cumDist = cumDistRef.current.length >= 2 ? cumDistRef.current : computeCumulativeDistances(polyline);
+                cumDistRef.current = cumDist;
                 const dist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
-                const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 30000));
+                const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 8000));
                 const totalDist = cumDist[cumDist.length - 1] ?? dist;
-                const projDist = CITY_BUS_BASE_VELOCITY * effectiveDelay;
-                const initialDist = Math.min(dist + projDist, totalDist);
+                const maxAllowedProj = Math.max(
+                    0,
+                    Math.min(
+                        CITY_BUS_BASE_VELOCITY * effectiveDelay,
+                        MAX_LATENCY_PROJECTION_COORD,
+                        totalDist - dist - STOP_DECEL_ZONE * 0.5
+                    )
+                );
+                const initialDist = Math.min(dist + maxAllowedProj, totalDist);
 
                 markerDistRef.current = initialDist;
                 prevRawDistRef.current = dist;
@@ -446,7 +474,6 @@ export function useAnimatedPosition(
                 lastDataTimeRef.current = performance.now();
                 sampleCountRef.current = 0;
 
-                // Start cruising immediately at normal bus speed
                 velocityRef.current = CITY_BUS_BASE_VELOCITY;
                 currentVelocityRef.current = CITY_BUS_BASE_VELOCITY;
                 targetDistRef.current = initialDist;
@@ -467,9 +494,20 @@ export function useAnimatedPosition(
             return;
         }
 
-        // Same position from API polling -> update timestamp so extrapolation stays fresh
+        // Same position from API polling -> bus is dwelling or stationary at a stop/terminal
         const prev = prevTargetRef.current;
         if (targetPosition[0] === prev[0] && targetPosition[1] === prev[1]) {
+            lastDataTimeRef.current = performance.now();
+            velocityRef.current = 0;
+            currentVelocityRef.current = 0;
+            if (cumDistRef.current.length >= 2) {
+                const snapped = snapPointToPolyline(targetPosition, polyline, {
+                    segmentHint: snapIndexHint,
+                    searchRadius: snapIndexRange,
+                });
+                const rawDist = polylineScalarDist(cumDistRef.current, snapped.segmentIndex, snapped.t);
+                targetDistRef.current = rawDist;
+            }
             return;
         }
         prevTargetRef.current = targetPosition;
@@ -485,77 +523,99 @@ export function useAnimatedPosition(
         const rawDist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
         const totalDist = cumDist[cumDist.length - 1];
         const lagMeters = getApproxDistanceMeters(currentPosRef.current, snapped.position);
+        const scalarGapCoord = Math.abs(markerDistRef.current - rawDist);
+        const isAbnormallyFar = lagMeters > MAX_ALLOWED_DISCREPANCY_METERS || (hasDataRef.current && scalarGapCoord > MAX_ALLOWED_DISCREPANCY_COORD);
         const now = performance.now();
 
-        // Check for backward jumps (GPS noise or route restart)
-        if (hasDataRef.current && rawDist < prevRawDistRef.current) {
-            // Small backward jitter -> keep current target
-            if (lagMeters <= BACKWARD_JITTER_METERS) {
-                prevRawDistRef.current = rawDist;
-                return;
-            }
+        // ----------------------------------------------------------------
+        // SAFEGUARD: Abnormally far from API OR route turnaround/loop restart
+        // ----------------------------------------------------------------
+        const scalarDropMeters = (prevRawDistRef.current - rawDist) * 111000;
+        const isTurnaroundLoop = hasDataRef.current && rawDist < prevRawDistRef.current && scalarDropMeters > SCALAR_LOOP_RESTART_THRESHOLD_METERS;
 
-            // Extreme jump / route loop restart -> re-anchor cleanly
-            if (lagMeters > TELEPORT_DISTANCE_METERS) {
-                const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 30000));
-                const projDist = CITY_BUS_BASE_VELOCITY * effectiveDelay;
-                const initialDist = Math.min(rawDist + projDist, totalDist);
+        if (isAbnormallyFar || isTurnaroundLoop) {
+            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 5000));
+            const maxAllowedProj = Math.max(
+                0,
+                Math.min(
+                    CITY_BUS_BASE_VELOCITY * effectiveDelay,
+                    MAX_LATENCY_PROJECTION_COORD,
+                    totalDist - rawDist - STOP_DECEL_ZONE * 0.5
+                )
+            );
+            const initialDist = Math.min(rawDist + maxAllowedProj, totalDist);
 
-                markerDistRef.current = initialDist;
-                targetDistRef.current = initialDist;
-                velocityRef.current = CITY_BUS_BASE_VELOCITY;
-                currentVelocityRef.current = CITY_BUS_BASE_VELOCITY;
-                sampleCountRef.current = 0;
-                lastDwelledStopIdxRef.current = -1;
-                dwellStartTimeRef.current = 0;
-                prevRawDistRef.current = rawDist;
-                lastDataTimeRef.current = now;
+            markerDistRef.current = initialDist;
+            targetDistRef.current = initialDist;
+            velocityRef.current = CITY_BUS_BASE_VELOCITY;
+            currentVelocityRef.current = CITY_BUS_BASE_VELOCITY;
+            sampleCountRef.current = 0;
+            lastDwelledStopIdxRef.current = -1;
+            dwellStartTimeRef.current = 0;
+            prevRawDistRef.current = rawDist;
+            lastDataTimeRef.current = now;
 
-                const {segIdx, t} = scalarToSegT(cumDist, initialDist);
-                const {position: pos, angle: pathAngle} = positionFromSegT(polyline, segIdx, t);
+            const {segIdx, t} = scalarToSegT(cumDist, initialDist);
+            const {position: pos, angle: pathAngle} = positionFromSegT(polyline, segIdx, t);
 
-                currentPosRef.current = pos;
-                currentAngleRef.current = pathAngle || snapped.angle;
-                updateMarkerDirect(pos, pathAngle || snapped.angle);
-                setState({position: pos, angle: pathAngle || snapped.angle});
-                return;
-            }
+            currentPosRef.current = pos;
+            currentAngleRef.current = pathAngle || snapped.angle;
+            updateMarkerDirect(pos, pathAngle || snapped.angle);
+            setState({position: pos, angle: pathAngle || snapped.angle});
+            return;
+        }
+
+        // Small backward jitter -> keep current target
+        if (hasDataRef.current && rawDist < prevRawDistRef.current && lagMeters <= BACKWARD_JITTER_METERS) {
+            prevRawDistRef.current = rawDist;
+            return;
         }
 
         // Estimate velocity based on progress between distinct GPS updates
         const dtMs = lastDataTimeRef.current > 0 ? now - lastDataTimeRef.current : 0;
-        if (dtMs > 600 && hasDataRef.current) {
-            const moved = rawDist - prevRawDistRef.current;
-            if (moved > 0) {
-                const rawV = moved / dtMs;
-                const clampedV = Math.min(Math.max(rawV, MIN_MOVING_VELOCITY), MAX_VELOCITY);
+        const moved = rawDist - prevRawDistRef.current;
+        const isStationary = Math.abs(moved) < 0.00005; // moved < ~5 meters
 
-                sampleCountRef.current++;
-                const samples = sampleCountRef.current;
+        if (isStationary) {
+            velocityRef.current = 0;
+            currentVelocityRef.current = 0;
+            targetDistRef.current = rawDist;
+        } else if (dtMs > 600 && hasDataRef.current && moved > 0) {
+            const rawV = moved / dtMs;
+            const clampedV = Math.min(Math.max(rawV, MIN_MOVING_VELOCITY), MAX_VELOCITY);
 
-                const measuredEMA =
-                    velocityRef.current <= STOP_THRESHOLD
-                        ? clampedV
-                        : VELOCITY_SMOOTHING * clampedV + (1 - VELOCITY_SMOOTHING) * velocityRef.current;
+            sampleCountRef.current++;
+            const samples = sampleCountRef.current;
 
-                velocityRef.current = Math.min(
-                    blendVelocityWithPrior(measuredEMA, samples),
-                    MAX_VELOCITY
-                );
-            }
+            const measuredEMA =
+                velocityRef.current <= STOP_THRESHOLD
+                    ? clampedV
+                    : VELOCITY_SMOOTHING * clampedV + (1 - VELOCITY_SMOOTHING) * velocityRef.current;
+
+            velocityRef.current = Math.min(
+                blendVelocityWithPrior(measuredEMA, samples),
+                MAX_VELOCITY
+            );
+
+            // Forward project real-time position by data latency compensation, bounded by safety limits
+            const v = Math.max(velocityRef.current, MIN_MOVING_VELOCITY);
+            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 8000));
+            const maxAllowedProj = Math.max(
+                0,
+                Math.min(
+                    v * effectiveDelay,
+                    MAX_LATENCY_PROJECTION_COORD,
+                    totalDist - rawDist - STOP_DECEL_ZONE * 0.5
+                )
+            );
+            targetDistRef.current = Math.min(rawDist + maxAllowedProj, totalDist);
+        } else {
+            targetDistRef.current = rawDist;
         }
 
         prevRawDistRef.current = rawDist;
         lastDataTimeRef.current = now;
         hasDataRef.current = true;
-
-        // Forward project real-time position by data latency compensation
-        const v = Math.max(velocityRef.current, MIN_MOVING_VELOCITY);
-        const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 30000));
-        const projDist = v * effectiveDelay;
-
-        // Reconcile new target without snapping backwards
-        targetDistRef.current = Math.min(rawDist + projDist, totalDist);
 
         // Reset dwell state if bus has moved past dwelled stop
         const stopDists = stopDistancesRef.current;
@@ -613,8 +673,21 @@ export function useAnimatedPosition(
                 deadReckoningFactor = Math.max(0, 1 - over / DEAD_RECKONING_FADEOUT_MS);
             }
 
-            if (deadReckoningFactor > 0 && activeV > 0) {
-                // Stop-aware speed modulation (skips deceleration/dwell for stops that bus has already passed)
+            // SAFETY CEILING: Extrapolation is strictly capped at MAX_FORWARD_EXTRAPOLATION_COORD past raw API position
+            const maxExtrapolatedDist = prevRawDistRef.current + MAX_FORWARD_EXTRAPOLATION_COORD;
+            const hardCeilingDist = Math.min(totalDist, maxExtrapolatedDist);
+
+            // If marker is at or near terminus/turnaround or reached forward extrapolation ceiling, stop dead reckoning
+            if (dist >= hardCeilingDist || dist >= totalDist - STOP_DECEL_ZONE * 0.5) {
+                deadReckoningFactor = 0;
+            }
+
+            // SAFEGUARD: If marker is abnormally ahead or behind (> MAX_ALLOWED_DISCREPANCY_COORD), snap instantly
+            if (Math.abs(gap) > MAX_ALLOWED_DISCREPANCY_COORD) {
+                dist = target;
+                markerDistRef.current = dist;
+            } else if (deadReckoningFactor > 0 && activeV > 0) {
+                // Stop-aware speed modulation
                 const {multiplier: stopMult, nearStopIdx} = getStopSpeedMultiplier(
                     dist,
                     target,
@@ -625,7 +698,6 @@ export function useAnimatedPosition(
                 let isDwelling = false;
                 if (nearStopIdx !== null) {
                     if (lastDwelledStopIdxRef.current !== nearStopIdx) {
-                        // Enter new stop dwell
                         lastDwelledStopIdxRef.current = nearStopIdx;
                         dwellStartTimeRef.current = now;
                         isDwelling = true;
@@ -637,15 +709,12 @@ export function useAnimatedPosition(
                 if (isDwelling) {
                     // Dwell at station: gentle crawl or pause
                     const dwellAdvance = activeV * 0.05 * clampedDt;
-                    dist = Math.min(dist + dwellAdvance, totalDist);
+                    dist = Math.min(dist + dwellAdvance, hardCeilingDist);
                     markerDistRef.current = dist;
                 } else {
-                    // Continuous Linear Dead Reckoning + Fast-Accelerating Catch-Up
-                    // 1. Base cruising speed along polyline
+                    // Continuous Linear Dead Reckoning + Responsive Catch-Up
                     const baseVelocity = activeV * deadReckoningFactor * stopMult;
-
-                    // 2. Responsive catch-up boost (accelerates quickly when behind target)
-                    const maxCatchupBoost = Math.max(baseVelocity * 3.5, MAX_VELOCITY * 1.5);
+                    const maxCatchupBoost = Math.max(baseVelocity * 3.0, MAX_VELOCITY * 1.2);
                     const catchupVelocity = Math.max(
                         -baseVelocity * 0.7,
                         Math.min(gap / CATCHUP_TAU_MS, maxCatchupBoost)
@@ -658,7 +727,7 @@ export function useAnimatedPosition(
                     const advance = effectiveVelocity * clampedDt;
 
                     if (advance > 0) {
-                        dist = Math.min(dist + advance, totalDist);
+                        dist = Math.min(dist + advance, hardCeilingDist);
                         markerDistRef.current = dist;
                     }
                 }
