@@ -17,20 +17,36 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                                                                          }) => {
     const now = currentTime || new Date();
     const currentMins = now.getHours() * 60 + now.getMinutes();
-    const isSunday = now.getDay() === 0;
+    const dayOfWeek = now.getDay();
+    const isSunday = dayOfWeek === 0;
+    const isSaturday = dayOfWeek === 6;
 
-    // Find next upcoming inbound shuttle
-    const nextInbound = useMemo(() => {
+    // Filter by today's day type
+    const applicableInboundList = useMemo(() => {
+        if (isSaturday) return [];
         const list = YONSEI_SHUTTLE_SCHEDULE.inbound_to_campus;
-        // Filter by today's day type
-        const applicableList = list.filter((item) => {
+        return list.filter((item) => {
             if (isSunday) {
                 return item.operation_type.includes("일요일");
             }
-            return !item.operation_type.includes("일요일");
+            return item.operation_type.includes("평일") || !item.operation_type.includes("일요일");
         });
+    }, [isSaturday, isSunday]);
 
-        for (const item of applicableList) {
+    const applicableOutboundList = useMemo(() => {
+        if (isSaturday) return [];
+        const list = YONSEI_SHUTTLE_SCHEDULE.outbound_from_campus;
+        return list.filter((item) => {
+            if (isSunday) {
+                return item.operation_type.includes("일요일");
+            }
+            return item.operation_type.includes("평일") || !item.operation_type.includes("일요일");
+        });
+    }, [isSaturday, isSunday]);
+
+    // Find next upcoming inbound shuttle
+    const nextInbound = useMemo(() => {
+        for (const item of applicableInboundList) {
             const mins = parseTimeToMinutes(item.departure_time);
             if (mins !== null && mins >= currentMins) {
                 return {
@@ -41,19 +57,11 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             }
         }
         return null;
-    }, [currentMins, isSunday]);
+    }, [applicableInboundList, currentMins]);
 
     // Find next upcoming outbound shuttle
     const nextOutbound = useMemo(() => {
-        const list = YONSEI_SHUTTLE_SCHEDULE.outbound_from_campus;
-        const applicableList = list.filter((item) => {
-            if (isSunday) {
-                return item.operation_type.includes("일요일");
-            }
-            return !item.operation_type.includes("일요일");
-        });
-
-        for (const item of applicableList) {
+        for (const item of applicableOutboundList) {
             const mins = parseTimeToMinutes(item.departure_time);
             if (mins !== null && mins >= currentMins) {
                 return {
@@ -64,7 +72,9 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             }
         }
         return null;
-    }, [currentMins, isSunday]);
+    }, [applicableOutboundList, currentMins]);
+
+    const hasUpcomingShuttle = Boolean(nextInbound || nextOutbound);
 
     const getWaitBadgeStyle = (waitMins: number) => {
         if (waitMins <= 10) {
@@ -76,6 +86,57 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
         return "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30 font-extrabold";
     };
 
+    // Minimized banner view when no shuttles are operating / available
+    if (!hasUpcomingShuttle) {
+        return (
+            <div
+                onClick={onOpenModal}
+                className="w-full backdrop-blur-2xl bg-gradient-to-r from-teal-900/[0.03] via-white/80 to-emerald-900/[0.03] dark:from-teal-950/25 dark:via-[#131926]/80 dark:to-emerald-950/20 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 border border-teal-500/20 dark:border-teal-500/20 hover:border-teal-500/60 dark:hover:border-teal-400/60 transition-all duration-300 shadow-xs hover:shadow-md cursor-pointer select-none active:scale-[0.99] flex items-center justify-between gap-3 group"
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onOpenModal();
+                    }
+                }}
+            >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div
+                        className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-teal-500/10 dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 border border-teal-500/25 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-200">
+                        <Bus className="w-4 h-4 sm:w-5 sm:h-5 text-teal-600 dark:text-teal-400"/>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                                className="text-xs sm:text-sm font-black text-slate-900 dark:text-white leading-tight truncate">
+                                무료 셔틀버스
+                            </span>
+                            <span
+                                className="px-2 py-0.5 rounded-lg bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold border border-black/5 dark:border-white/5">
+                                {isSaturday ? "토요일 미운행" : "운행 종료"}
+                            </span>
+                        </div>
+                        <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
+                            {isSaturday
+                                ? "토요일은 셔틀버스를 운행하지 않습니다 (시간표 및 정류장 위치 확인)"
+                                : "오늘 셔틀버스 운행이 종료되었습니다 (전체 시간표 및 정류장 확인)"}
+                        </p>
+                    </div>
+                </div>
+
+                <div
+                    className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-teal-500/10 group-hover:bg-gradient-to-r group-hover:from-teal-600 group-hover:to-emerald-600 dark:bg-teal-500/15 text-teal-700 group-hover:text-white dark:text-teal-300 dark:group-hover:text-white text-xs font-black border border-teal-500/25 group-hover:border-transparent group-hover:shadow-md group-hover:shadow-teal-700/20 transition-all shrink-0">
+                    <GraduationCap className="w-3.5 h-3.5"/>
+                    <span>시간표 보기</span>
+                    <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"/>
+                </div>
+            </div>
+        );
+    }
+
+    // Standard card view when upcoming shuttle buses exist
     return (
         <div
             onClick={onOpenModal}
