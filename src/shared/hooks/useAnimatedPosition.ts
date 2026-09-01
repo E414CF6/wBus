@@ -36,24 +36,24 @@ interface UseAnimatedPositionOptions {
 }
 
 // ----------------------------------------------------------------------
-// Constants — Real-Time Linear Interpolation, Dead Reckoning & Safeguards
+// Constants — Real-Time Smooth Interpolation, Bounded Dead Reckoning & Safeguards
 // ----------------------------------------------------------------------
 
 // Ignore backward jumps smaller than this (GPS jitter in meters)
 const BACKWARD_JITTER_METERS = 20;
 
 // Scalar distance drop in meters that signals route restart / turnaround loop
-const SCALAR_LOOP_RESTART_THRESHOLD_METERS = 50;
+const SCALAR_LOOP_RESTART_THRESHOLD_METERS = 400;
 
-// Maximum distance (meters) the animated marker is ever allowed to extrapolate ahead of the last confirmed API position (~100m)
-const MAX_FORWARD_EXTRAPOLATION_COORD = 0.0010;
+// Maximum distance backward/forward before teleporting instead of smooth transition (800m)
+const TELEPORT_DISTANCE_METERS = 800;
+const TELEPORT_COORD_THRESHOLD = 0.0075; // ~830m
 
-// Maximum latency compensation projection allowed upon receiving fresh API data (~50m)
-const MAX_LATENCY_PROJECTION_COORD = 0.0005;
+// Maximum distance the animated marker is ever allowed to dead-reckon ahead of the last confirmed API position (~300m)
+const MAX_DEAD_RECKONING_LEAD_COORD = 0.0028;
 
-// Maximum acceptable discrepancy between animated marker and API position before forcing immediate snap/re-anchor (~120m)
-const MAX_ALLOWED_DISCREPANCY_METERS = 120;
-const MAX_ALLOWED_DISCREPANCY_COORD = 0.0012;
+// Maximum latency compensation projection allowed upon receiving fresh API data (~60m)
+const MAX_LATENCY_PROJECTION_COORD = 0.0006;
 
 // React state update throttle — 20 Hz (50ms) for UI popup consumers
 const STATE_UPDATE_THROTTLE_MS = 50;
@@ -66,9 +66,9 @@ const MAX_DT_MS = 200;
 const CITY_BUS_BASE_VELOCITY = 0.000000075;
 
 // Velocity limits (coord-units / ms)
-// Min crawling speed (~10 km/h), Max cruising (~80 km/h), Max catchup (~85 km/h)
+// Min crawling speed (~10 km/h), Max cruising (~75 km/h), Max catchup (~85 km/h)
 const MIN_MOVING_VELOCITY = 0.000000025;
-const MAX_VELOCITY = 0.00000020;
+const MAX_VELOCITY = 0.00000019;
 const MAX_CATCHUP_VELOCITY = 0.00000022;
 const STOP_THRESHOLD = 0.000000005;
 
@@ -84,17 +84,17 @@ const VELOCITY_PRIOR_RAMP_SAMPLES = 2;
 const DEFAULT_DATA_DELAY_MS = 8000;
 
 // Dead reckoning duration:
-// Forward extrapolation for up to 30s between GPS updates (capped by MAX_FORWARD_EXTRAPOLATION_COORD)
-const DEAD_RECKONING_CRUISE_MS = 30000;
-// Graceful deceleration coasting from 30s to 60s if no data arrives
+// Smooth forward extrapolation for up to 35s between GPS updates (capped by MAX_DEAD_RECKONING_LEAD_COORD)
+const DEAD_RECKONING_CRUISE_MS = 35000;
+// Graceful deceleration coasting from 35s to 65s if no data arrives
 const DEAD_RECKONING_FADEOUT_MS = 30000;
 
 // Elastic Catch-Up time constant:
-// Snappy spring convergence over ~1.0s to quickly close position gaps when new API data arrives
-const CATCHUP_TAU_MS = 1000;
+// Smooth convergence over ~2.0s to close position gaps when new API data arrives
+const CATCHUP_TAU_MS = 2000;
 
 // Acceleration/deceleration transition easing (ms)
-const VELOCITY_TAU_MS = 250;
+const VELOCITY_TAU_MS = 300;
 
 // Angular smoothing
 const ANGULAR_LOOKAHEAD_THRESHOLD = 0.65;
@@ -257,8 +257,8 @@ function blendVelocityWithPrior(measured: number, sampleCount: number): number {
 // ----------------------------------------------------------------------
 
 /**
- * Animates a bus marker along a polyline with continuous linear interpolation,
- * bounded dead reckoning, fast catch-up, and strict anti-drift safeguards.
+ * Animates a bus marker along a polyline with continuous smooth linear interpolation,
+ * bounded forward dead reckoning, and anti-teleport / anti-drift safeguards.
  */
 export function useAnimatedPosition(
     targetPosition: Coordinate,
@@ -505,8 +505,7 @@ export function useAnimatedPosition(
                     segmentHint: snapIndexHint,
                     searchRadius: snapIndexRange,
                 });
-                const rawDist = polylineScalarDist(cumDistRef.current, snapped.segmentIndex, snapped.t);
-                targetDistRef.current = rawDist;
+                targetDistRef.current = polylineScalarDist(cumDistRef.current, snapped.segmentIndex, snapped.t);
             }
             return;
         }
@@ -523,17 +522,16 @@ export function useAnimatedPosition(
         const rawDist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
         const totalDist = cumDist[cumDist.length - 1];
         const lagMeters = getApproxDistanceMeters(currentPosRef.current, snapped.position);
-        const scalarGapCoord = Math.abs(markerDistRef.current - rawDist);
-        const isAbnormallyFar = lagMeters > MAX_ALLOWED_DISCREPANCY_METERS || (hasDataRef.current && scalarGapCoord > MAX_ALLOWED_DISCREPANCY_COORD);
         const now = performance.now();
 
         // ----------------------------------------------------------------
-        // SAFEGUARD: Abnormally far from API OR route turnaround/loop restart
+        // TELEPORT / TURNAROUND RE-ANCHOR: Only for extreme jumps or route resets
         // ----------------------------------------------------------------
         const scalarDropMeters = (prevRawDistRef.current - rawDist) * 111000;
         const isTurnaroundLoop = hasDataRef.current && rawDist < prevRawDistRef.current && scalarDropMeters > SCALAR_LOOP_RESTART_THRESHOLD_METERS;
+        const isExtremeTeleport = lagMeters > TELEPORT_DISTANCE_METERS;
 
-        if (isAbnormallyFar || isTurnaroundLoop) {
+        if (isTurnaroundLoop || isExtremeTeleport) {
             const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 5000));
             const maxAllowedProj = Math.max(
                 0,
@@ -571,10 +569,12 @@ export function useAnimatedPosition(
             return;
         }
 
-        // Estimate velocity based on progress between distinct GPS updates
+        // ----------------------------------------------------------------
+        // NORMAL PROGRESS: Update target distance for smooth animation
+        // ----------------------------------------------------------------
         const dtMs = lastDataTimeRef.current > 0 ? now - lastDataTimeRef.current : 0;
         const moved = rawDist - prevRawDistRef.current;
-        const isStationary = Math.abs(moved) < 0.00005; // moved < ~5 meters
+        const isStationary = Math.abs(moved) < 0.00003; // moved < ~3 meters
 
         if (isStationary) {
             velocityRef.current = 0;
@@ -597,7 +597,7 @@ export function useAnimatedPosition(
                 MAX_VELOCITY
             );
 
-            // Forward project real-time position by data latency compensation, bounded by safety limits
+            // Forward project target position by latency compensation (up to ~60m)
             const v = Math.max(velocityRef.current, MIN_MOVING_VELOCITY);
             const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 8000));
             const maxAllowedProj = Math.max(
@@ -637,7 +637,7 @@ export function useAnimatedPosition(
     ]);
 
     // ----------------------------------------------------------------
-    // Animation loop — Continuous 60fps Dead Reckoning & Linear Interpolation
+    // Animation loop — Continuous 60fps Smooth Interpolation & Dead Reckoning
     // ----------------------------------------------------------------
     useEffect(() => {
         const tick = (now: number) => {
@@ -663,7 +663,7 @@ export function useAnimatedPosition(
             const totalDist = cumDist[cumDist.length - 1];
             let dist = markerDistRef.current;
             const target = targetDistRef.current;
-            const gap = target - dist; // positive = behind target, negative = ahead
+            const gap = target - dist; // positive = marker behind target, negative = ahead
 
             // Check dead reckoning timeout / fadeout
             const timeSinceLastData = lastDataTimeRef.current > 0 ? now - lastDataTimeRef.current : 0;
@@ -673,20 +673,20 @@ export function useAnimatedPosition(
                 deadReckoningFactor = Math.max(0, 1 - over / DEAD_RECKONING_FADEOUT_MS);
             }
 
-            // SAFETY CEILING: Extrapolation is strictly capped at MAX_FORWARD_EXTRAPOLATION_COORD past raw API position
-            const maxExtrapolatedDist = prevRawDistRef.current + MAX_FORWARD_EXTRAPOLATION_COORD;
+            // SAFETY CEILING: Extrapolation is strictly capped at MAX_DEAD_RECKONING_LEAD_COORD (~300m) past raw API position
+            const maxExtrapolatedDist = prevRawDistRef.current + MAX_DEAD_RECKONING_LEAD_COORD;
             const hardCeilingDist = Math.min(totalDist, maxExtrapolatedDist);
 
-            // If marker is at or near terminus/turnaround or reached forward extrapolation ceiling, stop dead reckoning
+            // If marker is at/near route terminus or reached extrapolation ceiling, stop forward dead reckoning
             if (dist >= hardCeilingDist || dist >= totalDist - STOP_DECEL_ZONE * 0.5) {
                 deadReckoningFactor = 0;
             }
 
-            // SAFEGUARD: If marker is abnormally ahead or behind (> MAX_ALLOWED_DISCREPANCY_COORD), snap instantly
-            if (Math.abs(gap) > MAX_ALLOWED_DISCREPANCY_COORD) {
+            // If gap is enormous (> 800m), teleport to target; otherwise smoothly animate
+            if (Math.abs(gap) > TELEPORT_COORD_THRESHOLD) {
                 dist = target;
                 markerDistRef.current = dist;
-            } else if (deadReckoningFactor > 0 && activeV > 0) {
+            } else if (deadReckoningFactor > 0 || gap > 0.00005) {
                 // Stop-aware speed modulation
                 const {multiplier: stopMult, nearStopIdx} = getStopSpeedMultiplier(
                     dist,
@@ -707,16 +707,16 @@ export function useAnimatedPosition(
                 }
 
                 if (isDwelling) {
-                    // Dwell at station: gentle crawl or pause
+                    // Dwell at station: gentle crawl
                     const dwellAdvance = activeV * 0.05 * clampedDt;
                     dist = Math.min(dist + dwellAdvance, hardCeilingDist);
                     markerDistRef.current = dist;
                 } else {
-                    // Continuous Linear Dead Reckoning + Responsive Catch-Up
+                    // Smooth Linear Interpolation + Proportional Catch-Up
                     const baseVelocity = activeV * deadReckoningFactor * stopMult;
-                    const maxCatchupBoost = Math.max(baseVelocity * 3.0, MAX_VELOCITY * 1.2);
+                    const maxCatchupBoost = Math.max(baseVelocity * 2.5, MAX_VELOCITY * 1.2);
                     const catchupVelocity = Math.max(
-                        -baseVelocity * 0.7,
+                        -baseVelocity * 0.5,
                         Math.min(gap / CATCHUP_TAU_MS, maxCatchupBoost)
                     );
 
