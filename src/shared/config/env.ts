@@ -115,4 +115,7 @@ export const STORAGE_KEYS = {
     MAP_VIEW: "wbus_map_view",
     ACTIVE_TAB: "wbus_active_tab",
     TIMETABLE_SUBTAB: "wbus_timetable_subtab",
+    SCHEDULE_CACHE: "wbus_cached_schedule_v2",
+    NOTICE_LIST_CACHE: "wbus_cached_notice_list_v1",
+    NOTICE_DETAIL_PREFIX: "wbus_cached_notice_detail_",
 } as const;

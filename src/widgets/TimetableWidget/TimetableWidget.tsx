@@ -1,7 +1,7 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useState} from "react";
-import {BusCacheData, BusRoute, CacheMetadata} from "@shared/types/bus";
+import {BusCacheData, BusRoute, CacheMetadata, RouteDataset} from "@shared/types/bus";
 import {UI_TEXT} from "@shared/config/locale";
 import {STORAGE_KEYS} from "@shared/config/env";
 import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
@@ -45,6 +45,23 @@ export default function TimetableWidget({
     const [error, setError] = useState<string | null>(null);
     const [isNoticeOpen, setIsNoticeOpen] = useState<boolean>(false);
     const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
+
+    // Instant initial load from browser persistent cache (localStorage)
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEYS.SCHEDULE_CACHE);
+            if (raw) {
+                const parsed: { data: RouteDataset; meta: CacheMetadata } = JSON.parse(raw);
+                if (parsed?.data?.routes?.length) {
+                    setData(parsed.data as BusCacheData);
+                    setMeta(parsed.meta || null);
+                    setIsLoading(false);
+                }
+            }
+        } catch {
+            // Ignore corrupted local cache
+        }
+    }, []);
 
     // Restore saved timetable subtab preference from localStorage if uncontrolled
     useEffect(() => {
@@ -121,12 +138,10 @@ export default function TimetableWidget({
         [bookmarks]
     );
 
-    // Fetch bus timetable data
-    const fetchBusData = async (refresh = false) => {
+    // Fetch bus timetable data with browser HTTP cache and local persistence
+    const fetchBusData = useCallback(async (refresh = false) => {
         if (refresh) {
             setIsRefreshing(true);
-        } else {
-            setIsLoading(true);
         }
         setError(null);
 
@@ -136,17 +151,37 @@ export default function TimetableWidget({
 
             const res = await fetch(endpoint, {
                 method,
-                cache: "no-store",
-                headers: {"Cache-Control": "no-cache"},
+                ...(refresh ? {cache: "no-store", headers: {"Cache-Control": "no-cache"}} : {}),
             });
+
+            if (res.status === 304) {
+                // Up to date
+                setIsLoading(false);
+                if (refresh) setIsRefreshing(false);
+                return;
+            }
+
             const json = await res.json();
 
             if (!json.success || !json.data) {
                 throw new Error(json.error || UI_TEXT.ERROR.FETCH_FAILED(UI_TEXT.DATA_LABELS.SCHEDULE_DATA, res.status));
             }
 
-            setData(json.data);
-            setMeta(json.meta);
+            const freshData = json.data;
+            const updatedMeta = json.meta || null;
+
+            setData(freshData);
+            setMeta(updatedMeta);
+
+            // Persist to browser localStorage
+            try {
+                localStorage.setItem(
+                    STORAGE_KEYS.SCHEDULE_CACHE,
+                    JSON.stringify({data: freshData, meta: updatedMeta})
+                );
+            } catch {
+                // Storage limit
+            }
 
             if (refresh) {
                 if (json.refreshed) {
@@ -162,16 +197,18 @@ export default function TimetableWidget({
                 }
             }
         } catch (err) {
-            setError(err instanceof Error ? err.message : UI_TEXT.ERROR.UNKNOWN("Fetch Error"));
+            if (!data) {
+                setError(err instanceof Error ? err.message : UI_TEXT.ERROR.UNKNOWN("Fetch Error"));
+            }
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
         }
-    };
+    }, [data]);
 
     useEffect(() => {
         fetchBusData(false);
-    }, []);
+    }, [fetchBusData]);
 
     // Filtered Routes for All Routes Tab
     const filteredRoutes = useMemo(() => {
@@ -317,7 +354,7 @@ export default function TimetableWidget({
                     )}
 
                     {/* Route Cards Grid */}
-                    {isLoading ? (
+                    {isLoading && !data ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
                             {[1, 2, 3, 4, 5, 6].map((i) => (
                                 <div

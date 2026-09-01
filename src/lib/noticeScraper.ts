@@ -14,8 +14,8 @@ const HEADERS = {
 const listCache = new Map<string, { data: NoticeListResponse; expiresAt: number }>();
 const detailCache = new Map<string, { data: NoticeDetail; expiresAt: number }>();
 
-const LIST_TTL_MS = 5 * 60 * 1000; // 5 mins
-const DETAIL_TTL_MS = 30 * 60 * 1000; // 30 mins
+const LIST_TTL_MS = 10 * 60 * 1000; // 10 mins in memory
+const DETAIL_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours in memory
 
 /**
  * Scrapes notice list from Wonju ITS.
@@ -40,6 +40,10 @@ export async function scrapeWonjuNoticeList(page = 1, searchText = "", searchGb 
     });
 
     if (!res.ok) {
+        if (cached) {
+            console.warn(`[NoticeScraper] Fetch failed (${res.status}), serving stale cached list.`);
+            return cached.data;
+        }
         throw new Error(`Failed to fetch notice list from Wonju ITS (Status: ${res.status})`);
     }
 
@@ -110,6 +114,10 @@ export async function scrapeWonjuNoticeDetail(id: string): Promise<NoticeDetail>
     });
 
     if (!res.ok) {
+        if (cached) {
+            console.warn(`[NoticeScraper] Fetch detail failed (${res.status}), serving stale cache for bdIdx=${id}`);
+            return cached.data;
+        }
         throw new Error(`Failed to fetch notice detail for bdIdx=${id} (Status: ${res.status})`);
     }
 

@@ -11,6 +11,7 @@ import {CacheInfoBanner} from "@widgets/TimetableWidget/CacheInfoBanner";
 import {Footer} from "@shared/ui/Footer";
 import {TARGET_ROUTE_NUMBERS} from "@/data/yonseiRoutes";
 import {selectRouteVariant} from "@shared/lib/timeUtils";
+import {STORAGE_KEYS} from "@shared/config/env";
 import {CheckCircle2, Info, X} from "lucide-react";
 
 interface YonseiTimetableWidgetProps {
@@ -48,6 +49,23 @@ export default function YonseiTimetableWidget({
     const [isNoticeModalOpen, setIsNoticeModalOpen] = useState<boolean>(false);
     const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
 
+    // Instant initial load from browser persistent cache (localStorage)
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem(STORAGE_KEYS.SCHEDULE_CACHE);
+            if (raw) {
+                const parsed: { data: RouteDataset; meta: CacheMetadata } = JSON.parse(raw);
+                if (parsed?.data?.routes?.length) {
+                    setRoutes(parsed.data.routes);
+                    setMeta(parsed.meta || null);
+                    setIsLoading(false);
+                }
+            }
+        } catch {
+            // Ignore corrupted local cache
+        }
+    }, []);
+
     // Live clock update
     useEffect(() => {
         const timer = setInterval(() => {
@@ -56,12 +74,10 @@ export default function YonseiTimetableWidget({
         return () => clearInterval(timer);
     }, []);
 
-    // Fetch timetable schedule
+    // Fetch timetable schedule with HTTP browser cache & persistent storage sync
     const fetchScheduleData = useCallback(async (force = false) => {
         if (force) {
             setIsRefreshing(true);
-        } else {
-            setIsLoading(true);
         }
 
         try {
@@ -70,9 +86,16 @@ export default function YonseiTimetableWidget({
 
             const res = await fetch(endpoint, {
                 method,
-                cache: "no-store",
-                headers: {"Cache-Control": "no-cache"},
+                ...(force ? {cache: "no-store", headers: {"Cache-Control": "no-cache"}} : {}),
             });
+
+            if (res.status === 304) {
+                // Not modified - browser / local cache is perfectly up to date
+                setIsLoading(false);
+                if (force) setIsRefreshing(false);
+                return;
+            }
+
             const json = await res.json();
 
             if (!json.success || !json.data) {
@@ -80,8 +103,19 @@ export default function YonseiTimetableWidget({
             }
 
             const dataset: RouteDataset = json.data;
+            const updatedMeta: CacheMetadata = json.meta || null;
             setRoutes(dataset.routes || []);
-            setMeta(json.meta || null);
+            setMeta(updatedMeta);
+
+            // Persist to browser localStorage
+            try {
+                localStorage.setItem(
+                    STORAGE_KEYS.SCHEDULE_CACHE,
+                    JSON.stringify({data: dataset, meta: updatedMeta})
+                );
+            } catch {
+                // Storage quota limit fallback
+            }
 
             if (force) {
                 if (json.refreshed) {
@@ -97,15 +131,18 @@ export default function YonseiTimetableWidget({
                 }
             }
         } catch (err) {
-            setToastNotice({
-                type: "error",
-                message: err instanceof Error ? err.message : "시간표 데이터를 불러오는데 실패했습니다.",
-            });
+            // If network fails but we already have routes loaded from cache, don't break UI
+            if (routes.length === 0) {
+                setToastNotice({
+                    type: "error",
+                    message: err instanceof Error ? err.message : "시간표 데이터를 불러오는데 실패했습니다.",
+                });
+            }
         } finally {
             setIsLoading(false);
             setIsRefreshing(false);
         }
-    }, []);
+    }, [routes.length]);
 
     useEffect(() => {
         fetchScheduleData(false);

@@ -1,21 +1,31 @@
-import {NextResponse} from "next/server";
-
+import {NextRequest, NextResponse} from "next/server";
 import {getOrFetchSchedule} from "@lib/scheduleService";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     const startTime = Date.now();
     try {
         const {data, meta} = await getOrFetchSchedule(false);
+
+        // Generate strong ETag based on updatedAt and total route count
+        const etag = `W/"wbus-sched-${meta.updatedAt ? new Date(meta.updatedAt).getTime() : "latest"}-${data.routes?.length || 0}"`;
+
+        // Check If-None-Match header for conditional 304 Not Modified
+        const ifNoneMatch = request.headers.get("if-none-match");
+        if (ifNoneMatch && ifNoneMatch === etag) {
+            return new NextResponse(null, {
+                status: 304, headers: {
+                    ETag: etag, "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
+                },
+            });
+        }
+
         return NextResponse.json({
             success: true, data, meta, elapsedMs: Date.now() - startTime,
         }, {
             headers: {
-                "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0",
-                Pragma: "no-cache",
-                Expires: "0",
+                ETag: etag, "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
             },
         });
     } catch (error) {

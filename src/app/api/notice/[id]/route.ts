@@ -13,7 +13,7 @@ export async function GET(_request: NextRequest, {params}: { params: Promise<{ i
         const data = await scrapeWonjuNoticeDetail(id);
         return NextResponse.json({success: true, data}, {
             headers: {
-                "Cache-Control": "public, s-maxage=600, stale-while-revalidate=1800",
+                "Cache-Control": "public, max-age=1800, s-maxage=7200, stale-while-revalidate=86400",
             },
         });
     } catch (error) {

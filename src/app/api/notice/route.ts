@@ -1,5 +1,4 @@
 import {NextRequest, NextResponse} from "next/server";
-
 import {scrapeWonjuNoticeList} from "@lib/noticeScraper";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +14,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({success: true, data}, {
             headers: {
-                "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+                "Cache-Control": "public, max-age=180, s-maxage=900, stale-while-revalidate=3600",
             },
         });
     } catch (error) {
