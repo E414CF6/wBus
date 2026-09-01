@@ -49,11 +49,13 @@ const SCALAR_LOOP_RESTART_THRESHOLD_METERS = 400;
 const TELEPORT_DISTANCE_METERS = 800;
 const TELEPORT_COORD_THRESHOLD = 0.0075; // ~830m
 
-// Maximum distance the animated marker is ever allowed to dead-reckon ahead of the last confirmed API position (~450m)
-const MAX_DEAD_RECKONING_LEAD_COORD = 0.0040;
+// Maximum distance the animated marker is ever allowed to dead-reckon ahead of the last confirmed API position (~780m)
+// Scaled up to support slow API intervals & public transit latency
+const MAX_DEAD_RECKONING_LEAD_COORD = 0.0070;
 
-// Maximum latency compensation projection allowed upon receiving fresh API data (~100m)
-const MAX_LATENCY_PROJECTION_COORD = 0.0009;
+// Maximum latency compensation projection allowed upon receiving fresh API data (~300m)
+// Increased to compensate for realistic public bus API delay (10~25 seconds)
+const MAX_LATENCY_PROJECTION_COORD = 0.0028;
 
 // React state update throttle — 20 Hz (50ms) for UI popup consumers
 const STATE_UPDATE_THROTTLE_MS = 50;
@@ -74,6 +76,8 @@ const STOP_THRESHOLD = 0.000000005;
 
 // Velocity smoothing factor (EMA weight on new measurement)
 const VELOCITY_SMOOTHING = 0.70;
+// Deceleration smoothing factor (faster adaptation when new API delta shows bus slowed down)
+const VELOCITY_DECEL_SMOOTHING = 0.88;
 
 // Weight given to measured velocity vs prior (starts high to adapt quickly)
 const VELOCITY_PRIOR_BLEND_MIN = 0.6;
@@ -81,13 +85,13 @@ const VELOCITY_PRIOR_BLEND_MAX = 0.95;
 const VELOCITY_PRIOR_RAMP_SAMPLES = 2;
 
 // Default estimated latency between real bus and client reception (ms)
-const DEFAULT_DATA_DELAY_MS = 8000;
+const DEFAULT_DATA_DELAY_MS = 12000;
 
 // Dead reckoning duration:
-// Smooth forward extrapolation for up to 35s between GPS updates (capped by MAX_DEAD_RECKONING_LEAD_COORD)
-const DEAD_RECKONING_CRUISE_MS = 35000;
-// Graceful deceleration coasting from 35s to 65s if no data arrives
-const DEAD_RECKONING_FADEOUT_MS = 30000;
+// Smooth forward extrapolation for up to 45s between GPS updates (capped by MAX_DEAD_RECKONING_LEAD_COORD)
+const DEAD_RECKONING_CRUISE_MS = 45000;
+// Graceful deceleration coasting from 45s to 80s if no data arrives
+const DEAD_RECKONING_FADEOUT_MS = 35000;
 
 // Rapid Catch-Up time constant:
 // Fast exponential convergence (~600ms) with non-linear boost to rapidly catch up when slow API data arrives
@@ -258,7 +262,7 @@ function blendVelocityWithPrior(measured: number, sampleCount: number): number {
 
 /**
  * Animates a bus marker along a polyline with continuous smooth linear interpolation,
- * rapid catch-up sprint on new API updates, and anti-teleport / anti-drift safeguards.
+ * rapid catch-up sprint on new API updates, delta discrepancy slowdown detection, and anti-teleport / anti-drift safeguards.
  */
 export function useAnimatedPosition(
     targetPosition: Coordinate,
@@ -285,7 +289,7 @@ export function useAnimatedPosition(
             });
             const cumDist = computeCumulativeDistances(polyline);
             const dist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
-            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 8000));
+            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 25000));
             const totalDist = cumDist[cumDist.length - 1] ?? dist;
             const maxAllowedProj = Math.max(
                 0,
@@ -395,7 +399,7 @@ export function useAnimatedPosition(
             const cumDist = cumDistRef.current.length >= 2 ? cumDistRef.current : computeCumulativeDistances(polyline);
             cumDistRef.current = cumDist;
             const dist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
-            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 8000));
+            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 25000));
             const totalDist = cumDist[cumDist.length - 1] ?? dist;
             const maxAllowedProj = Math.max(
                 0,
@@ -456,7 +460,7 @@ export function useAnimatedPosition(
                 const cumDist = cumDistRef.current.length >= 2 ? cumDistRef.current : computeCumulativeDistances(polyline);
                 cumDistRef.current = cumDist;
                 const dist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
-                const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 8000));
+                const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 25000));
                 const totalDist = cumDist[cumDist.length - 1] ?? dist;
                 const maxAllowedProj = Math.max(
                     0,
@@ -532,7 +536,7 @@ export function useAnimatedPosition(
         const isExtremeTeleport = lagMeters > TELEPORT_DISTANCE_METERS;
 
         if (isTurnaroundLoop || isExtremeTeleport) {
-            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 5000));
+            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 10000));
             const maxAllowedProj = Math.max(
                 0,
                 Math.min(
@@ -570,7 +574,8 @@ export function useAnimatedPosition(
         }
 
         // ----------------------------------------------------------------
-        // NORMAL PROGRESS: Update target distance for rapid catch-up animation
+        // NORMAL PROGRESS & DELTA-AWARE SLOWDOWN:
+        // Detect delta changes in incoming data and adapt speed / projection
         // ----------------------------------------------------------------
         const dtMs = lastDataTimeRef.current > 0 ? now - lastDataTimeRef.current : 0;
         const moved = rawDist - prevRawDistRef.current;
@@ -587,19 +592,23 @@ export function useAnimatedPosition(
             sampleCountRef.current++;
             const samples = sampleCountRef.current;
 
+            // Asymmetric EMA smoothing:
+            // When bus decelerates (clampedV < velocityRef.current), apply faster smoothing (VELOCITY_DECEL_SMOOTHING)
+            // to rapidly throttle down rather than lagging behind a decelerating vehicle.
+            const smoothing = clampedV < velocityRef.current ? VELOCITY_DECEL_SMOOTHING : VELOCITY_SMOOTHING;
             const measuredEMA =
                 velocityRef.current <= STOP_THRESHOLD
                     ? clampedV
-                    : VELOCITY_SMOOTHING * clampedV + (1 - VELOCITY_SMOOTHING) * velocityRef.current;
+                    : smoothing * clampedV + (1 - smoothing) * velocityRef.current;
 
             velocityRef.current = Math.min(
                 blendVelocityWithPrior(measuredEMA, samples),
                 MAX_VELOCITY
             );
 
-            // Forward project target position by latency compensation (up to ~100m)
+            // Forward project target position by latency compensation (scaled by dynamic velocity)
             const v = Math.max(velocityRef.current, MIN_MOVING_VELOCITY);
-            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 10000));
+            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 25000));
             const maxAllowedProj = Math.max(
                 0,
                 Math.min(
@@ -608,7 +617,20 @@ export function useAnimatedPosition(
                     totalDist - rawDist - STOP_DECEL_ZONE * 0.5
                 )
             );
-            targetDistRef.current = Math.min(rawDist + maxAllowedProj, totalDist);
+            const newTargetDist = Math.min(rawDist + maxAllowedProj, totalDist);
+            targetDistRef.current = newTargetDist;
+
+            // ---- Delta Discrepancy & Overshoot Detection (새 정보의 델타 감지 및 감속 로직) ----
+            // If the marker's current position is ahead of the newly calculated target distance,
+            // the bus moved less than we previously extrapolated (e.g. traffic light or slow traffic).
+            // We detect this overshoot delta and immediately damp the active velocity so it smoothly slows down.
+            const currentDist = markerDistRef.current;
+            const overshoot = currentDist - newTargetDist;
+            if (overshoot > 0) {
+                // Throttle down dynamic velocity proportionally to how much we over-predicted (~100m scale)
+                const dampingRatio = Math.max(0, 1 - (overshoot / 0.0012));
+                currentVelocityRef.current = currentVelocityRef.current * dampingRatio;
+            }
         } else {
             targetDistRef.current = rawDist;
         }
@@ -673,7 +695,7 @@ export function useAnimatedPosition(
                 deadReckoningFactor = Math.max(0, 1 - over / DEAD_RECKONING_FADEOUT_MS);
             }
 
-            // SAFETY CEILING: Extrapolation is strictly capped at MAX_DEAD_RECKONING_LEAD_COORD (~450m) past raw API position
+            // SAFETY CEILING: Extrapolation is strictly capped at MAX_DEAD_RECKONING_LEAD_COORD (~780m) past raw API position
             const maxExtrapolatedDist = prevRawDistRef.current + MAX_DEAD_RECKONING_LEAD_COORD;
             const hardCeilingDist = Math.min(totalDist, maxExtrapolatedDist);
 
@@ -712,27 +734,28 @@ export function useAnimatedPosition(
                     dist = Math.min(dist + dwellAdvance, hardCeilingDist);
                     markerDistRef.current = dist;
                 } else {
-                    // Smooth Linear Interpolation + Rapid Proportional Catch-Up (급가속 추종)
-                    const baseVelocity = activeV * deadReckoningFactor * stopMult;
-                    let catchupVelocity = 0;
+                    // Smooth Linear Interpolation + Rapid Proportional Catch-Up
+                    let effectiveVelocity = 0;
 
                     if (gap > 0) {
                         // Aggressive catch-up sprint for slow API polling:
                         // Fast 600ms time constant with non-linear surge for larger gaps
+                        const baseVelocity = activeV * deadReckoningFactor * stopMult;
                         const linearBoost = gap / CATCHUP_TAU_MS;
-                        const surgeBoost = Math.max(0, (gap - 0.0001) * 0.0018);
-                        catchupVelocity = Math.min(linearBoost + surgeBoost, MAX_CATCHUP_VELOCITY);
-                    } else if (gap < 0) {
-                        // Marker is ahead of target: gently coast
-                        catchupVelocity = Math.max(-baseVelocity * 0.75, gap / CATCHUP_TAU_MS);
+                        const surgeBoost = Math.max(0, (gap - 0.0001) * 0.0020);
+                        const catchupVelocity = Math.min(linearBoost + surgeBoost, MAX_CATCHUP_VELOCITY);
+                        effectiveVelocity = Math.min(MAX_CATCHUP_VELOCITY, baseVelocity + catchupVelocity);
+                    } else if (gap < -0.00003) {
+                        // Marker is ahead of target (over-predicted lead) -> Active brake / decelerate
+                        currentVelocityRef.current = Math.max(0, currentVelocityRef.current * 0.90);
+                        effectiveVelocity = 0;
+                    } else {
+                        // Very close to target (-0.00003 <= gap <= 0): soft deceleration easing
+                        const softFactor = Math.max(0, 1 + gap / 0.00003);
+                        effectiveVelocity = activeV * deadReckoningFactor * stopMult * softFactor * 0.5;
                     }
 
-                    const effectiveVelocity = Math.min(
-                        MAX_CATCHUP_VELOCITY,
-                        Math.max(0, baseVelocity + catchupVelocity)
-                    );
                     const advance = effectiveVelocity * clampedDt;
-
                     if (advance > 0) {
                         dist = Math.min(dist + advance, hardCeilingDist);
                         markerDistRef.current = dist;

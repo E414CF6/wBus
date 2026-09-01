@@ -57,7 +57,7 @@ export const SITE_CONFIG = {
 export const API_CONFIG = {
     LIVE: {
         POLLING_INTERVAL_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_API_REFRESH_INTERVAL, 3000),
-        DATA_DELAY_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_DATA_DELAY, 10000),
+        DATA_DELAY_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_DATA_DELAY, 12000),
     },
     STATIC: {
         BASE_URL: getBlobBaseUrl() || "",
