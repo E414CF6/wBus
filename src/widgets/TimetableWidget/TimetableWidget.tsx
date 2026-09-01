@@ -1,7 +1,7 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useState} from "react";
-import {BusCacheData, BusRoute, CacheMetadata, RouteDataset} from "@shared/types/bus";
+import {BusRoute} from "@shared/types/bus";
 import {UI_TEXT} from "@shared/config/locale";
 import {STORAGE_KEYS} from "@shared/config/env";
 import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
@@ -12,6 +12,7 @@ import {BookmarkedDeparturesBanner} from "./BookmarkedDeparturesBanner";
 import {RouteFilter} from "./RouteFilter";
 import {RouteCard} from "./RouteCard";
 import {RouteDetailModal} from "./RouteDetailModal";
+import {useSchedule} from "@entities/schedule/hooks";
 import {AlertTriangle, Bus, CheckCircle2, Info, X} from "lucide-react";
 
 export type TimetableSubTab = "yonsei" | "all";
@@ -38,30 +39,22 @@ export default function TimetableWidget({
                                         }: TimetableWidgetProps) {
     const [internalSubTab, setInternalSubTab] = useState<TimetableSubTab>("yonsei");
     const subTab = externalSubTab ?? internalSubTab;
-    const [data, setData] = useState<BusCacheData | null>(null);
-    const [meta, setMeta] = useState<CacheMetadata | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+
+    // Single source of truth: useSchedule hook (SWR managed, zero infinite loop)
+    const {
+        data,
+        routes,
+        meta,
+        isLoading,
+        isRefreshing,
+        error,
+        refresh,
+        refreshToast,
+        clearRefreshToast
+    } = useSchedule();
+
     const [isNoticeOpen, setIsNoticeOpen] = useState<boolean>(false);
     const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
-
-    // Instant initial load from browser persistent cache (localStorage)
-    useEffect(() => {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEYS.SCHEDULE_CACHE);
-            if (raw) {
-                const parsed: { data: RouteDataset; meta: CacheMetadata } = JSON.parse(raw);
-                if (parsed?.data?.routes?.length) {
-                    setData(parsed.data as BusCacheData);
-                    setMeta(parsed.meta || null);
-                    setIsLoading(false);
-                }
-            }
-        } catch {
-            // Ignore corrupted local cache
-        }
-    }, []);
 
     // Restore saved timetable subtab preference from localStorage if uncontrolled
     useEffect(() => {
@@ -88,13 +81,8 @@ export default function TimetableWidget({
     const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
     const [showOnlyBookmarks, setShowOnlyBookmarks] = useState<boolean>(false);
 
-    // Modal & Toast States
+    // Modal & Bookmark States
     const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
-    const [refreshNotice, setRefreshNotice] = useState<{
-        type: "success" | "info";
-        message: string;
-    } | null>(null);
-
     const [bookmarks, setBookmarks] = useState<string[]>([]);
     const [now, setNow] = useState<Date>(() => new Date());
 
@@ -138,83 +126,11 @@ export default function TimetableWidget({
         [bookmarks]
     );
 
-    // Fetch bus timetable data with browser HTTP cache and local persistence
-    const fetchBusData = useCallback(async (refresh = false) => {
-        if (refresh) {
-            setIsRefreshing(true);
-        }
-        setError(null);
-
-        try {
-            const endpoint = refresh ? "/api/schedule/refresh?force=true" : "/api/schedule";
-            const method = refresh ? "POST" : "GET";
-
-            const res = await fetch(endpoint, {
-                method,
-                ...(refresh ? {cache: "no-store", headers: {"Cache-Control": "no-cache"}} : {}),
-            });
-
-            if (res.status === 304) {
-                // Up to date
-                setIsLoading(false);
-                if (refresh) setIsRefreshing(false);
-                return;
-            }
-
-            const json = await res.json();
-
-            if (!json.success || !json.data) {
-                throw new Error(json.error || UI_TEXT.ERROR.FETCH_FAILED(UI_TEXT.DATA_LABELS.SCHEDULE_DATA, res.status));
-            }
-
-            const freshData = json.data;
-            const updatedMeta = json.meta || null;
-
-            setData(freshData);
-            setMeta(updatedMeta);
-
-            // Persist to browser localStorage
-            try {
-                localStorage.setItem(
-                    STORAGE_KEYS.SCHEDULE_CACHE,
-                    JSON.stringify({data: freshData, meta: updatedMeta})
-                );
-            } catch {
-                // Storage limit
-            }
-
-            if (refresh) {
-                if (json.refreshed) {
-                    setRefreshNotice({
-                        type: "success",
-                        message: json.message || "원주시 ITS 실시간 최신 시간표로 갱신되었습니다.",
-                    });
-                } else {
-                    setRefreshNotice({
-                        type: "info",
-                        message: json.message || "최신 시간표가 이미 유지되고 있습니다.",
-                    });
-                }
-            }
-        } catch (err) {
-            if (!data) {
-                setError(err instanceof Error ? err.message : UI_TEXT.ERROR.UNKNOWN("Fetch Error"));
-            }
-        } finally {
-            setIsLoading(false);
-            setIsRefreshing(false);
-        }
-    }, [data]);
-
-    useEffect(() => {
-        fetchBusData(false);
-    }, [fetchBusData]);
-
     // Filtered Routes for All Routes Tab
     const filteredRoutes = useMemo(() => {
-        if (!data || !data.routes) return [];
+        if (!routes || routes.length === 0) return [];
 
-        const filtered = data.routes.filter((route) => {
+        const filtered = routes.filter((route) => {
             // 1. Search Query
             if (searchQuery.trim()) {
                 const q = searchQuery.toLowerCase().trim();
@@ -262,13 +178,13 @@ export default function TimetableWidget({
 
             return a.routeNo.localeCompare(b.routeNo, undefined, {numeric: true});
         });
-    }, [data, searchQuery, selectedDayType, selectedCategory, showOnlyBookmarks, isRouteBookmarked]);
+    }, [routes, searchQuery, selectedDayType, selectedCategory, showOnlyBookmarks, isRouteBookmarked]);
 
     const totalFilteredCount = filteredRoutes.length;
     const activeBookmarkCount = useMemo(() => {
-        if (!data || !data.routes) return bookmarks.length;
-        return data.routes.filter(isRouteBookmarked).length;
-    }, [data, bookmarks.length, isRouteBookmarked]);
+        if (!routes || routes.length === 0) return bookmarks.length;
+        return routes.filter(isRouteBookmarked).length;
+    }, [routes, bookmarks.length, isRouteBookmarked]);
 
     return (
         <div className="w-full flex-1 flex flex-col">
@@ -282,24 +198,26 @@ export default function TimetableWidget({
             ) : (
                 <div className="w-full flex flex-col gap-4 sm:gap-6 animate-fadeIn">
                     {/* Refresh Toast Banner */}
-                    {refreshNotice && (
+                    {refreshToast && (
                         <div
                             className={`p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between transition-all animate-fadeIn shadow-sm ${
-                                refreshNotice.type === "success"
+                                refreshToast.type === "success"
                                     ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
-                                    : "bg-blue-50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-500/40 text-blue-800 dark:text-blue-200"
+                                    : refreshToast.type === "error"
+                                        ? "bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200"
+                                        : "bg-blue-50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-500/40 text-blue-800 dark:text-blue-200"
                             }`}
                         >
                             <div className="flex items-center space-x-2.5">
-                                {refreshNotice.type === "success" ? (
+                                {refreshToast.type === "success" ? (
                                     <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"/>
                                 ) : (
                                     <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"/>
                                 )}
-                                <span className="text-xs sm:text-sm font-semibold">{refreshNotice.message}</span>
+                                <span className="text-xs sm:text-sm font-semibold">{refreshToast.message}</span>
                             </div>
                             <button
-                                onClick={() => setRefreshNotice(null)}
+                                onClick={clearRefreshToast}
                                 className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors shrink-0 ml-2 cursor-pointer"
                                 title="닫기"
                             >
@@ -312,9 +230,9 @@ export default function TimetableWidget({
                     <NoticeBanner onClick={handleOpenNotice}/>
 
                     {/* Bookmarked Live Departures Banner */}
-                    {data?.routes && data.routes.length > 0 && (
+                    {routes && routes.length > 0 && (
                         <BookmarkedDeparturesBanner
-                            routes={data.routes}
+                            routes={routes}
                             bookmarks={bookmarks}
                             currentTime={now}
                             onSelectRoute={(route) => setSelectedRoute(route)}
@@ -345,7 +263,7 @@ export default function TimetableWidget({
                                 <span className="text-xs sm:text-sm font-medium">{error}</span>
                             </div>
                             <button
-                                onClick={() => fetchBusData(false)}
+                                onClick={() => refresh(false)}
                                 className="px-2.5 sm:px-3 py-1 rounded-xl bg-rose-200 dark:bg-rose-500/20 hover:bg-rose-300 dark:hover:bg-rose-500/30 text-xs font-semibold transition-colors cursor-pointer"
                             >
                                 {UI_TEXT.COMMON.RETRY}
@@ -354,7 +272,7 @@ export default function TimetableWidget({
                     )}
 
                     {/* Route Cards Grid */}
-                    {isLoading && !data ? (
+                    {isLoading && (!data || routes.length === 0) ? (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
                             {[1, 2, 3, 4, 5, 6].map((i) => (
                                 <div
@@ -393,7 +311,7 @@ export default function TimetableWidget({
                     {/* Cache Information Banner & Manual Refresh */}
                     <CacheInfoBanner
                         meta={meta}
-                        onRefresh={() => fetchBusData(true)}
+                        onRefresh={() => refresh(true)}
                         isRefreshing={isRefreshing}
                     />
 

@@ -1,7 +1,7 @@
 "use client";
 
-import React, {useCallback, useEffect, useMemo, useState} from "react";
-import {BusRoute, CacheMetadata, RouteDataset} from "@shared/types/bus";
+import React, {useEffect, useMemo, useState} from "react";
+import {BusRoute} from "@shared/types/bus";
 import {YonseiRouteCard} from "./YonseiRouteCard";
 import {YonseiRouteDetailModal} from "./YonseiRouteDetailModal";
 import {YonseiShuttleCard} from "./YonseiShuttleCard";
@@ -11,7 +11,7 @@ import {CacheInfoBanner} from "@widgets/TimetableWidget/CacheInfoBanner";
 import {Footer} from "@shared/ui/Footer";
 import {TARGET_ROUTE_NUMBERS} from "@/data/yonseiRoutes";
 import {selectRouteVariant} from "@shared/lib/timeUtils";
-import {STORAGE_KEYS} from "@shared/config/env";
+import {useSchedule} from "@entities/schedule/hooks";
 import {CheckCircle2, Info, X} from "lucide-react";
 
 interface YonseiTimetableWidgetProps {
@@ -27,44 +27,18 @@ export default function YonseiTimetableWidget({
                                                   dayMode: externalDayMode,
                                                   onDayModeChange: _onDayModeChange,
                                               }: YonseiTimetableWidgetProps) {
-    const [routes, setRoutes] = useState<BusRoute[]>([]);
-    const [meta, setMeta] = useState<CacheMetadata | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+    const {routes, meta, isLoading, isRefreshing, refresh, refreshToast, clearRefreshToast} = useSchedule();
     const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
 
     // Internal dayMode if not controlled externally
     const [internalDayMode] = useState<"AUTO" | "WEEKDAY" | "VACATION">("AUTO");
     const dayMode = externalDayMode ?? internalDayMode;
 
-    // Toast notification state
-    const [toastNotice, setToastNotice] = useState<{
-        type: "success" | "info" | "error";
-        message: string;
-    } | null>(null);
-
     // Modals
     const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
     const [isShuttleModalOpen, setIsShuttleModalOpen] = useState<boolean>(false);
     const [isNoticeModalOpen, setIsNoticeModalOpen] = useState<boolean>(false);
     const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
-
-    // Instant initial load from browser persistent cache (localStorage)
-    useEffect(() => {
-        try {
-            const raw = localStorage.getItem(STORAGE_KEYS.SCHEDULE_CACHE);
-            if (raw) {
-                const parsed: { data: RouteDataset; meta: CacheMetadata } = JSON.parse(raw);
-                if (parsed?.data?.routes?.length) {
-                    setRoutes(parsed.data.routes);
-                    setMeta(parsed.meta || null);
-                    setIsLoading(false);
-                }
-            }
-        } catch {
-            // Ignore corrupted local cache
-        }
-    }, []);
 
     // Live clock update
     useEffect(() => {
@@ -73,80 +47,6 @@ export default function YonseiTimetableWidget({
         }, 10000);
         return () => clearInterval(timer);
     }, []);
-
-    // Fetch timetable schedule with HTTP browser cache & persistent storage sync
-    const fetchScheduleData = useCallback(async (force = false) => {
-        if (force) {
-            setIsRefreshing(true);
-        }
-
-        try {
-            const endpoint = force ? "/api/schedule/refresh?force=true" : "/api/schedule";
-            const method = force ? "POST" : "GET";
-
-            const res = await fetch(endpoint, {
-                method,
-                ...(force ? {cache: "no-store", headers: {"Cache-Control": "no-cache"}} : {}),
-            });
-
-            if (res.status === 304) {
-                // Not modified - browser / local cache is perfectly up to date
-                setIsLoading(false);
-                if (force) setIsRefreshing(false);
-                return;
-            }
-
-            const json = await res.json();
-
-            if (!json.success || !json.data) {
-                throw new Error(json.error || "시간표 데이터를 불러올 수 없습니다.");
-            }
-
-            const dataset: RouteDataset = json.data;
-            const updatedMeta: CacheMetadata = json.meta || null;
-            setRoutes(dataset.routes || []);
-            setMeta(updatedMeta);
-
-            // Persist to browser localStorage
-            try {
-                localStorage.setItem(
-                    STORAGE_KEYS.SCHEDULE_CACHE,
-                    JSON.stringify({data: dataset, meta: updatedMeta})
-                );
-            } catch {
-                // Storage quota limit fallback
-            }
-
-            if (force) {
-                if (json.refreshed) {
-                    setToastNotice({
-                        type: "success",
-                        message: json.message || "원주시 ITS 실시간 최신 시간표로 갱신되었습니다.",
-                    });
-                } else {
-                    setToastNotice({
-                        type: "info",
-                        message: json.message || "최신 시간표가 이미 유지되고 있습니다.",
-                    });
-                }
-            }
-        } catch (err) {
-            // If network fails but we already have routes loaded from cache, don't break UI
-            if (routes.length === 0) {
-                setToastNotice({
-                    type: "error",
-                    message: err instanceof Error ? err.message : "시간표 데이터를 불러오는데 실패했습니다.",
-                });
-            }
-        } finally {
-            setIsLoading(false);
-            setIsRefreshing(false);
-        }
-    }, [routes.length]);
-
-    useEffect(() => {
-        fetchScheduleData(false);
-    }, [fetchScheduleData]);
 
     const isTodayWeekendOrHoliday = useMemo(() => {
         const day = currentTime.getDay();
@@ -180,28 +80,28 @@ export default function YonseiTimetableWidget({
     return (
         <div className="w-full flex flex-col gap-4 sm:gap-6 animate-fadeIn">
             {/* Toast Message Notification */}
-            {toastNotice && (
+            {refreshToast && (
                 <div
                     className={`p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between transition-all animate-fadeIn shadow-sm shrink-0 ${
-                        toastNotice.type === "success"
+                        refreshToast.type === "success"
                             ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
-                            : toastNotice.type === "error"
+                            : refreshToast.type === "error"
                                 ? "bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200"
                                 : "bg-blue-50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-500/40 text-blue-800 dark:text-blue-200"
                     }`}
                 >
                     <div className="flex items-center space-x-2.5">
-                        {toastNotice.type === "success" ? (
+                        {refreshToast.type === "success" ? (
                             <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"/>
                         ) : (
                             <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"/>
                         )}
                         <span className="text-xs sm:text-sm font-semibold leading-relaxed">
-                            {toastNotice.message}
+                            {refreshToast.message}
                         </span>
                     </div>
                     <button
-                        onClick={() => setToastNotice(null)}
+                        onClick={clearRefreshToast}
                         className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors shrink-0 ml-2 cursor-pointer"
                         title="닫기"
                     >
@@ -250,7 +150,7 @@ export default function YonseiTimetableWidget({
             {/* Timetable Criteria & Refresh Banner */}
             <CacheInfoBanner
                 meta={meta}
-                onRefresh={() => fetchScheduleData(true)}
+                onRefresh={() => refresh(true)}
                 isRefreshing={isRefreshing}
             />
 
