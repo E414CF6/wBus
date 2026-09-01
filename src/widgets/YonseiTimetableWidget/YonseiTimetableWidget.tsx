@@ -4,6 +4,8 @@ import React, {useCallback, useEffect, useMemo, useState} from "react";
 import {BusRoute, CacheMetadata, RouteDataset} from "@shared/types/bus";
 import {YonseiRouteCard} from "./YonseiRouteCard";
 import {YonseiRouteDetailModal} from "./YonseiRouteDetailModal";
+import {YonseiShuttleCard} from "./YonseiShuttleCard";
+import {YonseiShuttleModal} from "./YonseiShuttleModal";
 import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
 import {CacheInfoBanner} from "@widgets/TimetableWidget/CacheInfoBanner";
 import {Footer} from "@shared/ui/Footer";
@@ -42,6 +44,7 @@ export default function YonseiTimetableWidget({
 
     // Modals
     const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
+    const [isShuttleModalOpen, setIsShuttleModalOpen] = useState<boolean>(false);
     const [isNoticeModalOpen, setIsNoticeModalOpen] = useState<boolean>(false);
     const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
 
@@ -201,6 +204,12 @@ export default function YonseiTimetableWidget({
                 </div>
             )}
 
+            {/* Free Shuttle Bus Card (Yeoju / Wonju <-> Yonsei Mirae Campus) */}
+            <YonseiShuttleCard
+                onOpenModal={() => setIsShuttleModalOpen(true)}
+                currentTime={currentTime}
+            />
+
             {/* Timetable Criteria & Refresh Banner */}
             <CacheInfoBanner
                 meta={meta}
@@ -221,6 +230,13 @@ export default function YonseiTimetableWidget({
                     currentTime={currentTime}
                 />
             )}
+
+            {/* Detailed Free Shuttle Bus Modal */}
+            <YonseiShuttleModal
+                isOpen={isShuttleModalOpen}
+                onClose={() => setIsShuttleModalOpen(false)}
+                currentTime={currentTime}
+            />
 
             {/* Wonju ITS Notice Center Modal */}
             <NoticeModal
