@@ -1,9 +1,10 @@
 "use client";
 
 import React, {memo, useMemo} from "react";
-import {YONSEI_SHUTTLE_SCHEDULE,} from "@/data/yonseiShuttleSchedule";
+import {AlertCircle, Bus, ChevronRight, Clock, GraduationCap, MapPin, Sparkles} from "lucide-react";
+
+import {YONSEI_SHUTTLE_SCHEDULE} from "@/data/yonseiShuttleSchedule";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
-import {AlertCircle, Bus, ChevronRight, Clock, Info, MapPin, Sparkles,} from "lucide-react";
 
 interface YonseiShuttleCardProps {
     onOpenModal: () => void;
@@ -65,14 +66,6 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
         return null;
     }, [currentMins, isSunday]);
 
-    // Choose the closest next shuttle (or either if one is ended)
-    const nextShuttle = useMemo(() => {
-        if (nextInbound && nextOutbound) {
-            return nextInbound.waitMins <= nextOutbound.waitMins ? nextInbound : nextOutbound;
-        }
-        return nextInbound || nextOutbound || null;
-    }, [nextInbound, nextOutbound]);
-
     const getWaitBadgeStyle = (waitMins: number) => {
         if (waitMins <= 10) {
             return "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 font-black animate-pulse";
@@ -95,7 +88,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                         <div
                             className="px-3 sm:px-3.5 py-1 rounded-2xl bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 text-white font-black text-sm sm:text-base tracking-tight shadow-md shadow-teal-700/20 shrink-0 flex items-center gap-1.5">
                             <Bus className="w-4 h-4"/>
-                            <span>무료 셔틀</span>
+                            <span>셔틀버스</span>
                         </div>
                         <div className="flex flex-col min-w-0">
                             <span
@@ -243,8 +236,8 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             <div
                 className="pt-3.5 mt-3.5 border-t border-teal-500/20 dark:border-teal-500/20 flex items-center justify-between">
                 <span className="text-[11px] font-bold text-teal-700 dark:text-teal-300 flex items-center gap-1">
-                    <Info className="w-3.5 h-3.5"/>
-                    <span>재학생 및 교직원 전용 무료 탑승</span>
+                    <GraduationCap className="w-3.5 h-3.5"/>
+                    <span>시간표 & 정류장 위치</span>
                 </span>
                 <button
                     onClick={(e) => {
@@ -253,7 +246,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                     }}
                     className="flex items-center space-x-1 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-black shadow-md shadow-teal-700/20 transition-all cursor-pointer active:scale-95"
                 >
-                    <span>시간표 & 정류장 위치 전체보기</span>
+                    <span>자세히 보기</span>
                     <ChevronRight className="h-3.5 w-3.5"/>
                 </button>
             </div>

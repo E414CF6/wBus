@@ -36,7 +36,7 @@ export interface ShuttleBusScheduleData {
 }
 
 export const YONSEI_SHUTTLE_SCHEDULE: ShuttleBusScheduleData = {
-    title: "여주·원주 지역 무료셔틀버스 시간표",
+    title: "무료 셔틀버스 시간표",
     stop_locations: [{
         name: "원주고속터미널 (원주버스터미널)", location_description: "원주고속터미널 건너편 그랜드 치과 병원 앞",
     }, {

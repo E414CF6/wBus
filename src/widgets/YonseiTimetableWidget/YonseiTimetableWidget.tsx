@@ -1,7 +1,9 @@
 "use client";
 
 import React, {useEffect, useMemo, useState} from "react";
+
 import {BusRoute} from "@shared/types/bus";
+
 import {YonseiRouteCard} from "./YonseiRouteCard";
 import {YonseiRouteDetailModal} from "./YonseiRouteDetailModal";
 import {YonseiShuttleCard} from "./YonseiShuttleCard";
@@ -113,6 +115,12 @@ export default function YonseiTimetableWidget({
             {/* Wonju ITS Live Notice Banner */}
             <NoticeBanner onClick={handleOpenNoticeModal}/>
 
+            {/* Free Shuttle Bus Card (Yeoju / Wonju <-> Yonsei Mirae Campus) */}
+            <YonseiShuttleCard
+                onOpenModal={() => setIsShuttleModalOpen(true)}
+                currentTime={currentTime}
+            />
+
             {/* 3 Route Cards Grid (30, 34, 34-1) */}
             {isLoading && activeRoutes.length === 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
@@ -140,12 +148,6 @@ export default function YonseiTimetableWidget({
                     ))}
                 </div>
             )}
-
-            {/* Free Shuttle Bus Card (Yeoju / Wonju <-> Yonsei Mirae Campus) */}
-            <YonseiShuttleCard
-                onOpenModal={() => setIsShuttleModalOpen(true)}
-                currentTime={currentTime}
-            />
 
             {/* Timetable Criteria & Refresh Banner */}
             <CacheInfoBanner

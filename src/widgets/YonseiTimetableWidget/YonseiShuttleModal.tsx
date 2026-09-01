@@ -118,7 +118,7 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
 
     const modalContent = (
         <div
-            className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 dark:bg-black/80 backdrop-blur-lg animate-fadeIn pointer-events-auto"
+            className="fixed inset-0 z-9999 flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 dark:bg-black/80 backdrop-blur-lg animate-fadeIn pointer-events-auto"
             onClick={onClose}
         >
             <div
@@ -132,14 +132,14 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                         <div
                             className="px-3 sm:px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 text-white font-black text-sm sm:text-base tracking-tight shadow-md shadow-teal-700/20 shrink-0 flex items-center gap-1.5">
                             <Bus className="w-4 h-4"/>
-                            <span>무료 셔틀</span>
+                            <span>셔틀버스</span>
                         </div>
                         <div className="min-w-0">
                             <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
                                 {YONSEI_SHUTTLE_SCHEDULE.title}
                             </h3>
                             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
-                                연세대학교 미래캠퍼스 재학생 및 교직원 대상
+                                연세대학교 미래캠퍼스 셔틀버스
                             </p>
                         </div>
                     </div>
@@ -167,7 +167,7 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                             }`}
                         >
                             <ArrowRight className="w-3.5 h-3.5 rotate-45"/>
-                            <span>등교 (캠퍼스행)</span>
+                            <span>등교</span>
                             <span className="text-[10px] opacity-80 font-mono">17</span>
                         </button>
                         <button
@@ -179,7 +179,7 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                             }`}
                         >
                             <ArrowRight className="w-3.5 h-3.5 -rotate-45"/>
-                            <span>하교 (캠퍼스발)</span>
+                            <span>하교</span>
                             <span className="text-[10px] opacity-80 font-mono">12</span>
                         </button>
                         <button
@@ -522,7 +522,7 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                                 className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-500/30 text-amber-950 dark:text-amber-200 flex items-start gap-2.5">
                                 <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"/>
                                 <div>
-                                    <h4 className="text-xs sm:text-sm font-black">무료셔틀버스 이용 시 준수사항</h4>
+                                    <h4 className="text-xs sm:text-sm font-black">무료 셔틀버스 이용 시 준수사항</h4>
                                     <p className="text-xs font-medium text-amber-800 dark:text-amber-300 mt-0.5 leading-relaxed">
                                         안전하고 쾌적한 통학을 위해 아래 안내사항을 반드시 숙지하여 주시기 바랍니다.
                                     </p>
