@@ -49,13 +49,16 @@ const SCALAR_LOOP_RESTART_THRESHOLD_METERS = 400;
 const TELEPORT_DISTANCE_METERS = 800;
 const TELEPORT_COORD_THRESHOLD = 0.0075; // ~830m
 
-// Maximum distance the animated marker is ever allowed to dead-reckon ahead of the last confirmed API position (~780m)
-// Scaled up to support slow API intervals & public transit latency
-const MAX_DEAD_RECKONING_LEAD_COORD = 0.0070;
+// Maximum distance the animated marker is ever allowed to dead-reckon ahead of the last confirmed API position (~1.35km)
+// 1차 예측 지점 이후의 예측 거리를 넉넉하게 확장하여 다음 API 수신이 늦어져도 끊김 없이 길게 지속
+const MAX_DEAD_RECKONING_LEAD_COORD = 0.0120;
 
 // Maximum latency compensation projection allowed upon receiving fresh API data (~300m)
-// Increased to compensate for realistic public bus API delay (10~25 seconds)
+// 1차 예측 지점: API 지연 보정 목표 거리
 const MAX_LATENCY_PROJECTION_COORD = 0.0028;
+
+// 1차 예측 지점 통과 후 2차 외삽 예측 속도 비율 (기본 속도의 40%로 감속하여 장거리 지속 주행)
+const POST_TARGET_VELOCITY_RATIO = 0.40;
 
 // React state update throttle — 20 Hz (50ms) for UI popup consumers
 const STATE_UPDATE_THROTTLE_MS = 50;
@@ -88,10 +91,10 @@ const VELOCITY_PRIOR_RAMP_SAMPLES = 2;
 const DEFAULT_DATA_DELAY_MS = 12000;
 
 // Dead reckoning duration:
-// Smooth forward extrapolation for up to 45s between GPS updates (capped by MAX_DEAD_RECKONING_LEAD_COORD)
-const DEAD_RECKONING_CRUISE_MS = 45000;
-// Graceful deceleration coasting from 45s to 80s if no data arrives
-const DEAD_RECKONING_FADEOUT_MS = 35000;
+// Smooth forward extrapolation for up to 60s between GPS updates (capped by MAX_DEAD_RECKONING_LEAD_COORD)
+const DEAD_RECKONING_CRUISE_MS = 60000;
+// Graceful deceleration coasting from 60s to 100s if no data arrives
+const DEAD_RECKONING_FADEOUT_MS = 40000;
 
 // Rapid Catch-Up time constant:
 // Fast exponential convergence (~600ms) with non-linear boost to rapidly catch up when slow API data arrives
@@ -324,7 +327,7 @@ export function useAnimatedPosition(
     const polylineRef = useRef(polyline);
     const cumDistRef = useRef<number[]>([]);
     const markerDistRef = useRef(0); // where marker currently is along polyline
-    const targetDistRef = useRef(0); // where real-time projected target is
+    const targetDistRef = useRef(0); // 1차 예측 목표 지점 (API 보정 지점)
     const velocityRef = useRef(CITY_BUS_BASE_VELOCITY); // estimated cruising velocity (coord-units / ms)
     const currentVelocityRef = useRef(CITY_BUS_BASE_VELOCITY); // smoothed dynamic velocity
     const lastFrameRef = useRef(0);
@@ -334,6 +337,7 @@ export function useAnimatedPosition(
     const prevRawDistRef = useRef(0); // raw scalar distance of previous GPS data
     const hasDataRef = useRef(false);
     const sampleCountRef = useRef(0);
+    const isOvershotOnDataRef = useRef(false); // true if marker was ahead of newly arrived API target
 
     // ---- Stop-aware Dwell State ----
     const stopDistancesRef = useRef<number[]>([]);
@@ -384,6 +388,7 @@ export function useAnimatedPosition(
         isFirstDataRef.current = true;
         lastFrameRef.current = 0;
         sampleCountRef.current = 0;
+        isOvershotOnDataRef.current = false;
         lastDwelledStopIdxRef.current = -1;
         dwellStartTimeRef.current = 0;
 
@@ -477,6 +482,7 @@ export function useAnimatedPosition(
                 hasDataRef.current = true;
                 lastDataTimeRef.current = performance.now();
                 sampleCountRef.current = 0;
+                isOvershotOnDataRef.current = false;
 
                 velocityRef.current = CITY_BUS_BASE_VELOCITY;
                 currentVelocityRef.current = CITY_BUS_BASE_VELOCITY;
@@ -552,6 +558,7 @@ export function useAnimatedPosition(
             velocityRef.current = CITY_BUS_BASE_VELOCITY;
             currentVelocityRef.current = CITY_BUS_BASE_VELOCITY;
             sampleCountRef.current = 0;
+            isOvershotOnDataRef.current = false;
             lastDwelledStopIdxRef.current = -1;
             dwellStartTimeRef.current = 0;
             prevRawDistRef.current = rawDist;
@@ -585,6 +592,7 @@ export function useAnimatedPosition(
             velocityRef.current = 0;
             currentVelocityRef.current = 0;
             targetDistRef.current = rawDist;
+            isOvershotOnDataRef.current = markerDistRef.current > rawDist + 0.00005;
         } else if (dtMs > 600 && hasDataRef.current && moved > 0) {
             const rawV = moved / dtMs;
             const clampedV = Math.min(Math.max(rawV, MIN_MOVING_VELOCITY), MAX_VELOCITY);
@@ -621,18 +629,20 @@ export function useAnimatedPosition(
             targetDistRef.current = newTargetDist;
 
             // ---- Delta Discrepancy & Overshoot Detection (새 정보의 델타 감지 및 감속 로직) ----
-            // If the marker's current position is ahead of the newly calculated target distance,
-            // the bus moved less than we previously extrapolated (e.g. traffic light or slow traffic).
-            // We detect this overshoot delta and immediately damp the active velocity so it smoothly slows down.
+            // If the marker's current position is ahead of the newly calculated 1st target distance,
+            // the real bus moved less than previous prediction. Mark as overshot and damp speed.
             const currentDist = markerDistRef.current;
             const overshoot = currentDist - newTargetDist;
-            if (overshoot > 0) {
-                // Throttle down dynamic velocity proportionally to how much we over-predicted (~100m scale)
+            if (overshoot > 0.00005) {
+                isOvershotOnDataRef.current = true;
                 const dampingRatio = Math.max(0, 1 - (overshoot / 0.0012));
                 currentVelocityRef.current = currentVelocityRef.current * dampingRatio;
+            } else {
+                isOvershotOnDataRef.current = false;
             }
         } else {
             targetDistRef.current = rawDist;
+            isOvershotOnDataRef.current = markerDistRef.current > rawDist + 0.00005;
         }
 
         prevRawDistRef.current = rawDist;
@@ -685,7 +695,7 @@ export function useAnimatedPosition(
             const totalDist = cumDist[cumDist.length - 1];
             let dist = markerDistRef.current;
             const target = targetDistRef.current;
-            const gap = target - dist; // positive = marker behind target, negative = ahead
+            const gap = target - dist; // positive = marker behind target, negative = marker past target
 
             // Check dead reckoning timeout / fadeout
             const timeSinceLastData = lastDataTimeRef.current > 0 ? now - lastDataTimeRef.current : 0;
@@ -695,7 +705,7 @@ export function useAnimatedPosition(
                 deadReckoningFactor = Math.max(0, 1 - over / DEAD_RECKONING_FADEOUT_MS);
             }
 
-            // SAFETY CEILING: Extrapolation is strictly capped at MAX_DEAD_RECKONING_LEAD_COORD (~780m) past raw API position
+            // SAFETY CEILING: Extrapolation is strictly capped at MAX_DEAD_RECKONING_LEAD_COORD (~1.35km) past raw API position
             const maxExtrapolatedDist = prevRawDistRef.current + MAX_DEAD_RECKONING_LEAD_COORD;
             const hardCeilingDist = Math.min(totalDist, maxExtrapolatedDist);
 
@@ -734,25 +744,34 @@ export function useAnimatedPosition(
                     dist = Math.min(dist + dwellAdvance, hardCeilingDist);
                     markerDistRef.current = dist;
                 } else {
-                    // Smooth Linear Interpolation + Rapid Proportional Catch-Up
                     let effectiveVelocity = 0;
 
                     if (gap > 0) {
-                        // Aggressive catch-up sprint for slow API polling:
-                        // Fast 600ms time constant with non-linear surge for larger gaps
+                        // --------------------------------------------------------
+                        // 1차 예측 지점 도달 전: 빠른 캐치업 가속 주행
+                        // --------------------------------------------------------
                         const baseVelocity = activeV * deadReckoningFactor * stopMult;
                         const linearBoost = gap / CATCHUP_TAU_MS;
                         const surgeBoost = Math.max(0, (gap - 0.0001) * 0.0020);
                         const catchupVelocity = Math.min(linearBoost + surgeBoost, MAX_CATCHUP_VELOCITY);
                         effectiveVelocity = Math.min(MAX_CATCHUP_VELOCITY, baseVelocity + catchupVelocity);
-                    } else if (gap < -0.00003) {
-                        // Marker is ahead of target (over-predicted lead) -> Active brake / decelerate
+                    } else if (isOvershotOnDataRef.current) {
+                        // --------------------------------------------------------
+                        // 새 API 데이터 수신 시 과예측(오버슈트) 판정된 경우: 대기 / 제동
+                        // --------------------------------------------------------
                         currentVelocityRef.current = Math.max(0, currentVelocityRef.current * 0.90);
                         effectiveVelocity = 0;
                     } else {
-                        // Very close to target (-0.00003 <= gap <= 0): soft deceleration easing
-                        const softFactor = Math.max(0, 1 + gap / 0.00003);
-                        effectiveVelocity = activeV * deadReckoningFactor * stopMult * softFactor * 0.5;
+                        // --------------------------------------------------------
+                        // 1차 예측 지점 이후 (2차 연장 예측 구간):
+                        // 속도는 줄이고(POST_TARGET_VELOCITY_RATIO), 거리는 길게 계속 전진
+                        // --------------------------------------------------------
+                        const leadBeyondTarget = Math.max(0, dist - target);
+                        const maxExtraLead = MAX_DEAD_RECKONING_LEAD_COORD;
+                        const extraProgress = Math.min(1, leadBeyondTarget / Math.max(0.001, maxExtraLead));
+                        // 1차 지점 통과 후 40% 속도에서 점진적으로 20%까지 완만하게 테이퍼링
+                        const taperFactor = POST_TARGET_VELOCITY_RATIO * (1 - extraProgress * 0.50);
+                        effectiveVelocity = activeV * deadReckoningFactor * stopMult * taperFactor;
                     }
 
                     const advance = effectiveVelocity * clampedDt;
