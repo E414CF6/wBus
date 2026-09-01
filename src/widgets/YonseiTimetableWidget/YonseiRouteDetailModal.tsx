@@ -95,7 +95,7 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
         const matches = allYonseiRoutes.filter((r) => r.routeNo === route.routeNo);
         if (!matches.length) return {weekdayRoute: route, vacationRoute: route};
 
-        const wRoute = matches.find((r) => r.dayType === "평일" || r.dayType === "통상") || matches[0];
+        const wRoute = matches.find((r) => r.dayType === "평일" || r.dayType === "매일") || matches[0];
         const vRoute = matches.find(
             (r) =>
                 r.dayType === "방학,휴일" ||
@@ -103,7 +103,7 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                 r.dayType.includes("휴일") ||
                 r.dayType.includes("토요일") ||
                 r.dayType.includes("공휴일") ||
-                r.dayType === "통상"
+                r.dayType === "매일"
         ) || matches[0];
 
         return {weekdayRoute: wRoute, vacationRoute: vRoute};

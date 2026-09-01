@@ -90,10 +90,10 @@ export function selectRouteVariant(routes: BusRoute[], routeNo: string, isHolida
     }
 
     if (isHolidayOrVacation) {
-        const vacationMatch = matches.find((r) => r.dayType === "방학,휴일" || r.dayType.includes("방학") || r.dayType.includes("휴일") || r.dayType.includes("토요일") || r.dayType.includes("공휴일") || r.dayType === "통상");
+        const vacationMatch = matches.find((r) => r.dayType === "방학,휴일" || r.dayType.includes("방학") || r.dayType.includes("휴일") || r.dayType.includes("토요일") || r.dayType.includes("공휴일") || r.dayType === "매일");
         return vacationMatch || matches[0];
     } else {
-        const weekdayMatch = matches.find((r) => r.dayType === "평일" || r.dayType === "통상");
+        const weekdayMatch = matches.find((r) => r.dayType === "평일" || r.dayType === "매일");
         return weekdayMatch || matches[0];
     }
 }

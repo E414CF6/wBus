@@ -13,13 +13,10 @@ const HEADERS = {
 const TARGET_RAW_NOS = ["30", "34(평일)", "34(방학,휴일)", "34-1(평일)", "34-1(방학,휴일)"];
 
 export async function fetchList(filterYonseiOnly = false): Promise<{
-    csrfToken: string;
-    cookieStr: string;
-    routes: BusRoute[];
+    csrfToken: string; cookieStr: string; routes: BusRoute[];
 }> {
     const res = await fetch(LIST_URL, {
-        headers: HEADERS,
-        signal: AbortSignal.timeout(8000),
+        headers: HEADERS, signal: AbortSignal.timeout(8000),
     });
 
     if (!res.ok) {
@@ -51,8 +48,7 @@ export async function fetchList(filterYonseiOnly = false): Promise<{
             if (!isTarget) continue;
         }
 
-        const cleanStationName = (name: string) =>
-            name ? name.replace(/장양리시내버스공영(정류장)?/g, "장양리") : name;
+        const cleanStationName = (name: string) => name ? name.replace(/장양리시내버스공영(정류장)?/g, "장양리") : name;
 
         const origin = cleanStationName(match[3].replace(/<[^>]+>/g, "").trim());
         const destination = cleanStationName(match[4].replace(/<[^>]+>/g, "").trim());
@@ -62,7 +58,7 @@ export async function fetchList(filterYonseiOnly = false): Promise<{
         const interval = match[8].replace(/<[^>]+>/g, "").trim();
 
         let routeNo = rawNo;
-        let dayType = "통상";
+        let dayType = "매일";
         const parenMatch = rawNo.match(/^([^(]+)(?:\(([^)]+)\))?/);
         if (parenMatch) {
             routeNo = parenMatch[1].trim();
@@ -89,11 +85,7 @@ export async function fetchList(filterYonseiOnly = false): Promise<{
     return {csrfToken, cookieStr, routes};
 }
 
-export async function fetchDetail(
-    detailId: string,
-    csrfToken: string,
-    cookieStr: string
-): Promise<TimetableEntry[]> {
+export async function fetchDetail(detailId: string, csrfToken: string, cookieStr: string): Promise<TimetableEntry[]> {
     const formData = new URLSearchParams();
     formData.append("CSRFToken", csrfToken);
     formData.append("no", detailId);
@@ -108,10 +100,7 @@ export async function fetchDetail(
     };
 
     const res = await fetch(DETAIL_URL, {
-        method: "POST",
-        headers: reqHeaders,
-        body: formData.toString(),
-        signal: AbortSignal.timeout(6000),
+        method: "POST", headers: reqHeaders, body: formData.toString(), signal: AbortSignal.timeout(6000),
     });
 
     if (!res.ok) {
@@ -130,9 +119,7 @@ export async function fetchDetail(
     let trMatch: RegExpExecArray | null;
     while ((trMatch = trRegex.exec(tbodyHtml)) !== null) {
         const trContent = trMatch[1];
-        const tdMatches = [...trContent.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) =>
-            m[1].replace(/<[^>]+>/g, "").trim()
-        );
+        const tdMatches = [...trContent.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => m[1].replace(/<[^>]+>/g, "").trim());
 
         if (tdMatches.length >= 4) {
             const seq = parseInt(tdMatches[0], 10) || timetable.length + 1;
@@ -160,23 +147,18 @@ export async function scrapeWonjuBusDataset(batchSize = 8): Promise<RouteDataset
 
     for (let i = 0; i < routes.length; i += batchSize) {
         const batch = routes.slice(i, i + batchSize);
-        await Promise.all(
-            batch.map(async (route) => {
-                try {
-                    route.timetable = await fetchDetail(route.id, csrfToken, cookieStr);
-                } catch (err) {
-                    console.error(`[ITS Scraper] Failed to fetch timetable for route ${route.routeNo} (${route.id}):`, err instanceof Error ? err.message : err);
-                    route.timetable = [];
-                }
-            })
-        );
+        await Promise.all(batch.map(async (route) => {
+            try {
+                route.timetable = await fetchDetail(route.id, csrfToken, cookieStr);
+            } catch (err) {
+                console.error(`[ITS Scraper] Failed to fetch timetable for route ${route.routeNo} (${route.id}):`, err instanceof Error ? err.message : err);
+                route.timetable = [];
+            }
+        }));
     }
 
     const dataset: RouteDataset = {
-        updatedAt: new Date().toISOString(),
-        sourceUrl: LIST_URL,
-        totalRoutes: routes.length,
-        routes,
+        updatedAt: new Date().toISOString(), sourceUrl: LIST_URL, totalRoutes: routes.length, routes,
     };
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -195,22 +177,17 @@ export async function scrapeWonjuItsYonsei(): Promise<RouteDataset> {
     const {csrfToken, cookieStr, routes} = await fetchList(true);
     console.log(`[ITS Scraper] Found ${routes.length} Yonsei routes. Crawling timetable details...`);
 
-    await Promise.all(
-        routes.map(async (route) => {
-            try {
-                route.timetable = await fetchDetail(route.id, csrfToken, cookieStr);
-            } catch (err) {
-                console.error(`[ITS Scraper] Failed to fetch timetable for ${route.id}:`, err instanceof Error ? err.message : err);
-                route.timetable = [];
-            }
-        })
-    );
+    await Promise.all(routes.map(async (route) => {
+        try {
+            route.timetable = await fetchDetail(route.id, csrfToken, cookieStr);
+        } catch (err) {
+            console.error(`[ITS Scraper] Failed to fetch timetable for ${route.id}:`, err instanceof Error ? err.message : err);
+            route.timetable = [];
+        }
+    }));
 
     const dataset: RouteDataset = {
-        updatedAt: new Date().toISOString(),
-        sourceUrl: LIST_URL,
-        totalRoutes: routes.length,
-        routes,
+        updatedAt: new Date().toISOString(), sourceUrl: LIST_URL, totalRoutes: routes.length, routes,
     };
 
     const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
