@@ -7,6 +7,7 @@ import React, {memo, useEffect, useState} from "react";
 interface LiveStatusBadgeProps {
     countText?: string;
     connectionStatus: SSEConnectionStatus;
+    hasFetched?: boolean;
     lastUpdated?: number | null;
     isDegraded?: boolean;
     onReconnect?: () => void;
@@ -16,6 +17,7 @@ interface LiveStatusBadgeProps {
 export const LiveStatusBadge = memo(({
                                          countText,
                                          connectionStatus,
+                                         hasFetched = true,
                                          lastUpdated,
                                          isDegraded = false,
                                          onReconnect,
@@ -43,7 +45,7 @@ export const LiveStatusBadge = memo(({
     let statusLabel: string = UI_TEXT.CONNECTION.CONNECTED;
     let isPulsing = false;
 
-    if (connectionStatus === "connecting") {
+    if (!hasFetched || connectionStatus === "connecting") {
         dotColorClass = "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]";
         statusLabel = UI_TEXT.CONNECTION.CONNECTING;
         isPulsing = true;
@@ -53,6 +55,9 @@ export const LiveStatusBadge = memo(({
     } else if (connectionStatus === "suspended") {
         dotColorClass = "bg-gray-400 dark:bg-gray-500";
         statusLabel = UI_TEXT.CONNECTION.SUSPENDED;
+    } else if (countText === "0" || countText === "0대") {
+        dotColorClass = "bg-gray-400 dark:bg-gray-500";
+        statusLabel = "운행 종료";
     }
 
     if (isDegraded && connectionStatus !== "suspended") {
@@ -75,14 +80,15 @@ export const LiveStatusBadge = memo(({
                 <span className={`relative inline-flex rounded-full h-2 w-2 ${dotColorClass}`}/>
             </span>
 
-            {countText && (
+            {countText && countText !== "0" && countText !== "0대" && (
                 <span className="text-gray-900 dark:text-gray-100 font-extrabold whitespace-nowrap">
                     {countText}
                 </span>
             )}
 
             <span className="text-gray-500 dark:text-gray-400 font-medium whitespace-nowrap flex items-center gap-1">
-                {countText && <span className="opacity-30 font-normal">•</span>}
+                {countText && countText !== "0" && countText !== "0대" &&
+                    <span className="opacity-30 font-normal">•</span>}
                 <span>{statusLabel}</span>
                 {isDegraded &&
                     <span className="text-amber-500 dark:text-amber-400 font-bold">{UI_TEXT.CONNECTION.DEGRADED}</span>}

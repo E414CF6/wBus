@@ -1,10 +1,13 @@
 "use client";
 
 import React, {useCallback, useMemo, useState} from "react";
-import {Bus, ChevronDown, GraduationCap} from "lucide-react";
+import {Bus, ChevronDown, GraduationCap, RefreshCw} from "lucide-react";
+
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
+
 import type {BusItem} from "@entities/bus/types";
+import type {SSEConnectionStatus} from "@features/live-tracking/useBusLocation";
 
 // ----------------------------------------------------------------------
 // Types
@@ -15,6 +18,10 @@ interface MapRouteHeaderProps {
     onSelectRoute: (route: string) => void;
     runningBuses?: BusItem[];
     allRoutes?: string[];
+    connectionStatus?: SSEConnectionStatus;
+    hasFetched?: boolean;
+    isDegraded?: boolean;
+    onReconnect?: () => void;
 }
 
 const DEFAULT_QUICK_ROUTES = ["30", "34", "34-1"];
@@ -24,6 +31,10 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                                   onSelectRoute,
                                                                   runningBuses = [],
                                                                   allRoutes = [],
+                                                                  connectionStatus = "connected",
+                                                                  hasFetched = true,
+                                                                  isDegraded = false,
+                                                                  onReconnect,
                                                               }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -63,6 +74,65 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
         },
         [onSelectRoute]
     );
+
+    // Determine status badge appearance & copy
+    const statusConfig = useMemo(() => {
+        // 1. Still connecting or waiting for initial API response
+        if (!hasFetched || connectionStatus === "connecting") {
+            return {
+                label: "연결 중...",
+                badgeClass: "bg-amber-500/10 dark:bg-amber-400/15 border-amber-500/30 text-amber-700 dark:text-amber-300",
+                dotClass: "bg-amber-500",
+                pingClass: "bg-amber-400",
+                isPulsing: true,
+                tooltip: "실시간 위치 API 연결 대기 중",
+            };
+        }
+
+        // 2. Suspended in background
+        if (connectionStatus === "suspended") {
+            return {
+                label: "대기 상태",
+                badgeClass: "bg-slate-500/10 dark:bg-slate-400/15 border-slate-500/20 text-slate-600 dark:text-slate-400",
+                dotClass: "bg-slate-400 dark:bg-slate-500",
+                pingClass: "",
+                isPulsing: false,
+                tooltip: "화면 비활성화로 일시 대기 중",
+            };
+        }
+
+        // 3. API responded & Buses are running
+        if (runningCount > 0) {
+            if (isDegraded) {
+                return {
+                    label: `${runningCount}대 운행 (지연)`,
+                    badgeClass: "bg-amber-500/10 dark:bg-amber-400/15 border-amber-500/30 text-amber-700 dark:text-amber-300",
+                    dotClass: "bg-amber-500",
+                    pingClass: "bg-amber-400",
+                    isPulsing: true,
+                    tooltip: "실시간 버스 운행 중 (일부 데이터 지연)",
+                };
+            }
+            return {
+                label: `${runningCount}대 운행 중`,
+                badgeClass: "bg-emerald-500/10 dark:bg-emerald-400/15 border-emerald-500/20 text-emerald-700 dark:text-emerald-300",
+                dotClass: "bg-emerald-500",
+                pingClass: "bg-emerald-400",
+                isPulsing: true,
+                tooltip: `현재 ${runningCount}대 실시간 운행 중`,
+            };
+        }
+
+        // 4. API responded but 0 buses running
+        return {
+            label: "운행 종료",
+            badgeClass: "bg-slate-500/10 dark:bg-slate-400/10 border-slate-400/20 text-slate-600 dark:text-slate-400",
+            dotClass: "bg-slate-400 dark:bg-slate-500",
+            pingClass: "",
+            isPulsing: false,
+            tooltip: "현재 운행 중인 버스가 없습니다 (운행 종료 또는 배차 대기)",
+        };
+    }, [hasFetched, connectionStatus, runningCount, isDegraded]);
 
     return (
         <>
@@ -118,24 +188,28 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                         </div>
                     </div>
 
-                    {/* Running Bus Status Pill */}
+                    {/* Detailed Real-Time Status Pill */}
                     <div
                         className="flex items-center gap-1.5 pl-1.5 border-l border-black/10 dark:border-white/10 shrink-0">
-                        <div
-                            className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 dark:bg-emerald-400/15 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[11px] font-extrabold whitespace-nowrap">
-                            <span className="relative flex h-2 w-2">
-                                {runningCount > 0 && (
+                        <button
+                            type="button"
+                            onClick={onReconnect}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer active:scale-95 ${statusConfig.badgeClass}`}
+                            title={statusConfig.tooltip}
+                        >
+                            <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
+                                {statusConfig.isPulsing && (
                                     <span
-                                        className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"/>
+                                        className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${statusConfig.pingClass}`}
+                                    />
                                 )}
-                                <span
-                                    className={`relative inline-flex rounded-full h-2 w-2 ${
-                                        runningCount > 0 ? "bg-emerald-500" : "bg-slate-400"
-                                    }`}
-                                />
+                                <span className={`relative inline-flex rounded-full h-2 w-2 ${statusConfig.dotClass}`}/>
                             </span>
-                            <span>{runningCount > 0 ? `${runningCount}대 운행` : "대기 중"}</span>
-                        </div>
+                            <span>{statusConfig.label}</span>
+                            {onReconnect && (!hasFetched || connectionStatus === "connecting") && (
+                                <RefreshCw className="w-2.5 h-2.5 animate-spin opacity-70 ml-0.5"/>
+                            )}
+                        </button>
                     </div>
                 </div>
 

@@ -339,12 +339,16 @@ export function AppShell() {
                 {/* 1. Real-time Map View Container (Lazy mounted ONLY when map is activated by user) */}
                 {hasVisitedMap && (
                     <div className={`relative flex-1 overflow-hidden ${activeTab === "map" ? "block" : "hidden"}`}>
-                        {/* Map Top Floating Header & Fast Route Switcher */}
+                        {/* Map Top Floating Header & Fast Route Switcher with Detailed Live Status */}
                         <MapRouteHeader
                             selectedRoute={activeRoute}
                             onSelectRoute={handleRouteChange}
                             runningBuses={liveBusData.sortedList}
                             allRoutes={allRoutes}
+                            connectionStatus={liveBusData.connectionStatus}
+                            hasFetched={liveBusData.hasFetched}
+                            isDegraded={liveBusData.isDegraded}
+                            onReconnect={liveBusData.reconnect}
                         />
 
                         <MapWrapper onReady={handleMapReady}>
@@ -405,6 +409,8 @@ export function AppShell() {
                     onSelectRoute={handleRouteChange}
                     runningBuses={liveBusData.sortedList}
                     getDirection={liveBusData.getDirection}
+                    connectionStatus={liveBusData.connectionStatus}
+                    hasFetched={liveBusData.hasFetched}
                     chatFilterRoute={chatFilterRoute}
                     onChatFilterRouteChange={handleChatFilterRouteChange}
                     commentCount={comments.length}
