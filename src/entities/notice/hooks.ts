@@ -1,11 +1,12 @@
 "use client";
 
+import useSWR from "swr";
+import {useEffect} from "react";
+
 import {getNoticeDetail, getNoticeList} from "./api";
 import type {NoticeDetail, NoticeListResponse} from "./types";
 
 import {APP_CONFIG, STORAGE_KEYS} from "@shared/config/env";
-
-import useSWR from "swr";
 
 const NOTICE_LIST_SWR_OPTIONS = {
     revalidateOnFocus: false,
@@ -25,7 +26,7 @@ const NOTICE_DETAIL_SWR_OPTIONS = {
 } as const;
 
 // Helper to get cached notice list from localStorage
-function getLocalNoticeListFallback(page: number, searchText: string, searchGb: string): NoticeListResponse | undefined {
+function getLocalNoticeListFallback(page: number, searchText: string, _searchGb: string): NoticeListResponse | undefined {
     if (typeof window === "undefined" || page !== 1 || searchText !== "") return undefined;
     try {
         const raw = localStorage.getItem(STORAGE_KEYS.NOTICE_LIST_CACHE);
@@ -75,11 +76,17 @@ export function useNoticeList(page = 1, searchText = "", searchGb = "title") {
             }
             return res;
         },
-        {
-            ...NOTICE_LIST_SWR_OPTIONS,
-            fallbackData: getLocalNoticeListFallback(page, searchText, searchGb),
-        }
+        NOTICE_LIST_SWR_OPTIONS
     );
+
+    useEffect(() => {
+        if (!data && page === 1 && !searchText) {
+            const local = getLocalNoticeListFallback(page, searchText, searchGb);
+            if (local) {
+                mutate(local, false);
+            }
+        }
+    }, [data, page, searchText, searchGb, mutate]);
 
     if (error && APP_CONFIG.IS_DEV) {
         console.error("[useNoticeList] Error fetching notice list", error);
@@ -102,7 +109,7 @@ export function useNoticeList(page = 1, searchText = "", searchGb = "title") {
 export function useNoticeDetail(id: string | null) {
     const key = id ? ["noticeDetail", id] : null;
 
-    const {data, error, isLoading} = useSWR<NoticeDetail>(
+    const {data, error, isLoading, mutate} = useSWR<NoticeDetail>(
         key,
         async () => {
             if (!id) throw new Error("No ID");
@@ -116,11 +123,17 @@ export function useNoticeDetail(id: string | null) {
             }
             return res;
         },
-        {
-            ...NOTICE_DETAIL_SWR_OPTIONS,
-            fallbackData: getLocalNoticeDetailFallback(id),
-        }
+        NOTICE_DETAIL_SWR_OPTIONS
     );
+
+    useEffect(() => {
+        if (!data && id) {
+            const local = getLocalNoticeDetailFallback(id);
+            if (local) {
+                mutate(local, false);
+            }
+        }
+    }, [data, id, mutate]);
 
     if (error && APP_CONFIG.IS_DEV) {
         console.error(`[useNoticeDetail] Error fetching notice detail for ${id}`, error);

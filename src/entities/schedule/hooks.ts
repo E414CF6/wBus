@@ -1,9 +1,10 @@
 "use client";
 
+import useSWR from "swr";
+import {useCallback, useEffect, useState} from "react";
+
 import {ApiResponse, BusCacheData, CacheMetadata} from "@shared/types/bus";
 import {STORAGE_KEYS} from "@shared/config/env";
-import useSWR from "swr";
-import {useCallback, useState} from "react";
 
 const SCHEDULE_SWR_OPTIONS = {
     revalidateOnFocus: false,
@@ -64,11 +65,17 @@ export function useSchedule() {
     const {data, error, isLoading, mutate} = useSWR(
         "scheduleData",
         fetchScheduleApi,
-        {
-            ...SCHEDULE_SWR_OPTIONS,
-            fallbackData: getLocalScheduleFallback(),
-        }
+        SCHEDULE_SWR_OPTIONS
     );
+
+    useEffect(() => {
+        if (!data) {
+            const local = getLocalScheduleFallback();
+            if (local) {
+                mutate(local, false);
+            }
+        }
+    }, [data, mutate]);
 
     const refresh = useCallback(async (force = true) => {
         setIsRefreshing(true);
