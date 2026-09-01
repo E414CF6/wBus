@@ -36,7 +36,7 @@ interface UseAnimatedPositionOptions {
 }
 
 // ----------------------------------------------------------------------
-// Constants — Real-Time Smooth Interpolation, Bounded Dead Reckoning & Safeguards
+// Constants — Real-Time Smooth Interpolation, Rapid Catch-Up & Safeguards
 // ----------------------------------------------------------------------
 
 // Ignore backward jumps smaller than this (GPS jitter in meters)
@@ -49,11 +49,11 @@ const SCALAR_LOOP_RESTART_THRESHOLD_METERS = 400;
 const TELEPORT_DISTANCE_METERS = 800;
 const TELEPORT_COORD_THRESHOLD = 0.0075; // ~830m
 
-// Maximum distance the animated marker is ever allowed to dead-reckon ahead of the last confirmed API position (~300m)
-const MAX_DEAD_RECKONING_LEAD_COORD = 0.0028;
+// Maximum distance the animated marker is ever allowed to dead-reckon ahead of the last confirmed API position (~450m)
+const MAX_DEAD_RECKONING_LEAD_COORD = 0.0040;
 
-// Maximum latency compensation projection allowed upon receiving fresh API data (~60m)
-const MAX_LATENCY_PROJECTION_COORD = 0.0006;
+// Maximum latency compensation projection allowed upon receiving fresh API data (~100m)
+const MAX_LATENCY_PROJECTION_COORD = 0.0009;
 
 // React state update throttle — 20 Hz (50ms) for UI popup consumers
 const STATE_UPDATE_THROTTLE_MS = 50;
@@ -66,14 +66,14 @@ const MAX_DT_MS = 200;
 const CITY_BUS_BASE_VELOCITY = 0.000000075;
 
 // Velocity limits (coord-units / ms)
-// Min crawling speed (~10 km/h), Max cruising (~75 km/h), Max catchup (~85 km/h)
+// Min crawling speed (~10 km/h), Max cruising (~80 km/h), Rapid Catchup sprint (~300 km/h scalar)
 const MIN_MOVING_VELOCITY = 0.000000025;
-const MAX_VELOCITY = 0.00000019;
-const MAX_CATCHUP_VELOCITY = 0.00000022;
+const MAX_VELOCITY = 0.00000022;
+const MAX_CATCHUP_VELOCITY = 0.00000085;
 const STOP_THRESHOLD = 0.000000005;
 
 // Velocity smoothing factor (EMA weight on new measurement)
-const VELOCITY_SMOOTHING = 0.65;
+const VELOCITY_SMOOTHING = 0.70;
 
 // Weight given to measured velocity vs prior (starts high to adapt quickly)
 const VELOCITY_PRIOR_BLEND_MIN = 0.6;
@@ -89,16 +89,16 @@ const DEAD_RECKONING_CRUISE_MS = 35000;
 // Graceful deceleration coasting from 35s to 65s if no data arrives
 const DEAD_RECKONING_FADEOUT_MS = 30000;
 
-// Elastic Catch-Up time constant:
-// Smooth convergence over ~2.0s to close position gaps when new API data arrives
-const CATCHUP_TAU_MS = 2000;
+// Rapid Catch-Up time constant:
+// Fast exponential convergence (~600ms) with non-linear boost to rapidly catch up when slow API data arrives
+const CATCHUP_TAU_MS = 600;
 
-// Acceleration/deceleration transition easing (ms)
-const VELOCITY_TAU_MS = 300;
+// Acceleration/deceleration transition easing (ms) - rapid throttle-up
+const VELOCITY_TAU_MS = 100;
 
 // Angular smoothing
 const ANGULAR_LOOKAHEAD_THRESHOLD = 0.65;
-const ANGULAR_SMOOTHING_FACTOR = 0.20;
+const ANGULAR_SMOOTHING_FACTOR = 0.22;
 
 // --- Stop-aware speed modulation ---
 // Deceleration zone before a stop (~150m ≈ 0.00135 degrees)
@@ -258,7 +258,7 @@ function blendVelocityWithPrior(measured: number, sampleCount: number): number {
 
 /**
  * Animates a bus marker along a polyline with continuous smooth linear interpolation,
- * bounded forward dead reckoning, and anti-teleport / anti-drift safeguards.
+ * rapid catch-up sprint on new API updates, and anti-teleport / anti-drift safeguards.
  */
 export function useAnimatedPosition(
     targetPosition: Coordinate,
@@ -570,7 +570,7 @@ export function useAnimatedPosition(
         }
 
         // ----------------------------------------------------------------
-        // NORMAL PROGRESS: Update target distance for smooth animation
+        // NORMAL PROGRESS: Update target distance for rapid catch-up animation
         // ----------------------------------------------------------------
         const dtMs = lastDataTimeRef.current > 0 ? now - lastDataTimeRef.current : 0;
         const moved = rawDist - prevRawDistRef.current;
@@ -597,9 +597,9 @@ export function useAnimatedPosition(
                 MAX_VELOCITY
             );
 
-            // Forward project target position by latency compensation (up to ~60m)
+            // Forward project target position by latency compensation (up to ~100m)
             const v = Math.max(velocityRef.current, MIN_MOVING_VELOCITY);
-            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 8000));
+            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 10000));
             const maxAllowedProj = Math.max(
                 0,
                 Math.min(
@@ -637,7 +637,7 @@ export function useAnimatedPosition(
     ]);
 
     // ----------------------------------------------------------------
-    // Animation loop — Continuous 60fps Smooth Interpolation & Dead Reckoning
+    // Animation loop — Continuous 60fps Rapid Catch-Up & Dead Reckoning
     // ----------------------------------------------------------------
     useEffect(() => {
         const tick = (now: number) => {
@@ -654,7 +654,7 @@ export function useAnimatedPosition(
             lastFrameRef.current = now;
             const clampedDt = Math.min(dt, MAX_DT_MS);
 
-            // Smooth dynamic velocity transition (bus inertia)
+            // Smooth dynamic velocity transition (rapid throttle response)
             const targetV = Math.max(velocityRef.current, MIN_MOVING_VELOCITY);
             const currentV = currentVelocityRef.current;
             const activeV = currentV + (targetV - currentV) * Math.min(clampedDt / VELOCITY_TAU_MS, 1);
@@ -673,7 +673,7 @@ export function useAnimatedPosition(
                 deadReckoningFactor = Math.max(0, 1 - over / DEAD_RECKONING_FADEOUT_MS);
             }
 
-            // SAFETY CEILING: Extrapolation is strictly capped at MAX_DEAD_RECKONING_LEAD_COORD (~300m) past raw API position
+            // SAFETY CEILING: Extrapolation is strictly capped at MAX_DEAD_RECKONING_LEAD_COORD (~450m) past raw API position
             const maxExtrapolatedDist = prevRawDistRef.current + MAX_DEAD_RECKONING_LEAD_COORD;
             const hardCeilingDist = Math.min(totalDist, maxExtrapolatedDist);
 
@@ -682,7 +682,7 @@ export function useAnimatedPosition(
                 deadReckoningFactor = 0;
             }
 
-            // If gap is enormous (> 800m), teleport to target; otherwise smoothly animate
+            // If gap is enormous (> 800m), teleport to target; otherwise smoothly & rapidly animate
             if (Math.abs(gap) > TELEPORT_COORD_THRESHOLD) {
                 dist = target;
                 markerDistRef.current = dist;
@@ -712,13 +712,20 @@ export function useAnimatedPosition(
                     dist = Math.min(dist + dwellAdvance, hardCeilingDist);
                     markerDistRef.current = dist;
                 } else {
-                    // Smooth Linear Interpolation + Proportional Catch-Up
+                    // Smooth Linear Interpolation + Rapid Proportional Catch-Up (급가속 추종)
                     const baseVelocity = activeV * deadReckoningFactor * stopMult;
-                    const maxCatchupBoost = Math.max(baseVelocity * 2.5, MAX_VELOCITY * 1.2);
-                    const catchupVelocity = Math.max(
-                        -baseVelocity * 0.5,
-                        Math.min(gap / CATCHUP_TAU_MS, maxCatchupBoost)
-                    );
+                    let catchupVelocity = 0;
+
+                    if (gap > 0) {
+                        // Aggressive catch-up sprint for slow API polling:
+                        // Fast 600ms time constant with non-linear surge for larger gaps
+                        const linearBoost = gap / CATCHUP_TAU_MS;
+                        const surgeBoost = Math.max(0, (gap - 0.0001) * 0.0018);
+                        catchupVelocity = Math.min(linearBoost + surgeBoost, MAX_CATCHUP_VELOCITY);
+                    } else if (gap < 0) {
+                        // Marker is ahead of target: gently coast
+                        catchupVelocity = Math.max(-baseVelocity * 0.75, gap / CATCHUP_TAU_MS);
+                    }
 
                     const effectiveVelocity = Math.min(
                         MAX_CATCHUP_VELOCITY,
