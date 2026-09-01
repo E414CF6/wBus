@@ -1,12 +1,14 @@
-import {TaskQueue} from "@shared/utils/concurrency";
+import {API_PRIORITY, TaskQueue} from "@shared/utils/concurrency";
+import {isRouteInServiceWindow, recordRouteBusActivity} from "@shared/lib/routeWindow";
 
 /**
  * Advanced Client for Korea's Public Data Portal (apis.data.go.kr)
  * Features:
+ * - Operating Service Window Engine (Prevents late-night/dawn futile API calls)
+ * - Priority-Based Task Queue & Token Bucket Rate Limiting (8 req/sec)
  * - Multi-Service-Key Load Balancing & Rotation with Automatic Failover on 429/Limit
  * - Circuit Breaker Pattern (CLOSED / OPEN / HALF_OPEN)
  * - In-flight Request Deduplication (Coalescing)
- * - Global Concurrency Limiting & Micro-Staggering
  * - Response Envelope Validation & Error Inspection
  */
 
@@ -180,11 +182,11 @@ class CircuitBreaker {
 const circuitBreaker = new CircuitBreaker();
 
 // ----------------------------------------------------------------------
-// 3. Concurrency Queue & In-flight Deduplication
+// 3. Priority Concurrency Queue & Token Bucket Rate Limiter
 // ----------------------------------------------------------------------
 
 const publicApiQueue = new TaskQueue({
-    concurrency: 3, staggerMs: 40,
+    concurrency: 3, staggerMs: 30, maxRps: 8, // Strictly limits upstream to maximum 8 req/sec
 });
 
 const pendingInflightRequests = new Map<string, Promise<unknown>>();
@@ -211,11 +213,17 @@ export function getRouteBusCount(routeId: string): number | undefined {
 }
 
 /**
- * Returns dynamic TTL based on active bus count.
- * Routes with active buses use high-frequency activeTtl (e.g. 4s).
- * Routes with 0 active buses use backoff idleTtl (e.g. 20s) to preserve API quota.
+ * Returns dynamic TTL based on route service window and active bus count.
+ * - Outside operating window: Long backoff TTL (e.g. 300s ~ 1800s) to eliminate futile calls.
+ * - Inside window with active buses: High-frequency activeTtl (e.g. 4s).
+ * - Inside window with 0 buses: Backoff idleTtl (e.g. 20s).
  */
 export function getAdaptiveTtlSeconds(routeId: string, activeTtl = 4, idleTtl = 20): number {
+    const status = isRouteInServiceWindow(routeId);
+    if (!status.inService) {
+        return status.retryAfterSeconds;
+    }
+
     const metrics = routeBusMetricsMap.get(routeId);
     if (!metrics) return activeTtl;
     return metrics.busCount > 0 ? activeTtl : idleTtl;
@@ -229,7 +237,7 @@ async function fetchPublicApi<T>(path: string, params: Record<string, string>, o
         return pendingInflightRequests.get(dedupeKey) as Promise<T>;
     }
 
-    const priority = options?.priority ?? 0;
+    const priority = options?.priority ?? API_PRIORITY.USER_INTERACTIVE;
     const promise = publicApiQueue.enqueue(() => rawFetchPublicApi<T>(path, params), {priority})
         .finally(() => {
             pendingInflightRequests.delete(dedupeKey);
@@ -395,6 +403,7 @@ export function getPublicApiHealth() {
     return {
         circuit: circuitBreaker.getState(),
         keys: keyManager.getMetrics(),
+        queue: publicApiQueue.getMetrics(),
         inflightRequests: pendingInflightRequests.size,
         routeBusCounts: Object.fromEntries(Array.from(routeBusMetricsMap.entries()).map(([id, m]) => [id, m.busCount])),
     };
@@ -415,19 +424,33 @@ export interface RawBusLocation {
     nodeord?: number;
 }
 
-export async function fetchBusLocations(routeId: string): Promise<RawBusLocation[]> {
+export async function fetchBusLocations(routeId: string, options?: {
+    force?: boolean;
+    priority?: number
+}): Promise<RawBusLocation[]> {
+    // 1. Check Operating Service Window (Short-circuit during midnight / non-operating hours)
+    const serviceStatus = isRouteInServiceWindow(routeId);
+    if (!serviceStatus.inService && !options?.force) {
+        // Record 0 bus count for metrics
+        routeBusMetricsMap.set(routeId, {
+            busCount: 0, lastFetchedAt: Date.now(),
+        });
+        return [];
+    }
+
     const currentMetrics = routeBusMetricsMap.get(routeId);
-    // Priority: 10 for active routes with buses, 0 for initial/unknown, -5 for confirmed 0-bus idle routes
-    const priority = currentMetrics ? (currentMetrics.busCount > 0 ? 10 : -5) : 0;
+    // Priority: Priority argument or calculated level
+    const priority = options?.priority ?? (serviceStatus.reason === "activity_override" || (currentMetrics && currentMetrics.busCount > 0) ? API_PRIORITY.USER_INTERACTIVE : API_PRIORITY.STREAM_ACTIVE);
 
     const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusLocation>>("/BusLcInfoInqireService/getRouteAcctoBusLcList", {routeId}, {priority});
 
     const items = extractItems(data, `getRouteAcctoBusLcList:${routeId}`);
 
-    // Update bus count metrics for dynamic backoff
+    // Update bus count metrics & activity timestamp for dynamic window extension
     routeBusMetricsMap.set(routeId, {
         busCount: items.length, lastFetchedAt: Date.now(),
     });
+    recordRouteBusActivity(routeId, items.length);
 
     return items.map((bus) => ({
         ...bus, routeid: routeId,
@@ -443,7 +466,7 @@ export interface RawBusArrival {
 }
 
 export async function fetchBusArrivals(nodeId: string): Promise<RawBusArrival[]> {
-    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusArrival>>("/ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList", {nodeId});
+    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusArrival>>("/ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList", {nodeId}, {priority: API_PRIORITY.USER_INTERACTIVE});
 
     return extractItems(data, `getSttnAcctoArvlPrearngeInfoList:${nodeId}`);
 }
@@ -459,7 +482,7 @@ export interface RawBusStop {
 }
 
 export async function fetchRouteStops(routeId: string): Promise<RawBusStop[]> {
-    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusStop>>("/BusRouteInfoInqireService/getRouteAcctoThrghSttnList", {routeId});
+    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusStop>>("/BusRouteInfoInqireService/getRouteAcctoThrghSttnList", {routeId}, {priority: API_PRIORITY.USER_INTERACTIVE});
 
     return extractItems(data, `getRouteAcctoThrghSttnList:${routeId}`);
 }
