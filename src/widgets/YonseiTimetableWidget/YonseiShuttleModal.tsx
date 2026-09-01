@@ -2,9 +2,9 @@
 
 import React, {useEffect, useMemo, useState} from "react";
 import {createPortal} from "react-dom";
-import {YONSEI_SHUTTLE_SCHEDULE,} from "@/data/yonseiShuttleSchedule";
+import {YONSEI_SHUTTLE_SCHEDULE} from "@/data/yonseiShuttleSchedule";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
-import {ArrowRight, Bus, Clock, Info, MapPin, Search, ShieldAlert, Sparkles, X,} from "lucide-react";
+import {ArrowRight, Bus, Clock, Info, MapPin, Search, ShieldAlert, Sparkles, X} from "lucide-react";
 
 interface YonseiShuttleModalProps {
     isOpen: boolean;
@@ -42,51 +42,57 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
     const currentMins = now.getHours() * 60 + now.getMinutes();
     const isSunday = now.getDay() === 0;
 
-    // Filter Inbound Items
+    // Filter and Sort Inbound Items by departure_time ascending
     const filteredInbound = useMemo(() => {
-        return YONSEI_SHUTTLE_SCHEDULE.inbound_to_campus.filter((item) => {
-            // Day filter
-            if (dayFilter === "WEEKDAY" && item.operation_type.includes("일요일")) return false;
-            if (dayFilter === "SUNDAY" && !item.operation_type.includes("일요일")) return false;
+        return YONSEI_SHUTTLE_SCHEDULE.inbound_to_campus
+            .filter((item) => {
+                // Day filter
+                if (dayFilter === "WEEKDAY" && item.operation_type.includes("일요일")) return false;
+                if (dayFilter === "SUNDAY" && !item.operation_type.includes("일요일")) return false;
 
-            // Search query
-            if (searchQuery.trim()) {
-                const q = searchQuery.toLowerCase().trim();
-                const matchPoint = item.departure_point.toLowerCase().includes(q);
-                const matchTime = item.departure_time.includes(q);
-                const matchDest = item.destination.toLowerCase().includes(q);
-                const matchVia = item.via.some((v) => v.name.toLowerCase().includes(q));
-                const matchNote = item.note ? item.note.toLowerCase().includes(q) : false;
-                if (!matchPoint && !matchTime && !matchDest && !matchVia && !matchNote) return false;
-            }
+                // Search query
+                if (searchQuery.trim()) {
+                    const q = searchQuery.toLowerCase().trim();
+                    const matchPoint = item.departure_point.toLowerCase().includes(q);
+                    const matchTime = item.departure_time.includes(q);
+                    const matchDest = item.destination.toLowerCase().includes(q);
+                    const matchVia = item.via.some((v) => v.name.toLowerCase().includes(q));
+                    const matchNote = item.note ? item.note.toLowerCase().includes(q) : false;
+                    if (!matchPoint && !matchTime && !matchDest && !matchVia && !matchNote) return false;
+                }
 
-            return true;
-        });
+                return true;
+            })
+            .slice()
+            .sort((a, b) => (parseTimeToMinutes(a.departure_time) ?? 0) - (parseTimeToMinutes(b.departure_time) ?? 0));
     }, [dayFilter, searchQuery]);
 
-    // Filter Outbound Items
+    // Filter and Sort Outbound Items by departure_time ascending
     const filteredOutbound = useMemo(() => {
-        return YONSEI_SHUTTLE_SCHEDULE.outbound_from_campus.filter((item) => {
-            // Day filter
-            if (dayFilter === "WEEKDAY" && item.operation_type.includes("일요일")) return false;
-            if (dayFilter === "SUNDAY" && !item.operation_type.includes("일요일")) return false;
+        return YONSEI_SHUTTLE_SCHEDULE.outbound_from_campus
+            .filter((item) => {
+                // Day filter
+                if (dayFilter === "WEEKDAY" && item.operation_type.includes("일요일")) return false;
+                if (dayFilter === "SUNDAY" && !item.operation_type.includes("일요일")) return false;
 
-            // Search query
-            if (searchQuery.trim()) {
-                const q = searchQuery.toLowerCase().trim();
-                const matchPoint = item.departure_point.toLowerCase().includes(q);
-                const matchTime = item.departure_time.includes(q);
-                const matchDest = item.destination.toLowerCase().includes(q);
-                const matchVia = item.via.some((v) => v.name.toLowerCase().includes(q));
-                const matchNote = item.note ? item.note.toLowerCase().includes(q) : false;
-                if (!matchPoint && !matchTime && !matchDest && !matchVia && !matchNote) return false;
-            }
+                // Search query
+                if (searchQuery.trim()) {
+                    const q = searchQuery.toLowerCase().trim();
+                    const matchPoint = item.departure_point.toLowerCase().includes(q);
+                    const matchTime = item.departure_time.includes(q);
+                    const matchDest = item.destination.toLowerCase().includes(q);
+                    const matchVia = item.via.some((v) => v.name.toLowerCase().includes(q));
+                    const matchNote = item.note ? item.note.toLowerCase().includes(q) : false;
+                    if (!matchPoint && !matchTime && !matchDest && !matchVia && !matchNote) return false;
+                }
 
-            return true;
-        });
+                return true;
+            })
+            .slice()
+            .sort((a, b) => (parseTimeToMinutes(a.departure_time) ?? 0) - (parseTimeToMinutes(b.departure_time) ?? 0));
     }, [dayFilter, searchQuery]);
 
-    // Next upcoming index for inbound
+    // Next upcoming index for inbound (based on earliest time >= currentMins)
     const nextInboundIdx = useMemo(() => {
         for (let i = 0; i < filteredInbound.length; i++) {
             const item = filteredInbound[i];
@@ -100,7 +106,7 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
         return -1;
     }, [filteredInbound, currentMins, isSunday, dayFilter]);
 
-    // Next upcoming index for outbound
+    // Next upcoming index for outbound (based on earliest time >= currentMins)
     const nextOutboundIdx = useMemo(() => {
         for (let i = 0; i < filteredOutbound.length; i++) {
             const item = filteredOutbound[i];

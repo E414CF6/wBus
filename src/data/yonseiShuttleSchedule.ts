@@ -71,6 +71,22 @@ export const YONSEI_SHUTTLE_SCHEDULE: ShuttleBusScheduleData = {
             name: "매지리", time: "08:32", is_fixed_time: true,
         },], destination: "미래캠퍼스", note: null,
     }, {
+        operation_type: "평일 운행", departure_point: "만종역 버스정류장", departure_time: "08:20", via: [{
+            name: "원주고속터미널", time: "08:31", is_fixed_time: true,
+        }, {
+            name: "원주시청사거리", time: null, is_fixed_time: false,
+        }, {
+            name: "매지리", time: null, is_fixed_time: false,
+        },], destination: "미래캠퍼스", note: null,
+    }, {
+        operation_type: "평일 운행", departure_point: "만종역 버스정류장", departure_time: "09:20", via: [{
+            name: "원주고속터미널", time: "09:30", is_fixed_time: true,
+        }, {
+            name: "원주시청사거리", time: null, is_fixed_time: false,
+        }, {
+            name: "매지리", time: null, is_fixed_time: false,
+        },], destination: "미래캠퍼스", note: null,
+    }, {
         operation_type: "평일 운행",
         departure_point: "여주역",
         departure_time: "12:15",
@@ -79,22 +95,23 @@ export const YONSEI_SHUTTLE_SCHEDULE: ShuttleBusScheduleData = {
         note: null,
     }, {
         operation_type: "평일 운행",
-        departure_point: "여주역",
-        departure_time: "14:20",
+        departure_point: "원주역(시내버스정류장)",
+        departure_time: "12:23",
         via: [],
         destination: "미래캠퍼스",
         note: "직행 버스",
     }, {
-        operation_type: "평일 운행",
-        departure_point: "여주역",
-        departure_time: "17:50",
-        via: [],
-        destination: "미래캠퍼스",
-        note: null,
+        operation_type: "평일 운행", departure_point: "원주세브란스 장례식장 주차장 앞", departure_time: "12:50", via: [{
+            name: "원주고속터미널", time: null, is_fixed_time: false,
+        }, {
+            name: "원주시청사거리", time: null, is_fixed_time: false,
+        }, {
+            name: "매지리", time: null, is_fixed_time: false,
+        },], destination: "미래캠퍼스", note: null,
     }, {
         operation_type: "평일 운행",
-        departure_point: "원주역(시내버스정류장)",
-        departure_time: "12:23",
+        departure_point: "여주역",
+        departure_time: "14:20",
         via: [],
         destination: "미래캠퍼스",
         note: "직행 버스",
@@ -109,18 +126,6 @@ export const YONSEI_SHUTTLE_SCHEDULE: ShuttleBusScheduleData = {
             name: "시청사거리", time: null, is_fixed_time: false,
         },], destination: "미래캠퍼스", note: null,
     }, {
-        operation_type: "평일 운행", departure_point: "원주고속터미널 건너편 그랜드치과", departure_time: "17:15", via: [{
-            name: "시청사거리", time: null, is_fixed_time: false,
-        },], destination: "미래캠퍼스", note: null,
-    }, {
-        operation_type: "평일 운행", departure_point: "원주세브란스 장례식장 주차장 앞", departure_time: "12:50", via: [{
-            name: "원주고속터미널", time: null, is_fixed_time: false,
-        }, {
-            name: "원주시청사거리", time: null, is_fixed_time: false,
-        }, {
-            name: "매지리", time: null, is_fixed_time: false,
-        },], destination: "미래캠퍼스", note: null,
-    }, {
         operation_type: "평일 운행", departure_point: "원주세브란스 장례식장 주차장 앞", departure_time: "16:40", via: [{
             name: "원주고속터미널", time: null, is_fixed_time: false,
         }, {
@@ -129,24 +134,19 @@ export const YONSEI_SHUTTLE_SCHEDULE: ShuttleBusScheduleData = {
             name: "매지리", time: null, is_fixed_time: false,
         },], destination: "미래캠퍼스", note: null,
     }, {
+        operation_type: "평일 운행", departure_point: "원주고속터미널 건너편 그랜드치과", departure_time: "17:15", via: [{
+            name: "시청사거리", time: null, is_fixed_time: false,
+        },], destination: "미래캠퍼스", note: null,
+    }, {
+        operation_type: "평일 운행",
+        departure_point: "여주역",
+        departure_time: "17:50",
+        via: [],
+        destination: "미래캠퍼스",
+        note: null,
+    }, {
         operation_type: "평일 운행", departure_point: "원주세브란스 장례식장 주차장 앞", departure_time: "17:50", via: [{
             name: "원주고속터미널", time: null, is_fixed_time: false,
-        }, {
-            name: "원주시청사거리", time: null, is_fixed_time: false,
-        }, {
-            name: "매지리", time: null, is_fixed_time: false,
-        },], destination: "미래캠퍼스", note: null,
-    }, {
-        operation_type: "평일 운행", departure_point: "만종역 버스정류장", departure_time: "08:20", via: [{
-            name: "원주고속터미널", time: "08:31", is_fixed_time: true,
-        }, {
-            name: "원주시청사거리", time: null, is_fixed_time: false,
-        }, {
-            name: "매지리", time: null, is_fixed_time: false,
-        },], destination: "미래캠퍼스", note: null,
-    }, {
-        operation_type: "평일 운행", departure_point: "만종역 버스정류장", departure_time: "09:20", via: [{
-            name: "원주고속터미널", time: "09:30", is_fixed_time: true,
         }, {
             name: "원주시청사거리", time: null, is_fixed_time: false,
         }, {
@@ -178,21 +178,7 @@ export const YONSEI_SHUTTLE_SCHEDULE: ShuttleBusScheduleData = {
         },], destination: "미래캠퍼스", note: "일요일 운행",
     },],
     outbound_from_campus: [{
-        operation_type: "평일 운행",
-        departure_point: "미래관",
-        departure_time: "13:00",
-        destination: "여주역",
-        via: [],
-        note: "여주역 직행",
-    }, {
-        operation_type: "평일 운행",
-        departure_point: "미래관",
-        departure_time: "17:00",
-        destination: "여주역",
-        via: [],
-        note: null,
-    }, {
-        operation_type: "평일 운행", departure_point: "미래관", departure_time: "16:10", destination: "만종역", via: [{
+        operation_type: "평일 운행", departure_point: "미래관", departure_time: "12:05", destination: "원주세브란스 장례식장", via: [{
             name: "매지리", time: null,
         }, {
             name: "원주역", time: null,
@@ -202,9 +188,12 @@ export const YONSEI_SHUTTLE_SCHEDULE: ShuttleBusScheduleData = {
             name: "원주고속터미널", time: null,
         },], note: null,
     }, {
-        operation_type: "평일 운행", departure_point: "미래관", departure_time: "17:50", destination: "만종역", via: [{
-            name: "매지리", time: null,
-        },], note: "목요일만 만종역 경유 후 여주역까지 연장운행 (매주 목요일: 매지리→만종역→여주역)",
+        operation_type: "평일 운행",
+        departure_point: "미래관",
+        departure_time: "13:00",
+        destination: "여주역",
+        via: [],
+        note: "여주역 직행",
     }, {
         operation_type: "평일 운행", departure_point: "미래관", departure_time: "14:00", destination: "원주고속터미널", via: [{
             name: "매지리", time: null,
@@ -222,13 +211,7 @@ export const YONSEI_SHUTTLE_SCHEDULE: ShuttleBusScheduleData = {
             name: "시청사거리", time: null,
         },], note: null,
     }, {
-        operation_type: "평일 운행", departure_point: "미래관", departure_time: "16:50", destination: "원주고속터미널", via: [{
-            name: "원주역", time: null,
-        }, {
-            name: "시청사거리", time: null,
-        },], note: null,
-    }, {
-        operation_type: "평일 운행", departure_point: "미래관", departure_time: "12:05", destination: "원주세브란스 장례식장", via: [{
+        operation_type: "평일 운행", departure_point: "미래관", departure_time: "16:10", destination: "만종역", via: [{
             name: "매지리", time: null,
         }, {
             name: "원주역", time: null,
@@ -246,6 +229,19 @@ export const YONSEI_SHUTTLE_SCHEDULE: ShuttleBusScheduleData = {
             name: "원주고속터미널", time: null,
         },], note: "원주역 미정차",
     }, {
+        operation_type: "평일 운행", departure_point: "미래관", departure_time: "16:50", destination: "원주고속터미널", via: [{
+            name: "원주역", time: null,
+        }, {
+            name: "시청사거리", time: null,
+        },], note: null,
+    }, {
+        operation_type: "평일 운행",
+        departure_point: "미래관",
+        departure_time: "17:00",
+        destination: "여주역",
+        via: [],
+        note: null,
+    }, {
         operation_type: "평일 운행", departure_point: "미래관", departure_time: "17:15", destination: "원주세브란스 장례식장", via: [{
             name: "매지리", time: null,
         }, {
@@ -253,6 +249,10 @@ export const YONSEI_SHUTTLE_SCHEDULE: ShuttleBusScheduleData = {
         }, {
             name: "원주고속터미널", time: null,
         },], note: null,
+    }, {
+        operation_type: "평일 운행", departure_point: "미래관", departure_time: "17:50", destination: "만종역", via: [{
+            name: "매지리", time: null,
+        },], note: "목요일만 만종역 경유 후 여주역까지 연장운행 (매주 목요일: 매지리→만종역→여주역)",
     }, {
         operation_type: "일요일 운행", departure_point: "미래관", departure_time: "18:45", destination: "원주고속터미널", via: [{
             name: "매지리", time: null,

@@ -21,30 +21,36 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
     const isSunday = dayOfWeek === 0;
     const isSaturday = dayOfWeek === 6;
 
-    // Filter by today's day type
+    // Filter by today's day type and sort chronologically by departure time
     const applicableInboundList = useMemo(() => {
         if (isSaturday) return [];
         const list = YONSEI_SHUTTLE_SCHEDULE.inbound_to_campus;
-        return list.filter((item) => {
-            if (isSunday) {
-                return item.operation_type.includes("일요일");
-            }
-            return item.operation_type.includes("평일") || !item.operation_type.includes("일요일");
-        });
+        return list
+            .filter((item) => {
+                if (isSunday) {
+                    return item.operation_type.includes("일요일");
+                }
+                return item.operation_type.includes("평일") || !item.operation_type.includes("일요일");
+            })
+            .slice()
+            .sort((a, b) => (parseTimeToMinutes(a.departure_time) ?? 0) - (parseTimeToMinutes(b.departure_time) ?? 0));
     }, [isSaturday, isSunday]);
 
     const applicableOutboundList = useMemo(() => {
         if (isSaturday) return [];
         const list = YONSEI_SHUTTLE_SCHEDULE.outbound_from_campus;
-        return list.filter((item) => {
-            if (isSunday) {
-                return item.operation_type.includes("일요일");
-            }
-            return item.operation_type.includes("평일") || !item.operation_type.includes("일요일");
-        });
+        return list
+            .filter((item) => {
+                if (isSunday) {
+                    return item.operation_type.includes("일요일");
+                }
+                return item.operation_type.includes("평일") || !item.operation_type.includes("일요일");
+            })
+            .slice()
+            .sort((a, b) => (parseTimeToMinutes(a.departure_time) ?? 0) - (parseTimeToMinutes(b.departure_time) ?? 0));
     }, [isSaturday, isSunday]);
 
-    // Find next upcoming inbound shuttle
+    // Find next upcoming inbound shuttle (earliest time >= currentMins)
     const nextInbound = useMemo(() => {
         for (const item of applicableInboundList) {
             const mins = parseTimeToMinutes(item.departure_time);
@@ -59,7 +65,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
         return null;
     }, [applicableInboundList, currentMins]);
 
-    // Find next upcoming outbound shuttle
+    // Find next upcoming outbound shuttle (earliest time >= currentMins)
     const nextOutbound = useMemo(() => {
         for (const item of applicableOutboundList) {
             const mins = parseTimeToMinutes(item.departure_time);
