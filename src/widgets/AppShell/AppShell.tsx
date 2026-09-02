@@ -7,7 +7,6 @@ import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
 import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 import {createClient} from "@shared/supabase/client";
 import BottomNav, {type DayMode, type NavTab, type TimetableSubTab} from "@shared/ui/BottomNav";
-import Splash from "@shared/ui/Splash";
 import {ChatView} from "@widgets/ChatWidget";
 import {TimetableWidget} from "@widgets/TimetableWidget";
 
@@ -62,16 +61,6 @@ export function AppShell() {
 
     const isMapActive = activeTab === "map";
     const [hasVisitedMap, setHasVisitedMap] = useState<boolean>(() => isMapActive);
-    const [isSplashVisible, setIsSplashVisible] = useState<boolean>(() => isMapActive);
-
-    // Safety fallback: Dismiss splash screen automatically if map loading takes too long
-    useEffect(() => {
-        if (!isSplashVisible) return;
-        const timer = setTimeout(() => {
-            setIsSplashVisible(false);
-        }, 3000);
-        return () => clearTimeout(timer);
-    }, [isSplashVisible]);
 
     // Square / Comments State
     const [comments, setComments] = useState<CommentItem[]>([]);
@@ -349,14 +338,17 @@ export function AppShell() {
         (route: string) => {
             setSelectedRoute(route);
             try {
-                localStorage.setItem(STORAGE_KEYS.ROUTE_ID, route);
-            } catch (e) {
-                if (APP_CONFIG.IS_DEV) {
-                    console.warn(
-                        "[handleRouteChange] Failed to save route preference to localStorage",
-                        e
-                    );
-                }
+                // Save to local storage for quick access
+                const savedRecent = localStorage.getItem("wbus_recent_map_routes");
+                const recents: string[] = savedRecent ? JSON.parse(savedRecent) : [];
+                const filtered = recents.filter((r) => r !== route);
+                filtered.unshift(route);
+                localStorage.setItem(
+                    "wbus_recent_map_routes",
+                    JSON.stringify(filtered.slice(0, 10))
+                );
+            } catch {
+                // Ignore
             }
             if (
                 typeof window !== "undefined" &&
@@ -387,10 +379,6 @@ export function AppShell() {
         }
     }, [routeMap, activeRoute, selectedRoute]);
 
-    const handleMapReady = useCallback(() => {
-        setIsSplashVisible(false);
-    }, []);
-
     const handleSelectMapRoute = useCallback(
         (routeName: string) => {
             handleRouteChange(routeName);
@@ -403,95 +391,91 @@ export function AppShell() {
     const isFixedLayout = activeTab !== "schedule";
 
     return (
-        <>
-            <Splash isVisible={isSplashVisible}/>
+        <div
+            className={
+                isFixedLayout
+                    ? "fixed inset-0 flex flex-col w-full h-[100dvh] overflow-hidden bg-slate-50 dark:bg-[#0b0f19]"
+                    : "relative min-h-[100dvh] w-full flex flex-col bg-slate-50 dark:bg-[#0b0f19]"
+            }
+        >
+            {/* 1. Real-time Map View Container (Lazy mounted ONLY when map is activated by user) */}
+            {hasVisitedMap && (
+                <div
+                    className={`relative flex-1 overflow-hidden ${
+                        activeTab === "map" ? "block" : "hidden"
+                    }`}
+                >
+                    {/* Map Top Floating Header & Fast Route Switcher with Detailed Live Status */}
+                    <MapRouteHeader
+                        selectedRoute={activeRoute}
+                        onSelectRoute={handleRouteChange}
+                        runningBuses={liveBusData.sortedList}
+                        allRoutes={allRoutes}
+                        connectionStatus={liveBusData.connectionStatus}
+                        hasFetched={liveBusData.hasFetched}
+                        isDegraded={liveBusData.isDegraded}
+                        onReconnect={liveBusData.reconnect}
+                    />
 
-            <div
-                className={
-                    isFixedLayout
-                        ? "fixed inset-0 flex flex-col w-full h-[100dvh] overflow-hidden bg-slate-50 dark:bg-[#0b0f19]"
-                        : "relative min-h-[100dvh] w-full flex flex-col bg-slate-50 dark:bg-[#0b0f19]"
-                }
-            >
-                {/* 1. Real-time Map View Container (Lazy mounted ONLY when map is activated by user) */}
-                {hasVisitedMap && (
-                    <div
-                        className={`relative flex-1 overflow-hidden ${
-                            activeTab === "map" ? "block" : "hidden"
-                        }`}
-                    >
-                        {/* Map Top Floating Header & Fast Route Switcher with Detailed Live Status */}
-                        <MapRouteHeader
-                            selectedRoute={activeRoute}
-                            onSelectRoute={handleRouteChange}
-                            runningBuses={liveBusData.sortedList}
-                            allRoutes={allRoutes}
-                            connectionStatus={liveBusData.connectionStatus}
-                            hasFetched={liveBusData.hasFetched}
-                            isDegraded={liveBusData.isDegraded}
-                            onReconnect={liveBusData.reconnect}
+                    <MapWrapper>
+                        <RouteLayer
+                            routeName={activeRoute}
+                            onRouteChange={handleRouteChange}
                         />
+                    </MapWrapper>
+                </div>
+            )}
 
-                        <MapWrapper onReady={handleMapReady}>
-                            <RouteLayer
-                                routeName={activeRoute}
-                                onRouteChange={handleRouteChange}
-                            />
-                        </MapWrapper>
-                    </div>
-                )}
-
-                {/* 2. Schedule Timetable View (Yonsei 30,34,34-1 & All Wonju routes) */}
-                {activeTab === "schedule" && (
-                    <main
-                        className="w-full min-h-dvh px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-32 sm:pb-36 flex flex-col items-center">
-                        <div className="w-full max-w-6xl flex-1 flex flex-col">
-                            <TimetableWidget
-                                subTab={timetableSubTab}
-                                onSubTabChange={handleScheduleSubTabChange}
-                                onSelectMapRoute={handleSelectMapRoute}
-                                dayMode={dayMode}
-                                onDayModeChange={setDayMode}
-                            />
-                        </div>
-                    </main>
-                )}
-
-                {/* 3. Real-time Square View */}
-                {activeTab === "chat" && (
-                    <div
-                        className="flex-1 overflow-hidden w-full max-w-6xl mx-auto px-3 sm:px-6 pt-2 sm:pt-4 pb-[calc(env(safe-area-inset-bottom,0)+4.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+5rem)] flex flex-col">
-                        <ChatView
-                            comments={comments}
-                            onAddComment={handleAddComment}
-                            onLikeComment={handleLikeComment}
-                            onDeleteComment={handleDeleteComment}
-                            onRefresh={fetchComments}
-                            isRefreshing={isRefreshingComments}
+            {/* 2. Schedule Timetable View (Yonsei 30,34,34-1 & All Wonju routes) */}
+            {activeTab === "schedule" && (
+                <main
+                    className="w-full min-h-dvh px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-32 sm:pb-36 flex flex-col items-center">
+                    <div className="w-full max-w-6xl flex-1 flex flex-col">
+                        <TimetableWidget
+                            subTab={timetableSubTab}
+                            onSubTabChange={handleScheduleSubTabChange}
+                            onSelectMapRoute={handleSelectMapRoute}
+                            dayMode={dayMode}
+                            onDayModeChange={setDayMode}
                         />
                     </div>
-                )}
+                </main>
+            )}
 
-                {/* Unified Bottom Floating Pill Navigation Bar */}
-                <BottomNav
-                    activeTab={activeTab}
-                    onTabChange={handleTabChange}
-                    scheduleSubTab={timetableSubTab}
-                    onScheduleSubTabChange={handleScheduleSubTabChange}
-                    dayMode={dayMode}
-                    onDayModeChange={setDayMode}
-                    isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-                    allRoutes={allRoutes}
-                    selectedRoute={activeRoute}
-                    onSelectRoute={handleRouteChange}
-                    runningBuses={liveBusData.sortedList}
-                    getDirection={liveBusData.getDirection}
-                    connectionStatus={liveBusData.connectionStatus}
-                    hasFetched={liveBusData.hasFetched}
-                    commentCount={comments.length}
-                />
-            </div>
-        </>
+            {/* 3. Real-time Square View */}
+            {activeTab === "chat" && (
+                <div
+                    className="flex-1 overflow-hidden w-full max-w-6xl mx-auto px-3 sm:px-6 pt-2 sm:pt-4 pb-[calc(env(safe-area-inset-bottom,0)+4.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+5rem)] flex flex-col">
+                    <ChatView
+                        comments={comments}
+                        onAddComment={handleAddComment}
+                        onLikeComment={handleLikeComment}
+                        onDeleteComment={handleDeleteComment}
+                        onRefresh={fetchComments}
+                        isRefreshing={isRefreshingComments}
+                    />
+                </div>
+            )}
+
+            {/* Unified Bottom Floating Pill Navigation Bar */}
+            <BottomNav
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                scheduleSubTab={timetableSubTab}
+                onScheduleSubTabChange={handleScheduleSubTabChange}
+                dayMode={dayMode}
+                onDayModeChange={setDayMode}
+                isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                allRoutes={allRoutes}
+                selectedRoute={activeRoute}
+                onSelectRoute={handleRouteChange}
+                runningBuses={liveBusData.sortedList}
+                getDirection={liveBusData.getDirection}
+                connectionStatus={liveBusData.connectionStatus}
+                hasFetched={liveBusData.hasFetched}
+                commentCount={comments.length}
+            />
+        </div>
     );
 }
 

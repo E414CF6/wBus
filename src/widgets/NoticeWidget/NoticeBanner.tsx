@@ -3,7 +3,7 @@
 import React, {useEffect, useMemo, useState} from "react";
 import {useNoticeList} from "@entities/notice/hooks";
 import {UI_TEXT} from "@shared/config/locale";
-import {ChevronLeft, ChevronRight, Megaphone, Sparkles} from "lucide-react";
+import {ChevronLeft, ChevronRight, Megaphone} from "lucide-react";
 
 interface NoticeBannerProps {
     onClick: (noticeId?: string) => void;
@@ -29,7 +29,6 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
 
     // Keep top 5 latest notices for cycling carousel
     const latestNotices = useMemo(() => sortedNotices.slice(0, 5), [sortedNotices]);
-    const pinnedCount = noticeData?.notices?.filter((n) => n.isNotice).length ?? 0;
 
     // Reset index if out of bounds
     useEffect(() => {
@@ -93,14 +92,6 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                     <div
                         className="relative flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/20 shrink-0 group-hover:scale-105 transition-transform duration-200">
                         <Megaphone className="w-5 h-5 stroke-[2.4]"/>
-                        {pinnedCount > 0 && (
-                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                                <span
-                                    className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"/>
-                                <span
-                                    className="relative inline-flex rounded-full h-3 w-3 bg-red-500 border-2 border-white dark:border-slate-900"/>
-                            </span>
-                        )}
                     </div>
 
                     <div className="min-w-0 flex-1">
@@ -116,26 +107,12 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                                     <span>{UI_TEXT.NOTICE.BADGE_NEW}</span>
                                 </span>
                             )}
-
-                            {pinnedCount > 0 && (
-                                <span
-                                    className="hidden xs:inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                                    <Sparkles className="w-3 h-3"/>
-                                    <span>{UI_TEXT.NOTICE.PINNED_COUNT(pinnedCount)}</span>
-                                </span>
-                            )}
                         </div>
 
                         {loading ? (
                             <div className="h-5 w-64 bg-amber-500/10 rounded-lg animate-pulse my-1"/>
                         ) : currentNotice ? (
                             <div className="flex items-center space-x-2 min-w-0">
-                                {currentNotice.isNotice && (
-                                    <span
-                                        className="shrink-0 px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                                        {UI_TEXT.NOTICE.PINNED_BADGE}
-                                    </span>
-                                )}
                                 <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white truncate group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                                     {currentNotice.title}
                                 </h3>
@@ -165,7 +142,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                                 type="button"
                                 onClick={handlePrev}
                                 aria-label={UI_TEXT.NOTICE.PREV_NOTICE_ARIA}
-                                className="p-1 rounded-lg hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 transition-colors"
+                                className="p-1 rounded-lg hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 transition-colors cursor-pointer"
                             >
                                 <ChevronLeft className="w-3.5 h-3.5"/>
                             </button>
@@ -177,7 +154,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                                         type="button"
                                         onClick={(e) => handleDotClick(e, idx)}
                                         aria-label={UI_TEXT.NOTICE.NOTICE_INDEX_ARIA(idx + 1)}
-                                        className={`h-1.5 rounded-full transition-all duration-300 ${
+                                        className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
                                             idx === currentIndex
                                                 ? "w-4 bg-amber-600 dark:bg-amber-400"
                                                 : "w-1.5 bg-amber-500/30 hover:bg-amber-500/50"
@@ -190,7 +167,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                                 type="button"
                                 onClick={handleNext}
                                 aria-label={UI_TEXT.NOTICE.NEXT_NOTICE_ARIA}
-                                className="p-1 rounded-lg hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 transition-colors"
+                                className="p-1 rounded-lg hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 transition-colors cursor-pointer"
                             >
                                 <ChevronRight className="w-3.5 h-3.5"/>
                             </button>
@@ -203,7 +180,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
                             e.stopPropagation();
                             onClick();
                         }}
-                        className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-black border border-amber-500/30 transition-all group-hover:bg-amber-500 group-hover:text-white group-hover:shadow-md group-hover:shadow-amber-500/20"
+                        className="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-black border border-amber-500/30 transition-all group-hover:bg-amber-500 group-hover:text-white group-hover:shadow-md group-hover:shadow-amber-500/20 cursor-pointer"
                     >
                         <span>{UI_TEXT.NOTICE.VIEW_ALL}</span>
                         <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1"/>

@@ -31,7 +31,6 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
     const [searchInput, setSearchInput] = useState("");
     const [activeSearch, setActiveSearch] = useState("");
     const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(initialNoticeId);
-    const [filterTab, setFilterTab] = useState<"all" | "pinned">("all");
 
     useEffect(() => {
         setMounted(true);
@@ -66,11 +65,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
         setSelectedNoticeId(null);
     };
 
-    const filteredNotices = (listData?.notices ?? []).filter((item) => {
-        if (filterTab === "pinned") return item.isNotice;
-        return true;
-    });
-
+    const notices = listData?.notices ?? [];
     const totalPages = listData?.totalCount ? Math.ceil(listData.totalCount / 10) : 1;
 
     if (!isOpen || !mounted) return null;
@@ -102,7 +97,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                             <button
                                 type="button"
                                 onClick={handleBackToList}
-                                className="flex items-center justify-center w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-200 transition-colors"
+                                className="flex items-center justify-center w-9 h-9 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-gray-700 dark:text-gray-200 transition-colors cursor-pointer"
                                 aria-label={UI_TEXT.NOTICE.BACK_TO_LIST}
                             >
                                 <ArrowLeft className="w-4 h-4"/>
@@ -139,7 +134,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                            className="flex items-center justify-center w-9 h-9 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
                             aria-label={UI_TEXT.ACCESSIBILITY.CLOSE_MODAL}
                         >
                             <X className="w-5 h-5"/>
@@ -162,7 +157,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                     ) : (
                         /* List View */
                         <div className="flex flex-col h-full overflow-hidden">
-                            {/* Search and Filter Controls */}
+                            {/* Search and Refresh Bar */}
                             <div className="p-4 border-b border-black/5 dark:border-white/5 space-y-3">
                                 <form onSubmit={handleSearchSubmit} className="relative flex items-center">
                                     <Search className="absolute left-3.5 w-4 h-4 text-gray-400 pointer-events-none"/>
@@ -182,63 +177,40 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                             <button
                                                 type="button"
                                                 onClick={handleClearSearch}
-                                                className="p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                                className="p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
                                             >
                                                 <X className="w-3.5 h-3.5"/>
                                             </button>
                                         )}
                                         <button
                                             type="submit"
-                                            className="px-3 py-1 text-xs font-semibold rounded-xl bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-opacity"
+                                            className="px-3 py-1 text-xs font-semibold rounded-xl bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-opacity cursor-pointer"
                                         >
                                             {UI_TEXT.NOTICE.SEARCH_BUTTON}
                                         </button>
                                     </div>
                                 </form>
 
-                                <div className="flex items-center justify-between pt-1">
-                                    <div
-                                        className="flex items-center gap-1.5 bg-gray-100 dark:bg-white/5 p-1 rounded-xl">
-                                        <button
-                                            type="button"
-                                            onClick={() => setFilterTab("all")}
-                                            className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                                                filterTab === "all"
-                                                    ? "bg-white dark:bg-white/20 text-gray-900 dark:text-white shadow-xs"
-                                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                                            }`}
-                                        >
-                                            {UI_TEXT.NOTICE.TAB_ALL}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setFilterTab("pinned")}
-                                            className={`flex items-center gap-1 px-3 py-1 text-xs font-semibold rounded-lg transition-all ${
-                                                filterTab === "pinned"
-                                                    ? "bg-amber-500 text-white shadow-xs"
-                                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-                                            }`}
-                                        >
-                                            <Megaphone className="w-3 h-3"/>
-                                            {UI_TEXT.NOTICE.TAB_PINNED}
-                                        </button>
-                                    </div>
+                                <div className="flex items-center justify-between pt-0.5">
+                                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+                                        전체 소식 {listData?.totalCount ? `(${listData.totalCount}건)` : ""}
+                                    </span>
 
                                     <button
                                         type="button"
                                         onClick={() => refresh()}
-                                        className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+                                        className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"
                                         title={UI_TEXT.NOTICE.REFRESH}
                                     >
                                         <RefreshCw className={`w-3.5 h-3.5 ${listLoading ? "animate-spin" : ""}`}/>
-                                        <span className="hidden sm:inline">{UI_TEXT.NOTICE.REFRESH}</span>
+                                        <span>{UI_TEXT.NOTICE.REFRESH}</span>
                                     </button>
                                 </div>
                             </div>
 
                             {/* Notice Items List */}
                             <div className="flex-1 overflow-y-auto px-4 py-3 custom-scrollbar space-y-2.5">
-                                {listLoading && filteredNotices.length === 0 ? (
+                                {listLoading && notices.length === 0 ? (
                                     <ListSkeleton/>
                                 ) : listError ? (
                                     <div
@@ -247,19 +219,19 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                         <button
                                             type="button"
                                             onClick={() => refresh()}
-                                            className="mt-3 px-4 py-2 text-xs font-semibold rounded-xl bg-black/5 dark:bg-white/10 hover:bg-black/10 transition-colors"
+                                            className="mt-3 px-4 py-2 text-xs font-semibold rounded-xl bg-black/5 dark:bg-white/10 hover:bg-black/10 transition-colors cursor-pointer"
                                         >
                                             {UI_TEXT.COMMON.RETRY}
                                         </button>
                                     </div>
-                                ) : filteredNotices.length === 0 ? (
+                                ) : notices.length === 0 ? (
                                     <div
                                         className="flex flex-col items-center justify-center py-16 text-center text-gray-400">
                                         <FileText className="w-10 h-10 stroke-[1.5] mb-2 opacity-50"/>
                                         <p className="text-sm font-medium">{UI_TEXT.NOTICE.NO_NOTICES}</p>
                                     </div>
                                 ) : (
-                                    filteredNotices.map((notice) => (
+                                    notices.map((notice) => (
                                         <div
                                             key={notice.id}
                                             onClick={() => handleSelectNotice(notice.id)}
@@ -276,17 +248,15 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                         >
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="flex items-start gap-2 flex-1 min-w-0">
-                                                    {notice.isNotice ? (
-                                                        <span
-                                                            className="shrink-0 px-2 py-0.5 text-[11px] font-extrabold rounded-md bg-amber-500 text-white shadow-xs">
-                              {UI_TEXT.NOTICE.TAB_PINNED}
-                            </span>
-                                                    ) : (
-                                                        <span
-                                                            className="shrink-0 px-2 py-0.5 text-[11px] font-medium rounded-md bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-300">
-                              #{notice.num}
-                            </span>
-                                                    )}
+                                                    <span
+                                                        className={`shrink-0 px-2 py-0.5 text-[11px] font-bold rounded-md ${
+                                                            notice.isNotice
+                                                                ? "bg-amber-500 text-white shadow-xs"
+                                                                : "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300"
+                                                        }`}
+                                                    >
+                                                        {notice.isNotice ? "공지" : `#${notice.num}`}
+                                                    </span>
                                                     <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-2 leading-snug">
                                                         {notice.title}
                                                     </h3>
@@ -294,7 +264,9 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
 
                                                 {notice.hasFile && (
                                                     <div
-                                                        className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-gray-200/60 dark:bg-white/10 text-gray-500 dark:text-gray-400">
+                                                        className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-gray-200/60 dark:bg-white/10 text-gray-500 dark:text-gray-400"
+                                                        title="첨부파일 있음"
+                                                    >
                                                         <Paperclip className="w-3 h-3"/>
                                                     </div>
                                                 )}
@@ -321,7 +293,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                         type="button"
                                         disabled={page <= 1}
                                         onClick={() => setPage((p) => Math.max(1, p - 1))}
-                                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+                                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-gray-200 dark:hover:bg-white/20 transition-colors cursor-pointer"
                                     >
                                         <ChevronLeft className="w-3.5 h-3.5"/>
                                         {UI_TEXT.NOTICE.PREV_PAGE}
@@ -335,7 +307,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                         type="button"
                                         disabled={page >= totalPages}
                                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"
+                                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-xl bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 disabled:opacity-30 disabled:pointer-events-none hover:bg-gray-200 dark:hover:bg-white/20 transition-colors cursor-pointer"
                                     >
                                         {UI_TEXT.NOTICE.NEXT_PAGE}
                                         <ChevronRight className="w-3.5 h-3.5"/>
@@ -379,7 +351,7 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
                 <button
                     type="button"
                     onClick={onBack}
-                    className="mt-4 px-4 py-2 text-xs font-semibold rounded-xl bg-black dark:bg-white text-white dark:text-black"
+                    className="mt-4 px-4 py-2 text-xs font-semibold rounded-xl bg-black dark:bg-white text-white dark:text-black cursor-pointer"
                 >
                     {UI_TEXT.NOTICE.BACK_TO_LIST}
                 </button>
@@ -487,7 +459,7 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
                 <button
                     type="button"
                     onClick={onBack}
-                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-opacity"
+                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl bg-black dark:bg-white text-white dark:text-black hover:opacity-90 transition-opacity cursor-pointer"
                 >
                     <ArrowLeft className="w-3.5 h-3.5"/>
                     {UI_TEXT.NOTICE.BACK_TO_LIST}
