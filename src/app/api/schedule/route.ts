@@ -1,5 +1,5 @@
-import {NextRequest, NextResponse} from "next/server";
-import {getOrFetchSchedule} from "@lib/scheduleService";
+import {getOrFetchSchedule} from "@entities/schedule";
+import {type NextRequest, NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,23 +15,38 @@ export async function GET(request: NextRequest) {
         const ifNoneMatch = request.headers.get("if-none-match");
         if (ifNoneMatch && ifNoneMatch === etag) {
             return new NextResponse(null, {
-                status: 304, headers: {
-                    ETag: etag, "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
+                status: 304,
+                headers: {
+                    ETag: etag,
+                    "Cache-Control":
+                        "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
                 },
             });
         }
 
-        return NextResponse.json({
-            success: true, data, meta, elapsedMs: Date.now() - startTime,
-        }, {
-            headers: {
-                ETag: etag, "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
+        return NextResponse.json(
+            {
+                success: true,
+                data,
+                meta,
+                elapsedMs: Date.now() - startTime,
             },
-        });
+            {
+                headers: {
+                    ETag: etag,
+                    "Cache-Control":
+                        "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
+                },
+            }
+        );
     } catch (error) {
         console.error("API /api/schedule error:", error);
-        return NextResponse.json({
-            success: false, error: error instanceof Error ? error.message : "Unknown error",
-        }, {status: 500});
+        return NextResponse.json(
+            {
+                success: false,
+                error: error instanceof Error ? error.message : "Unknown error",
+            },
+            {status: 500}
+        );
     }
 }

@@ -1,20 +1,58 @@
-import {BusCacheData, CacheMetadata} from "@shared/types/bus";
-import {APP_CONFIG} from "@shared/config/env";
-import {loadFromVercelBlob, saveToVercelBlob} from "@/lib/blobService";
-import {scrapeWonjuBusDataset, scrapeWonjuItsYonsei} from "@/lib/itsScraper";
 import fs from "fs";
 import path from "path";
+import {scrapeWonjuBusDataset, scrapeWonjuItsYonsei} from "@entities/schedule/itsScraper";
+import {APP_CONFIG} from "@shared/config/env";
+import {loadFromVercelBlob, saveToVercelBlob} from "@shared/lib/blobService";
+import type {BusCacheData, CacheMetadata} from "@shared/types/bus";
 
 const LOCAL_DATA_PATH = path.join(process.cwd(), "public", "data", "schedule.json");
 export const MIN_REFRESH_INTERVAL_DAYS = 1;
 export const MIN_REFRESH_INTERVAL_MS = MIN_REFRESH_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
+const IN_MEMORY_TTL_MS = 30 * 1000;
+
+let inMemoryCache: {
+    data: BusCacheData;
+    meta: CacheMetadata;
+    timestamp: number;
+} | null = null;
 
 function getLocalFilePath(): string {
     return LOCAL_DATA_PATH;
 }
 
+function loadFromLocalFile(): BusCacheData | null {
+    const filePath = getLocalFilePath();
+    if (fs.existsSync(/*turbopackIgnore: true*/ filePath)) {
+        try {
+            const rawData = fs.readFileSync(/*turbopackIgnore: true*/ filePath, "utf-8");
+            const parsed = JSON.parse(rawData);
+            if (parsed && Array.isArray(parsed.routes) && parsed.routes.length > 0) {
+                return parsed;
+            }
+        } catch (err) {
+            console.error("[BusService] Failed to parse local schedule.json:", err);
+        }
+    }
+
+    const tmpPaths = ["/tmp/schedule.json", "/tmp/scheduleCache.json", "/tmp/cache.json"];
+    for (const tmpPath of tmpPaths) {
+        if (fs.existsSync(/*turbopackIgnore: true*/ tmpPath)) {
+            try {
+                const rawData = fs.readFileSync(/*turbopackIgnore: true*/ tmpPath, "utf-8");
+                const parsed = JSON.parse(rawData);
+                if (parsed && Array.isArray(parsed.routes) && parsed.routes.length > 0) {
+                    return parsed;
+                }
+            } catch {
+                // Continue
+            }
+        }
+    }
+
+    return null;
+}
+
 export async function loadCacheData(): Promise<BusCacheData | null> {
-    // 1. Try loading from Vercel Blob first (schedule.json)
     try {
         const blobData = await loadFromVercelBlob<BusCacheData>();
         if (blobData && Array.isArray(blobData.routes) && blobData.routes.length > 0) {
@@ -26,188 +64,168 @@ export async function loadCacheData(): Promise<BusCacheData | null> {
         }
     }
 
-    // 2. Check serverless container /tmp/ schedule.json
-    for (const tmpPath of ["/tmp/schedule.json", "/tmp/scheduleCache.json", "/tmp/cache.json"]) {
-        if (fs.existsSync(/*turbopackIgnore: true*/ tmpPath)) {
-            try {
-                const raw = fs.readFileSync(/*turbopackIgnore: true*/ tmpPath, "utf-8");
-                const data: BusCacheData = JSON.parse(raw);
-                if (data && Array.isArray(data.routes) && data.routes.length > 0) {
-                    return data;
-                }
-            } catch (err) {
-                console.warn(`[BusService] Error reading ${tmpPath}:`, err);
-            }
-        }
-    }
-
-    // 3. Check public/data/schedule.json
-    const localDataPath = getLocalFilePath();
-    if (fs.existsSync(/*turbopackIgnore: true*/ localDataPath)) {
-        try {
-            const raw = fs.readFileSync(/*turbopackIgnore: true*/ localDataPath, "utf-8");
-            const data: BusCacheData = JSON.parse(raw);
-            if (data && Array.isArray(data.routes) && data.routes.length > 0) {
-                return data;
-            }
-        } catch (err) {
-            console.warn(`[BusService] Error reading ${localDataPath}:`, err);
-        }
-    }
-
-    return null;
+    return loadFromLocalFile();
 }
 
-export function getCacheMetadata(overrideData?: BusCacheData): CacheMetadata {
-    let updatedAt: string | null = null;
-    let totalRoutes = 0;
-    let sizeBytes = 0;
-    let exists = false;
-    const filePath = getLocalFilePath();
-
-    if (overrideData) {
-        updatedAt = overrideData.updatedAt || new Date().toISOString();
-        totalRoutes = overrideData.totalRoutes || overrideData.routes?.length || 0;
-        sizeBytes = Buffer.byteLength(JSON.stringify(overrideData), "utf-8");
-        exists = totalRoutes > 0;
-    } else if (fs.existsSync(/*turbopackIgnore: true*/ filePath)) {
-        try {
-            const stat = fs.statSync(/*turbopackIgnore: true*/ filePath);
-            const raw = fs.readFileSync(/*turbopackIgnore: true*/ filePath, "utf-8");
-            const data: BusCacheData = JSON.parse(raw);
-            updatedAt = data.updatedAt || stat.mtime.toISOString();
-            totalRoutes = data.totalRoutes || data.routes?.length || 0;
-            sizeBytes = stat.size;
-            exists = totalRoutes > 0;
-        } catch (err) {
-            console.warn("[BusService] Failed to read metadata from local file:", err);
-        }
-    }
+export function computeCacheMetadata(data: BusCacheData | null): CacheMetadata {
+    const updatedAt = data?.updatedAt || new Date().toISOString();
+    const totalRoutes = data?.routes ? data.routes.length : 0;
 
     let canRefresh = true;
     let nextRefreshAvailableAt: string | null = null;
 
     if (updatedAt) {
-        const lastMs = new Date(updatedAt).getTime();
-        if (!isNaN(lastMs)) {
-            const nextMs = lastMs + MIN_REFRESH_INTERVAL_MS;
-            nextRefreshAvailableAt = new Date(nextMs).toISOString();
-            canRefresh = Date.now() >= nextMs;
+        const lastUpdatedTime = new Date(updatedAt).getTime();
+        if (!isNaN(lastUpdatedTime)) {
+            const timeSinceLastRefresh = Date.now() - lastUpdatedTime;
+            canRefresh = timeSinceLastRefresh >= MIN_REFRESH_INTERVAL_MS;
+            if (!canRefresh) {
+                nextRefreshAvailableAt = new Date(
+                    lastUpdatedTime + MIN_REFRESH_INTERVAL_MS
+                ).toISOString();
+            }
         }
     }
 
     return {
-        filePath,
-        exists,
+        exists: totalRoutes > 0,
         updatedAt,
         totalRoutes,
-        sizeBytes,
-        minRefreshIntervalDays: MIN_REFRESH_INTERVAL_DAYS,
         canRefresh,
         nextRefreshAvailableAt,
+        minRefreshIntervalDays: MIN_REFRESH_INTERVAL_DAYS,
     };
 }
 
-export async function saveCacheData(data: BusCacheData): Promise<void> {
+async function saveCache(data: BusCacheData): Promise<void> {
     const jsonStr = JSON.stringify(data, null, 2);
+    const meta = computeCacheMetadata(data);
 
-    // 1. Save to Vercel Blob
+    inMemoryCache = {
+        data,
+        meta,
+        timestamp: Date.now(),
+    };
+
     try {
         await saveToVercelBlob(data, "schedule.json");
     } catch (err) {
-        console.warn("[BusService] Failed to save to Vercel Blob:", err);
+        console.warn("[BusService] Vercel Blob save skipped:", err);
     }
 
-    // 2. Save locally to public/data/schedule.json
     try {
-        const targetPath = getLocalFilePath();
-        const dir = path.dirname(targetPath);
+        const p = getLocalFilePath();
+        const dir = path.dirname(p);
         if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
             fs.mkdirSync(/*turbopackIgnore: true*/ dir, {recursive: true});
         }
-        fs.writeFileSync(/*turbopackIgnore: true*/ targetPath, jsonStr, "utf-8");
-    } catch (err) {
-        console.warn(`[BusService] Failed to write local cache file (${getLocalFilePath()}):`, err);
+        fs.writeFileSync(/*turbopackIgnore: true*/ p, jsonStr, "utf-8");
+    } catch {
+        // Ignore
     }
 
-    // 3. Save to serverless container /tmp directory as well
     try {
         fs.writeFileSync(/*turbopackIgnore: true*/ "/tmp/schedule.json", jsonStr, "utf-8");
     } catch {
-        // Ignore /tmp write errors in constrained envs
+        // Ignore
     }
 }
 
-export async function getOrFetchBusData(force = false): Promise<{
-    data: BusCacheData | null; meta: CacheMetadata;
-}> {
-    const data = await loadCacheData();
-    if (data && (!force || data.routes.length > 0)) {
+export async function getOrFetchBusData(
+    force = false
+): Promise<{ data: BusCacheData; meta: CacheMetadata }> {
+    if (!force && inMemoryCache && Date.now() - inMemoryCache.timestamp < IN_MEMORY_TTL_MS) {
         return {
-            data, meta: getCacheMetadata(data),
+            data: inMemoryCache.data,
+            meta: inMemoryCache.meta,
         };
     }
-    return refreshBusData(force);
-}
 
-export async function refreshBusData(_force = false): Promise<{
-    refreshed: boolean; message: string; data: BusCacheData | null; meta: CacheMetadata;
-}> {
-    const currentData = await loadCacheData();
-
-    try {
-        const scraped = await scrapeWonjuBusDataset();
-        if (scraped && scraped.routes && scraped.routes.length > 0) {
-            const freshData: BusCacheData = {
-                updatedAt: new Date().toISOString(),
-                sourceUrl: scraped.sourceUrl || "https://its.wonju.go.kr",
-                totalRoutes: scraped.routes.length,
-                routes: scraped.routes,
-            };
-            await saveCacheData(freshData);
-            return {
-                refreshed: true,
-                message: `시간표 데이터 (${freshData.totalRoutes}개 노선)가 원주시 ITS에서 새로 수집되어 갱신되었습니다.`,
-                data: freshData,
-                meta: getCacheMetadata(freshData),
-            };
-        }
-    } catch (scrapeErr) {
-        console.warn("[BusService] Direct full scraping failed, attempting fast scrape fallback:", scrapeErr);
-        try {
-            const yonseiScraped = await scrapeWonjuItsYonsei();
-            if (yonseiScraped && yonseiScraped.routes && yonseiScraped.routes.length > 0) {
-                const freshData: BusCacheData = {
-                    updatedAt: new Date().toISOString(),
-                    sourceUrl: yonseiScraped.sourceUrl || "https://its.wonju.go.kr",
-                    totalRoutes: yonseiScraped.routes.length,
-                    routes: yonseiScraped.routes,
-                };
-                await saveCacheData(freshData);
-                return {
-                    refreshed: true,
-                    message: "연세대 노선 시간표 데이터가 원주시 ITS에서 새로 수집되어 갱신되었습니다.",
-                    data: freshData,
-                    meta: getCacheMetadata(freshData),
-                };
-            }
-        } catch (fastErr) {
-            console.warn("[BusService] Fast scrape also failed:", fastErr);
+    if (!force) {
+        const loaded = await loadCacheData();
+        if (loaded) {
+            const meta = computeCacheMetadata(loaded);
+            inMemoryCache = {data: loaded, meta, timestamp: Date.now()};
+            return {data: loaded, meta};
         }
     }
+
+    console.log("[BusService] No cache found. Scraping full timetable from Wonju ITS...");
+    try {
+        const freshData = await scrapeWonjuBusDataset();
+        await saveCache(freshData);
+        const meta = computeCacheMetadata(freshData);
+        return {data: freshData, meta};
+    } catch (err) {
+        console.warn("[BusService] Full scrape failed, falling back to Yonsei only:", err);
+        try {
+            const yonseiData = await scrapeWonjuItsYonsei();
+            await saveCache(yonseiData);
+            const meta = computeCacheMetadata(yonseiData);
+            return {data: yonseiData, meta};
+        } catch (fallbackErr) {
+            console.error("[BusService] Initial scrape failed completely:", fallbackErr);
+            const emptyDataset: BusCacheData = {
+                updatedAt: new Date().toISOString(),
+                sourceUrl: "",
+                totalRoutes: 0,
+                routes: [],
+            };
+            return {data: emptyDataset, meta: computeCacheMetadata(emptyDataset)};
+        }
+    }
+}
+
+export async function refreshBusData(force = true): Promise<{
+    refreshed: boolean;
+    message: string;
+    data: BusCacheData;
+    meta: CacheMetadata;
+}> {
+    const current = await getOrFetchBusData(false);
+    const meta = current.meta;
+
+    if (force || !meta.exists || meta.canRefresh) {
+        console.log("[BusService] Triggering Wonju ITS scraper for full timetable update...");
+        try {
+            const newData = await scrapeWonjuBusDataset();
+            newData.updatedAt = new Date().toISOString();
+            await saveCache(newData);
+            const updatedMeta = computeCacheMetadata(newData);
+            return {
+                refreshed: true,
+                message: `최신 시간표 (${newData.totalRoutes}개 노선)를 원주시 ITS에서 성공적으로 수집하여 갱신했습니다.`,
+                data: newData,
+                meta: updatedMeta,
+            };
+        } catch (err) {
+            console.warn(
+                "[BusService] Full scraper failed. Falling back to existing cache:",
+                err instanceof Error ? err.message : err
+            );
+            return {
+                refreshed: false,
+                message: "서버 응답 지연으로 기존 저장된 최신 시간표를 유지합니다.",
+                data: current.data,
+                meta: current.meta,
+            };
+        }
+    }
+
+    const nextAvailableStr = meta.nextRefreshAvailableAt
+        ? new Date(meta.nextRefreshAvailableAt).toLocaleString("ko-KR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+        })
+        : "";
 
     return {
         refreshed: false,
-        message: "원주시 ITS 서버 응답 지연으로 기존 저장소의 시간표를 유지합니다.",
-        data: currentData,
-        meta: getCacheMetadata(currentData || undefined),
+        message: `최소 갱신 주기(${MIN_REFRESH_INTERVAL_DAYS}일)가 지나지 않아 기존 시간표를 사용합니다. (다음 갱신 가능: ${nextAvailableStr})`,
+        data: current.data,
+        meta: current.meta,
     };
-}
-
-export async function refreshCache(): Promise<BusCacheData> {
-    const res = await refreshBusData(true);
-    if (res.data) return res.data;
-    const current = await loadCacheData();
-    if (current) return current;
-    throw new Error(res.message);
 }

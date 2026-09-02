@@ -1,15 +1,15 @@
 "use client";
 
+import {type CommentItem, type CommentRow, rowToComment} from "@entities/comment";
 import {useBusRouteMap} from "@entities/route/hooks";
 import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
-import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
-import BottomNav, {DayMode, NavTab, TimetableSubTab} from "@shared/ui/BottomNav";
-import Splash from "@shared/ui/Splash";
-import {TimetableWidget} from "@widgets/TimetableWidget";
-import {ChatView} from "@widgets/ChatWidget";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
-import {CommentItem, CommentRow, rowToComment} from "@/types/comment";
-import {createClient} from "@/utils/supabase/client";
+import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
+import {createClient} from "@shared/supabase/client";
+import BottomNav, {type DayMode, type NavTab, type TimetableSubTab} from "@shared/ui/BottomNav";
+import Splash from "@shared/ui/Splash";
+import {ChatView} from "@widgets/ChatWidget";
+import {TimetableWidget} from "@widgets/TimetableWidget";
 
 import dynamic from "next/dynamic";
 import {usePathname, useRouter, useSearchParams} from "next/navigation";
@@ -104,7 +104,9 @@ export function AppShell() {
     // Restore saved preferences on initial client mount if not in URL
     useEffect(() => {
         try {
-            const savedSubTab = localStorage.getItem(STORAGE_KEYS.TIMETABLE_SUBTAB) as TimetableSubTab | null;
+            const savedSubTab = localStorage.getItem(
+                STORAGE_KEYS.TIMETABLE_SUBTAB
+            ) as TimetableSubTab | null;
             if (savedSubTab && !searchParams.get("subTab")) {
                 if (savedSubTab === "yonsei" || savedSubTab === "all") {
                     setTimetableSubTab(savedSubTab);
@@ -174,7 +176,9 @@ export function AppShell() {
                         } else if (payload.eventType === "DELETE") {
                             const deletedId = (payload.old as { id: string })?.id;
                             if (deletedId) {
-                                setComments((prev) => prev.filter((c) => c.id !== deletedId));
+                                setComments((prev) =>
+                                    prev.filter((c) => c.id !== deletedId)
+                                );
                             }
                         }
                     }
@@ -252,7 +256,9 @@ export function AppShell() {
             const json = await res.json();
             if (json.success) {
                 setComments((prev) =>
-                    prev.map((c) => (c.id === id ? (json.comment || {...c, isDeleted: true}) : c))
+                    prev.map((c) =>
+                        c.id === id ? json.comment || {...c, isDeleted: true} : c
+                    )
                 );
             } else {
                 throw new Error(json.error || "스퀘어 글 삭제에 실패했습니다.");
@@ -263,67 +269,99 @@ export function AppShell() {
         }
     };
 
-    const handleScheduleSubTabChange = useCallback((subTab: TimetableSubTab) => {
-        setTimetableSubTab(subTab);
-        try {
-            localStorage.setItem(STORAGE_KEYS.TIMETABLE_SUBTAB, subTab);
-        } catch (e) {
-            if (APP_CONFIG.IS_DEV) {
-                console.warn("[handleScheduleSubTabChange] Failed to save subtab preference", e);
+    const handleScheduleSubTabChange = useCallback(
+        (subTab: TimetableSubTab) => {
+            setTimetableSubTab(subTab);
+            try {
+                localStorage.setItem(STORAGE_KEYS.TIMETABLE_SUBTAB, subTab);
+            } catch (e) {
+                if (APP_CONFIG.IS_DEV) {
+                    console.warn(
+                        "[handleScheduleSubTabChange] Failed to save subtab preference",
+                        e
+                    );
+                }
             }
-        }
-        if (typeof window !== "undefined" && (pathname === "/" || pathname === "/schedule")) {
-            const query = subTab === "yonsei" ? "/" : "/?subTab=all";
-            window.history.replaceState(null, "", query);
-        }
-    }, [pathname]);
+            if (
+                typeof window !== "undefined" &&
+                (pathname === "/" || pathname === "/schedule")
+            ) {
+                const query = subTab === "yonsei" ? "/" : "/?subTab=all";
+                window.history.replaceState(null, "", query);
+            }
+        },
+        [pathname]
+    );
 
     // Only fetch route map & telemetry when real-time map is active or visited
     const routeMap = useBusRouteMap(hasVisitedMap && isMapActive);
-    const allRoutes = useMemo(() => (routeMap ? Object.keys(routeMap) : ["30", "34", "34-1"]), [routeMap]);
+    const allRoutes = useMemo(
+        () => (routeMap ? Object.keys(routeMap) : ["30", "34", "34-1"]),
+        [routeMap]
+    );
     const activeRoute = useMemo(() => {
         if (!routeMap) return selectedRoute;
         if (routeMap[selectedRoute]) return selectedRoute;
 
-        return routeMap[MAP_SETTINGS.DEFAULT_ROUTE] ? MAP_SETTINGS.DEFAULT_ROUTE : Object.keys(routeMap)[0] ?? selectedRoute;
+        return routeMap[MAP_SETTINGS.DEFAULT_ROUTE]
+            ? MAP_SETTINGS.DEFAULT_ROUTE
+            : Object.keys(routeMap)[0] ?? selectedRoute;
     }, [routeMap, selectedRoute]);
 
     // Live telemetry for active map route
     const liveBusData = useBusSortedList(activeRoute, hasVisitedMap && isMapActive);
 
     // Handle tab change and push to browser history
-    const handleTabChange = useCallback((tab: NavTab) => {
-        if (tab === "map") {
-            setHasVisitedMap(true);
-            const routeParam = selectedRoute ? `?route=${encodeURIComponent(selectedRoute)}` : "";
-            router.push(`/live${routeParam}`);
-        } else if (tab === "chat") {
-            router.push("/chat");
-        } else {
-            const subTabParam = timetableSubTab === "all" ? "?subTab=all" : "";
-            router.push(`/${subTabParam}`);
-        }
-        try {
-            localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, tab);
-        } catch {
-            // Ignore
-        }
-    }, [router, selectedRoute, timetableSubTab]);
+    const handleTabChange = useCallback(
+        (tab: NavTab) => {
+            if (tab === "map") {
+                setHasVisitedMap(true);
+                const routeParam = selectedRoute
+                    ? `?route=${encodeURIComponent(selectedRoute)}`
+                    : "";
+                router.push(`/live${routeParam}`);
+            } else if (tab === "chat") {
+                router.push("/chat");
+            } else {
+                const subTabParam = timetableSubTab === "all" ? "?subTab=all" : "";
+                router.push(`/${subTabParam}`);
+            }
+            try {
+                localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, tab);
+            } catch {
+                // Ignore
+            }
+        },
+        [router, selectedRoute, timetableSubTab]
+    );
 
     // Persist route selection to state, localStorage & URL
-    const handleRouteChange = useCallback((route: string) => {
-        setSelectedRoute(route);
-        try {
-            localStorage.setItem(STORAGE_KEYS.ROUTE_ID, route);
-        } catch (e) {
-            if (APP_CONFIG.IS_DEV) {
-                console.warn("[handleRouteChange] Failed to save route preference to localStorage", e);
+    const handleRouteChange = useCallback(
+        (route: string) => {
+            setSelectedRoute(route);
+            try {
+                localStorage.setItem(STORAGE_KEYS.ROUTE_ID, route);
+            } catch (e) {
+                if (APP_CONFIG.IS_DEV) {
+                    console.warn(
+                        "[handleRouteChange] Failed to save route preference to localStorage",
+                        e
+                    );
+                }
             }
-        }
-        if (typeof window !== "undefined" && (pathname.startsWith("/live") || pathname.startsWith("/map"))) {
-            window.history.replaceState(null, "", `/live?route=${encodeURIComponent(route)}`);
-        }
-    }, [pathname]);
+            if (
+                typeof window !== "undefined" &&
+                (pathname.startsWith("/live") || pathname.startsWith("/map"))
+            ) {
+                window.history.replaceState(
+                    null,
+                    "",
+                    `/live?route=${encodeURIComponent(route)}`
+                );
+            }
+        },
+        [pathname]
+    );
 
     useEffect(() => {
         if (!routeMap) return;
@@ -332,7 +370,10 @@ export function AppShell() {
             localStorage.setItem(STORAGE_KEYS.ROUTE_ID, activeRoute);
         } catch (e) {
             if (APP_CONFIG.IS_DEV) {
-                console.warn("[handleRouteChange] Failed to save route preference to localStorage", e);
+                console.warn(
+                    "[handleRouteChange] Failed to save route preference to localStorage",
+                    e
+                );
             }
         }
     }, [routeMap, activeRoute, selectedRoute]);
@@ -341,11 +382,14 @@ export function AppShell() {
         setIsSplashVisible(false);
     }, []);
 
-    const handleSelectMapRoute = useCallback((routeName: string) => {
-        handleRouteChange(routeName);
-        setHasVisitedMap(true);
-        router.push(`/live?route=${encodeURIComponent(routeName)}`);
-    }, [handleRouteChange, router]);
+    const handleSelectMapRoute = useCallback(
+        (routeName: string) => {
+            handleRouteChange(routeName);
+            setHasVisitedMap(true);
+            router.push(`/live?route=${encodeURIComponent(routeName)}`);
+        },
+        [handleRouteChange, router]
+    );
 
     const isFixedLayout = activeTab !== "schedule";
 
@@ -362,7 +406,11 @@ export function AppShell() {
             >
                 {/* 1. Real-time Map View Container (Lazy mounted ONLY when map is activated by user) */}
                 {hasVisitedMap && (
-                    <div className={`relative flex-1 overflow-hidden ${activeTab === "map" ? "block" : "hidden"}`}>
+                    <div
+                        className={`relative flex-1 overflow-hidden ${
+                            activeTab === "map" ? "block" : "hidden"
+                        }`}
+                    >
                         {/* Map Top Floating Header & Fast Route Switcher with Detailed Live Status */}
                         <MapRouteHeader
                             selectedRoute={activeRoute}
@@ -437,3 +485,5 @@ export function AppShell() {
         </>
     );
 }
+
+export default AppShell;

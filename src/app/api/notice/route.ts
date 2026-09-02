@@ -1,5 +1,5 @@
-import {NextRequest, NextResponse} from "next/server";
-import {scrapeWonjuNoticeList} from "@lib/noticeScraper";
+import {scrapeWonjuNoticeList} from "@entities/notice";
+import {type NextRequest, NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -12,15 +12,23 @@ export async function GET(request: NextRequest) {
 
         const data = await scrapeWonjuNoticeList(page, searchText, searchGb);
 
-        return NextResponse.json({success: true, data}, {
-            headers: {
-                "Cache-Control": "public, max-age=180, s-maxage=900, stale-while-revalidate=3600",
-            },
-        });
+        return NextResponse.json(
+            {success: true, data},
+            {
+                headers: {
+                    "Cache-Control":
+                        "public, max-age=180, s-maxage=900, stale-while-revalidate=3600",
+                },
+            }
+        );
     } catch (error) {
         console.error("API GET /api/notice error:", error);
-        return NextResponse.json({
-            success: false, error: error instanceof Error ? error.message : "공지사항 조회 실패",
-        }, {status: 500});
+        return NextResponse.json(
+            {
+                success: false,
+                error: error instanceof Error ? error.message : "공지사항 조회 실패",
+            },
+            {status: 500}
+        );
     }
 }

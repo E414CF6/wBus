@@ -1,31 +1,26 @@
 "use client";
 
+import {
+    Activity,
+    ArrowUpRight,
+    Dices,
+    Flame,
+    Hash,
+    Heart,
+    MessageCircle,
+    ShieldCheck,
+    Sparkles,
+    User,
+    X,
+} from "lucide-react";
 import React, {useEffect, useState} from "react";
 import {createPortal} from "react-dom";
-import {Dices, Flame, Hash, Heart, MessageCircle, ShieldCheck, Sparkles, TrendingUp, User, X,} from "lucide-react";
-import {CommentItem} from "@/types/comment";
+import type {RankedThread, TrendingTag} from "./types";
+import {getAvatarGradient} from "./utils/avatarUtils";
+import {renderRichContent} from "./utils/textParser";
 
-export function getAvatarGradient(name: string, tag = ""): string {
-    const gradients = [
-        "from-blue-500 to-indigo-600",
-        "from-emerald-500 to-teal-600",
-        "from-purple-500 to-pink-600",
-        "from-amber-500 to-orange-600",
-        "from-rose-500 to-red-600",
-        "from-cyan-500 to-blue-600",
-        "from-violet-500 to-purple-700",
-        "from-teal-500 to-emerald-600",
-    ];
-    const combined = `${name}${tag}`;
-    let hash = 0;
-    for (let i = 0; i < combined.length; i++) {
-        hash = combined.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const idx = Math.abs(hash) % gradients.length;
-    return gradients[idx];
-}
-
-export type ModalTab = "OVERVIEW" | "HOT" | "TREND" | "GUIDE";
+export type ModalTab = "OVERVIEW" | "TRENDING" | "HOT_THREADS";
+export {getAvatarGradient} from "./utils/avatarUtils";
 
 interface SquareProfileModalProps {
     isOpen: boolean;
@@ -37,43 +32,12 @@ interface SquareProfileModalProps {
     myTotalPostsCount: number;
     likedCount: number;
     onSelectMyPosts: () => void;
-    trendingTags: Array<{ tag: string; count: number; score: number }>;
+    trendingTags: TrendingTag[];
     selectedHashtag: string | null;
     onSelectHashtag: (tag: string) => void;
-    topRankedThreads: Array<{
-        thread: CommentItem;
-        replyCount: number;
-        score: number;
-    }>;
+    topRankedThreads: RankedThread[];
     onSelectThread: (threadId: string) => void;
 }
-
-const TAB_HEADER_MAP: Record<ModalTab, { title: string; subtitle: string; icon: React.ElementType; color: string }> = {
-    OVERVIEW: {
-        title: "내 프로필",
-        subtitle: "익명 활동 통계 & 레이더",
-        icon: User,
-        color: "from-blue-600 via-indigo-600 to-violet-600",
-    },
-    HOT: {
-        title: "실시간 HOT 토론",
-        subtitle: "반응과 공감이 뜨거운 화제의 스레드",
-        icon: Flame,
-        color: "from-rose-500 via-red-500 to-amber-500",
-    },
-    TREND: {
-        title: "실시간 트렌드 태그",
-        subtitle: "지금 가장 많이 언급되는 키워드",
-        icon: TrendingUp,
-        color: "from-blue-600 via-cyan-600 to-teal-500",
-    },
-    GUIDE: {
-        title: "스퀘어 클린 가이드",
-        subtitle: "서로 존중하는 클린 광장 수칙",
-        icon: Sparkles,
-        color: "from-indigo-600 via-purple-600 to-pink-500",
-    },
-};
 
 export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                                                                           isOpen,
@@ -91,458 +55,237 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                                                                           topRankedThreads,
                                                                           onSelectThread,
                                                                       }) => {
+    const [tab, setTab] = useState<ModalTab>(initialTab);
     const [mounted, setMounted] = useState(false);
-    const [activeTab, setActiveTab] = useState<ModalTab>(initialTab);
 
     useEffect(() => {
         setMounted(true);
     }, []);
 
-    // Reset or update active tab when modal is opened with an initialTab
     useEffect(() => {
-        if (isOpen && initialTab) {
-            setActiveTab(initialTab);
+        if (isOpen) {
+            setTab(initialTab);
         }
     }, [isOpen, initialTab]);
 
-    // Prevent background scrolling when modal is open
-    useEffect(() => {
-        if (!isOpen) return;
-        const originalStyle = window.getComputedStyle(document.body).overflow;
-        document.body.style.overflow = "hidden";
-        return () => {
-            document.body.style.overflow = originalStyle;
-        };
-    }, [isOpen]);
-
     if (!isOpen || !mounted) return null;
 
-    const currentHeader = TAB_HEADER_MAP[activeTab] || TAB_HEADER_MAP.OVERVIEW;
-    const HeaderIcon = currentHeader.icon;
-
     const modalContent = (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3.5 sm:p-4 animate-fadeIn">
-            {/* Backdrop Blur Overlay */}
+        <div
+            className="fixed inset-0 z-9999 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 dark:bg-black/80 backdrop-blur-md animate-fadeIn pointer-events-auto"
+            onClick={onClose}
+        >
             <div
-                className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity duration-300"
-                onClick={onClose}
-                aria-hidden="true"
-            />
-
-            {/* Main Modal Dialog Container */}
-            <div
-                className="relative w-full max-w-lg h-[82dvh] max-h-[82dvh] bg-white/95 dark:bg-[#12131a]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 shadow-[0_24px_70px_rgba(0,0,0,0.35)] dark:shadow-[0_24px_70px_rgba(0,0,0,0.85)] rounded-[28px] sm:rounded-[32px] overflow-hidden flex flex-col z-10 animate-scaleUp"
-                role="dialog"
-                aria-modal="true"
-                aria-label={currentHeader.title}
+                className="w-full max-w-lg max-h-[85vh] rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-2xl flex flex-col overflow-hidden bg-white dark:bg-[#111622] transition-all"
+                onClick={(e) => e.stopPropagation()}
             >
-                {/* Dynamic Header Bar */}
+                {/* Modal Header */}
                 <div
-                    className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-3 border-b border-black/5 dark:border-white/5 shrink-0 transition-colors">
-                    <div className="flex items-center gap-3">
+                    className="p-4 sm:p-5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] flex items-center justify-between">
+                    <div className="flex items-center gap-2">
                         <div
-                            className={`flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr ${currentHeader.color} text-white shadow-md shadow-black/10`}>
-                            <HeaderIcon className="w-5 h-5"/>
+                            className={`w-9 h-9 rounded-2xl bg-gradient-to-tr ${getAvatarGradient(
+                                authorName,
+                                userTag
+                            )} text-white flex items-center justify-center font-black text-sm shadow-xs`}
+                        >
+                            {authorName.charAt(0) || "U"}
                         </div>
                         <div>
-                            <div className="flex items-center gap-2">
-                                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
-                                    {currentHeader.title}
-                                </h2>
+                            <div className="flex items-center gap-1.5">
+                                <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                                    {authorName}
+                                </h3>
+                                <span
+                                    className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 font-mono text-xs font-bold">
+                                    #{userTag}
+                                </span>
                             </div>
-                            <p className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                                {currentHeader.subtitle}
+                            <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                                <ShieldCheck className="w-3 h-3 text-emerald-500"/>
+                                <span>암호화된 익명 프로필</span>
                             </p>
                         </div>
                     </div>
 
                     <button
-                        type="button"
                         onClick={onClose}
-                        className="p-2 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer active:scale-95"
-                        aria-label="닫기"
+                        className="p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-all cursor-pointer"
                     >
-                        <X className="w-5 h-5"/>
+                        <X className="h-4 w-4"/>
                     </button>
                 </div>
 
-                {/* Navigation Sub-Tabs */}
+                {/* Sub Tab Navigation */}
                 <div
-                    className="flex items-center gap-1 px-4 sm:px-6 py-2 border-b border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] shrink-0 overflow-x-auto custom-scrollbar">
+                    className="px-4 pt-3 pb-2 border-b border-slate-100 dark:border-white/5 flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden">
                     <button
-                        type="button"
-                        onClick={() => setActiveTab("OVERVIEW")}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                            activeTab === "OVERVIEW"
-                                ? "bg-white dark:bg-white/15 text-blue-600 dark:text-white shadow-xs font-black"
-                                : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                        onClick={() => setTab("OVERVIEW")}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                            tab === "OVERVIEW"
+                                ? "bg-indigo-600 text-white shadow-xs"
+                                : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                         }`}
                     >
-                        내 프로필
+                        <User className="w-3.5 h-3.5"/>
+                        <span>내 프로필</span>
                     </button>
                     <button
-                        type="button"
-                        onClick={() => setActiveTab("HOT")}
-                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                            activeTab === "HOT"
-                                ? "bg-rose-500 text-white shadow-xs font-black"
-                                : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                        onClick={() => setTab("TRENDING")}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                            tab === "TRENDING"
+                                ? "bg-indigo-600 text-white shadow-xs"
+                                : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                        }`}
+                    >
+                        <Activity className="w-3.5 h-3.5"/>
+                        <span>실시간 트렌드</span>
+                    </button>
+                    <button
+                        onClick={() => setTab("HOT_THREADS")}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
+                            tab === "HOT_THREADS"
+                                ? "bg-indigo-600 text-white shadow-xs"
+                                : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
                         }`}
                     >
                         <Flame className="w-3.5 h-3.5"/>
-                        <span>HOT 토론 ({topRankedThreads.length})</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("TREND")}
-                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                            activeTab === "TREND"
-                                ? "bg-blue-600 text-white shadow-xs font-black"
-                                : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-                        }`}
-                    >
-                        <TrendingUp className="w-3.5 h-3.5"/>
-                        <span>트렌드 ({trendingTags.length})</span>
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("GUIDE")}
-                        className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                            activeTab === "GUIDE"
-                                ? "bg-indigo-600 text-white shadow-xs font-black"
-                                : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-                        }`}
-                    >
-                        <Sparkles className="w-3.5 h-3.5"/>
-                        <span>클린 가이드</span>
+                        <span>인기 스레드</span>
                     </button>
                 </div>
 
-                {/* Modal Scrollable Content Body */}
-                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-4">
-                    {/* 1. OVERVIEW TAB: Profile & Stats */}
-                    {activeTab === "OVERVIEW" && (
+                {/* Modal Content */}
+                <div className="p-4 sm:p-6 overflow-y-auto custom-scrollbar space-y-4 flex-1 min-h-0">
+                    {tab === "OVERVIEW" && (
                         <div className="space-y-4 animate-fadeIn">
-                            {/* Profile Identity Card */}
-                            <div
-                                className="p-4 rounded-3xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 space-y-4 shadow-xs">
-                                <div className="flex items-center gap-3.5">
-                                    <div
-                                        className={`w-14 h-14 rounded-2xl bg-gradient-to-tr ${getAvatarGradient(
-                                            authorName,
-                                            userTag
-                                        )} text-white flex items-center justify-center font-black text-xl shadow-lg shrink-0`}
-                                    >
-                                        {authorName.charAt(0) || "?"}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-base font-black text-slate-900 dark:text-white truncate">
-                                                {authorName}
-                                            </p>
-                                            <span
-                                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/20 shrink-0">
-                                                <span
-                                                    className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/>
-                                                {myTotalPostsCount > 0 ? "활동 중" : "참여 중"}
-                                            </span>
-                                        </div>
-                                        <p className="text-xs font-mono text-slate-400 dark:text-slate-500 mt-0.5">
-                                            고유 식별 태그: <strong
-                                            className="text-slate-700 dark:text-slate-300">{userTag}</strong>
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={onRerollNickname}
-                                    className="w-full py-2.5 rounded-2xl bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200/80 dark:border-white/10 transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-98 shadow-xs"
-                                >
-                                    <Dices className="w-4 h-4 text-blue-500"/>
-                                    <span>랜덤 닉네임 새로고침</span>
-                                </button>
-                            </div>
-
-                            {/* User Activity Stats */}
+                            {/* Stats */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div
-                                    className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 space-y-1 text-center flex flex-col justify-between">
-                                    <div>
-                                        <p className="text-[11px] font-bold text-slate-400">내가 쓴 글/답글</p>
-                                        <p className="text-xl font-black text-slate-900 dark:text-white mt-1">
-                                            {myTotalPostsCount}
-                                            <span className="text-xs font-semibold text-slate-400 ml-0.5">개</span>
-                                        </p>
+                                    onClick={onSelectMyPosts}
+                                    className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-500/20 cursor-pointer hover:border-indigo-500/40 transition-all group"
+                                >
+                                    <div
+                                        className="flex items-center justify-between text-indigo-600 dark:text-indigo-400 mb-1">
+                                        <MessageCircle className="w-4 h-4"/>
+                                        <ArrowUpRight
+                                            className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity"/>
                                     </div>
+                                    <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
+                                        {myTotalPostsCount}
+                                    </div>
+                                    <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                        내 작성글 / 댓글
+                                    </div>
+                                </div>
+
+                                <div
+                                    className="p-4 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-500/20">
+                                    <div className="text-rose-600 dark:text-rose-400 mb-1">
+                                        <Heart className="w-4 h-4 fill-current"/>
+                                    </div>
+                                    <div className="text-xl font-black text-slate-900 dark:text-white font-mono">
+                                        {likedCount}
+                                    </div>
+                                    <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                        공감한 이야기
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Nickname Reroll Box */}
+                            <div
+                                className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/5 space-y-2">
+                                <div
+                                    className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                                    <span>익명 닉네임 변경</span>
                                     <button
-                                        type="button"
-                                        onClick={onSelectMyPosts}
-                                        className="mt-2 py-1 px-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-[11px] font-black transition-all cursor-pointer"
+                                        onClick={onRerollNickname}
+                                        className="px-2.5 py-1 rounded-xl bg-white dark:bg-[#181f2e] border border-slate-200 dark:border-white/10 hover:border-indigo-500 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                                     >
-                                        내 글 모아보기 →
+                                        <Dices className="w-3.5 h-3.5"/>
+                                        <span>랜덤 생성</span>
                                     </button>
                                 </div>
-
-                                <div
-                                    className="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 space-y-1 text-center flex flex-col justify-between">
-                                    <div>
-                                        <p className="text-[11px] font-bold text-slate-400">공감(좋아요)한 글</p>
-                                        <p className="text-xl font-black text-rose-500 mt-1">
-                                            {likedCount}
-                                            <span className="text-xs font-semibold text-slate-400 ml-0.5">개</span>
-                                        </p>
-                                    </div>
-                                    <div className="mt-2 py-1 px-2 text-[11px] font-semibold text-slate-400">
-                                        스퀘어 소통 중
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Quick Radar Preview Cards */}
-                            <div
-                                className="p-3.5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Flame className="w-4 h-4 text-rose-500"/>
-                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                        실시간 HOT 토론 <strong>{topRankedThreads.length}개</strong> 진행 중
-                                    </span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveTab("HOT")}
-                                    className="text-xs font-black text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-                                >
-                                    보기 →
-                                </button>
-                            </div>
-
-                            <div
-                                className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-100 dark:border-indigo-900/30 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <TrendingUp className="w-4 h-4 text-indigo-500"/>
-                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                                        실시간 트렌드 태그 <strong>{trendingTags.length}개</strong>
-                                    </span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveTab("TREND")}
-                                    className="text-xs font-black text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-                                >
-                                    보기 →
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* 2. HOT DISCUSSIONS TAB */}
-                    {activeTab === "HOT" && (
-                        <div className="space-y-3 animate-fadeIn">
-                            <div className="flex items-center justify-between">
-                                <div
-                                    className="flex items-center gap-1.5 text-xs font-black text-rose-600 dark:text-rose-400">
-                                    <Flame className="w-4 h-4 fill-rose-500"/>
-                                    <span>실시간 HOT 토론 (TOP {topRankedThreads.length})</span>
-                                </div>
-                                <span className="text-[11px] text-slate-400 font-medium">
-                                    탭하여 해당 스레드로 바로 이동
-                                </span>
-                            </div>
-
-                            {topRankedThreads.length > 0 ? (
-                                <div className="space-y-2.5">
-                                    {topRankedThreads.map(({thread, replyCount}, idx) => (
-                                        <div
-                                            key={thread.id}
-                                            onClick={() => {
-                                                onSelectThread(thread.id);
-                                                onClose();
-                                            }}
-                                            className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/10 hover:border-blue-500 dark:hover:border-blue-500 cursor-pointer transition-all space-y-2 active:scale-[0.99] shadow-xs"
-                                        >
-                                            <div className="flex items-center justify-between gap-2">
-                                                <span
-                                                    className={`px-2 py-0.5 rounded-md text-[10px] font-black ${
-                                                        idx === 0
-                                                            ? "bg-amber-400 text-slate-900"
-                                                            : idx === 1
-                                                                ? "bg-slate-300 text-slate-900 dark:bg-slate-600 dark:text-white"
-                                                                : "bg-amber-700/60 text-white"
-                                                    }`}
-                                                >
-                                                    TOP {idx + 1}
-                                                </span>
-                                                <div className="flex items-center gap-3 text-xs font-mono">
-                                                    <span className="flex items-center gap-1 text-rose-500 font-bold">
-                                                        <Heart className="w-3 h-3 fill-rose-500"/>
-                                                        {thread.likes || 0}
-                                                    </span>
-                                                    <span className="flex items-center gap-1 text-blue-500 font-bold">
-                                                        <MessageCircle className="w-3 h-3"/>
-                                                        {replyCount}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 line-clamp-2 leading-relaxed">
-                                                {thread.content}
-                                            </p>
-                                            <div
-                                                className="flex items-center justify-between pt-1 border-t border-slate-200/50 dark:border-white/5 text-[10px] text-slate-400">
-                                                <span>작성자: {thread.author}</span>
-                                                <span className="text-blue-500 font-bold">스레드로 이동 →</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="py-12 text-center text-slate-400 text-xs space-y-1">
-                                    <p className="font-bold">현재 진행 중인 HOT 토론이 없습니다.</p>
-                                    <p className="text-[11px]">첫 번째 화제의 글을 작성해보세요!</p>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* 3. TRENDING HASHTAGS TAB */}
-                    {activeTab === "TREND" && (
-                        <div className="space-y-3 animate-fadeIn">
-                            <div className="flex items-center justify-between">
-                                <div
-                                    className="flex items-center gap-1.5 text-xs font-black text-slate-900 dark:text-white">
-                                    <TrendingUp className="w-4 h-4 text-blue-500"/>
-                                    <span>실시간 트렌드 해시태그 (TOP {trendingTags.length})</span>
-                                </div>
-                                {selectedHashtag && (
-                                    <button
-                                        type="button"
-                                        onClick={() => onSelectHashtag("")}
-                                        className="text-[11px] text-blue-500 hover:underline cursor-pointer font-bold"
-                                    >
-                                        필터 해제
-                                    </button>
-                                )}
-                            </div>
-
-                            {trendingTags.length > 0 ? (
-                                <div className="space-y-1.5">
-                                    {trendingTags.map((t, idx) => {
-                                        const isSelected = selectedHashtag === t.tag;
-                                        return (
-                                            <div
-                                                key={t.tag}
-                                                onClick={() => {
-                                                    onSelectHashtag(t.tag);
-                                                    onClose();
-                                                }}
-                                                className={`flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer ${
-                                                    isSelected
-                                                        ? "bg-blue-600 text-white shadow-md font-bold"
-                                                        : "bg-slate-50 dark:bg-white/[0.03] hover:bg-slate-100 dark:hover:bg-white/10 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-white/5"
-                                                }`}
-                                            >
-                                                <div className="flex items-center gap-2.5 min-w-0">
-                                                    <span
-                                                        className={`text-xs font-mono font-black ${
-                                                            isSelected
-                                                                ? "text-white"
-                                                                : idx === 0
-                                                                    ? "text-rose-500"
-                                                                    : idx === 1
-                                                                        ? "text-amber-500"
-                                                                        : "text-blue-500"
-                                                        }`}
-                                                    >
-                                                        #{idx + 1}
-                                                    </span>
-                                                    <span className="text-xs font-bold truncate">{t.tag}</span>
-                                                </div>
-                                                <span
-                                                    className={`text-[11px] font-mono ${
-                                                        isSelected ? "text-white/80" : "text-slate-400"
-                                                    }`}
-                                                >
-                                                    {t.count}회 언급
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="py-12 text-center text-slate-400 text-xs space-y-1">
-                                    <p className="font-bold">아직 언급된 해시태그가 없습니다.</p>
-                                    <p className="text-[11px]">#태그를 사용하여 글을 작성해보세요!</p>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* 4. CLEAN SQUARE GUIDE TAB */}
-                    {activeTab === "GUIDE" && (
-                        <div className="space-y-3 animate-fadeIn">
-                            <div
-                                className="p-4 rounded-3xl bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-purple-500/10 border border-blue-500/20 space-y-3">
-                                <div
-                                    className="flex items-center gap-2 text-sm font-black text-blue-700 dark:text-blue-300">
-                                    <Sparkles className="w-4 h-4"/>
-                                    <span>스퀘어 클린 가이드 & 이용 수칙</span>
-                                </div>
-                                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-                                    wBus 스퀘어는 원주시민과 버스 이용자 모두가 실시간으로 소통하는 열린 광장입니다.
+                                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                                    새로운 닉네임과 고유 식별 태그를 발급받습니다. 기존 작성한 글은
+                                    계속 보존됩니다.
                                 </p>
                             </div>
+                        </div>
+                    )}
 
-                            <div className="space-y-2 text-xs">
-                                <div
-                                    className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 space-y-1">
-                                    <p className="font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-500"/>
-                                        <span>따뜻한 매너와 상호 존중</span>
-                                    </p>
-                                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-[11px]">
-                                        서로를 존중하는 언어로 건전하고 유익한 커뮤니티 문화를 만들어주세요. 비방, 욕설, 혐오 표현은 제재 대상이 될 수 있습니다.
-                                    </p>
-                                </div>
-
-                                <div
-                                    className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 space-y-1">
-                                    <p className="font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                                        <Hash className="w-3.5 h-3.5 text-blue-500"/>
-                                        <span>해시태그와 실시간 정보 공유</span>
-                                    </p>
-                                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-[11px]">
-                                        #실시간 #셔틀지연 #분실물 등 유용한 태그를 함께 남겨주시면 다른 이용자들에게 큰 도움이 됩니다.
-                                    </p>
-                                </div>
-
-                                <div
-                                    className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 space-y-1">
-                                    <p className="font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                                        <Dices className="w-3.5 h-3.5 text-indigo-500"/>
-                                        <span>익명성과 개인정보 보호</span>
-                                    </p>
-                                    <p className="text-slate-600 dark:text-slate-400 leading-relaxed text-[11px]">
-                                        모든 닉네임은 무작위 익명으로 생성되며 언제든 새로고침할 수 있습니다. 개인정보(전화번호, 계좌 등) 공유는 금지됩니다.
-                                    </p>
-                                </div>
+                    {tab === "TRENDING" && (
+                        <div className="space-y-3 animate-fadeIn">
+                            <div
+                                className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 text-amber-500"/>
+                                <span>실시간 화제의 키워드</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {trendingTags.map((tag) => (
+                                    <button
+                                        key={tag.tag}
+                                        onClick={() => {
+                                            onSelectHashtag(tag.tag);
+                                            onClose();
+                                        }}
+                                        className={`px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                            selectedHashtag === tag.tag
+                                                ? "bg-indigo-600 text-white shadow-xs"
+                                                : "bg-slate-100 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 hover:text-indigo-600"
+                                        }`}
+                                    >
+                                        <Hash className="w-3 h-3 opacity-60"/>
+                                        <span>{tag.tag.replace("#", "")}</span>
+                                        <span className="text-[10px] opacity-70 font-mono">
+                                            {tag.count}
+                                        </span>
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     )}
-                </div>
 
-                {/* Footer Bar */}
-                <div
-                    className="px-4 sm:px-6 py-3 border-t border-black/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] flex items-center justify-between shrink-0">
-                    <span className="text-[11px] text-slate-400 font-medium">
-                        wBus Square
-                    </span>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="px-4 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black hover:opacity-90 transition-opacity cursor-pointer active:scale-95"
-                    >
-                        닫기
-                    </button>
+                    {tab === "HOT_THREADS" && (
+                        <div className="space-y-2.5 animate-fadeIn">
+                            {topRankedThreads.map((item, idx) => (
+                                <div
+                                    key={item.thread.id}
+                                    onClick={() => {
+                                        onSelectThread(item.thread.id);
+                                        onClose();
+                                    }}
+                                    className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 hover:border-indigo-500/40 transition-all cursor-pointer space-y-1.5"
+                                >
+                                    <div className="flex items-center justify-between text-xs">
+                                        <div className="flex items-center gap-1.5">
+                                            <span
+                                                className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-mono font-black text-[10px] flex items-center justify-center">
+                                                {idx + 1}
+                                            </span>
+                                            <span className="font-bold text-slate-700 dark:text-slate-300">
+                                                {item.thread.author}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 text-[10px] text-slate-400 font-mono">
+                                            <span className="flex items-center gap-0.5 text-rose-500">
+                                                <Heart className="w-2.5 h-2.5 fill-current"/>
+                                                {item.thread.likes || 0}
+                                            </span>
+                                            <span className="flex items-center gap-0.5 text-indigo-500">
+                                                <MessageCircle className="w-2.5 h-2.5"/>
+                                                {item.replyCount}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div
+                                        className="text-xs text-slate-800 dark:text-slate-200 line-clamp-2 leading-relaxed">
+                                        {renderRichContent(item.thread.content)}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
