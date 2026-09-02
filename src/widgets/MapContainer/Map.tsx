@@ -8,7 +8,7 @@ import {createMapViewFromMap, getInitialMapView, saveMapView} from "@features/ma
 import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import {useTheme} from "next-themes";
 import React, {useCallback, useEffect, useMemo, useRef} from "react";
 import MapGL, {MapRef, NavigationControl} from "react-map-gl/maplibre";
