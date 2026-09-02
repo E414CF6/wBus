@@ -207,8 +207,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                                     </button>
                                 </div>
                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                                    새로운 닉네임과 고유 식별 태그를 발급받습니다. 기존 작성한 글은
-                                    계속 보존됩니다.
+                                    새로운 닉네임을 발급받습니다. 기존 작성한 글은 계속 보존됩니다.
                                 </p>
                             </div>
                         </div>
