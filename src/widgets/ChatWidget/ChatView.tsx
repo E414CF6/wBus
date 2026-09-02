@@ -310,7 +310,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             }
             setIsComposerExpanded(false);
             setCooldown(3);
-            showToast("스퀘어에 새로운 글이 등록되었습니다 ✨");
+            showToast("새로운 글이 등록되었습니다!");
         } catch (err: unknown) {
             const errorMsg = err instanceof Error ? err.message : "글 작성에 실패했습니다. 잠시 후 다시 시도해주세요.";
             showToast(errorMsg);
@@ -940,9 +940,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                 value={composerContent}
                                 onChange={handleTextareaChange}
                                 onFocus={() => setIsComposerExpanded(true)}
-                                placeholder="스퀘어에 무슨 일이 일어나고 있나요? (#해시태그 로 실시간 공유)"
+                                placeholder="무슨 일이 일어나고 있나요?"
                                 rows={isComposerExpanded ? 3 : 2}
-                                maxLength={500}
+                                maxLength={1000}
                                 className="w-full bg-white dark:bg-black/20 rounded-2xl p-3 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none resize-none font-medium leading-relaxed border border-slate-200/60 dark:border-white/5 focus:border-blue-500 transition-colors"
                             />
 

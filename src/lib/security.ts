@@ -205,9 +205,9 @@ export function validateAndSanitizeContent(rawContent: string, rawAuthor?: strin
         };
     }
 
-    if (content.length > 500) {
+    if (content.length > 1000) {
         return {
-            isValid: false, error: "내용은 최대 500자까지 입력 가능합니다.", sanitizedContent: content, sanitizedAuthor: author,
+            isValid: false, error: "내용은 최대 1000자까지 입력 가능합니다.", sanitizedContent: content, sanitizedAuthor: author,
         };
     }
 
