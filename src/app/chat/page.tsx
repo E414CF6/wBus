@@ -2,7 +2,7 @@ import type {Metadata} from "next";
 import {MainApp} from "@widgets/AppShell";
 
 export const metadata: Metadata = {
-    title: "실시간 톡", description: "원주시 시내버스 이용자 실시간 소통, 운행 제보 및 꿀팁 커뮤니티",
+    title: "스퀘어", description: "실시간 소통, 제보 및 꿀팁 커뮤니티 광장",
 };
 
 export default function ChatPage() {

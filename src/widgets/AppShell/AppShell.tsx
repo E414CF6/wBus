@@ -8,7 +8,8 @@ import Splash from "@shared/ui/Splash";
 import {TimetableWidget} from "@widgets/TimetableWidget";
 import {ChatView} from "@widgets/ChatWidget";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
-import {CommentItem} from "@/types/comment";
+import {CommentItem, CommentRow, rowToComment} from "@/types/comment";
+import {createClient} from "@/utils/supabase/client";
 
 import dynamic from "next/dynamic";
 import {usePathname, useRouter, useSearchParams} from "next/navigation";
@@ -33,7 +34,7 @@ export function AppShell() {
     // Derive active tab from current URL pathname
     const activeTab: NavTab = useMemo(() => {
         if (pathname.startsWith("/live") || pathname.startsWith("/map")) return "map";
-        if (pathname.startsWith("/chat")) return "chat";
+        if (pathname.startsWith("/chat") || pathname.startsWith("/square")) return "chat";
         return "schedule";
     }, [pathname]);
 
@@ -63,12 +64,9 @@ export function AppShell() {
     const [hasVisitedMap, setHasVisitedMap] = useState<boolean>(() => isMapActive);
     const [isSplashVisible, setIsSplashVisible] = useState<boolean>(() => isMapActive);
 
-    // Chat / Comments State
+    // Square / Comments State
     const [comments, setComments] = useState<CommentItem[]>([]);
     const [isRefreshingComments, setIsRefreshingComments] = useState<boolean>(false);
-    const [chatFilterRoute, setChatFilterRoute] = useState<string>(() => {
-        return searchParams.get("filter") || "ALL";
-    });
 
     // Live clock for holiday / weekend detection
     const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
@@ -100,13 +98,6 @@ export function AppShell() {
         const querySubTab = searchParams.get("subTab");
         if (querySubTab === "yonsei" || querySubTab === "all") {
             setTimetableSubTab(querySubTab);
-        }
-    }, [searchParams]);
-
-    useEffect(() => {
-        const queryFilter = searchParams.get("filter");
-        if (queryFilter) {
-            setChatFilterRoute(queryFilter);
         }
     }, [searchParams]);
 
@@ -153,14 +144,54 @@ export function AppShell() {
         }
     }, []);
 
+    // Initial load + Supabase Realtime live sync
     useEffect(() => {
         fetchComments(false);
+
+        try {
+            const supabase = createClient();
+            const channel = supabase
+                .channel("comments_live_channel")
+                .on(
+                    "postgres_changes",
+                    {
+                        event: "*",
+                        schema: "public",
+                        table: "comments",
+                    },
+                    (payload) => {
+                        if (payload.eventType === "INSERT") {
+                            const newComment = rowToComment(payload.new as CommentRow);
+                            setComments((prev) => {
+                                if (prev.some((c) => c.id === newComment.id)) return prev;
+                                return [newComment, ...prev];
+                            });
+                        } else if (payload.eventType === "UPDATE") {
+                            const updated = rowToComment(payload.new as CommentRow);
+                            setComments((prev) =>
+                                prev.map((c) => (c.id === updated.id ? updated : c))
+                            );
+                        } else if (payload.eventType === "DELETE") {
+                            const deletedId = (payload.old as { id: string })?.id;
+                            if (deletedId) {
+                                setComments((prev) => prev.filter((c) => c.id !== deletedId));
+                            }
+                        }
+                    }
+                )
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        } catch (err) {
+            console.warn("[AppShell] Supabase Realtime subscription error:", err);
+        }
     }, [fetchComments]);
 
     const handleAddComment = async (data: {
         author?: string;
         content: string;
-        routeNo?: string;
         category?: string;
         parentId?: string;
         replyToAuthor?: string;
@@ -174,10 +205,13 @@ export function AppShell() {
         });
         const json = await res.json();
         if (!json.success) {
-            throw new Error(json.error || "댓글 등록에 실패했습니다.");
+            throw new Error(json.error || "스퀘어 글 등록에 실패했습니다.");
         }
         if (json.comment) {
-            setComments((prev) => [json.comment, ...prev]);
+            setComments((prev) => {
+                if (prev.some((c) => c.id === json.comment.id)) return prev;
+                return [json.comment, ...prev];
+            });
             try {
                 const saved = localStorage.getItem("wbus_my_comments");
                 const list: string[] = saved ? JSON.parse(saved) : [];
@@ -222,7 +256,7 @@ export function AppShell() {
                     prev.map((c) => (c.id === id ? (json.comment || {...c, isDeleted: true}) : c))
                 );
             } else {
-                throw new Error(json.error || "댓글 삭제에 실패했습니다.");
+                throw new Error(json.error || "스퀘어 글 삭제에 실패했습니다.");
             }
         } catch (err) {
             console.warn("[AppShell] Failed to delete comment:", err);
@@ -265,8 +299,7 @@ export function AppShell() {
             const routeParam = selectedRoute ? `?route=${encodeURIComponent(selectedRoute)}` : "";
             router.push(`/live${routeParam}`);
         } else if (tab === "chat") {
-            const filterParam = chatFilterRoute !== "ALL" ? `?filter=${encodeURIComponent(chatFilterRoute)}` : "";
-            router.push(`/chat${filterParam}`);
+            router.push("/chat");
         } else {
             const subTabParam = timetableSubTab === "all" ? "?subTab=all" : "";
             router.push(`/${subTabParam}`);
@@ -276,7 +309,7 @@ export function AppShell() {
         } catch {
             // Ignore
         }
-    }, [router, selectedRoute, chatFilterRoute, timetableSubTab]);
+    }, [router, selectedRoute, timetableSubTab]);
 
     // Persist route selection to state, localStorage & URL
     const handleRouteChange = useCallback((route: string) => {
@@ -315,19 +348,11 @@ export function AppShell() {
         router.push(`/live?route=${encodeURIComponent(routeName)}`);
     }, [handleRouteChange, router]);
 
-    const handleChatFilterRouteChange = useCallback((route: string) => {
-        setChatFilterRoute(route);
-        if (typeof window !== "undefined" && pathname.startsWith("/chat")) {
-            const query = route === "ALL" ? "/chat" : `/chat?filter=${encodeURIComponent(route)}`;
-            window.history.replaceState(null, "", query);
-        }
-    }, [pathname]);
-
     const isFixedLayout = activeTab !== "schedule";
 
     return (
         <>
-            <Splash isVisible={isSplashVisible}/>
+            <Splash isVisible={isSplashVisible} />
 
             <div
                 className={
@@ -362,9 +387,7 @@ export function AppShell() {
 
                 {/* 2. Schedule Timetable View (Yonsei 30,34,34-1 & All Wonju routes) */}
                 {activeTab === "schedule" && (
-                    <main
-                        className="w-full min-h-[100dvh] px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-32 sm:pb-36 flex flex-col items-center"
-                    >
+                    <main className="w-full min-h-[100dvh] px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-32 sm:pb-36 flex flex-col items-center">
                         <div className="w-full max-w-6xl flex-1 flex flex-col">
                             <TimetableWidget
                                 subTab={timetableSubTab}
@@ -377,11 +400,9 @@ export function AppShell() {
                     </main>
                 )}
 
-                {/* 3. Real-time Chat View */}
+                {/* 3. Real-time Square View */}
                 {activeTab === "chat" && (
-                    <div
-                        className="flex-1 overflow-hidden w-full max-w-6xl mx-auto px-3 sm:px-6 pt-2 sm:pt-4 pb-[calc(env(safe-area-inset-bottom,0)+4.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+5rem)] flex flex-col"
-                    >
+                    <div className="flex-1 overflow-hidden w-full max-w-6xl mx-auto px-3 sm:px-6 pt-2 sm:pt-4 pb-[calc(env(safe-area-inset-bottom,0)+4.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+5rem)] flex flex-col">
                         <ChatView
                             comments={comments}
                             onAddComment={handleAddComment}
@@ -389,8 +410,6 @@ export function AppShell() {
                             onDeleteComment={handleDeleteComment}
                             onRefresh={fetchComments}
                             isRefreshing={isRefreshingComments}
-                            filterRoute={chatFilterRoute}
-                            onFilterRouteChange={handleChatFilterRouteChange}
                         />
                     </div>
                 )}
@@ -411,8 +430,6 @@ export function AppShell() {
                     getDirection={liveBusData.getDirection}
                     connectionStatus={liveBusData.connectionStatus}
                     hasFetched={liveBusData.hasFetched}
-                    chatFilterRoute={chatFilterRoute}
-                    onChatFilterRouteChange={handleChatFilterRouteChange}
                     commentCount={comments.length}
                 />
             </div>

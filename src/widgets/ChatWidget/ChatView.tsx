@@ -2,21 +2,18 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {
-    ArrowDown,
     Ban,
-    Check,
-    CheckCircle2,
     Clock,
-    Copy,
     CornerDownRight,
     Dices,
+    Heart,
+    MessageCircle,
     MessageSquare,
     RotateCw,
     Search,
     Send,
-    SlidersHorizontal,
+    Share2,
     Sparkles,
-    ThumbsUp,
     Trash2,
     X,
 } from "lucide-react";
@@ -26,7 +23,7 @@ import {formatRelativeTime} from "@lib/timeUtils";
 import {generateUserTag, getRandomNickname} from "@/data/nicknames";
 
 interface ReplyTarget {
-    id: string; // Root parent comment ID
+    id: string; // Root parent thread ID
     author: string;
     authorTag?: string;
     content: string;
@@ -37,7 +34,6 @@ interface ChatViewProps {
     onAddComment: (data: {
         author?: string;
         content: string;
-        routeNo?: string;
         category?: string;
         parentId?: string;
         replyToAuthor?: string;
@@ -48,22 +44,27 @@ interface ChatViewProps {
     onDeleteComment?: (id: string, authorTag?: string) => Promise<void>;
     onRefresh: (force?: boolean) => Promise<void>;
     isRefreshing?: boolean;
-    filterRoute?: string;
-    onFilterRouteChange?: (route: string) => void;
 }
+
+const CATEGORIES = [
+    {id: "ALL", label: "전체"},
+    {id: "잡담", label: "💬 일상·잡담"},
+    {id: "제보", label: "📢 실시간 제보"},
+    {id: "꿀팁", label: "💡 버스 꿀팁"},
+    {id: "질문", label: "❓ 질문·문의"},
+    {id: "분실물", label: "🎒 분실물"},
+] as const;
 
 const PRESET_CHIPS = [
     {label: "🚌 지금 만차예요", text: "지금 버스 만차예요! 뒤차 타시는 걸 추천해요.", category: "제보"},
-    {label: "📍 학관 출발했어요", text: "방금 학생회관 정류장 지나서 출발했습니다.", category: "제보"},
+    {label: "📍 학관 방금 출발", text: "방금 학생회관 정류장 지나서 출발했습니다.", category: "제보"},
     {label: "⏳ 5분 지연 중", text: "도로 정체로 예정보다 5분 정도 지연되고 있어요.", category: "제보"},
     {label: "✨ 좌석 여유 있어요", text: "현재 좌석 여유 많고 쾌적하게 운행 중입니다.", category: "꿀팁"},
     {label: "🎒 분실물 문의", text: "혹시 버스 안에서 분실물 보신 분 계신가요?", category: "분실물"},
-    {label: "👋 다들 좋은 하루 보내세요", text: "오늘도 다들 좋은 하루 보내세요!", category: "잡담"},
+    {label: "👋 좋은 하루 보내세요", text: "오늘도 다들 안전하고 좋은 하루 보내세요!", category: "잡담"},
 ];
 
-const CATEGORIES = ["ALL", "잡담", "제보", "꿀팁", "질문", "분실물"] as const;
-
-function getAvatarGradient(name: string, tag: string = ""): string {
+function getAvatarGradient(name: string, tag = ""): string {
     const gradients = [
         "from-blue-500 to-indigo-600",
         "from-emerald-500 to-teal-600",
@@ -72,7 +73,7 @@ function getAvatarGradient(name: string, tag: string = ""): string {
         "from-rose-500 to-red-600",
         "from-cyan-500 to-blue-600",
         "from-violet-500 to-purple-700",
-        "from-lime-500 to-emerald-600",
+        "from-teal-500 to-emerald-600",
     ];
     const combined = `${name}${tag}`;
     let hash = 0;
@@ -83,6 +84,30 @@ function getAvatarGradient(name: string, tag: string = ""): string {
     return gradients[idx];
 }
 
+// Convert URLs in string into clickable links
+function renderFormattedContent(content: string) {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = content.split(urlRegex);
+
+    return parts.map((part, index) => {
+        if (part.match(urlRegex)) {
+            return (
+                <a
+                    key={index}
+                    href={part}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline break-all font-semibold inline-flex items-center gap-0.5"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {part}
+                </a>
+            );
+        }
+        return part;
+    });
+}
+
 export const ChatView: React.FC<ChatViewProps> = ({
                                                       comments,
                                                       onAddComment,
@@ -90,78 +115,64 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                                       onDeleteComment,
                                                       onRefresh,
                                                       isRefreshing = false,
-                                                      filterRoute = "ALL",
-                                                      onFilterRouteChange: _onFilterRouteChange,
                                                   }) => {
-    const [newContent, setNewContent] = useState("");
-    const [newAuthor, setNewAuthor] = useState("");
-    const [userTag, setUserTag] = useState<string>("");
-    const [selectedRouteTag, setSelectedRouteTag] = useState<string>("ALL");
+    // Identity State
+    const [authorName, setAuthorName] = useState("");
+    const [userTag, setUserTag] = useState("");
+
+    // Composer State
+    const [composerContent, setComposerContent] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("잡담");
-    const [replyingTo, setReplyingTo] = useState<ReplyTarget | null>(null);
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-    // Filters
-    const [filterCategory, setFilterCategory] = useState<string>("ALL");
-    const [searchQuery, setSearchQuery] = useState<string>("ALL".length ? "" : "");
-
-    // States
+    const [isComposerExpanded, setIsComposerExpanded] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [commentSuccess, setCommentSuccess] = useState(false);
-    const [autoRefresh, _setAutoRefresh] = useState(true);
-    const [_lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
+    const [cooldown, setCooldown] = useState<number>(0);
+
+    // Active Inline Reply State
+    const [activeReplyParentId, setActiveReplyParentId] = useState<string | null>(null);
+    const [inlineReplyContent, setInlineReplyContent] = useState("");
+    const [inlineReplyTarget, setInlineReplyTarget] = useState<ReplyTarget | null>(null);
+    const [isSubmittingReply, setIsSubmittingReply] = useState(false);
+
+    // Filter & Search State
+    const [filterCategory, setFilterCategory] = useState<string>("ALL");
+    const [searchQuery, setSearchQuery] = useState<string>("");
+
+    // User Interaction Memory
     const [likedCommentIds, setLikedCommentIds] = useState<Set<string>>(new Set());
     const [myCommentIds, setMyCommentIds] = useState<Set<string>>(new Set());
     const [deletingId, setDeletingId] = useState<string | null>(null);
-    const [copiedId, setCopiedId] = useState<string | null>(null);
-    const [showScrollBottom, setShowScrollBottom] = useState(false);
-    const [latestCreatedId, setLatestCreatedId] = useState<string | null>(null);
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-    const inputRef = useRef<HTMLInputElement>(null);
-    const listContainerRef = useRef<HTMLDivElement>(null);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const menuRef = useRef<HTMLDivElement>(null);
-    const isNearBottomRef = useRef<boolean>(true);
-    const hasInitiallyScrolledRef = useRef<boolean>(false);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const inlineReplyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-    const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth") => {
-        if (listContainerRef.current) {
-            listContainerRef.current.scrollTo({
-                top: listContainerRef.current.scrollHeight,
-                behavior,
-            });
-        } else if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({behavior, block: "end"});
-        }
+    // Show temporary toast notification
+    const showToast = useCallback((msg: string) => {
+        setToastMessage(msg);
+        setTimeout(() => {
+            setToastMessage((prev) => (prev === msg ? null : prev));
+        }, 3000);
     }, []);
 
-    // Close menu when clicking outside
+    // Cooldown countdown timer (Anti-flood)
     useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-                setIsMenuOpen(false);
-            }
-        };
-        if (isMenuOpen) {
-            document.addEventListener("mousedown", handleClickOutside);
-        }
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
-    }, [isMenuOpen]);
+        if (cooldown <= 0) return;
+        const timer = setInterval(() => {
+            setCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [cooldown]);
 
-    // Initialize nickname, user unique tag & liked comments on mount
+    // Initialize user nickname, tag & saved likes
     useEffect(() => {
         try {
-            // 1. Nickname
             let savedNick = localStorage.getItem("wbus_chat_nickname");
             if (!savedNick || !savedNick.trim() || savedNick.trim() === "익명") {
                 savedNick = getRandomNickname();
                 localStorage.setItem("wbus_chat_nickname", savedNick);
             }
-            setNewAuthor(savedNick);
+            setAuthorName(savedNick);
 
-            // 2. User Tag (e.g. #d67qe62)
             let savedTag = localStorage.getItem("wbus_user_tag");
             if (!savedTag || !savedTag.startsWith("#")) {
                 savedTag = generateUserTag();
@@ -169,229 +180,218 @@ export const ChatView: React.FC<ChatViewProps> = ({
             }
             setUserTag(savedTag);
 
-            // 3. Liked comments
             const savedLikes = localStorage.getItem("wbus_liked_comments");
             if (savedLikes) {
                 setLikedCommentIds(new Set(JSON.parse(savedLikes)));
             }
 
-            // 4. My authored comments
             const savedMy = localStorage.getItem("wbus_my_comments");
             if (savedMy) {
                 setMyCommentIds(new Set(JSON.parse(savedMy)));
             }
         } catch {
-            setNewAuthor(getRandomNickname());
+            setAuthorName(getRandomNickname());
             setUserTag(generateUserTag());
         }
+    }, []);
 
-        // Scroll to bottom upon initial mount
-        const timer1 = setTimeout(() => {
-            scrollToBottom("auto");
-            hasInitiallyScrolledRef.current = true;
-        }, 50);
-        const timer2 = setTimeout(() => {
-            scrollToBottom("auto");
-            hasInitiallyScrolledRef.current = true;
-        }, 200);
-
-        return () => {
-            clearTimeout(timer1);
-            clearTimeout(timer2);
-        };
-    }, [scrollToBottom]);
-
-    // Auto-refresh interval (every 15s)
-    useEffect(() => {
-        if (!autoRefresh) return;
-        const timer = setInterval(() => {
-            onRefresh(false).then(() => {
-                setLastRefreshedAt(new Date());
-            }).catch(() => {
-            });
-        }, 15000);
-
-        return () => clearInterval(timer);
-    }, [autoRefresh, onRefresh]);
-
-    const handleManualRefresh = async () => {
-        await onRefresh(true);
-        setLastRefreshedAt(new Date());
-    };
-
-    const handleRandomNickname = () => {
-        const name = getRandomNickname(newAuthor);
-        setNewAuthor(name);
+    // Re-roll random nickname
+    const handleRerollNickname = () => {
+        const next = getRandomNickname(authorName);
+        setAuthorName(next);
         try {
-            localStorage.setItem("wbus_chat_nickname", name);
+            localStorage.setItem("wbus_chat_nickname", next);
+            showToast(`닉네임이 '${next}'(으)로 변경되었습니다`);
         } catch {
             // Ignore
         }
     };
 
-    const handleAuthorChange = (val: string) => {
-        setNewAuthor(val);
-        try {
-            localStorage.setItem("wbus_chat_nickname", val);
-        } catch {
-            // Ignore
-        }
+    // Auto-expand textarea height
+    const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setComposerContent(e.target.value);
+        e.target.style.height = "auto";
+        e.target.style.height = `${Math.min(e.target.scrollHeight, 180)}px`;
     };
 
-    const handlePresetClick = (preset: typeof PRESET_CHIPS[number]) => {
-        setNewContent(preset.text);
+    const handleInlineReplyTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        setInlineReplyContent(e.target.value);
+        e.target.style.height = "auto";
+        e.target.style.height = `${Math.min(e.target.scrollHeight, 140)}px`;
+    };
+
+    const handlePresetSelect = (preset: typeof PRESET_CHIPS[number]) => {
+        setComposerContent(preset.text);
         setSelectedCategory(preset.category);
-        setIsMenuOpen(false);
-        if (inputRef.current) {
-            inputRef.current.focus();
+        setIsComposerExpanded(true);
+        if (textareaRef.current) {
+            textareaRef.current.focus();
         }
     };
 
-    const handleStartReply = (comment: CommentItem, rootParentId?: string) => {
-        setReplyingTo({
-            id: rootParentId || comment.id,
-            author: comment.author,
-            authorTag: comment.authorTag,
-            content: comment.isDeleted ? "삭제된 메시지" : comment.content,
-        });
-        if (comment.routeNo && comment.routeNo !== "ALL") {
-            setSelectedRouteTag(comment.routeNo);
-        } else {
-            setSelectedRouteTag("ALL");
-        }
-        if (inputRef.current) {
-            inputRef.current.focus();
-        }
-    };
-
-    const isMyComment = (comment: CommentItem) => {
-        if (userTag && comment.authorTag && comment.authorTag === userTag) {
-            return true;
-        }
-        if (myCommentIds.has(comment.id)) {
-            return true;
-        }
-        return false;
-    };
-
-    const handleDelete = async (id: string) => {
-        if (!window.confirm("이 메시지를 삭제하시겠습니까?\n삭제된 메시지는 '삭제된 메시지입니다'로 표시됩니다.")) {
+    // Submit root thread
+    const handlePostThread = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (cooldown > 0) {
+            showToast(`보안 및 도배 방지를 위해 ${cooldown}초 후에 다시 작성할 수 있습니다.`);
             return;
         }
+        const content = composerContent.trim();
+        if (!content || isSubmitting) return;
+
+        setIsSubmitting(true);
+        try {
+            const finalAuthor = authorName.trim() || getRandomNickname();
+            const finalTag = userTag || generateUserTag();
+
+            await onAddComment({
+                author: finalAuthor,
+                authorTag: finalTag,
+                content,
+                category: selectedCategory,
+            });
+
+            setComposerContent("");
+            if (textareaRef.current) {
+                textareaRef.current.style.height = "auto";
+            }
+            setIsComposerExpanded(false);
+            setCooldown(3);
+            showToast("스퀘어에 새로운 글이 등록되었습니다 ✨");
+        } catch (err: unknown) {
+            const errorMsg = err instanceof Error ? err.message : "글 작성에 실패했습니다. 잠시 후 다시 시도해주세요.";
+            showToast(errorMsg);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    // Open inline reply box for a thread
+    const handleStartReply = (targetComment: CommentItem, rootThreadId: string) => {
+        if (activeReplyParentId === rootThreadId && inlineReplyTarget?.id === targetComment.id) {
+            setActiveReplyParentId(null);
+            setInlineReplyTarget(null);
+            setInlineReplyContent("");
+            return;
+        }
+
+        setActiveReplyParentId(rootThreadId);
+        setInlineReplyTarget({
+            id: targetComment.id,
+            author: targetComment.author,
+            authorTag: targetComment.authorTag,
+            content: targetComment.isDeleted ? "삭제된 메시지" : targetComment.content,
+        });
+        setInlineReplyContent("");
+
+        setTimeout(() => {
+            if (inlineReplyTextareaRef.current) {
+                inlineReplyTextareaRef.current.focus();
+            }
+        }, 60);
+    };
+
+    // Submit reply to thread
+    const handlePostReply = async (rootThreadId: string) => {
+        if (cooldown > 0) {
+            showToast(`보안 및 도배 방지를 위해 ${cooldown}초 후에 다시 작성할 수 있습니다.`);
+            return;
+        }
+        const content = inlineReplyContent.trim();
+        if (!content || isSubmittingReply) return;
+
+        setIsSubmittingReply(true);
+        try {
+            const finalAuthor = authorName.trim() || getRandomNickname();
+            const finalTag = userTag || generateUserTag();
+
+            await onAddComment({
+                author: finalAuthor,
+                authorTag: finalTag,
+                content,
+                parentId: rootThreadId,
+                replyToAuthor: inlineReplyTarget?.author,
+                replyToAuthorTag: inlineReplyTarget?.authorTag,
+                category: selectedCategory,
+            });
+
+            setInlineReplyContent("");
+            setActiveReplyParentId(null);
+            setInlineReplyTarget(null);
+            setCooldown(3);
+            showToast("답글이 등록되었습니다 💬");
+        } catch (err: unknown) {
+            const errorMsg = err instanceof Error ? err.message : "답글 작성에 실패했습니다.";
+            showToast(errorMsg);
+        } finally {
+            setIsSubmittingReply(false);
+        }
+    };
+
+    // Like thread / reply
+    const handleLike = async (id: string) => {
+        if (likedCommentIds.has(id)) return;
+
+        const next = new Set(likedCommentIds);
+        next.add(id);
+        setLikedCommentIds(next);
+        try {
+            localStorage.setItem("wbus_liked_comments", JSON.stringify(Array.from(next)));
+        } catch {
+            // Ignore
+        }
+
+        if (onLikeComment) {
+            try {
+                await onLikeComment(id);
+            } catch (err: unknown) {
+                const errorMsg = err instanceof Error ? err.message : "공감 처리에 실패했습니다.";
+                showToast(errorMsg);
+            }
+        }
+    };
+
+    // Delete thread / reply
+    const handleDelete = async (id: string) => {
+        if (!window.confirm("이 글(스레드)을 삭제하시겠습니까?")) return;
+
         if (onDeleteComment) {
             setDeletingId(id);
             try {
                 await onDeleteComment(id, userTag);
-            } catch {
-                alert("메시지 삭제에 실패했습니다.");
+                showToast("글이 삭제되었습니다");
+            } catch (err: unknown) {
+                const errorMsg = err instanceof Error ? err.message : "삭제 권한이 없거나 이미 삭제된 글입니다.";
+                showToast(errorMsg);
             } finally {
                 setDeletingId(null);
             }
         }
     };
 
-    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        const {scrollTop, scrollHeight, clientHeight} = e.currentTarget;
-        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-        const isNear = distanceFromBottom < 80;
-        isNearBottomRef.current = isNear;
-        setShowScrollBottom(!isNear);
-    };
-
-    const handleSubmit = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        const contentTrimmed = newContent.trim();
-        if (!contentTrimmed || isSubmitting) return;
-
-        setIsSubmitting(true);
+    // Share / Copy content
+    const handleShare = async (comment: CommentItem) => {
+        const shareText = `[wBus 스퀘어]\n${comment.author}: ${comment.content}\nhttps://wbus.app/chat`;
         try {
-            let author = newAuthor.trim();
-            if (!author || author === "익명") {
-                author = getRandomNickname();
-                setNewAuthor(author);
-                try {
-                    localStorage.setItem("wbus_chat_nickname", author);
-                } catch {
-                    // Ignore
-                }
+            if (navigator.clipboard) {
+                await navigator.clipboard.writeText(shareText);
+                showToast("내용이 클립보드에 복사되었습니다 📋");
             }
-
-            const currentTag = userTag || generateUserTag();
-
-            await onAddComment({
-                author,
-                authorTag: currentTag,
-                content: contentTrimmed,
-                routeNo: selectedRouteTag === "ALL" ? undefined : selectedRouteTag,
-                category: selectedCategory,
-                parentId: replyingTo?.id,
-                replyToAuthor: replyingTo?.author,
-                replyToAuthorTag: replyingTo?.authorTag,
-            });
-
-            setNewContent("");
-            setReplyingTo(null);
-            setIsMenuOpen(false);
-            setCommentSuccess(true);
-            setLastRefreshedAt(new Date());
-
-            setTimeout(() => {
-                scrollToBottom("smooth");
-            }, 80);
-
-            setTimeout(() => setCommentSuccess(false), 2500);
         } catch {
-            // Handled in parent
-        } finally {
-            setIsSubmitting(false);
+            showToast("복사 실패");
         }
     };
 
-    // When comments update, mark latest comment and auto-scroll if near bottom or initial
-    useEffect(() => {
-        if (comments.length > 0) {
-            setLatestCreatedId(comments[0].id);
-            if (isNearBottomRef.current || !hasInitiallyScrolledRef.current) {
-                setTimeout(() => {
-                    scrollToBottom(hasInitiallyScrolledRef.current ? "smooth" : "auto");
-                    hasInitiallyScrolledRef.current = true;
-                }, 80);
-            }
-        }
-    }, [comments, scrollToBottom]);
-
-    const handleLike = async (id: string) => {
-        if (likedCommentIds.has(id)) return;
-
-        const nextSet = new Set(likedCommentIds);
-        nextSet.add(id);
-        setLikedCommentIds(nextSet);
-        try {
-            localStorage.setItem("wbus_liked_comments", JSON.stringify(Array.from(nextSet)));
-        } catch {
-            // Ignore
-        }
-
-        if (onLikeComment) {
-            await onLikeComment(id);
-        }
+    const isMyComment = (comment: CommentItem) => {
+        if (userTag && comment.authorTag && comment.authorTag === userTag) return true;
+        if (myCommentIds.has(comment.id)) return true;
+        return false;
     };
 
-    const handleCopy = (id: string, text: string) => {
-        try {
-            navigator.clipboard.writeText(text);
-            setCopiedId(id);
-            setTimeout(() => setCopiedId(null), 2000);
-        } catch {
-            // Ignore
-        }
-    };
-
-    // Group comments into root threads and replies, sorted chronologically (Oldest -> Newest at bottom)
-    const {rootComments, repliesByParent} = useMemo(() => {
+    // Organize root threads and their child replies
+    const {rootThreads, repliesByThreadId} = useMemo(() => {
         const roots: CommentItem[] = [];
         const replies: Record<string, CommentItem[]> = {};
-
         const commentIdSet = new Set(comments.map((c) => c.id));
 
         for (const c of comments) {
@@ -405,41 +405,32 @@ export const ChatView: React.FC<ChatViewProps> = ({
             }
         }
 
-        // Sort roots chronologically: oldest on top, newest at bottom (Chat style)
-        roots.sort(
-            (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-        );
+        // Newest threads first
+        roots.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        // Sort replies chronologically: oldest on top, newest at bottom
+        // Replies in ascending order
         for (const pid in replies) {
             replies[pid].sort(
                 (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
             );
         }
 
-        return {rootComments: roots, repliesByParent: replies};
+        return {rootThreads: roots, repliesByThreadId: replies};
     }, [comments]);
 
-    // Filter threads
-    const filteredRoots = useMemo(() => {
-        return rootComments.filter((root) => {
-            const threadReplies = repliesByParent[root.id] || [];
+    // Filter threads by search and category
+    const filteredThreads = useMemo(() => {
+        return rootThreads.filter((root) => {
+            const threadReplies = repliesByThreadId[root.id] || [];
 
-            // Route filter
-            if (filterRoute !== "ALL") {
-                const matchesRoot = root.routeNo === filterRoute;
-                const matchesReply = threadReplies.some((r) => r.routeNo === filterRoute);
-                if (!matchesRoot && !matchesReply) return false;
-            }
-
-            // Category filter
+            // 1. Category filter
             if (filterCategory !== "ALL") {
-                const matchesRoot = root.category === filterCategory;
-                const matchesReply = threadReplies.some((r) => r.category === filterCategory);
-                if (!matchesRoot && !matchesReply) return false;
+                const matchRoot = root.category === filterCategory;
+                const matchReply = threadReplies.some((r) => r.category === filterCategory);
+                if (!matchRoot && !matchReply) return false;
             }
 
-            // Search query
+            // 2. Search query
             if (searchQuery.trim()) {
                 const q = searchQuery.toLowerCase().trim();
                 const inRoot =
@@ -457,710 +448,561 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
             return true;
         });
-    }, [rootComments, repliesByParent, filterRoute, filterCategory, searchQuery]);
+    }, [rootThreads, repliesByThreadId, filterCategory, searchQuery]);
 
     return (
-        <div className="w-full flex-1 min-h-0 flex flex-col gap-2.5 sm:gap-3 animate-fadeIn">
-            {/* 1. Header Card with Title, Filters & Controls */}
+        <div className="w-full flex-1 min-h-0 flex flex-col gap-3 relative animate-fadeIn">
+            {/* Toast Notification */}
+            {toastMessage && (
+                <div
+                    className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-2xl bg-slate-900/90 dark:bg-white/95 text-white dark:text-slate-900 text-xs font-black shadow-2xl backdrop-blur-md animate-slideDown flex items-center gap-2 border border-white/10 max-w-[90vw] text-center">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-400 dark:text-amber-500 shrink-0"/>
+                    <span>{toastMessage}</span>
+                </div>
+            )}
+
+            {/* 1. Square Header & Filter Controls Bar */}
             <div
-                className="shrink-0 backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl p-3.5 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-sm space-y-3">
-                {/* Top Info Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3">
+                className="shrink-0 backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-xs space-y-3">
+                {/* Header Title & Live Status */}
+                <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
                         <div
-                            className="w-9 h-9 rounded-2xl bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                            <MessageSquare className="w-5 h-5"/>
+                            className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white flex items-center justify-center shadow-xs">
+                            <MessageSquare className="w-4 h-4"/>
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
                                 <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
-                                    실시간 톡
+                                    스퀘어
                                 </h2>
                                 <span
                                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black border border-emerald-500/20">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/>
-                                    LIVE
+                                    Live Agora
                                 </span>
                             </div>
                             <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                                {filteredRoots.length}개의 메시지
+                                Community Square
                             </p>
                         </div>
                     </div>
 
-                    {/* Controls: Manual refresh */}
-                    <div className="flex items-center gap-2">
-                        <button
-                            type="button"
-                            onClick={handleManualRefresh}
-                            disabled={isRefreshing}
-                            className="p-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all cursor-pointer disabled:opacity-50"
-                            title="새로고침"
-                        >
-                            <RotateCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`}/>
-                        </button>
-                    </div>
+                    {/* Refresh Button */}
+                    <button
+                        type="button"
+                        onClick={() => onRefresh(true)}
+                        disabled={isRefreshing}
+                        className="p-2 rounded-2xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
+                        title="새로고침"
+                    >
+                        <RotateCw className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-500" : ""}`}/>
+                    </button>
                 </div>
 
-                {/* Filter and Search Row */}
+                {/* Search Bar */}
+                <div className="relative w-full">
+                    <Search className="w-3.5 h-3.5 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400"/>
+                    <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="닉네임, 내용, #태그 검색..."
+                        className="w-full pl-9 pr-8 py-2 text-xs rounded-2xl bg-slate-100/80 dark:bg-white/5 border border-transparent focus:border-blue-500 text-slate-900 dark:text-white outline-none font-medium transition-all"
+                    />
+                    {searchQuery && (
+                        <button
+                            onClick={() => setSearchQuery("")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                        >
+                            <X className="w-3.5 h-3.5"/>
+                        </button>
+                    )}
+                </div>
+
+                {/* Category Filter Pills */}
                 <div
-                    className="flex flex-wrap items-center justify-between gap-2.5 pt-2 border-t border-slate-200/60 dark:border-white/5">
-                    {/* Search Input */}
-                    <div className="relative flex-1 min-w-[200px] max-w-sm sm:max-w-md">
-                        <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
-                        <input
-                            type="text"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="내용, 닉네임 또는 #태그 검색..."
-                            className="w-full pl-8 pr-8 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-transparent focus:border-blue-500 text-slate-900 dark:text-white outline-none font-medium transition-all"
-                        />
-                        {searchQuery && (
-                            <button
-                                onClick={() => setSearchQuery("")}
-                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
-                            >
-                                <X className="w-3 h-3"/>
-                            </button>
-                        )}
+                    className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar py-0.5 border-t border-slate-100 dark:border-white/5 pt-2">
+                    {CATEGORIES.map((cat) => (
+                        <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => setFilterCategory(cat.id)}
+                            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                filterCategory === cat.id
+                                    ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
+                                    : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                            }`}
+                        >
+                            {cat.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* 2. Top Square Composer Card ("스퀘어에 새로운 이야기 남기기...") */}
+            <div
+                className="shrink-0 backdrop-blur-2xl bg-white/90 dark:bg-[#111622]/90 rounded-3xl p-3.5 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-xs transition-all">
+                {/* Author Info Bar with Re-roll */}
+                <div
+                    className="flex items-center justify-between gap-2 pb-2.5 mb-2.5 border-b border-slate-100 dark:border-white/5">
+                    <div className="flex items-center gap-2">
+                        <div
+                            className={`w-7 h-7 rounded-xl bg-gradient-to-tr ${getAvatarGradient(
+                                authorName,
+                                userTag
+                            )} text-white flex items-center justify-center font-black text-xs shadow-xs`}
+                        >
+                            {authorName.charAt(0)}
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-xs font-black text-slate-900 dark:text-white">
+                                    {authorName}
+                                </span>
+                                <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                                    {userTag}
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Category Filter Pills */}
-                    <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar py-0.5">
-                        {CATEGORIES.map((cat) => (
+                    <button
+                        type="button"
+                        onClick={handleRerollNickname}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 text-[11px] font-bold transition-all cursor-pointer active:scale-95"
+                        title="랜덤 닉네임 새로고침"
+                    >
+                        <Dices className="w-3.5 h-3.5 text-blue-500"/>
+                        <span>닉네임 변경</span>
+                    </button>
+                </div>
+
+                {/* Textarea Composer */}
+                <div className="space-y-2.5">
+                    <textarea
+                        ref={textareaRef}
+                        value={composerContent}
+                        onChange={handleTextareaChange}
+                        onFocus={() => setIsComposerExpanded(true)}
+                        placeholder="스퀘어에 새로운 이야기를 남겨보세요... (실시간 버스 제보, 질문, 일상 등)"
+                        rows={isComposerExpanded ? 3 : 2}
+                        maxLength={500}
+                        className="w-full bg-transparent text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none resize-none font-medium leading-relaxed"
+                    />
+
+                    {/* Quick Template Chips */}
+                    {isComposerExpanded && (
+                        <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar py-1">
+                            {PRESET_CHIPS.map((chip, idx) => (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => handlePresetSelect(chip)}
+                                    className="px-2.5 py-1 rounded-xl bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-200/60 dark:border-blue-800/40 transition-all cursor-pointer whitespace-nowrap"
+                                >
+                                    {chip.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Category Selector + Submit Button */}
+                    <div
+                        className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-white/5">
+                        <div className="flex flex-wrap items-center gap-1">
+                            {CATEGORIES.filter((c) => c.id !== "ALL").map((cat) => (
+                                <button
+                                    key={cat.id}
+                                    type="button"
+                                    onClick={() => setSelectedCategory(cat.id)}
+                                    className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold transition-all cursor-pointer ${
+                                        selectedCategory === cat.id
+                                            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+                                            : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                                    }`}
+                                >
+                                    {cat.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Submit Action */}
+                        <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-[10px] font-mono font-semibold text-slate-400">
+                                {composerContent.length}/500
+                            </span>
                             <button
-                                key={cat}
                                 type="button"
-                                onClick={() => setFilterCategory(cat)}
-                                className={`px-2.5 py-1 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap ${
-                                    filterCategory === cat
-                                        ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
-                                        : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
-                                }`}
+                                onClick={() => handlePostThread()}
+                                disabled={!composerContent.trim() || isSubmitting || cooldown > 0}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-black transition-all cursor-pointer disabled:opacity-40 disabled:pointer-events-none shadow-xs"
                             >
-                                {cat === "ALL" ? "전체 분류" : cat}
+                                <Send className="w-3.5 h-3.5"/>
+                                <span>
+                                    {isSubmitting
+                                        ? "게시 중..."
+                                        : cooldown > 0
+                                        ? `${cooldown}초 후 가능`
+                                        : "게시하기"}
+                                </span>
                             </button>
-                        ))}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* 2. Full-Width Message Feed Container (Screen-fitted responsive flex height) */}
+            {/* 3. Square Threads Feed Container (Scrollable) */}
             <div
-                className="flex-1 min-h-0 relative backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-sm flex flex-col overflow-hidden"
-            >
-                {/* Scrollable Messages Area */}
-                <div
-                    ref={listContainerRef}
-                    onScroll={handleScroll}
-                    className="flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-4 p-3.5 sm:p-4 pr-1.5 sm:pr-2"
-                >
-                    {filteredRoots.length === 0 ? (
-                        <div className="py-24 text-center space-y-3">
-                            <div
-                                className="w-12 h-12 rounded-full bg-slate-100 dark:bg-white/5 text-slate-400 mx-auto flex items-center justify-center">
-                                <MessageSquare className="w-6 h-6"/>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-sm font-black text-slate-700 dark:text-slate-300">
-                                    등록된 메시지가 없습니다.
-                                </p>
-                                <p className="text-xs text-slate-400">
-                                    하단 입력창에서 첫 번째 버스 제보를 남겨보세요!
-                                </p>
-                            </div>
+                className="flex-1 min-h-0 backdrop-blur-2xl bg-white/80 dark:bg-[#111622]/85 rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xs overflow-y-auto custom-scrollbar p-3.5 sm:p-4 space-y-4">
+                {filteredThreads.length === 0 ? (
+                    <div className="py-20 text-center space-y-3">
+                        <div
+                            className="w-12 h-12 rounded-3xl bg-slate-100 dark:bg-white/5 text-slate-400 mx-auto flex items-center justify-center">
+                            <MessageCircle className="w-6 h-6"/>
                         </div>
-                    ) : (
-                        filteredRoots.map((comment) => {
-                            const isLiked = likedCommentIds.has(comment.id);
-                            const isLatest = comment.id === latestCreatedId;
-                            const threadReplies = repliesByParent[comment.id] || [];
+                        <div className="space-y-1">
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-300">
+                                등록된 이야기가 없습니다.
+                            </p>
+                            <p className="text-xs text-slate-400">
+                                상단 입력창에서 첫 번째 스퀘어 글을 남겨보세요!
+                            </p>
+                        </div>
+                    </div>
+                ) : (
+                    filteredThreads.map((thread) => {
+                        const threadReplies = repliesByThreadId[thread.id] || [];
+                        const isLiked = likedCommentIds.has(thread.id);
+                        const isReplyOpen = activeReplyParentId === thread.id;
 
-                            return (
-                                <div key={comment.id} className="space-y-2.5">
-                                    {/* Main Root Comment Card */}
-                                    <div
-                                        className={`p-3.5 sm:p-4 rounded-2xl border transition-all duration-300 ${
-                                            comment.isDeleted
-                                                ? "bg-slate-50/40 dark:bg-white/[0.01] border-slate-200/50 dark:border-white/5 opacity-80"
-                                                : isLatest
-                                                    ? "bg-blue-50/50 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800 animate-slideUp"
-                                                    : "bg-slate-50/60 dark:bg-white/[0.02] border-slate-200/70 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
-                                        }`}
-                                    >
-                                        <div className="flex items-start justify-between gap-2.5">
-                                            <div className="flex items-center gap-2.5">
-                                                <div
-                                                    className={`w-7 h-7 rounded-xl ${
-                                                        comment.isDeleted
-                                                            ? "bg-slate-200 dark:bg-slate-800 text-slate-400"
-                                                            : `bg-gradient-to-tr ${getAvatarGradient(
-                                                                comment.author,
-                                                                comment.authorTag
-                                                            )} text-white`
-                                                    } flex items-center justify-center font-black text-xs shadow-xs shrink-0`}
+                        return (
+                            <div
+                                key={thread.id}
+                                className="p-3.5 sm:p-4 rounded-3xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/70 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10 transition-all space-y-3"
+                            >
+                                {/* Root Thread Card with Visual Connector Rail */}
+                                <div className="flex items-start gap-3">
+                                    {/* Avatar & Continuous Thread Line */}
+                                    <div className="flex flex-col items-center self-stretch shrink-0">
+                                        <div
+                                            className={`w-8 h-8 rounded-2xl bg-gradient-to-tr ${getAvatarGradient(
+                                                thread.author,
+                                                thread.authorTag
+                                            )} text-white flex items-center justify-center font-black text-xs shadow-xs`}
+                                        >
+                                            {thread.isDeleted ? (
+                                                <Ban className="w-4 h-4 text-slate-300"/>
+                                            ) : (
+                                                thread.author.charAt(0)
+                                            )}
+                                        </div>
+                                        {/* Connecting Thread Rail Line if there are replies or active composer */}
+                                        {(threadReplies.length > 0 || isReplyOpen) && (
+                                            <div
+                                                className="w-0.5 flex-1 bg-slate-200 dark:bg-white/10 my-1 rounded-full"/>
+                                        )}
+                                    </div>
+
+                                    {/* Thread Content Area */}
+                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                        {/* Author, Tag, Badges & Timestamp */}
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span
+                                                    className={`text-xs font-black ${
+                                                        thread.isDeleted
+                                                            ? "text-slate-400 dark:text-slate-500"
+                                                            : "text-slate-900 dark:text-white"
+                                                    }`}
                                                 >
-                                                    {comment.isDeleted ? (
-                                                        <Ban className="w-3.5 h-3.5"/>
-                                                    ) : (
-                                                        comment.author.charAt(0)
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-1.5 flex-wrap">
-                                                        <span
-                                                            className={`font-extrabold text-xs ${
-                                                                comment.isDeleted
-                                                                    ? "text-slate-400 dark:text-slate-500"
-                                                                    : "text-slate-900 dark:text-white"
-                                                            }`}
-                                                        >
-                                                            {comment.author}
-                                                        </span>
-                                                        {comment.authorTag && (
-                                                            <span
-                                                                className="text-[10px] font-mono font-semibold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-white/5 px-1 py-0.2 rounded">
-                                                                {comment.authorTag}
-                                                            </span>
-                                                        )}
-                                                        {comment.isDeleted ? (
-                                                            <span
-                                                                className="px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-slate-500 text-[10px] font-bold">
-                                                                삭제됨
-                                                            </span>
-                                                        ) : (
-                                                            <>
-                                                                {comment.category && (
-                                                                    <span
-                                                                        className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
-                                                                            comment.category === "제보"
-                                                                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
-                                                                                : comment.category === "꿀팁"
-                                                                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                                                                                    : comment.category === "분실물"
-                                                                                        ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
-                                                                                        : "bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300"
-                                                                        }`}
-                                                                    >
-                                                                        {comment.category}
-                                                                    </span>
-                                                                )}
-                                                                {comment.routeNo && comment.routeNo !== "ALL" && (
-                                                                    <span
-                                                                        className="px-1.5 py-0.2 rounded-md bg-blue-600/10 text-blue-600 dark:text-blue-400 text-[10px] font-black">
-                                                                        {comment.routeNo}번
-                                                                    </span>
-                                                                )}
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                    <div
-                                                        className="flex items-center gap-1 text-[10px] text-slate-400 font-medium mt-0.5">
-                                                        <Clock className="w-2.5 h-2.5"/>
-                                                        <span>{formatRelativeTime(comment.createdAt)}</span>
-                                                    </div>
-                                                </div>
+                                                    {thread.author}
+                                                </span>
+                                                {thread.authorTag && (
+                                                    <span
+                                                        className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                                                        {thread.authorTag}
+                                                    </span>
+                                                )}
+                                                {!thread.isDeleted && thread.category && (
+                                                    <span
+                                                        className={`px-1.5 py-0.2 rounded-md text-[10px] font-black ${
+                                                            thread.category === "제보"
+                                                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                                                : thread.category === "꿀팁"
+                                                                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                                                    : thread.category === "분실물"
+                                                                        ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                                                                        : "bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300"
+                                                        }`}
+                                                    >
+                                                        {thread.category}
+                                                    </span>
+                                                )}
                                             </div>
 
-                                            {/* Actions: Reply, Like & Copy & Delete */}
-                                            <div className="flex items-center gap-1 shrink-0">
-                                                {/* Reply Button */}
+                                            <div
+                                                className="flex items-center gap-1 text-[10px] text-slate-400 shrink-0">
+                                                <Clock className="w-3 h-3"/>
+                                                <span>{formatRelativeTime(thread.createdAt)}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Thread Body */}
+                                        {thread.isDeleted ? (
+                                            <p className="text-xs text-slate-400 dark:text-slate-500 italic flex items-center gap-1 select-none">
+                                                <Ban className="w-3 h-3 opacity-60"/>
+                                                <span>삭제된 글입니다.</span>
+                                            </p>
+                                        ) : (
+                                            <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap break-words leading-relaxed">
+                                                {renderFormattedContent(thread.content)}
+                                            </p>
+                                        )}
+
+                                        {/* Action Bar */}
+                                        {!thread.isDeleted && (
+                                            <div className="flex items-center gap-1.5 pt-1">
+                                                {/* Like Button */}
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleStartReply(comment)}
-                                                    className="inline-flex items-center gap-1 px-2 py-1 rounded-xl bg-white dark:bg-white/5 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 border border-slate-200/80 dark:border-white/5 text-[11px] font-bold transition-all cursor-pointer active:scale-95"
-                                                    title="답글 달기"
+                                                    onClick={() => handleLike(thread.id)}
+                                                    disabled={isLiked}
+                                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-extrabold transition-all cursor-pointer active:scale-90 ${
+                                                        isLiked
+                                                            ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                                                            : "bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400"
+                                                    }`}
                                                 >
-                                                    <CornerDownRight className="w-3 h-3 text-blue-500"/>
+                                                    <Heart
+                                                        className={`w-3.5 h-3.5 ${
+                                                            isLiked ? "fill-rose-500 text-rose-500" : ""
+                                                        }`}
+                                                    />
+                                                    <span>{thread.likes || 0}</span>
+                                                </button>
+
+                                                {/* Reply Trigger */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleStartReply(thread, thread.id)}
+                                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+                                                        isReplyOpen
+                                                            ? "bg-blue-600 text-white"
+                                                            : "bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300"
+                                                    }`}
+                                                >
+                                                    <MessageCircle className="w-3.5 h-3.5"/>
                                                     <span>답글</span>
                                                     {threadReplies.length > 0 && (
-                                                        <span
-                                                            className="text-[10px] text-blue-600 dark:text-blue-400 font-black">
+                                                        <span className="font-mono text-[11px]">
                                                             {threadReplies.length}
                                                         </span>
                                                     )}
                                                 </button>
 
-                                                {!comment.isDeleted && (
-                                                    <>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleLike(comment.id)}
-                                                            disabled={isLiked}
-                                                            className={`flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-90 ${
-                                                                isLiked
-                                                                    ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
-                                                                    : "bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-white/5"
-                                                            }`}
-                                                            title="좋아요"
-                                                        >
-                                                            <ThumbsUp
-                                                                className={`w-3 h-3 ${isLiked ? "fill-current text-rose-500" : ""}`}/>
-                                                            <span
-                                                                className="text-[11px] font-black">{comment.likes || 0}</span>
-                                                        </button>
+                                                {/* Share Button */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleShare(thread)}
+                                                    className="p-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-all cursor-pointer active:scale-90"
+                                                    title="글 공유 / 복사"
+                                                >
+                                                    <Share2 className="w-3.5 h-3.5"/>
+                                                </button>
 
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => handleCopy(comment.id, comment.content)}
-                                                            className="p-1.5 rounded-xl bg-white dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 border border-slate-200/80 dark:border-white/5 transition-all cursor-pointer active:scale-90"
-                                                            title="내용 복사"
-                                                        >
-                                                            {copiedId === comment.id ? (
-                                                                <Check className="w-3 h-3 text-emerald-500"/>
-                                                            ) : (
-                                                                <Copy className="w-3 h-3"/>
-                                                            )}
-                                                        </button>
-
-                                                        {isMyComment(comment) && onDeleteComment && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => handleDelete(comment.id)}
-                                                                disabled={deletingId === comment.id}
-                                                                className="p-1.5 rounded-xl bg-white dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 border border-slate-200/80 dark:border-white/5 transition-all cursor-pointer active:scale-90 disabled:opacity-50"
-                                                                title="메시지 삭제"
-                                                            >
-                                                                <Trash2 className="w-3 h-3"/>
-                                                            </button>
-                                                        )}
-                                                    </>
+                                                {/* Delete Button (If Author) */}
+                                                {isMyComment(thread) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleDelete(thread.id)}
+                                                        disabled={deletingId === thread.id}
+                                                        className="p-1.5 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-all cursor-pointer active:scale-90 disabled:opacity-50"
+                                                        title="글 삭제"
+                                                    >
+                                                        <Trash2 className="w-3.5 h-3.5"/>
+                                                    </button>
                                                 )}
                                             </div>
-                                        </div>
-
-                                        {/* Message Body */}
-                                        {comment.isDeleted ? (
-                                            <p className="mt-2 text-xs sm:text-sm text-slate-400 dark:text-slate-500 italic font-medium whitespace-pre-wrap break-words leading-relaxed pl-9 flex items-center gap-1.5 select-none">
-                                                <Ban className="w-3.5 h-3.5 shrink-0 opacity-60"/>
-                                                <span>삭제된 메시지입니다.</span>
-                                            </p>
-                                        ) : (
-                                            <p className="mt-2 text-xs sm:text-sm text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap break-words leading-relaxed pl-9">
-                                                {comment.content}
-                                            </p>
                                         )}
                                     </div>
+                                </div>
 
-                                    {/* Nested Replies List (Thread) */}
-                                    {threadReplies.length > 0 && (
-                                        <div
-                                            className="ml-4 sm:ml-7 pl-3 border-l-2 border-blue-500/30 dark:border-blue-400/30 space-y-2">
-                                            {threadReplies.map((reply) => {
-                                                const isReplyLiked = likedCommentIds.has(reply.id);
-                                                const isReplyLatest = reply.id === latestCreatedId;
+                                {/* Thread Nested Replies (Children) */}
+                                {threadReplies.length > 0 && (
+                                    <div
+                                        className="ml-5 sm:ml-6 pl-3 sm:pl-4 border-l-2 border-slate-200 dark:border-white/10 space-y-2.5 pt-1">
+                                        {threadReplies.map((reply) => {
+                                            const isReplyLiked = likedCommentIds.has(reply.id);
 
-                                                return (
-                                                    <div
-                                                        key={reply.id}
-                                                        className={`p-3 rounded-2xl border transition-all duration-300 ${
-                                                            reply.isDeleted
-                                                                ? "bg-slate-50/40 dark:bg-white/[0.01] border-slate-200/50 dark:border-white/5 opacity-80"
-                                                                : isReplyLatest
-                                                                    ? "bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 animate-slideUp"
-                                                                    : "bg-white/70 dark:bg-white/[0.03] border-slate-200/60 dark:border-white/5 hover:border-slate-300 dark:hover:border-white/10"
-                                                        }`}
-                                                    >
-                                                        <div className="flex items-start justify-between gap-2">
-                                                            <div className="flex items-center gap-2">
-                                                                <div
-                                                                    className={`w-6 h-6 rounded-lg ${
-                                                                        reply.isDeleted
-                                                                            ? "bg-slate-200 dark:bg-slate-800 text-slate-400"
-                                                                            : `bg-gradient-to-tr ${getAvatarGradient(
-                                                                                reply.author,
-                                                                                reply.authorTag
-                                                                            )} text-white`
-                                                                    } flex items-center justify-center font-black text-[10px] shadow-xs shrink-0`}
-                                                                >
-                                                                    {reply.isDeleted ? (
-                                                                        <Ban className="w-3 h-3"/>
-                                                                    ) : (
-                                                                        reply.author.charAt(0)
-                                                                    )}
-                                                                </div>
-                                                                <div>
-                                                                    <div
-                                                                        className="flex items-center gap-1.5 flex-wrap">
-                                                                        <span
-                                                                            className={`font-extrabold text-xs ${
-                                                                                reply.isDeleted
-                                                                                    ? "text-slate-400 dark:text-slate-500"
-                                                                                    : "text-slate-900 dark:text-white"
-                                                                            }`}
-                                                                        >
-                                                                            {reply.author}
-                                                                        </span>
-                                                                        {reply.authorTag && (
-                                                                            <span
-                                                                                className="text-[9px] font-mono font-semibold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-white/5 px-1 py-0.2 rounded">
-                                                                                {reply.authorTag}
-                                                                            </span>
-                                                                        )}
-                                                                        {reply.isDeleted ? (
-                                                                            <span
-                                                                                className="px-1 py-0.2 rounded bg-slate-100 dark:bg-white/5 text-slate-400 dark:text-slate-500 text-[9px] font-bold">
-                                                                                삭제됨
-                                                                            </span>
-                                                                        ) : (
-                                                                            reply.replyToAuthor && (
-                                                                                <span
-                                                                                    className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-1.5 py-0.2 rounded">
-                                                                                    <span>@{reply.replyToAuthor}</span>
-                                                                                    {reply.replyToAuthorTag && (
-                                                                                        <span
-                                                                                            className="font-mono text-[9px] opacity-75">
-                                                                                            {reply.replyToAuthorTag}
-                                                                                        </span>
-                                                                                    )}
-                                                                                </span>
-                                                                            )
-                                                                        )}
-                                                                    </div>
-                                                                    <div
-                                                                        className="flex items-center gap-1 text-[9px] text-slate-400 font-medium mt-0.5">
-                                                                        <Clock className="w-2.5 h-2.5"/>
-                                                                        <span>{formatRelativeTime(reply.createdAt)}</span>
-                                                                    </div>
-                                                                </div>
+                                            return (
+                                                <div
+                                                    key={reply.id}
+                                                    className="p-3 rounded-2xl bg-white dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 space-y-1.5 transition-all"
+                                                >
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                            <div
+                                                                className={`w-5 h-5 rounded-lg bg-gradient-to-tr ${getAvatarGradient(
+                                                                    reply.author,
+                                                                    reply.authorTag
+                                                                )} text-white flex items-center justify-center font-black text-[10px] shadow-xs`}
+                                                            >
+                                                                {reply.author.charAt(0)}
                                                             </div>
-
-                                                            {/* Reply Actions */}
-                                                            {!reply.isDeleted && (
-                                                                <div className="flex items-center gap-1 shrink-0">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleStartReply(reply, comment.id)}
-                                                                        className="px-1.5 py-0.5 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 text-[10px] font-bold transition-all cursor-pointer active:scale-95"
-                                                                        title="답글 달기"
-                                                                    >
-                                                                        답글
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleLike(reply.id)}
-                                                                        disabled={isReplyLiked}
-                                                                        className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer active:scale-90 ${
-                                                                            isReplyLiked
-                                                                                ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30"
-                                                                                : "bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400"
-                                                                        }`}
-                                                                    >
-                                                                        <ThumbsUp
-                                                                            className={`w-2.5 h-2.5 ${isReplyLiked ? "fill-current text-rose-500" : ""}`}/>
-                                                                        <span>{reply.likes || 0}</span>
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleCopy(reply.id, reply.content)}
-                                                                        className="p-1 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-all cursor-pointer active:scale-90"
-                                                                        title="복사"
-                                                                    >
-                                                                        {copiedId === reply.id ? (
-                                                                            <Check
-                                                                                className="w-2.5 h-2.5 text-emerald-500"/>
-                                                                        ) : (
-                                                                            <Copy className="w-2.5 h-2.5"/>
-                                                                        )}
-                                                                    </button>
-                                                                    {isMyComment(reply) && onDeleteComment && (
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => handleDelete(reply.id)}
-                                                                            disabled={deletingId === reply.id}
-                                                                            className="p-1 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-all cursor-pointer active:scale-90 disabled:opacity-50"
-                                                                            title="삭제"
-                                                                        >
-                                                                            <Trash2 className="w-2.5 h-2.5"/>
-                                                                        </button>
-                                                                    )}
-                                                                </div>
+                                                            <span
+                                                                className="text-xs font-extrabold text-slate-900 dark:text-white">
+                                                                {reply.author}
+                                                            </span>
+                                                            {reply.authorTag && (
+                                                                <span
+                                                                    className="text-[9px] font-mono text-slate-400 dark:text-slate-500">
+                                                                    {reply.authorTag}
+                                                                </span>
+                                                            )}
+                                                            {reply.replyToAuthor && (
+                                                                <span
+                                                                    className="text-[10px] text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-950/40 px-1.5 py-0.2 rounded">
+                                                                    @{reply.replyToAuthor}
+                                                                </span>
                                                             )}
                                                         </div>
 
-                                                        {/* Reply Content */}
-                                                        {reply.isDeleted ? (
-                                                            <p className="mt-1.5 text-xs text-slate-400 dark:text-slate-500 italic font-medium whitespace-pre-wrap break-words leading-relaxed pl-8 flex items-center gap-1 select-none">
-                                                                <Ban className="w-3 h-3 shrink-0 opacity-60"/>
-                                                                <span>삭제된 메시지입니다.</span>
-                                                            </p>
-                                                        ) : (
-                                                            <p className="mt-1.5 text-xs text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap break-words leading-relaxed pl-8">
-                                                                {reply.content}
-                                                            </p>
-                                                        )}
+                                                        <span className="text-[9px] text-slate-400 font-medium">
+                                                            {formatRelativeTime(reply.createdAt)}
+                                                        </span>
                                                     </div>
-                                                );
-                                            })}
+
+                                                    {/* Reply Body */}
+                                                    {reply.isDeleted ? (
+                                                        <p className="text-xs text-slate-400 dark:text-slate-500 italic flex items-center gap-1">
+                                                            <Ban className="w-3 h-3 opacity-60"/>
+                                                            <span>삭제된 답글입니다.</span>
+                                                        </p>
+                                                    ) : (
+                                                        <p className="text-xs text-slate-800 dark:text-slate-200 font-medium whitespace-pre-wrap break-words leading-relaxed pl-6">
+                                                            {renderFormattedContent(reply.content)}
+                                                        </p>
+                                                    )}
+
+                                                    {/* Reply Action Row */}
+                                                    {!reply.isDeleted && (
+                                                        <div
+                                                            className="flex items-center justify-between gap-2 pt-1 pl-6">
+                                                            <div className="flex items-center gap-1">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleLike(reply.id)}
+                                                                    disabled={isReplyLiked}
+                                                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                                                                        isReplyLiked
+                                                                            ? "bg-rose-500/15 text-rose-600 dark:text-rose-400"
+                                                                            : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                                                                    }`}
+                                                                >
+                                                                    <Heart
+                                                                        className={`w-3 h-3 ${
+                                                                            isReplyLiked
+                                                                                ? "fill-rose-500 text-rose-500"
+                                                                                : ""
+                                                                        }`}
+                                                                    />
+                                                                    <span>{reply.likes || 0}</span>
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        handleStartReply(reply, thread.id)
+                                                                    }
+                                                                    className="px-2 py-0.5 rounded-lg text-[10px] font-bold text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-pointer"
+                                                                >
+                                                                    답글
+                                                                </button>
+                                                            </div>
+
+                                                            {isMyComment(reply) && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleDelete(reply.id)}
+                                                                    disabled={deletingId === reply.id}
+                                                                    className="p-1 text-slate-400 hover:text-rose-600 transition-all cursor-pointer"
+                                                                    title="답글 삭제"
+                                                                >
+                                                                    <Trash2 className="w-3 h-3"/>
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Inline Reply Composer Box */}
+                                {isReplyOpen && (
+                                    <div
+                                        className="ml-5 sm:ml-6 pl-3 sm:pl-4 border-l-2 border-blue-500 dark:border-blue-400 pt-2 animate-slideDown">
+                                        <div
+                                            className="p-3 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/40 space-y-2">
+                                            <div
+                                                className="flex items-center justify-between text-[11px] font-bold text-blue-600 dark:text-blue-400">
+                                                <div className="flex items-center gap-1">
+                                                    <CornerDownRight className="w-3 h-3"/>
+                                                    <span>
+                                                        @{inlineReplyTarget?.author || thread.author}님에게 답글 작성
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setActiveReplyParentId(null);
+                                                        setInlineReplyTarget(null);
+                                                    }}
+                                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                                                >
+                                                    <X className="w-3.5 h-3.5"/>
+                                                </button>
+                                            </div>
+
+                                            <textarea
+                                                ref={inlineReplyTextareaRef}
+                                                value={inlineReplyContent}
+                                                onChange={handleInlineReplyTextareaChange}
+                                                placeholder="답글 내용을 입력하세요..."
+                                                rows={2}
+                                                maxLength={300}
+                                                className="w-full bg-white dark:bg-black/20 rounded-xl p-2 text-xs text-slate-900 dark:text-white placeholder-slate-400 outline-none resize-none font-medium border border-blue-200/60 dark:border-blue-800/40"
+                                            />
+
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-mono text-slate-400">
+                                                    {inlineReplyContent.length}/300
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handlePostReply(thread.id)}
+                                                    disabled={!inlineReplyContent.trim() || isSubmittingReply || cooldown > 0}
+                                                    className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black transition-all cursor-pointer disabled:opacity-40"
+                                                >
+                                                    <Send className="w-3 h-3"/>
+                                                    <span>
+                                                        {isSubmittingReply
+                                                            ? "등록 중..."
+                                                            : cooldown > 0
+                                                            ? `${cooldown}초 후`
+                                                            : "답글 등록"}
+                                                    </span>
+                                                </button>
+                                            </div>
                                         </div>
-                                    )}
-                                </div>
-                            );
-                        })
-                    )}
-
-                    {/* Anchor element to automatically scroll down to latest message */}
-                    <div ref={messagesEndRef} className="h-1"/>
-                </div>
-
-                {/* Floating Scroll-to-Bottom Button (Appears when scrolled up) */}
-                {showScrollBottom && (
-                    <button
-                        type="button"
-                        onClick={() => scrollToBottom("smooth")}
-                        className="absolute bottom-3 right-4 sm:right-5 z-20 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-blue-600 dark:bg-blue-500 hover:bg-blue-700 dark:hover:bg-blue-600 text-white text-xs font-black shadow-lg shadow-blue-500/25 hover:shadow-xl backdrop-blur-md transition-all duration-200 hover:scale-105 active:scale-95 cursor-pointer animate-fadeIn border border-white/20"
-                        title="아래로 스크롤"
-                    >
-                        <ArrowDown className="w-3.5 h-3.5 animate-bounce"/>
-                        <span>아래로 스크롤</span>
-                    </button>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })
                 )}
-            </div>
-
-            {/* 3. Bottom Compose Bar with Settings Popover */}
-            <div className="shrink-0 relative w-full" ref={menuRef}>
-                {/* Expandable Settings & Tools Popover Panel (Appears above input) */}
-                {isMenuOpen && (
-                    <div
-                        className="absolute bottom-full mb-2 left-0 w-full sm:w-[420px] max-h-[60vh] overflow-y-auto custom-scrollbar backdrop-blur-2xl bg-white/95 dark:bg-[#151a27]/95 rounded-3xl p-4 sm:p-5 border border-slate-200/90 dark:border-white/15 shadow-2xl z-30 space-y-3.5 animate-slideUp">
-                        {/* Popover Header */}
-                        <div
-                            className="flex items-center justify-between border-b border-slate-200/70 dark:border-white/10 pb-2.5">
-                            <div className="flex items-center gap-2">
-                                <SlidersHorizontal className="w-4 h-4 text-blue-600 dark:text-blue-400"/>
-                                <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                    메시지 옵션 & 프리셋
-                                </span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setIsMenuOpen(false)}
-                                className="p-1 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
-                                title="닫기"
-                            >
-                                <X className="w-4 h-4"/>
-                            </button>
-                        </div>
-
-                        {/* 1. Nickname & User Tag */}
-                        <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                                <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                                    닉네임 & 고유 식별 태그
-                                </label>
-                                <span
-                                    className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 px-1.5 py-0.2 rounded-md">
-                                    {userTag}
-                                </span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <input
-                                    type="text"
-                                    value={newAuthor}
-                                    onChange={(e) => handleAuthorChange(e.target.value)}
-                                    placeholder="닉네임"
-                                    maxLength={15}
-                                    className="w-full px-3 py-1.5 text-xs rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:border-blue-500 font-bold"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={handleRandomNickname}
-                                    className="p-2 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200/70 dark:border-white/10 text-slate-600 dark:text-slate-300 transition-all cursor-pointer active:scale-95 shrink-0"
-                                    title="랜덤 닉네임 생성"
-                                >
-                                    <Dices className="w-3.5 h-3.5"/>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* 2. Route Tag Selection */}
-                        <div className="space-y-1">
-                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                                관련 버스 노선
-                            </label>
-                            <div className="grid grid-cols-4 gap-1">
-                                {["ALL", "30", "34", "34-1"].map((tag) => (
-                                    <button
-                                        key={tag}
-                                        type="button"
-                                        onClick={() => setSelectedRouteTag(tag)}
-                                        className={`py-1 rounded-xl font-black text-[11px] transition-all cursor-pointer ${
-                                            selectedRouteTag === tag
-                                                ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs"
-                                                : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10"
-                                        }`}
-                                    >
-                                        {tag === "ALL" ? "공통" : `${tag}번`}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 3. Category Selection */}
-                        <div className="space-y-1">
-                            <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                                글 카테고리
-                            </label>
-                            <div className="grid grid-cols-5 gap-1">
-                                {["잡담", "제보", "꿀팁", "질문", "분실물"].map((cat) => (
-                                    <button
-                                        key={cat}
-                                        type="button"
-                                        onClick={() => setSelectedCategory(cat)}
-                                        className={`py-1 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer ${
-                                            selectedCategory === cat
-                                                ? "bg-blue-600 text-white shadow-xs font-black"
-                                                : "bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10"
-                                        }`}
-                                    >
-                                        {cat}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 4. Preset Quick Chips */}
-                        <div className="space-y-1">
-                            <label
-                                className="text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                                <Sparkles className="w-3 h-3"/>
-                                <span>빠른 입력 칩 (클릭 시 자동 입력)</span>
-                            </label>
-                            <div className="flex flex-wrap gap-1">
-                                {PRESET_CHIPS.map((chip, idx) => (
-                                    <button
-                                        key={idx}
-                                        type="button"
-                                        onClick={() => handlePresetClick(chip)}
-                                        className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-slate-200/60 dark:border-white/5 text-slate-700 dark:text-slate-300 text-[10px] font-bold transition-all cursor-pointer active:scale-95"
-                                    >
-                                        {chip.label}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* 5. Policy Links */}
-                        <div
-                            className="pt-2 border-t border-slate-200/60 dark:border-white/10 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
-                            <span>wBus</span>
-                            <div className="flex items-center gap-3">
-                                <a
-                                    href="/terms"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:text-slate-700 dark:hover:text-slate-300 underline underline-offset-2 transition-colors font-semibold"
-                                >
-                                    이용약관
-                                </a>
-                                <a
-                                    href="/privacy"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:text-slate-700 dark:hover:text-slate-300 underline underline-offset-2 transition-colors font-semibold"
-                                >
-                                    개인정보처리방침
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Main Fixed Bottom Form Widget */}
-                <form
-                    onSubmit={handleSubmit}
-                    className="backdrop-blur-2xl bg-white/85 dark:bg-[#111622]/90 rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-lg space-y-2.5"
-                >
-                    {/* Replying Banner (Appears when user clicks Reply) */}
-                    {replyingTo && (
-                        <div
-                            className="flex items-center justify-between px-3 py-1.5 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/80 text-xs animate-fadeIn">
-                            <div
-                                className="flex items-center gap-1.5 text-blue-700 dark:text-blue-300 font-bold truncate">
-                                <CornerDownRight className="w-3.5 h-3.5 shrink-0 text-blue-500"/>
-                                <span
-                                    className="font-black text-blue-600 dark:text-blue-400">@{replyingTo.author} {replyingTo.authorTag}</span>
-                                <span className="text-slate-500 dark:text-slate-400 font-medium truncate text-[11px]">
-                                    님에게 답글 작성 중: "{replyingTo.content.slice(0, 30)}{replyingTo.content.length > 30 ? "..." : ""}"
-                                </span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setReplyingTo(null)}
-                                className="p-1 rounded-xl hover:bg-blue-200/60 dark:hover:bg-blue-900/60 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer shrink-0 ml-2"
-                                title="답글 취소"
-                            >
-                                <X className="w-3.5 h-3.5"/>
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Input Control Row */}
-                    <div className="flex items-center gap-2">
-                        {/* Options / Settings Menu Toggle Button */}
-                        <button
-                            type="button"
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer active:scale-95 shrink-0 border ${
-                                isMenuOpen
-                                    ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                                    : "bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 border-slate-200/70 dark:border-white/10"
-                            }`}
-                            title="작성 옵션 메뉴 (닉네임/노선/카테고리/프리셋)"
-                        >
-                            <SlidersHorizontal className="w-3.5 h-3.5"/>
-                            <span className="hidden sm:inline">메뉴</span>
-                            {/* Current Setting Indicators */}
-                            <span
-                                className="hidden md:inline-flex items-center gap-1 pl-1 border-l border-current/20 text-[10px] font-extrabold opacity-85">
-                                <span>{newAuthor}</span>
-                                <span>·</span>
-                                <span>{selectedCategory}</span>
-                                <span>·</span>
-                                <span>{selectedRouteTag === "ALL" ? "공통" : `${selectedRouteTag}번`}</span>
-                            </span>
-                        </button>
-
-                        {/* Main Input Text Field */}
-                        <div className="relative flex-1">
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                value={newContent}
-                                onChange={(e) => setNewContent(e.target.value)}
-                                placeholder={
-                                    replyingTo
-                                        ? `@${replyingTo.author} 님에게 답글을 입력하세요...`
-                                        : "메시지를 입력하세요..."
-                                }
-                                maxLength={1000}
-                                className="w-full pl-3.5 pr-14 py-2 text-xs sm:text-sm rounded-2xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-900 dark:text-white outline-none focus:border-blue-500 font-medium transition-all"
-                            />
-                            <span
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400 pointer-events-none font-mono">
-                                {newContent.length}/1000
-                            </span>
-                        </div>
-
-                        {/* Submit Button */}
-                        <button
-                            type="submit"
-                            disabled={!newContent.trim() || isSubmitting}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 dark:disabled:bg-slate-800 text-white text-xs sm:text-sm font-black transition-all cursor-pointer shrink-0 active:scale-95 disabled:cursor-not-allowed shadow-sm"
-                        >
-                            <Send className="w-3.5 h-3.5"/>
-                            <span>{isSubmitting ? "전송 중..." : replyingTo ? "답글" : "전송"}</span>
-                        </button>
-                    </div>
-
-                    {commentSuccess && (
-                        <div
-                            className="flex items-center justify-center gap-1 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-fadeIn pt-0.5">
-                            <CheckCircle2 className="w-3.5 h-3.5"/>
-                            <span>메시지가 등록되었습니다!</span>
-                        </div>
-                    )}
-                </form>
             </div>
         </div>
     );

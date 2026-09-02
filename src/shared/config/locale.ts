@@ -239,7 +239,7 @@ export const UI_TEXT = {
     BOTTOM_NAV: {
         TAB_SCHEDULE: "시간표",
         TAB_MAP: "실시간 지도",
-        TAB_CHAT: "실시간 톡",
+        TAB_CHAT: "스퀘어",
         TAB_YONSEI: "연세대",
         TAB_ALL: "전체",
         ROUTE_OPTION: (route: string) => `${route}번 노선`,
@@ -377,13 +377,13 @@ export const UI_TEXT = {
     FOOTER: {
         COPYRIGHT: "© 2026 wBus",
         DESCRIPTION: "시내버스 정보 서비스",
-        LINKS: [{label: "이용약관", href: "/terms"}, {label: "개인정보처리방침", href: "/privacy"}],
+        LINKS: [{label: "이용약관", href: "/terms"}, {label: "개인정보처리방침", href: "/privacy"},],
         DISCLAIMER: "본 서비스는 참고용이며, 실제 운행 정보와 다를 수 있습니다.",
     },
 } as const;
 
 export const YONSEI_STATIC_TIMETABLES: Record<string, {
-    weekday: YonseiDaySchedule; vacation: YonseiDaySchedule
+    weekday: YonseiDaySchedule; vacation: YonseiDaySchedule;
 }> = {
     "30": {
         weekday: {

@@ -87,7 +87,7 @@ export default function TermsPage() {
                         <span className="text-blue-600 dark:text-blue-400">제1조</span> (목적)
                     </h2>
                     <p className="text-slate-600 dark:text-slate-300 text-sm">
-                        본 약관은 wBus(이하 &quot;서비스&quot;)가 제공하는 원주시 버스 실시간 위치, 노선 시간표, 실시간 톡(소통 공간) 등 제반 서비스의 이용 조건 및
+                        본 약관은 wBus(이하 &quot;서비스&quot;)가 제공하는 원주시 버스 실시간 위치, 노선 시간표, 스퀘어(커뮤니티 광장) 등 제반 서비스의 이용 조건 및
                         절차, 이용자와 서비스 간의 권리, 의무 및 책임 사항을 규정함을 목적으로 합니다.
                     </p>
                 </section>
@@ -103,7 +103,7 @@ export default function TermsPage() {
                             의미합니다.
                         </li>
                         <li><strong>&quot;이용자&quot;</strong>란 서비스에 접속하여 본 약관에 따라 서비스를 이용하는 모든 사용자를 의미합니다.</li>
-                        <li><strong>&quot;실시간 톡&quot;</strong>이란 이용자가 버스 운행 상황 공유, 질문, 정보 교환 등을 위해 작성하는 실시간 댓글 및 메시지
+                        <li><strong>&quot;스퀘어&quot;</strong>이란 이용자가 버스 운행 상황 공유, 질문, 정보 교환 등을 위해 작성하는 실시간 스레드 및 메시지
                             게시 공간을 말합니다.
                         </li>
                     </ul>
@@ -140,10 +140,10 @@ export default function TermsPage() {
                 <section
                     className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <span className="text-blue-600 dark:text-blue-400">제5조</span> (실시간 톡 및 게시물 관리 기준)
+                        <span className="text-blue-600 dark:text-blue-400">제5조</span> (스퀘어 및 게시물 관리 기준)
                     </h2>
                     <div className="space-y-2 text-slate-600 dark:text-slate-300 text-sm">
-                        <p>1. 실시간 톡은 시민과 이용자 간의 건전한 정보 공유를 위한 익명 소통 공간입니다.</p>
+                        <p>1. 스퀘어는 시민과 이용자 간의 건전한 정보 공유를 위한 익명 소통 공간입니다.</p>
                         <p>2. 이용자는 다음 각 호에 해당하는 행위나 게시물을 등록해서는 안 됩니다:</p>
                         <ul className="list-disc list-inside pl-2 space-y-1 text-slate-500 dark:text-slate-400">
                             <li>타인의 명예를 훼손하거나 모욕, 비방, 허위사실을 유포하는 행위</li>

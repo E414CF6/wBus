@@ -54,19 +54,15 @@ interface BottomNavProps {
     connectionStatus?: SSEConnectionStatus;
     hasFetched?: boolean;
 
-    // Dynamic Chat options (Active when activeTab === "chat")
-    chatFilterRoute?: string;
-    onChatFilterRouteChange?: (route: string) => void;
+    // Dynamic Square / Comments options
     commentCount?: number;
 
     className?: string;
 }
 
-const CHAT_ROUTES = ["ALL", "30", "34", "34-1"];
-
 /**
  * Unified Floating Pill Navigation Bar.
- * Combines Logo, Timetable/Map/Chat Tabs, Day Mode Switcher, Route Selector, Running Bus List Toggle, and Theme Switcher.
+ * Combines Logo, Timetable/Map/Square Tabs, Day Mode Switcher, Route Selector, Running Bus List Toggle, and Theme Switcher.
  */
 export default function BottomNav({
                                       activeTab,
@@ -84,8 +80,6 @@ export default function BottomNav({
                                       onBusClick,
                                       connectionStatus = "connected",
                                       hasFetched = true,
-                                      chatFilterRoute = "ALL",
-                                      onChatFilterRouteChange,
                                       commentCount = 0,
                                       className = "",
                                   }: BottomNavProps) {
@@ -171,15 +165,12 @@ export default function BottomNav({
                 {/* Expandable Floating Running Bus List Sheet (Map Tab) */}
                 {activeTab === "map" && isBusListOpen && (
                     <div
-                        className="w-full max-w-sm backdrop-blur-2xl bg-white/90 dark:bg-[#121212]/90 border border-black/10 dark:border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.7)] rounded-[28px] overflow-hidden transition-all duration-300 animate-fadeIn"
-                    >
+                        className="w-full max-w-sm backdrop-blur-2xl bg-white/90 dark:bg-[#121212]/90 border border-black/10 dark:border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.7)] rounded-[28px] overflow-hidden transition-all duration-300 animate-fadeIn">
                         <div
-                            className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]"
-                        >
+                            className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
                             <div className="flex items-center space-x-2">
                                 <div
-                                    className="flex items-center justify-center w-7 h-7 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                                >
+                                    className="flex items-center justify-center w-7 h-7 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
                                     <Bus className="w-4 h-4"/>
                                 </div>
                                 <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
@@ -203,13 +194,18 @@ export default function BottomNav({
                             {isConnecting ? (
                                 <li className="flex flex-col items-center justify-center py-8 text-amber-600 dark:text-amber-400 gap-2">
                                     <Loader2 className="w-5 h-5 animate-spin"/>
-                                    <span className="text-xs font-semibold">실시간 위치 정보를 확인하고 있습니다...</span>
+                                    <span className="text-xs font-semibold">
+                                        실시간 위치 정보를 확인하고 있습니다...
+                                    </span>
                                 </li>
                             ) : runningBuses.length === 0 ? (
                                 <li className="text-center py-7 text-slate-500 dark:text-slate-400 text-xs font-medium space-y-1">
-                                    <p className="font-bold text-slate-700 dark:text-slate-300">현재 운행 중인 버스가 없습니다.</p>
-                                    <p className="text-[11px] text-slate-400 dark:text-slate-500">운행 종료 시간대이거나 차고지 배차 대기
-                                        중입니다.</p>
+                                    <p className="font-bold text-slate-700 dark:text-slate-300">
+                                        현재 운행 중인 버스가 없습니다.
+                                    </p>
+                                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                                        운행 종료 시간대이거나 차고지 배차 대기 중입니다.
+                                    </p>
                                 </li>
                             ) : (
                                 runningBuses.map((bus) => (
@@ -234,13 +230,11 @@ export default function BottomNav({
                     {/* Brand Logo & Title */}
                     <div className="flex items-center gap-2 pl-1 pr-1 select-none shrink-0">
                         <div
-                            className="flex items-center justify-center w-7.5 h-7.5 rounded-full bg-black dark:bg-white text-white dark:text-black shrink-0"
-                        >
+                            className="flex items-center justify-center w-7.5 h-7.5 rounded-full bg-black dark:bg-white text-white dark:text-black shrink-0">
                             <MapIcon className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden="true"/>
                         </div>
                         <span
-                            className="hidden xs:inline-block text-sm sm:text-base font-black text-black dark:text-white tracking-tight shrink-0"
-                        >
+                            className="hidden xs:inline-block text-sm sm:text-base font-black text-black dark:text-white tracking-tight shrink-0">
                             {APP_CONFIG.NAME}
                         </span>
                     </div>
@@ -268,12 +262,13 @@ export default function BottomNav({
                                 >
                                     <div className="relative">
                                         <Icon
-                                            className={`w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4] ${isActive ? "animate-pulse" : ""}`}
+                                            className={`w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.4] ${
+                                                isActive ? "animate-pulse" : ""
+                                            }`}
                                         />
                                         {tab.id === "chat" && commentCount > 0 && !isActive && (
                                             <span
-                                                className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500 animate-pulse"
-                                            />
+                                                className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500 animate-pulse"/>
                                         )}
                                     </div>
                                     <span className="whitespace-nowrap">{tab.label}</span>
@@ -429,33 +424,6 @@ export default function BottomNav({
                                             : "운행 종료 (0)"}
                                 </span>
                             </button>
-                        </>
-                    )}
-
-                    {/* Dynamic Options for Chat Tab (Route Filter Quick Switch) */}
-                    {activeTab === "chat" && onChatFilterRouteChange && (
-                        <>
-                            {/* Divider */}
-                            <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0 animate-fadeIn"/>
-
-                            <div className="flex items-center gap-1 shrink-0 animate-fadeIn">
-                                {CHAT_ROUTES.map((route) => (
-                                    <button
-                                        key={route}
-                                        type="button"
-                                        onClick={() => onChatFilterRouteChange(route)}
-                                        className={`px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                                            chatFilterRoute === route
-                                                ? "bg-blue-600 text-white shadow-xs scale-[1.02]"
-                                                : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/10"
-                                        }`}
-                                    >
-                                        <span className="whitespace-nowrap">
-                                            {route === "ALL" ? UI_TEXT.BOTTOM_NAV.CHAT_ALL_FILTER : `${route}번`}
-                                        </span>
-                                    </button>
-                                ))}
-                            </div>
                         </>
                     )}
 
