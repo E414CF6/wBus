@@ -49,16 +49,16 @@ const SCALAR_LOOP_RESTART_THRESHOLD_METERS = 400;
 const TELEPORT_DISTANCE_METERS = 800;
 const TELEPORT_COORD_THRESHOLD = 0.0075; // ~830m
 
-// Maximum distance the animated marker is ever allowed to dead-reckon ahead of the last confirmed API position (~1.35km)
-// 1차 예측 지점 이후의 예측 거리를 넉넉하게 확장하여 다음 API 수신이 늦어져도 끊김 없이 길게 지속
-const MAX_DEAD_RECKONING_LEAD_COORD = 0.0120;
+// Maximum distance the animated marker is ever allowed to dead-reckon ahead of the last confirmed API position (~1.75km)
+// 1차 예측 지점 이후의 예측 거리를 넉넉하게 확장하여 다음 API 수신이 늦어져도 끊김 없이 길게 지속 주행
+const MAX_DEAD_RECKONING_LEAD_COORD = 0.0160;
 
-// Maximum latency compensation projection allowed upon receiving fresh API data (~300m)
+// Maximum latency compensation projection allowed upon receiving fresh API data (~400m)
 // 1차 예측 지점: API 지연 보정 목표 거리
-const MAX_LATENCY_PROJECTION_COORD = 0.0028;
+const MAX_LATENCY_PROJECTION_COORD = 0.0036;
 
-// 1차 예측 지점 통과 후 2차 외삽 예측 속도 비율 (기본 속도의 40%로 감속하여 장거리 지속 주행)
-const POST_TARGET_VELOCITY_RATIO = 0.40;
+// 1차 예측 지점 통과 후 2차 외삽 예측 속도 비율 (기본 주행 속도의 85%를 유지하여 적극적으로 전진 주행)
+const POST_TARGET_VELOCITY_RATIO = 0.85;
 
 // React state update throttle — 20 Hz (50ms) for UI popup consumers
 const STATE_UPDATE_THROTTLE_MS = 50;
@@ -67,13 +67,13 @@ const STATE_UPDATE_THROTTLE_MS = 50;
 const MAX_DT_MS = 200;
 
 // City bus base cruising speed (coord-units / ms)
-// 1 degree ≈ 111 km → 30 km/h = 8.33 m/s ≈ 7.5e-8 deg/ms
-const CITY_BUS_BASE_VELOCITY = 0.000000075;
+// 1 degree ≈ 111 km → 34 km/h = 9.44 m/s ≈ 8.5e-8 deg/ms
+const CITY_BUS_BASE_VELOCITY = 0.000000085;
 
 // Velocity limits (coord-units / ms)
-// Min crawling speed (~10 km/h), Max cruising (~80 km/h), Rapid Catchup sprint (~300 km/h scalar)
+// Min crawling speed (~10 km/h), Max cruising (~95 km/h), Rapid Catchup sprint (~350 km/h scalar)
 const MIN_MOVING_VELOCITY = 0.000000025;
-const MAX_VELOCITY = 0.00000022;
+const MAX_VELOCITY = 0.00000024;
 const MAX_CATCHUP_VELOCITY = 0.00000085;
 const STOP_THRESHOLD = 0.000000005;
 
@@ -97,8 +97,8 @@ const DEAD_RECKONING_CRUISE_MS = 60000;
 const DEAD_RECKONING_FADEOUT_MS = 40000;
 
 // Rapid Catch-Up time constant:
-// Fast exponential convergence (~600ms) with non-linear boost to rapidly catch up when slow API data arrives
-const CATCHUP_TAU_MS = 600;
+// Fast exponential convergence (~500ms) with non-linear boost to rapidly catch up when slow API data arrives
+const CATCHUP_TAU_MS = 500;
 
 // Acceleration/deceleration transition easing (ms) - rapid throttle-up
 const VELOCITY_TAU_MS = 100;
@@ -108,16 +108,16 @@ const ANGULAR_LOOKAHEAD_THRESHOLD = 0.65;
 const ANGULAR_SMOOTHING_FACTOR = 0.22;
 
 // --- Stop-aware speed modulation ---
-// Deceleration zone before a stop (~150m ≈ 0.00135 degrees)
-const STOP_DECEL_ZONE = 0.00135;
-// Acceleration zone after a stop (~100m ≈ 0.0009 degrees)
-const STOP_ACCEL_ZONE = 0.0009;
-// Proximity threshold to trigger station dwell (~25m ≈ 0.00022 degrees)
-const STOP_DWELL_PROXIMITY = 0.00022;
-// Minimum speed multiplier during approach
-const STOP_MIN_SPEED_MULT = 0.15;
-// Realistic passenger boarding dwell time at a stop during extrapolation (ms)
-const STOP_DWELL_MS = 3500;
+// Deceleration zone before a stop (~100m ≈ 0.0009 degrees)
+const STOP_DECEL_ZONE = 0.0009;
+// Acceleration zone after a stop (~65m ≈ 0.0006 degrees)
+const STOP_ACCEL_ZONE = 0.0006;
+// Proximity threshold to trigger station dwell (~20m ≈ 0.00018 degrees)
+const STOP_DWELL_PROXIMITY = 0.00018;
+// Minimum speed multiplier during approach (자연스러운 주행 유지를 위해 40%로 완화)
+const STOP_MIN_SPEED_MULT = 0.40;
+// Realistic passenger boarding dwell time at a stop during extrapolation (ms) (과도한 정차 지연 방지)
+const STOP_DWELL_MS = 2000;
 
 // ----------------------------------------------------------------------
 // Pure Helper Functions
@@ -705,7 +705,7 @@ export function useAnimatedPosition(
                 deadReckoningFactor = Math.max(0, 1 - over / DEAD_RECKONING_FADEOUT_MS);
             }
 
-            // SAFETY CEILING: Extrapolation is strictly capped at MAX_DEAD_RECKONING_LEAD_COORD (~1.35km) past raw API position
+            // SAFETY CEILING: Extrapolation is strictly capped at MAX_DEAD_RECKONING_LEAD_COORD (~1.75km) past raw API position
             const maxExtrapolatedDist = prevRawDistRef.current + MAX_DEAD_RECKONING_LEAD_COORD;
             const hardCeilingDist = Math.min(totalDist, maxExtrapolatedDist);
 
@@ -739,8 +739,8 @@ export function useAnimatedPosition(
                 }
 
                 if (isDwelling) {
-                    // Dwell at station: gentle crawl
-                    const dwellAdvance = activeV * 0.05 * clampedDt;
+                    // Dwell at station: gentle crawl instead of full freeze
+                    const dwellAdvance = activeV * 0.20 * clampedDt;
                     dist = Math.min(dist + dwellAdvance, hardCeilingDist);
                     markerDistRef.current = dist;
                 } else {
@@ -763,14 +763,13 @@ export function useAnimatedPosition(
                         effectiveVelocity = 0;
                     } else {
                         // --------------------------------------------------------
-                        // 1차 예측 지점 이후 (2차 연장 예측 구간):
-                        // 속도는 줄이고(POST_TARGET_VELOCITY_RATIO), 거리는 길게 계속 전진
+                        // 1차 예측 지점 이후 (2차 연장 외삽 구간):
+                        // 공격적인 지속 주행: 기본 속도의 85%를 유지하며 원거리 시에도 완만하게(최소 64%) 유지
                         // --------------------------------------------------------
                         const leadBeyondTarget = Math.max(0, dist - target);
                         const maxExtraLead = MAX_DEAD_RECKONING_LEAD_COORD;
                         const extraProgress = Math.min(1, leadBeyondTarget / Math.max(0.001, maxExtraLead));
-                        // 1차 지점 통과 후 40% 속도에서 점진적으로 20%까지 완만하게 테이퍼링
-                        const taperFactor = POST_TARGET_VELOCITY_RATIO * (1 - extraProgress * 0.50);
+                        const taperFactor = POST_TARGET_VELOCITY_RATIO * (1 - extraProgress * 0.25);
                         effectiveVelocity = activeV * deadReckoningFactor * stopMult * taperFactor;
                     }
 
