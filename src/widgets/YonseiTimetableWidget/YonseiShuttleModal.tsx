@@ -137,8 +137,8 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                     <div className="flex items-center gap-2.5 min-w-0">
                         <div
                             className="px-3 sm:px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 text-white font-black text-sm sm:text-base tracking-tight shadow-md shadow-teal-700/20 shrink-0 flex items-center gap-1.5">
-                            <Bus className="w-4 h-4"/>
-                            <span>셔틀버스</span>
+                            <Bus className="w-4 h-4 shrink-0"/>
+                            <span className="whitespace-nowrap">셔틀버스</span>
                         </div>
                         <div className="min-w-0">
                             <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
@@ -163,61 +163,62 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                     className="px-3 sm:px-6 pt-3 pb-2 border-b border-slate-200/80 dark:border-white/10 bg-white/50 dark:bg-[#111622]/50 flex flex-wrap items-center justify-between gap-2 shrink-0">
                     {/* Tabs */}
                     <div
-                        className="flex items-center gap-1 sm:gap-1.5 bg-slate-100 dark:bg-white/[0.06] p-1 rounded-2xl">
+                        className="flex items-center gap-1 sm:gap-1.5 bg-slate-100 dark:bg-white/[0.06] p-1 rounded-2xl max-w-full overflow-x-auto custom-scrollbar-hidden shrink-0">
                         <button
                             onClick={() => setActiveTab("inbound")}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                                 activeTab === "inbound"
                                     ? "bg-teal-600 text-white shadow-sm"
                                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                             }`}
                         >
-                            <ArrowRight className="w-3.5 h-3.5 rotate-45"/>
-                            <span>등교</span>
+                            <ArrowRight className="w-3.5 h-3.5 rotate-45 shrink-0"/>
+                            <span className="whitespace-nowrap">등교</span>
                             <span className="text-[10px] opacity-80 font-mono">17</span>
                         </button>
                         <button
                             onClick={() => setActiveTab("outbound")}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                                 activeTab === "outbound"
                                     ? "bg-emerald-600 text-white shadow-sm"
                                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                             }`}
                         >
-                            <ArrowRight className="w-3.5 h-3.5 -rotate-45"/>
-                            <span>하교</span>
+                            <ArrowRight className="w-3.5 h-3.5 -rotate-45 shrink-0"/>
+                            <span className="whitespace-nowrap">하교</span>
                             <span className="text-[10px] opacity-80 font-mono">12</span>
                         </button>
                         <button
                             onClick={() => setActiveTab("stops")}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                                 activeTab === "stops"
                                     ? "bg-blue-600 text-white shadow-sm"
                                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                             }`}
                         >
-                            <MapPin className="w-3.5 h-3.5"/>
-                            <span>탑승 장소</span>
+                            <MapPin className="w-3.5 h-3.5 shrink-0"/>
+                            <span className="whitespace-nowrap">탑승 장소</span>
                         </button>
                         <button
                             onClick={() => setActiveTab("guidelines")}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
                                 activeTab === "guidelines"
                                     ? "bg-amber-600 text-white shadow-sm"
                                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                             }`}
                         >
-                            <Info className="w-3.5 h-3.5"/>
-                            <span>이용 안내</span>
+                            <Info className="w-3.5 h-3.5 shrink-0"/>
+                            <span className="whitespace-nowrap">이용 안내</span>
                         </button>
                     </div>
 
                     {/* Day Filter Pills (Only for Inbound & Outbound) */}
                     {(activeTab === "inbound" || activeTab === "outbound") && (
-                        <div className="flex items-center gap-1 text-[11px] font-bold">
+                        <div
+                            className="flex items-center gap-1 text-[11px] font-bold shrink-0 overflow-x-auto custom-scrollbar-hidden max-w-full">
                             <button
                                 onClick={() => setDayFilter("ALL")}
-                                className={`px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                                className={`px-2.5 py-1 rounded-lg border transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                                     dayFilter === "ALL"
                                         ? "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-teal-300 dark:border-teal-500/40 font-black"
                                         : "bg-slate-50 dark:bg-white/[0.03] text-slate-500 border-slate-200 dark:border-white/5"
@@ -227,7 +228,7 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                             </button>
                             <button
                                 onClick={() => setDayFilter("WEEKDAY")}
-                                className={`px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                                className={`px-2.5 py-1 rounded-lg border transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                                     dayFilter === "WEEKDAY"
                                         ? "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-teal-300 dark:border-teal-500/40 font-black"
                                         : "bg-slate-50 dark:bg-white/[0.03] text-slate-500 border-slate-200 dark:border-white/5"
@@ -237,7 +238,7 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                             </button>
                             <button
                                 onClick={() => setDayFilter("SUNDAY")}
-                                className={`px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${
+                                className={`px-2.5 py-1 rounded-lg border transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                                     dayFilter === "SUNDAY"
                                         ? "bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border-teal-300 dark:border-teal-500/40 font-black"
                                         : "bg-slate-50 dark:bg-white/[0.03] text-slate-500 border-slate-200 dark:border-white/5"
