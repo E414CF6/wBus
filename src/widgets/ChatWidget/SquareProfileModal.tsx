@@ -25,9 +25,12 @@ export function getAvatarGradient(name: string, tag = ""): string {
     return gradients[idx];
 }
 
+export type ModalTab = "OVERVIEW" | "HOT" | "TREND" | "GUIDE";
+
 interface SquareProfileModalProps {
     isOpen: boolean;
     onClose: () => void;
+    initialTab?: ModalTab;
     authorName: string;
     userTag: string;
     onRerollNickname: () => void;
@@ -45,11 +48,37 @@ interface SquareProfileModalProps {
     onSelectThread: (threadId: string) => void;
 }
 
-type ModalTab = "OVERVIEW" | "HOT" | "TREND" | "GUIDE";
+const TAB_HEADER_MAP: Record<ModalTab, { title: string; subtitle: string; icon: React.ElementType; color: string }> = {
+    OVERVIEW: {
+        title: "내 프로필",
+        subtitle: "익명 활동 통계 & 레이더",
+        icon: User,
+        color: "from-blue-600 via-indigo-600 to-violet-600",
+    },
+    HOT: {
+        title: "실시간 HOT 토론",
+        subtitle: "반응과 공감이 뜨거운 화제의 스레드",
+        icon: Flame,
+        color: "from-rose-500 via-red-500 to-amber-500",
+    },
+    TREND: {
+        title: "실시간 트렌드 태그",
+        subtitle: "지금 가장 많이 언급되는 키워드",
+        icon: TrendingUp,
+        color: "from-blue-600 via-cyan-600 to-teal-500",
+    },
+    GUIDE: {
+        title: "스퀘어 클린 가이드",
+        subtitle: "서로 존중하는 클린 광장 수칙",
+        icon: Sparkles,
+        color: "from-indigo-600 via-purple-600 to-pink-500",
+    },
+};
 
 export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                                                                           isOpen,
                                                                           onClose,
+                                                                          initialTab = "OVERVIEW",
                                                                           authorName,
                                                                           userTag,
                                                                           onRerollNickname,
@@ -63,11 +92,18 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                                                                           onSelectThread,
                                                                       }) => {
     const [mounted, setMounted] = useState(false);
-    const [activeTab, setActiveTab] = useState<ModalTab>("OVERVIEW");
+    const [activeTab, setActiveTab] = useState<ModalTab>(initialTab);
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Reset or update active tab when modal is opened with an initialTab
+    useEffect(() => {
+        if (isOpen && initialTab) {
+            setActiveTab(initialTab);
+        }
+    }, [isOpen, initialTab]);
 
     // Prevent background scrolling when modal is open
     useEffect(() => {
@@ -80,6 +116,9 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
     }, [isOpen]);
 
     if (!isOpen || !mounted) return null;
+
+    const currentHeader = TAB_HEADER_MAP[activeTab] || TAB_HEADER_MAP.OVERVIEW;
+    const HeaderIcon = currentHeader.icon;
 
     const modalContent = (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-3.5 sm:p-4 animate-fadeIn">
@@ -95,24 +134,24 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                 className="relative w-full max-w-lg h-[82dvh] max-h-[82dvh] bg-white/95 dark:bg-[#12131a]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 shadow-[0_24px_70px_rgba(0,0,0,0.35)] dark:shadow-[0_24px_70px_rgba(0,0,0,0.85)] rounded-[28px] sm:rounded-[32px] overflow-hidden flex flex-col z-10 animate-scaleUp"
                 role="dialog"
                 aria-modal="true"
-                aria-label="스퀘어 프로필 및 레이더"
+                aria-label={currentHeader.title}
             >
-                {/* Header Bar */}
+                {/* Dynamic Header Bar */}
                 <div
-                    className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-3 border-b border-black/5 dark:border-white/5 shrink-0">
+                    className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-3 border-b border-black/5 dark:border-white/5 shrink-0 transition-colors">
                     <div className="flex items-center gap-3">
                         <div
-                            className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 text-white shadow-md shadow-blue-500/25">
-                            <User className="w-5 h-5"/>
+                            className={`flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr ${currentHeader.color} text-white shadow-md shadow-black/10`}>
+                            <HeaderIcon className="w-5 h-5"/>
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
                                 <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
-                                    내 프로필
+                                    {currentHeader.title}
                                 </h2>
                             </div>
                             <p className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                                익명 활동 통계 & 레이더
+                                {currentHeader.subtitle}
                             </p>
                         </div>
                     </div>

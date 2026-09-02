@@ -3,8 +3,6 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {
     Ban,
-    ChevronDown,
-    ChevronUp,
     Clock,
     CornerDownRight,
     Dices,
@@ -27,7 +25,7 @@ import {
 import {CommentItem} from "@/types/comment";
 import {formatRelativeTime} from "@lib/timeUtils";
 import {generateUserTag, getRandomNickname} from "@/data/nicknames";
-import {getAvatarGradient, SquareProfileModal} from "./SquareProfileModal";
+import {getAvatarGradient, ModalTab, SquareProfileModal} from "./SquareProfileModal";
 
 interface ReplyTarget {
     id: string; // Root parent thread ID
@@ -144,7 +142,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     // Modal State
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-    const [isMobileHotOpen, setIsMobileHotOpen] = useState(false);
+    const [profileModalInitialTab, setProfileModalInitialTab] = useState<ModalTab>("OVERVIEW");
 
     // Feed Tab & Filter State (Generic Community Stream)
     const [activeTab, setActiveTab] = useState<"LATEST" | "HOT" | "MINE">("LATEST");
@@ -593,6 +591,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <SquareProfileModal
                 isOpen={isProfileModalOpen}
                 onClose={() => setIsProfileModalOpen(false)}
+                initialTab={profileModalInitialTab}
                 authorName={authorName}
                 userTag={userTag}
                 onRerollNickname={handleRerollNickname}
@@ -674,6 +673,17 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                     >
                                         <Flame className="w-3 h-3"/>
                                         <span>인기</span>
+                                        {topRankedThreads.length > 0 && (
+                                            <span
+                                                className={`text-[10px] font-mono font-bold px-1 py-0.2 rounded-full ${
+                                                    activeTab === "HOT"
+                                                        ? "bg-white/20 text-white"
+                                                        : "bg-rose-500/10 text-rose-500 dark:text-rose-400"
+                                                }`}
+                                            >
+                                                {topRankedThreads.length}
+                                            </span>
+                                        )}
                                     </button>
                                     <button
                                         type="button"
@@ -723,7 +733,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                 {/* Profile & Radar Trigger Button */}
                                 <button
                                     type="button"
-                                    onClick={() => setIsProfileModalOpen(true)}
+                                    onClick={() => {
+                                        setProfileModalInitialTab("OVERVIEW");
+                                        setIsProfileModalOpen(true);
+                                    }}
                                     className="flex items-center gap-1.5 p-1 sm:px-2 sm:py-1 rounded-2xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 transition-all cursor-pointer border border-slate-200/50 dark:border-white/5 active:scale-95"
                                     title="내 프로필 및 레이더 열기"
                                 >
@@ -764,8 +777,8 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             </div>
                         )}
 
-                        {/* Mobile Only: Horizontal Trending Hashtags Strip & HOT Ticker */}
-                        <div className="lg:hidden space-y-2 pt-2 border-t border-slate-100 dark:border-white/5">
+                        {/* Mobile Only: Horizontal Trending Hashtags Strip */}
+                        <div className="lg:hidden pt-2 border-t border-slate-100 dark:border-white/5">
                             {/* Hashtags Strip */}
                             <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-0.5">
                                 <span
@@ -793,81 +806,6 @@ export const ChatView: React.FC<ChatViewProps> = ({
                                     <span className="text-[10px] text-slate-400">#해시태그로 글을 작성해보세요</span>
                                 )}
                             </div>
-
-                            {/* Mobile Quick Action Bar (HOT Discussions Toggle & Profile Quick Info) */}
-                            <div
-                                className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-white/5">
-                                {topRankedThreads.length > 0 ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setIsMobileHotOpen(!isMobileHotOpen)}
-                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 text-[11px] font-black border border-rose-500/20 transition-all cursor-pointer active:scale-95"
-                                    >
-                                        <Flame className="w-3 h-3 fill-rose-500"/>
-                                        <span>실시간 HOT 토론 ({topRankedThreads.length})</span>
-                                        {isMobileHotOpen ? (
-                                            <ChevronUp className="w-3 h-3"/>
-                                        ) : (
-                                            <ChevronDown className="w-3 h-3"/>
-                                        )}
-                                    </button>
-                                ) : (
-                                    <div className="text-[10px] text-slate-400 font-medium">
-                                        글이 많아지면 HOT 토론이 표시됩니다.
-                                    </div>
-                                )}
-
-                            </div>
-
-                            {/* Mobile Collapsible HOT Discussions Cards */}
-                            {isMobileHotOpen && topRankedThreads.length > 0 && (
-                                <div className="space-y-2 pt-1 animate-slideDown">
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                        {topRankedThreads.map(({thread, replyCount}, idx) => (
-                                            <div
-                                                key={thread.id}
-                                                onClick={() => {
-                                                    handleScrollToThread(thread.id);
-                                                    setIsMobileHotOpen(false);
-                                                }}
-                                                className="p-2.5 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/60 dark:border-rose-900/40 hover:bg-rose-100/50 dark:hover:bg-rose-900/30 cursor-pointer transition-all space-y-1.5 active:scale-98 shadow-xs"
-                                            >
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <span
-                                                        className={`px-1.5 py-0.2 rounded-md text-[9px] font-black ${
-                                                            idx === 0
-                                                                ? "bg-amber-400 text-slate-900"
-                                                                : idx === 1
-                                                                    ? "bg-slate-300 text-slate-900 dark:bg-slate-600 dark:text-white"
-                                                                    : "bg-amber-700/60 text-white"
-                                                        }`}
-                                                    >
-                                                        TOP {idx + 1}
-                                                    </span>
-                                                    <div className="flex items-center gap-2 text-[10px] font-mono">
-                                                        <span
-                                                            className="flex items-center gap-0.5 text-rose-500 font-bold">
-                                                            <Heart className="w-2.5 h-2.5 fill-rose-500"/>
-                                                            {thread.likes || 0}
-                                                        </span>
-                                                        <span
-                                                            className="flex items-center gap-0.5 text-blue-500 font-bold">
-                                                            <MessageCircle className="w-2.5 h-2.5"/>
-                                                            {replyCount}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 line-clamp-2 leading-relaxed">
-                                                    {thread.content}
-                                                </p>
-                                                <p className="text-[10px] text-rose-600 dark:text-rose-400 font-bold text-right">
-                                                    스레드로 이동 →
-                                                </p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
                         {/* Active Hashtag Filter Banner */}
