@@ -3,19 +3,6 @@ import {generateUserTag, getRandomNickname} from "@/data/nicknames";
 import {createClient} from "@/utils/supabase/server";
 import {validateAndSanitizeContent} from "@/lib/security";
 
-function sanitizeComment(c: CommentItem): CommentItem {
-    if (c.routeNo === "ALL" || c.routeNo === "" || !c.routeNo) {
-        const copy = {...c};
-        delete copy.routeNo;
-        return copy;
-    }
-    return c;
-}
-
-function sanitizeComments(comments: CommentItem[]): CommentItem[] {
-    return comments.map(sanitizeComment);
-}
-
 /**
  * Fetch comments directly from Supabase Postgres
  */
@@ -33,7 +20,7 @@ export async function getComments(_forceFresh = false): Promise<CommentItem[]> {
         }
 
         if (data && Array.isArray(data)) {
-            return sanitizeComments(data.map((r) => rowToComment(r as CommentRow)));
+            return data.map((r) => rowToComment(r as CommentRow));
         }
     } catch (err) {
         console.error("[Comments] Failed to load comments from Supabase:", err);
@@ -47,8 +34,6 @@ export async function getComments(_forceFresh = false): Promise<CommentItem[]> {
 export async function addComment(params: {
     author?: string;
     content: string;
-    routeNo?: string;
-    category?: string;
     parentId?: string;
     replyToAuthor?: string;
     authorTag?: string;
@@ -63,16 +48,13 @@ export async function addComment(params: {
 
     const generatedTag = params.authorTag || generateUserTag();
     const finalAuthor = validation.sanitizedAuthor || getRandomNickname();
-    const rawRouteNo = params.routeNo?.trim();
-    const finalRouteNo = rawRouteNo && rawRouteNo !== "ALL" ? rawRouteNo : undefined;
 
     const newComment: CommentItem = {
         id: `c-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
         author: finalAuthor,
         authorTag: generatedTag,
         content: validation.sanitizedContent,
-        category: params.category || "잡담",
-        createdAt: new Date().toISOString(), ...(finalRouteNo ? {routeNo: finalRouteNo} : {}),
+        createdAt: new Date().toISOString(),
         likes: 0,
         parentId: params.parentId,
         replyToAuthor: params.replyToAuthor,

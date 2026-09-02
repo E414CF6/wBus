@@ -1,19 +1,15 @@
-export type CommentCategory = "ALL" | "INFO" | "TIP" | "QUESTION" | "LOST" | "CHAT";
-
 export interface CommentItem {
     id: string;
     author: string;
     content: string;
     createdAt: string;
-    routeNo?: string;
-    category?: "제보" | "꿀팁" | "질문" | "분실물" | "잡담" | string;
+    authorTag?: string;
     likes?: number;
-    ipHash?: string;
     parentId?: string;
     replyToAuthor?: string;
-    authorTag?: string;
     replyToAuthorTag?: string;
     isDeleted?: boolean;
+    ipHash?: string;
 }
 
 export interface CommentRow {
@@ -21,9 +17,7 @@ export interface CommentRow {
     author: string;
     author_tag: string | null;
     content: string;
-    category: string | null;
     created_at: string;
-    route_no: string | null;
     likes: number | null;
     parent_id: string | null;
     reply_to_author: string | null;
@@ -38,9 +32,7 @@ export function rowToComment(row: CommentRow): CommentItem {
         author: row.author,
         authorTag: row.author_tag ?? undefined,
         content: row.content,
-        category: (row.category as CommentItem["category"]) ?? undefined,
         createdAt: row.created_at,
-        routeNo: row.route_no ?? undefined,
         likes: row.likes ?? 0,
         parentId: row.parent_id ?? undefined,
         replyToAuthor: row.reply_to_author ?? undefined,
@@ -56,9 +48,7 @@ export function commentToRow(c: CommentItem): CommentRow {
         author: c.author,
         author_tag: c.authorTag || null,
         content: c.content,
-        category: c.category || "잡담",
         created_at: c.createdAt,
-        route_no: c.routeNo && c.routeNo !== "ALL" ? c.routeNo : null,
         likes: c.likes ?? 0,
         parent_id: c.parentId || null,
         reply_to_author: c.replyToAuthor || null,
@@ -66,9 +56,4 @@ export function commentToRow(c: CommentItem): CommentRow {
         is_deleted: c.isDeleted ?? false,
         ip_hash: c.ipHash || null,
     };
-}
-
-export interface CommentsDataset {
-    updatedAt: string;
-    comments: CommentItem[];
 }

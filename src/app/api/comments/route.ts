@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         const ipHash = hashClientIp(clientIp);
 
         const body = await request.json();
-        const {author, content, routeNo, category, parentId, replyToAuthor, authorTag, replyToAuthorTag} = body;
+        const {author, content, parentId, replyToAuthor, authorTag, replyToAuthorTag} = body;
 
         if (!content || typeof content !== "string") {
             return NextResponse.json({success: false, error: "글 내용을 입력해주세요."}, {status: 400});
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
         // 2. Add Comment with Content Moderation & IP Hash
         const newComment = await addComment({
-            author, content, routeNo, category, parentId, replyToAuthor, authorTag, replyToAuthorTag, ipHash,
+            author, content, parentId, replyToAuthor, authorTag, replyToAuthorTag, ipHash,
         });
 
         return NextResponse.json({

@@ -192,7 +192,6 @@ export function AppShell() {
     const handleAddComment = async (data: {
         author?: string;
         content: string;
-        category?: string;
         parentId?: string;
         replyToAuthor?: string;
         authorTag?: string;
@@ -352,7 +351,7 @@ export function AppShell() {
 
     return (
         <>
-            <Splash isVisible={isSplashVisible} />
+            <Splash isVisible={isSplashVisible}/>
 
             <div
                 className={
@@ -387,7 +386,8 @@ export function AppShell() {
 
                 {/* 2. Schedule Timetable View (Yonsei 30,34,34-1 & All Wonju routes) */}
                 {activeTab === "schedule" && (
-                    <main className="w-full min-h-[100dvh] px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-32 sm:pb-36 flex flex-col items-center">
+                    <main
+                        className="w-full min-h-dvh px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-32 sm:pb-36 flex flex-col items-center">
                         <div className="w-full max-w-6xl flex-1 flex flex-col">
                             <TimetableWidget
                                 subTab={timetableSubTab}
@@ -402,7 +402,8 @@ export function AppShell() {
 
                 {/* 3. Real-time Square View */}
                 {activeTab === "chat" && (
-                    <div className="flex-1 overflow-hidden w-full max-w-6xl mx-auto px-3 sm:px-6 pt-2 sm:pt-4 pb-[calc(env(safe-area-inset-bottom,0)+4.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+5rem)] flex flex-col">
+                    <div
+                        className="flex-1 overflow-hidden w-full max-w-6xl mx-auto px-3 sm:px-6 pt-2 sm:pt-4 pb-[calc(env(safe-area-inset-bottom,0)+4.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+5rem)] flex flex-col">
                         <ChatView
                             comments={comments}
                             onAddComment={handleAddComment}
