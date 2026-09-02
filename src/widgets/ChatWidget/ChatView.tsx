@@ -909,7 +909,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                             <div className="flex items-center justify-end gap-2 pt-1">
                                 <div className="flex items-center gap-2 shrink-0">
                                     <span className="text-[10px] font-mono font-semibold text-slate-400">
-                                        {composerContent.length}/500
+                                        {composerContent.length}/1000
                                     </span>
                                     <button
                                         type="button"
