@@ -9,9 +9,15 @@ import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 
 import * as maplibregl from "maplibre-gl";
+import {setWorkerUrl} from "maplibre-gl";
 import {useTheme} from "next-themes";
 import React, {useCallback, useEffect, useMemo, useRef} from "react";
 import MapGL, {MapRef, NavigationControl} from "react-map-gl/maplibre";
+
+// Set MapLibre GL JS v6 Web Worker path via CDN
+if (typeof window !== "undefined") {
+    setWorkerUrl("https://unpkg.com/maplibre-gl@6.6.0/dist/maplibre-gl-worker.mjs");
+}
 
 // ----------------------------------------------------------------------
 // Types
@@ -49,11 +55,24 @@ export default function Map({onReady, children}: MapProps) {
         onReady?.();
     }, [onReady, setMap]);
 
+    const handleError = useCallback((e: unknown) => {
+        console.warn("[MapGL] Map error encountered, falling back to ready state:", e);
+        handleLoad();
+    }, [handleLoad]);
+
     const handleMoveEnd = useCallback(() => {
         if (mapRef.current) {
             saveMapView(createMapViewFromMap(mapRef.current));
         }
     }, []);
+
+    // Safety timeout in case onLoad is delayed or interrupted
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            handleLoad();
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, [handleLoad]);
 
     // Cleanup map context on unmounting
     useEffect(() => {
@@ -72,6 +91,7 @@ export default function Map({onReady, children}: MapProps) {
         }}
         onMoveEnd={handleMoveEnd}
         onLoad={handleLoad}
+        onError={handleError}
         mapStyle={mapStyleUrl}
         mapLib={maplibregl}
         minZoom={MAP_SETTINGS.ZOOM.MIN}

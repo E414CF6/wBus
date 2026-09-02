@@ -64,6 +64,15 @@ export function AppShell() {
     const [hasVisitedMap, setHasVisitedMap] = useState<boolean>(() => isMapActive);
     const [isSplashVisible, setIsSplashVisible] = useState<boolean>(() => isMapActive);
 
+    // Safety fallback: Dismiss splash screen automatically if map loading takes too long
+    useEffect(() => {
+        if (!isSplashVisible) return;
+        const timer = setTimeout(() => {
+            setIsSplashVisible(false);
+        }, 3000);
+        return () => clearTimeout(timer);
+    }, [isSplashVisible]);
+
     // Square / Comments State
     const [comments, setComments] = useState<CommentItem[]>([]);
     const [isRefreshingComments, setIsRefreshingComments] = useState<boolean>(false);

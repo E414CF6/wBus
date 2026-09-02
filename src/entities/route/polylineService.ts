@@ -8,6 +8,8 @@ import {getStationMap} from "@entities/station/api";
 import type {StationLocation} from "@entities/station/types";
 import {isFiniteNumber, snapPointToPolyline} from "@shared/utils/geo";
 
+import type {Feature, FeatureCollection} from "geojson";
+
 export interface StopIndexMap {
     byId: Record<string, number>;
     byIdDir: Record<string, number>;
@@ -334,9 +336,9 @@ export function isPointNearPolyline(point: Coordinate, polyline: Coordinate[], m
 export function buildSegmentedRouteGeoJson(
     validRouteIds: string[],
     polylineMap: Map<string, PolylineData>
-): GeoJSON.FeatureCollection | null {
+): FeatureCollection | null {
     if (validRouteIds.length === 0) return null;
-    const features: GeoJSON.Feature[] = [];
+    const features: Feature[] = [];
 
     // Single route ID case: Entire route in unified blue
     if (validRouteIds.length === 1) {
@@ -374,7 +376,7 @@ export function buildSegmentedRouteGeoJson(
                 }
             });
         }
-        return {type: "FeatureCollection" as const, features};
+        return {type: "FeatureCollection", features};
     }
 
     // Multiple route IDs: Segment into shared (blue) vs distinct branch colors
@@ -456,7 +458,7 @@ export function buildSegmentedRouteGeoJson(
         }
     }
 
-    return {type: "FeatureCollection" as const, features};
+    return {type: "FeatureCollection", features};
 }
 
 export function createMultiPolylineData(polylineMap: Map<string, PolylineData>, activeRouteIds?: string[]): MultiPolylineData {
