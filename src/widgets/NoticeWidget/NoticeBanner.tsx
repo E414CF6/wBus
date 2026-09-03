@@ -7,9 +7,10 @@ import {ChevronLeft, ChevronRight, Megaphone} from "lucide-react";
 
 interface NoticeBannerProps {
     onClick: (noticeId?: string) => void;
+    className?: string;
 }
 
-export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
+export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick, className = ""}) => {
     const {data: noticeData, loading} = useNoticeList(1);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isHovered, setIsHovered] = useState(false);
@@ -80,7 +81,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick}) => {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={() => onClick(currentNotice?.id)}
-            className="mb-6 group relative overflow-hidden rounded-3xl p-5 border border-amber-500/20 dark:border-amber-400/20 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-600/10 dark:from-amber-500/15 dark:via-orange-500/10 dark:to-amber-500/5 backdrop-blur-2xl shadow-xs hover:shadow-xl hover:border-amber-500/40 transition-all duration-300 cursor-pointer select-none active:scale-[0.99]"
+            className={`group relative overflow-hidden rounded-3xl p-5 border border-amber-500/20 dark:border-amber-400/20 bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-600/10 dark:from-amber-500/15 dark:via-orange-500/10 dark:to-amber-500/5 backdrop-blur-2xl shadow-xs hover:shadow-xl hover:border-amber-500/40 transition-all duration-300 cursor-pointer select-none active:scale-[0.99] ${className}`}
         >
             {/* Background Decorative Glow */}
             <div

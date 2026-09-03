@@ -10,9 +10,7 @@ export const MIN_REFRESH_INTERVAL_MS = MIN_REFRESH_INTERVAL_DAYS * 24 * 60 * 60 
 const IN_MEMORY_TTL_MS = 30 * 1000; // 30 seconds
 
 let inMemoryCache: {
-    data: RouteDataset;
-    meta: CacheMetadata;
-    timestamp: number;
+    data: RouteDataset; meta: CacheMetadata; timestamp: number;
 } | null = null;
 
 function getLocalCachePath(): string {
@@ -84,9 +82,7 @@ async function saveCache(data: RouteDataset): Promise<void> {
 
     // 1. Update in-memory cache
     inMemoryCache = {
-        data,
-        meta,
-        timestamp: Date.now(),
+        data, meta, timestamp: Date.now(),
     };
 
     // 2. Save to Vercel Blob
@@ -116,14 +112,11 @@ async function saveCache(data: RouteDataset): Promise<void> {
     }
 }
 
-export async function getOrFetchSchedule(
-    force = false
-): Promise<{ data: RouteDataset; meta: CacheMetadata }> {
+export async function getOrFetchSchedule(force = false): Promise<{ data: RouteDataset; meta: CacheMetadata }> {
     // 1. Check in-memory cache (with 30s TTL)
     if (!force && inMemoryCache && Date.now() - inMemoryCache.timestamp < IN_MEMORY_TTL_MS) {
         return {
-            data: inMemoryCache.data,
-            meta: inMemoryCache.meta,
+            data: inMemoryCache.data, meta: inMemoryCache.meta,
         };
     }
 
@@ -150,9 +143,7 @@ export async function getOrFetchSchedule(
     }
 
     // 4. If no cache found anywhere, scrape full dataset from Wonju ITS
-    console.log(
-        "[ScheduleService] No cache found. Fetching initial full timetable from Wonju ITS..."
-    );
+    console.log("[ScheduleService] No cache found. Fetching initial full timetable from Wonju ITS...");
     try {
         const freshData = await scrapeWonjuBusDataset();
         await saveCache(freshData);
@@ -168,10 +159,7 @@ export async function getOrFetchSchedule(
         } catch (fallbackErr) {
             console.error("[ScheduleService] Initial scrape failed completely:", fallbackErr);
             const emptyDataset: RouteDataset = {
-                updatedAt: new Date().toISOString(),
-                sourceUrl: "",
-                totalRoutes: 0,
-                routes: [],
+                updatedAt: new Date().toISOString(), sourceUrl: "", totalRoutes: 0, routes: [],
             };
             return {data: emptyDataset, meta: getCacheMetadata(emptyDataset)};
         }
@@ -179,18 +167,13 @@ export async function getOrFetchSchedule(
 }
 
 export async function refreshSchedule(force = true): Promise<{
-    refreshed: boolean;
-    message: string;
-    data: RouteDataset;
-    meta: CacheMetadata;
+    refreshed: boolean; message: string; data: RouteDataset; meta: CacheMetadata;
 }> {
     const current = await getOrFetchSchedule(false);
     const meta = current.meta;
 
     if (force || !meta.exists || meta.canRefresh) {
-        console.log(
-            "[ScheduleService] Triggering Wonju ITS scraper for full timetable update..."
-        );
+        console.log("[ScheduleService] Triggering Wonju ITS scraper for full timetable update...");
         try {
             const newData = await scrapeWonjuBusDataset();
             newData.updatedAt = new Date().toISOString();
@@ -198,33 +181,21 @@ export async function refreshSchedule(force = true): Promise<{
             const updatedMeta = getCacheMetadata(newData);
             return {
                 refreshed: true,
-                message: `최신 시간표 (${newData.totalRoutes}개 노선)를 원주시 ITS에서 성공적으로 수집하여 갱신했습니다.`,
+                message: `최신 시간표 (${newData.totalRoutes}개 노선)를 성공적으로 수집하여 갱신했습니다.`,
                 data: newData,
                 meta: updatedMeta,
             };
         } catch (err) {
-            console.warn(
-                "[ScheduleService] Full scraper failed. Falling back to existing cache:",
-                err instanceof Error ? err.message : err
-            );
+            console.warn("[ScheduleService] Full scraper failed. Falling back to existing cache:", err instanceof Error ? err.message : err);
             return {
-                refreshed: false,
-                message: "서버 응답 지연으로 기존 저장된 최신 시간표를 유지합니다.",
-                data: current.data,
-                meta: current.meta,
+                refreshed: false, message: "서버 응답 지연으로 기존 저장된 최신 시간표를 유지합니다.", data: current.data, meta: current.meta,
             };
         }
     }
 
-    const nextAvailableStr = meta.nextRefreshAvailableAt
-        ? new Date(meta.nextRefreshAvailableAt).toLocaleString(LOCALE, {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-        })
-        : "";
+    const nextAvailableStr = meta.nextRefreshAvailableAt ? new Date(meta.nextRefreshAvailableAt).toLocaleString(LOCALE, {
+        year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    }) : "";
 
     return {
         refreshed: false,

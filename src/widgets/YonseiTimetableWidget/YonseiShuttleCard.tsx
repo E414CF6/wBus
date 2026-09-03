@@ -170,8 +170,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                     <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                         <div
                             className="px-3 sm:px-3.5 py-1 rounded-2xl bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 text-white font-black text-sm sm:text-base tracking-tight shadow-md shadow-teal-700/20 shrink-0 flex items-center gap-1.5">
-                            <Bus className="w-4 h-4"/>
-                            <span>셔틀버스</span>
+                            <span>셔틀</span>
                         </div>
                         <div className="flex flex-col min-w-0">
                             <span
@@ -217,27 +216,45 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 my-2">
                     {/* Inbound Next */}
                     <div
-                        className="p-3 sm:p-3.5 rounded-2xl bg-teal-50/70 dark:bg-teal-950/30 border border-teal-200/70 dark:border-teal-500/25 flex flex-col justify-between">
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenModal("inbound");
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onOpenModal("inbound");
+                            }
+                        }}
+                        className="p-3 sm:p-3.5 rounded-2xl bg-teal-50/70 dark:bg-teal-950/30 border border-teal-200/70 dark:border-teal-500/25 hover:border-teal-500/60 dark:hover:border-teal-400/60 hover:bg-teal-50/95 dark:hover:bg-teal-950/50 hover:shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between group/inbound active:scale-[0.99]"
+                    >
                         <div
                             className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider mb-1">
                             <span className="flex items-center gap-1 text-teal-800 dark:text-teal-200 font-black">
                                 <Clock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400"/>
                                 <span>다음 등교 셔틀 (캠퍼스행)</span>
                             </span>
-                            {nextInbound && (
-                                <span
-                                    className={`px-2 py-0.5 rounded-lg text-[10px] border ${getWaitBadgeStyle(
-                                        nextInbound.waitMins
-                                    )}`}
-                                >
-                                    {nextInbound.waitMins <= 5 && (
-                                        <AlertCircle className="w-2.5 h-2.5 inline mr-0.5 -mt-0.5"/>
-                                    )}
-                                    {nextInbound.waitMins === 0
-                                        ? "곧 출발"
-                                        : `${nextInbound.waitMins}분 후`}
-                                </span>
-                            )}
+                            <div className="flex items-center gap-1.5">
+                                {nextInbound && (
+                                    <span
+                                        className={`px-2 py-0.5 rounded-lg text-[10px] border ${getWaitBadgeStyle(
+                                            nextInbound.waitMins
+                                        )}`}
+                                    >
+                                        {nextInbound.waitMins <= 5 && (
+                                            <AlertCircle className="w-2.5 h-2.5 inline mr-0.5 -mt-0.5"/>
+                                        )}
+                                        {nextInbound.waitMins === 0
+                                            ? "곧 출발"
+                                            : `${nextInbound.waitMins}분 후`}
+                                    </span>
+                                )}
+                                <ChevronRight
+                                    className="w-3.5 h-3.5 text-teal-600/50 dark:text-teal-400/50 group-hover/inbound:translate-x-0.5 group-hover/inbound:text-teal-700 dark:group-hover/inbound:text-teal-200 transition-all"/>
+                            </div>
                         </div>
 
                         {nextInbound ? (
@@ -267,27 +284,45 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
 
                     {/* Outbound Next */}
                     <div
-                        className="p-3 sm:p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-500/25 flex flex-col justify-between">
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenModal("outbound");
+                        }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onOpenModal("outbound");
+                            }
+                        }}
+                        className="p-3 sm:p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-500/25 hover:border-emerald-500/60 dark:hover:border-emerald-400/60 hover:bg-emerald-50/95 dark:hover:bg-emerald-950/50 hover:shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between group/outbound active:scale-[0.99]"
+                    >
                         <div
                             className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider mb-1">
                             <span className="flex items-center gap-1 text-emerald-800 dark:text-emerald-200 font-black">
                                 <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"/>
                                 <span>다음 하교 셔틀 (캠퍼스발)</span>
                             </span>
-                            {nextOutbound && (
-                                <span
-                                    className={`px-2 py-0.5 rounded-lg text-[10px] border ${getWaitBadgeStyle(
-                                        nextOutbound.waitMins
-                                    )}`}
-                                >
-                                    {nextOutbound.waitMins <= 5 && (
-                                        <AlertCircle className="w-2.5 h-2.5 inline mr-0.5 -mt-0.5"/>
-                                    )}
-                                    {nextOutbound.waitMins === 0
-                                        ? "곧 출발"
-                                        : `${nextOutbound.waitMins}분 후`}
-                                </span>
-                            )}
+                            <div className="flex items-center gap-1.5">
+                                {nextOutbound && (
+                                    <span
+                                        className={`px-2 py-0.5 rounded-lg text-[10px] border ${getWaitBadgeStyle(
+                                            nextOutbound.waitMins
+                                        )}`}
+                                    >
+                                        {nextOutbound.waitMins <= 5 && (
+                                            <AlertCircle className="w-2.5 h-2.5 inline mr-0.5 -mt-0.5"/>
+                                        )}
+                                        {nextOutbound.waitMins === 0
+                                            ? "곧 출발"
+                                            : `${nextOutbound.waitMins}분 후`}
+                                    </span>
+                                )}
+                                <ChevronRight
+                                    className="w-3.5 h-3.5 text-emerald-600/50 dark:text-emerald-400/50 group-hover/outbound:translate-x-0.5 group-hover/outbound:text-emerald-700 dark:group-hover/outbound:text-emerald-200 transition-all"/>
+                            </div>
                         </div>
 
                         {nextOutbound ? (

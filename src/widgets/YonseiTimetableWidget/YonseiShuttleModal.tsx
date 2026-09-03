@@ -32,6 +32,9 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
         if (initialTab) {
             setActiveTab(initialTab);
         }
+        if (isOpen) {
+            setSearchQuery("");
+        }
     }, [initialTab, isOpen]);
 
     useEffect(() => {

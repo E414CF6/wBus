@@ -12,9 +12,7 @@ export const MIN_REFRESH_INTERVAL_MS = MIN_REFRESH_INTERVAL_DAYS * 24 * 60 * 60 
 const IN_MEMORY_TTL_MS = 30 * 1000;
 
 let inMemoryCache: {
-    data: BusCacheData;
-    meta: CacheMetadata;
-    timestamp: number;
+    data: BusCacheData; meta: CacheMetadata; timestamp: number;
 } | null = null;
 
 function getLocalFilePath(): string {
@@ -81,9 +79,7 @@ export function computeCacheMetadata(data: BusCacheData | null): CacheMetadata {
             const timeSinceLastRefresh = Date.now() - lastUpdatedTime;
             canRefresh = timeSinceLastRefresh >= MIN_REFRESH_INTERVAL_MS;
             if (!canRefresh) {
-                nextRefreshAvailableAt = new Date(
-                    lastUpdatedTime + MIN_REFRESH_INTERVAL_MS
-                ).toISOString();
+                nextRefreshAvailableAt = new Date(lastUpdatedTime + MIN_REFRESH_INTERVAL_MS).toISOString();
             }
         }
     }
@@ -103,9 +99,7 @@ async function saveCache(data: BusCacheData): Promise<void> {
     const meta = computeCacheMetadata(data);
 
     inMemoryCache = {
-        data,
-        meta,
-        timestamp: Date.now(),
+        data, meta, timestamp: Date.now(),
     };
 
     try {
@@ -132,13 +126,10 @@ async function saveCache(data: BusCacheData): Promise<void> {
     }
 }
 
-export async function getOrFetchBusData(
-    force = false
-): Promise<{ data: BusCacheData; meta: CacheMetadata }> {
+export async function getOrFetchBusData(force = false): Promise<{ data: BusCacheData; meta: CacheMetadata }> {
     if (!force && inMemoryCache && Date.now() - inMemoryCache.timestamp < IN_MEMORY_TTL_MS) {
         return {
-            data: inMemoryCache.data,
-            meta: inMemoryCache.meta,
+            data: inMemoryCache.data, meta: inMemoryCache.meta,
         };
     }
 
@@ -167,10 +158,7 @@ export async function getOrFetchBusData(
         } catch (fallbackErr) {
             console.error("[BusService] Initial scrape failed completely:", fallbackErr);
             const emptyDataset: BusCacheData = {
-                updatedAt: new Date().toISOString(),
-                sourceUrl: "",
-                totalRoutes: 0,
-                routes: [],
+                updatedAt: new Date().toISOString(), sourceUrl: "", totalRoutes: 0, routes: [],
             };
             return {data: emptyDataset, meta: computeCacheMetadata(emptyDataset)};
         }
@@ -178,10 +166,7 @@ export async function getOrFetchBusData(
 }
 
 export async function refreshBusData(force = true): Promise<{
-    refreshed: boolean;
-    message: string;
-    data: BusCacheData;
-    meta: CacheMetadata;
+    refreshed: boolean; message: string; data: BusCacheData; meta: CacheMetadata;
 }> {
     const current = await getOrFetchBusData(false);
     const meta = current.meta;
@@ -195,33 +180,21 @@ export async function refreshBusData(force = true): Promise<{
             const updatedMeta = computeCacheMetadata(newData);
             return {
                 refreshed: true,
-                message: `최신 시간표 (${newData.totalRoutes}개 노선)를 원주시 ITS에서 성공적으로 수집하여 갱신했습니다.`,
+                message: `최신 시간표 (${newData.totalRoutes}개 노선)를 성공적으로 수집하여 갱신했습니다.`,
                 data: newData,
                 meta: updatedMeta,
             };
         } catch (err) {
-            console.warn(
-                "[BusService] Full scraper failed. Falling back to existing cache:",
-                err instanceof Error ? err.message : err
-            );
+            console.warn("[BusService] Full scraper failed. Falling back to existing cache:", err instanceof Error ? err.message : err);
             return {
-                refreshed: false,
-                message: "서버 응답 지연으로 기존 저장된 최신 시간표를 유지합니다.",
-                data: current.data,
-                meta: current.meta,
+                refreshed: false, message: "서버 응답 지연으로 기존 저장된 최신 시간표를 유지합니다.", data: current.data, meta: current.meta,
             };
         }
     }
 
-    const nextAvailableStr = meta.nextRefreshAvailableAt
-        ? new Date(meta.nextRefreshAvailableAt).toLocaleString(LOCALE, {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-        })
-        : "";
+    const nextAvailableStr = meta.nextRefreshAvailableAt ? new Date(meta.nextRefreshAvailableAt).toLocaleString(LOCALE, {
+        year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    }) : "";
 
     return {
         refreshed: false,

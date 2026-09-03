@@ -103,7 +103,7 @@ export function useSchedule() {
             if (force) {
                 setRefreshToast({
                     type: json.refreshed ? "success" : "info",
-                    message: json.message || (json.refreshed ? "원주시 ITS 실시간 최신 시간표로 갱신되었습니다." : "최신 시간표가 이미 유지되고 있습니다."),
+                    message: json.message || (json.refreshed ? "최신 시간표로 갱신되었습니다." : "최신 시간표가 이미 유지되고 있습니다."),
                 });
             }
         } catch (err) {

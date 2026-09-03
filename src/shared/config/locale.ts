@@ -82,8 +82,8 @@ const YONSEI_STRINGS = {
     FOOTNOTE_TOOLTIP_ACTIVE: "클릭하여 이 비고 시간만 강조",
     FOOTNOTE_TOOLTIP_CLEAR: "클릭하여 각주 강조 해제",
 
-    REFRESH_SUCCESS: "시간표 데이터가 원주시 ITS에서 새로 수집되어 갱신되었습니다.",
-    REFRESH_INFO: "최소 갱신 시간이 지나지 않아 기존 저장소 JSON 데이터를 사용합니다.",
+    REFRESH_SUCCESS: "시간표 데이터가 새로 수집되었습니다.",
+    REFRESH_INFO: "최소 갱신 시간이 지나지 않아 기존 데이터를 사용합니다.",
 } as const;
 
 // ============================================================================
@@ -101,6 +101,7 @@ const TIMETABLE_STRINGS = {
     BASE_DATETIME_LABEL: "기준 일시:",
     CACHE_REFRESH_BUTTON: "시간표 갱신",
     CACHE_REFRESHING: "갱신 중...",
+    CACHE_BANNER_TITLE: "시간표 기준 일시",
 
     BOOKMARKS_BANNER_TITLE: "즐겨찾기 노선 모아보기",
     BOOKMARKS_BANNER_COUNT: (count: number) => `${count}개 노선`,

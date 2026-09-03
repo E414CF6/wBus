@@ -119,6 +119,14 @@ export default function YonseiTimetableWidget({
                 </div>
             )}
 
+            {/* Timetable Criteria & Refresh Banner */}
+            <CacheInfoBanner
+                meta={meta}
+                onRefresh={() => refresh(true)}
+                isRefreshing={isRefreshing}
+                variant="banner"
+            />
+
             {/* Wonju ITS Live Notice Banner */}
             <NoticeBanner onClick={handleOpenNoticeModal}/>
 
@@ -158,13 +166,6 @@ export default function YonseiTimetableWidget({
                     ))}
                 </div>
             )}
-
-            {/* Timetable Criteria & Refresh Banner */}
-            <CacheInfoBanner
-                meta={meta}
-                onRefresh={() => refresh(true)}
-                isRefreshing={isRefreshing}
-            />
 
             {/* Minimal Footer */}
             <Footer/>

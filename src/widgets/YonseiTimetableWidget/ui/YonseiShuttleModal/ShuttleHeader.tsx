@@ -36,7 +36,11 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                     </div>
                     <div className="min-w-0">
                         <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate flex items-center gap-2">
-                            <span>연세대학교 미래캠퍼스 무료 셔틀버스</span>
+                            <span>셔틀버스</span>
+                            <span
+                                className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
+                                무료
+                            </span>
                             <span
                                 className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
                                 2026/08/21
