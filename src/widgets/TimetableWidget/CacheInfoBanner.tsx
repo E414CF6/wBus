@@ -69,7 +69,6 @@ export const CacheInfoBanner: React.FC<CacheInfoBannerProps> = ({
                             className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-600 hover:text-white dark:bg-blue-500/20 dark:hover:bg-blue-500 text-blue-700 dark:text-blue-300 text-[11px] sm:text-xs font-black border border-blue-500/30 transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0 disabled:opacity-50 disabled:pointer-events-none"
                         >
                             <RefreshCw className={`w-3 h-3 sm:w-3.5 sm:h-3.5 ${isRefreshing ? "animate-spin" : ""}`}/>
-                            <span>{isRefreshing ? UI_TEXT.TIMETABLE.CACHE_REFRESHING : UI_TEXT.TIMETABLE.CACHE_REFRESH_BUTTON}</span>
                         </button>
                     )}
                 </div>
