@@ -9,7 +9,8 @@ export function getAvatarGradient(name: string, tag = ""): string {
         "from-violet-500 to-purple-700",
         "from-teal-500 to-emerald-600",
     ];
-    const combined = `${name}${tag}`;
+    const cleanTag = tag ? tag.replace(/^#+/, "").trim() : "";
+    const combined = `${name}${cleanTag}`;
     let hash = 0;
     for (let i = 0; i < combined.length; i++) {
         hash = combined.charCodeAt(i) + ((hash << 5) - hash);

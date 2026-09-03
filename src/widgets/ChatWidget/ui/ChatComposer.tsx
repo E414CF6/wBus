@@ -56,9 +56,11 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
                             className="text-xs font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {authorName}
                         </span>
-                        <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
-                            {userTag}
-                        </span>
+                        {userTag && (
+                            <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                                #{userTag.replace(/^#+/, "")}
+                            </span>
+                        )}
                     </div>
                 </div>
 

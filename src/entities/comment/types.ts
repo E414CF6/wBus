@@ -27,32 +27,38 @@ export interface CommentRow {
 }
 
 export function rowToComment(row: CommentRow): CommentItem {
+    const cleanAuthorTag = row.author_tag ? row.author_tag.replace(/^#+/, "").trim() : undefined;
+    const cleanReplyToAuthorTag = row.reply_to_author_tag ? row.reply_to_author_tag.replace(/^#+/, "").trim() : undefined;
+
     return {
         id: row.id,
         author: row.author,
-        authorTag: row.author_tag ?? undefined,
+        authorTag: cleanAuthorTag || undefined,
         content: row.content,
         createdAt: row.created_at,
         likes: row.likes ?? 0,
         parentId: row.parent_id ?? undefined,
         replyToAuthor: row.reply_to_author ?? undefined,
-        replyToAuthorTag: row.reply_to_author_tag ?? undefined,
+        replyToAuthorTag: cleanReplyToAuthorTag || undefined,
         isDeleted: row.is_deleted ?? false,
         ipHash: row.ip_hash ?? undefined,
     };
 }
 
 export function commentToRow(c: CommentItem): CommentRow {
+    const cleanAuthorTag = c.authorTag ? c.authorTag.replace(/^#+/, "").trim() : null;
+    const cleanReplyToAuthorTag = c.replyToAuthorTag ? c.replyToAuthorTag.replace(/^#+/, "").trim() : null;
+
     return {
         id: c.id,
         author: c.author,
-        author_tag: c.authorTag || null,
+        author_tag: cleanAuthorTag || null,
         content: c.content,
         created_at: c.createdAt,
         likes: c.likes ?? 0,
         parent_id: c.parentId || null,
         reply_to_author: c.replyToAuthor || null,
-        reply_to_author_tag: c.replyToAuthorTag || null,
+        reply_to_author_tag: cleanReplyToAuthorTag || null,
         is_deleted: c.isDeleted ?? false,
         ip_hash: c.ipHash || null,
     };

@@ -46,7 +46,9 @@ export async function addComment(params: {
         throw new Error(validation.error || "부적절한 내용이 감지되어 등록할 수 없습니다.");
     }
 
-    const generatedTag = params.authorTag || generateUserTag();
+    const rawTag = params.authorTag ? params.authorTag.replace(/^#+/, "").trim() : generateUserTag();
+    const generatedTag = rawTag || generateUserTag();
+    const cleanReplyToAuthorTag = params.replyToAuthorTag ? params.replyToAuthorTag.replace(/^#+/, "").trim() : undefined;
     const finalAuthor = validation.sanitizedAuthor || getRandomNickname();
 
     const newComment: CommentItem = {
@@ -58,7 +60,7 @@ export async function addComment(params: {
         likes: 0,
         parentId: params.parentId,
         replyToAuthor: params.replyToAuthor,
-        replyToAuthorTag: params.replyToAuthorTag,
+        replyToAuthorTag: cleanReplyToAuthorTag,
         ipHash: params.ipHash,
     };
 
@@ -134,7 +136,8 @@ export async function deleteComment(
             .eq("id", id);
 
         if (userTag) {
-            query = query.eq("author_tag", userTag);
+            const cleanTag = userTag.replace(/^#+/, "").trim();
+            query = query.in("author_tag", [cleanTag, `#${cleanTag}`]);
         } else if (ipHash) {
             query = query.eq("ip_hash", ipHash);
         }

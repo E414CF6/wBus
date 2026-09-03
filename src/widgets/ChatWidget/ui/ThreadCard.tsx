@@ -78,7 +78,7 @@ export const ThreadCard: React.FC<ThreadCardProps> = ({
                             </span>
                         {thread.authorTag && (<span
                             className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 font-mono text-[10px] font-bold">
-                                    {thread.authorTag}
+                                    #{thread.authorTag.replace(/^#+/, "")}
                                 </span>)}
                         {isMine && (<span
                             className="px-1.5 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-[10px] font-black border border-indigo-200 dark:border-indigo-500/30">

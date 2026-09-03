@@ -59,9 +59,11 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                         <p className="text-sm font-black text-slate-900 dark:text-white truncate">
                             {authorName}
                         </p>
-                        <p className="text-xs font-mono text-slate-400 dark:text-slate-500">
-                            {userTag}
-                        </p>
+                        {userTag && (
+                            <p className="text-xs font-mono text-slate-400 dark:text-slate-500">
+                                #{userTag.replace(/^#+/, "")}
+                            </p>
+                        )}
                     </div>
                 </div>
 

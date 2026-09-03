@@ -28,7 +28,13 @@ export function useChatFeed({comments, userTag, myCommentIds}: UseChatFeedProps)
     const isMyComment = useCallback(
         (comment: CommentItem) => {
             if (myCommentIds.has(comment.id)) return true;
-            if (userTag && comment.authorTag && userTag === comment.authorTag) return true;
+            if (userTag && comment.authorTag) {
+                const cleanUserTag = userTag.replace(/^#+/, "").trim();
+                const cleanAuthorTag = comment.authorTag.replace(/^#+/, "").trim();
+                if (cleanUserTag && cleanAuthorTag && cleanUserTag === cleanAuthorTag) {
+                    return true;
+                }
+            }
             return false;
         },
         [myCommentIds, userTag]

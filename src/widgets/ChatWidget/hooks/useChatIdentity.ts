@@ -16,10 +16,12 @@ export function useChatIdentity() {
             setAuthorName(savedNick);
 
             let savedTag = localStorage.getItem("wbus_user_tag");
-            if (!savedTag || !savedTag.startsWith("#")) {
+            if (!savedTag || !savedTag.trim()) {
                 savedTag = generateUserTag();
-                localStorage.setItem("wbus_user_tag", savedTag);
+            } else {
+                savedTag = savedTag.replace(/^#+/, "").trim();
             }
+            localStorage.setItem("wbus_user_tag", savedTag);
             setUserTag(savedTag);
         } catch {
             setAuthorName(getRandomNickname());
