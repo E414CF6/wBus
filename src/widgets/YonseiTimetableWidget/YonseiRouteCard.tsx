@@ -56,7 +56,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
             }
         }
         return null;
-    }, [validDepartures, currentMins]);
+    }, [validDepartures]);
 
     // Upcoming subsequent departure times (up to 4 upcoming times)
     const upcomingTimes = useMemo(() => {
@@ -74,7 +74,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
             .filter((item) => item.minutes !== null && item.minutes >= currentMins);
 
         return remaining.slice(1, 5);
-    }, [validDepartures, currentMins]);
+    }, [validDepartures]);
 
     const getRouteBadgeGradient = (no: string) => {
         if (no === "30") return "from-[#003876] to-blue-700 shadow-blue-900/30 text-white";
