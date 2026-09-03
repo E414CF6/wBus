@@ -81,14 +81,21 @@ export const ShuttleMapViewer: React.FC<ShuttleMapViewerProps> = ({
                             longitude={stop.lng}
                             latitude={stop.lat}
                             anchor="bottom"
+                            style={{pointerEvents: "auto", cursor: "pointer"}}
                             onClick={(e) => {
-                                e.originalEvent.stopPropagation();
+                                if (e.originalEvent) {
+                                    e.originalEvent.stopPropagation();
+                                }
                                 onSelectStop(stop);
+                                if (typeof window !== "undefined") {
+                                    window.open(roadviewUrl, "_blank", "noopener,noreferrer");
+                                }
                             }}
                         >
                             <div
-                                className="group/marker cursor-pointer flex flex-col items-center transition-transform duration-200 hover:scale-105"
+                                className="group/marker cursor-pointer flex flex-col items-center transition-transform duration-200 hover:scale-105 active:scale-95 select-none"
                                 style={{zIndex: isSelected ? 40 : 10}}
+                                title={`${stop.name} - 클릭 시 로드뷰가 열립니다`}
                             >
                                 {/* Marker Badge & Roadview Button Row */}
                                 <div className="flex items-center gap-1 mb-1 whitespace-nowrap shadow-lg">
@@ -132,7 +139,8 @@ export const ShuttleMapViewer: React.FC<ShuttleMapViewerProps> = ({
             <div
                 className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 dark:bg-black/85 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-sm text-xs font-bold text-slate-700 dark:text-slate-300 pointer-events-none">
                 <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"/>
-                <span>마커의 <span className="text-teal-600 dark:text-teal-400 font-black">로드뷰</span> 버튼을 누르면 현장 거리뷰가 열립니다</span>
+                <span>마커를 누르면 <span
+                    className="text-teal-600 dark:text-teal-400 font-black">로드뷰</span>가 새 창으로 열립니다</span>
             </div>
         </div>
     );

@@ -40,14 +40,14 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                     </div>
                     <div className="min-w-0">
                         <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate flex items-center gap-2">
-                            <span>연세대 미래캠퍼스 무료 셔틀버스</span>
+                            <span>연세대학교 미래캠퍼스 무료 셔틀버스</span>
                             <span
                                 className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
-                                2026학년도
+                                2026/08/21
                             </span>
                         </h2>
                         <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
-                            여주역 · 만종역 · 원주고속터미널 · 원주역 · 시청사거리 · 세브란스 ↔ 캠퍼스
+                            여주역 · 만종역 · 원주고속터미널 · 원주역 · 시청사거리 · 세브란스 ↔ 연세대학교 미래캠퍼스
                         </p>
                     </div>
                 </div>
@@ -73,7 +73,7 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                     }`}
                 >
                     <Clock className="w-3.5 h-3.5"/>
-                    <span>등교 (캠퍼스행)</span>
+                    <span>등교</span>
                 </button>
 
                 <button
@@ -85,7 +85,7 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                     }`}
                 >
                     <Clock className="w-3.5 h-3.5"/>
-                    <span>하교 (캠퍼스발)</span>
+                    <span>하교</span>
                 </button>
 
                 <button
@@ -97,7 +97,7 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                     }`}
                 >
                     <MapPin className="w-3.5 h-3.5"/>
-                    <span>정류장 지도 & 로드뷰</span>
+                    <span>정류장 지도</span>
                 </button>
 
                 <button

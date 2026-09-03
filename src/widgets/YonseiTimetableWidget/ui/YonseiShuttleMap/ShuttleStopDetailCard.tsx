@@ -48,13 +48,11 @@ export const ShuttleStopDetailCard: React.FC<ShuttleStopDetailCardProps> = ({
                     <span>{stop.locationDescription}</span>
                 </div>
 
-                {stop.tips && (
-                    <div
-                        className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-300/90 font-medium">
-                        <Info className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"/>
-                        <span>{stop.tips}</span>
-                    </div>
-                )}
+                {stop.tips && (<div
+                    className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-300/90 font-medium">
+                    <Info className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"/>
+                    <span>{stop.tips}</span>
+                </div>)}
             </div>
 
             {/* Actions: Open Roadview or Map Link in New Tab */}

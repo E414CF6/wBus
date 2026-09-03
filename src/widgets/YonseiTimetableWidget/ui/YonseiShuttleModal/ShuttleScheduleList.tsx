@@ -83,12 +83,6 @@ export const ShuttleScheduleList: React.FC<ShuttleScheduleListProps> = ({
                                 >
                                     {item.operation_type}
                                 </span>
-                                {item.note && (
-                                    <span
-                                        className="px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[10px] font-extrabold border border-blue-200 dark:border-blue-500/30">
-                                        {item.note}
-                                    </span>
-                                )}
                                 {!isInbound && (
                                     <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
                                         {UI_TEXT.YONSEI_SHUTTLE.DEPARTURE_PREFIX}

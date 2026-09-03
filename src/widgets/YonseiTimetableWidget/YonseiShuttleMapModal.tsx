@@ -82,17 +82,17 @@ export const YonseiShuttleMapModal: React.FC<YonseiShuttleMapModalProps> = ({
                                     <span>셔틀버스 정류장 위치 안내</span>
                                     <span
                                         className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-lg bg-teal-50 dark:bg-teal-950/50 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
-                                        5개 거점
+                                        {YONSEI_SHUTTLE_STOPS.length}개 거점
                                     </span>
                                 </h2>
                                 <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
-                                    <span>지도 위 마커의</span>
+                                    <span>지도 위 마커를 누르면 </span>
                                     <span
                                         className="text-teal-600 dark:text-teal-400 font-black inline-flex items-center gap-0.5">
                                         <Camera className="w-3 h-3"/>
                                         로드뷰
                                     </span>
-                                    <span>버튼을 누르면 현장 거리뷰가 열립니다</span>
+                                    <span>가 새 창으로 열립니다</span>
                                 </p>
                             </div>
                         </div>
