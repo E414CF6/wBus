@@ -26,5 +26,6 @@ export interface NoticeDetail extends NoticeItem {
 export interface NoticeListResponse {
     notices: NoticeItem[];
     totalCount: number;
+    totalPages?: number;
     page: number;
 }

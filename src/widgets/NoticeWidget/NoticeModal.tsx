@@ -66,7 +66,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
     };
 
     const notices = listData?.notices ?? [];
-    const totalPages = listData?.totalCount ? Math.ceil(listData.totalCount / 10) : 1;
+    const totalPages = listData?.totalPages || (listData?.totalCount ? Math.ceil(listData.totalCount / 10) : 1);
 
     if (!isOpen || !mounted) return null;
 

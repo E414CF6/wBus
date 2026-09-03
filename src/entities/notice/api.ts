@@ -9,12 +9,20 @@ export async function getNoticeList(page = 1, searchText = "", searchGb = "title
         params.set("searchGb", searchGb);
     }
     const query = params.toString() ? `?${params.toString()}` : "";
-    return fetchAPI<NoticeListResponse>(`/api/notice${query}`);
+    const res = await fetchAPI<{
+        success?: boolean; data?: NoticeListResponse
+    } | NoticeListResponse>(`/api/notice${query}`);
+    if (res && typeof res === "object" && "data" in res && res.data) {
+        return res.data;
+    }
+    return res as NoticeListResponse;
 }
 
 export async function getNoticeDetail(id: string): Promise<NoticeDetail> {
-    const res = await fetchAPI<{ data: NoticeDetail } | NoticeDetail>(`/api/notice/${encodeURIComponent(id)}`);
-    if ("data" in res && res.data) {
+    const res = await fetchAPI<{
+        success?: boolean; data?: NoticeDetail
+    } | NoticeDetail>(`/api/notice/${encodeURIComponent(id)}`);
+    if (res && typeof res === "object" && "data" in res && res.data) {
         return res.data;
     }
     return res as NoticeDetail;
