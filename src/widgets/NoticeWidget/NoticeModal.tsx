@@ -114,7 +114,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                 {selectedNoticeId ? (detailNotice?.title ? detailNotice.title : UI_TEXT.NOTICE.SECTION_TITLE) : UI_TEXT.NOTICE.WIDGET_TITLE}
                             </h2>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Wonju ITS Notice Center
+                                Wonju Notice Center
                             </p>
                         </div>
                     </div>

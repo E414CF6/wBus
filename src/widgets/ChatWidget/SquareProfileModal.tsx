@@ -98,7 +98,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                                 </h3>
                                 <span
                                     className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400 font-mono text-xs font-bold">
-                                    #{userTag}
+                                    {userTag}
                                 </span>
                             </div>
                             <p className="text-[10px] text-slate-400 flex items-center gap-1">
