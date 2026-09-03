@@ -66,7 +66,7 @@ export default function YonseiTimetableWidget({
         if (dayMode === "WEEKDAY") return false;
         if (dayMode === "VACATION") return true;
         return isTodayWeekendOrHoliday;
-    }, [dayMode, isTodayWeekendOrHoliday]);
+    }, [isTodayWeekendOrHoliday]);
 
     // Pair each target routeNo (30, 34, 34-1) with its matching active schedule variant
     const activeRoutes = useMemo(() => {

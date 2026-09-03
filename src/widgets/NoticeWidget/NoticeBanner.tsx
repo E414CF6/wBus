@@ -57,7 +57,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick, className = 
         const now = new Date();
         const diffDays = Math.ceil(Math.abs(now.getTime() - noticeDate.getTime()) / (1000 * 60 * 60 * 24));
         return diffDays <= 14 || currentIndex === 0;
-    }, [currentNotice?.date, currentIndex]);
+    }, [currentIndex]);
 
     const handlePrev = (e: React.MouseEvent) => {
         e.stopPropagation();

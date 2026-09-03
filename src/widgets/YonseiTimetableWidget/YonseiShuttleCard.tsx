@@ -128,8 +128,8 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                         </div>
                         <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
                             {isSaturday
-                                ? "토요일은 셔틀버스를 운행하지 않습니다 (시간표 및 정류장 위치 확인)"
-                                : "오늘 셔틀버스 운행이 종료되었습니다 (전체 시간표 및 정류장 확인)"}
+                                ? "토요일은 셔틀버스를 운행하지 않습니다."
+                                : "오늘 셔틀버스 운행이 종료되었습니다."}
                         </p>
                     </div>
                 </div>
