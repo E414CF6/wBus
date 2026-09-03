@@ -1,18 +1,22 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import React, {useCallback, useEffect, useMemo, useState} from "react";
+import {usePathname, useRouter, useSearchParams} from "next/navigation";
+
+import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
+
 import {type CommentItem, type CommentRow, rowToComment} from "@entities/comment";
 import {useBusRouteMap} from "@entities/route/hooks";
+
 import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
-import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
+
 import {createClient} from "@shared/supabase/client";
 import BottomNav, {type DayMode, type NavTab, type TimetableSubTab} from "@shared/ui/BottomNav";
+
 import {ChatView} from "@widgets/ChatWidget";
 import {TimetableWidget} from "@widgets/TimetableWidget";
-
-import dynamic from "next/dynamic";
-import {usePathname, useRouter, useSearchParams} from "next/navigation";
-import React, {useCallback, useEffect, useMemo, useState} from "react";
 
 /**
  * Dynamically import MapWrapper & RouteLayer with SSR disabled.

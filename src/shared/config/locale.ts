@@ -31,15 +31,14 @@ const YONSEI_STRINGS = {
     VIA_LABEL: "주요 경유지",
     VIA_SHORT_LABEL: "주요 경유",
     VIA_30: "장양리 - 북원교 - 진광중고교 - 상지대학교 - 한라비발디아파트 - 단계현진아파트 - 고속시외버스터미널 - 베스타운 - 뜨란채 - 원주역 - 육민관고 - 흥업사거리 - 세동마을 - 연세대학교",
-    VIA_34: "장양리 - 북원교 - 단계사거리 - 단계현진아파트 - 고속시외버스터미널 - YWCA - (→ 원일로 →/← 평원로 ←) - 남원로 남부시장 - 원주의료원 - 도영쇼핑 - 명륜소방서 - 오페라웨딩홀 - (← 원주역 ←) - 서곡삼거리 - 강원대학교 - 흥업사거리 - 세동마을 - 연세대학교",
-    VIA_34_1: "장양리 - 북원교 - 단계사거리 - 단계현진아파트 - 고속시외버스터미널 - YWCA - (→ 원일로 →/← 평원로 ←) - 남원로 남부시장 - 원주의료원 - 도영쇼핑 - 명륜소방서 - 오페라웨딩홀 - 원주역 - 서곡삼거리 - 강원대학교 - 흥업사거리 - 세동마을 - 연세대학교 - 한촌 - 매지리 - 회촌",
+    VIA_34: "장양리 - 북원교 - 단계사거리 - 단계현진아파트 - 고속시외버스터미널 - YWCA - (→ 원일로 →/← 평원로 ←) - 남원로 남부시장 - 원주의료원 - 도형쇼핑 - 명륜소방서 - 오페라웨딩홀 - (← 원주역 ←) - 서곡삼거리 - 강원대학교 - 흥업사거리 - 세동마을 - 연세대학교",
+    VIA_34_1: "장양리 - 북원교 - 단계사거리 - 단계현진아파트 - 고속시외버스터미널 - YWCA - (→ 원일로 →/← 평원로 ←) - 남원로 남부시장 - 원주의료원 - 도형쇼핑 - 명륜소방서 - 오페라웨딩홀 - 원주역 - 서곡삼거리 - 강원대학교 - 흥업사거리 - 세동마을 - 연세대학교 - 한촌 - 매지리 - 회촌",
 
     LOCATION_YONSEI: "연세대 출발",
     LOCATION_HOECHON: "회촌 출발",
     TIMETABLE_TITLE: (label: string) => `${label} 시간표`,
 
     MODE_OVERRIDE_LABEL: "운행 기준",
-    MODE_AUTO: (isHoliday: boolean) => `자동 (${isHoliday ? "휴일" : "평일"})`,
     MODE_AUTO_TOOLTIP: "자동 감지 (오늘 요일 기준)",
     MODE_WEEKDAY: "평일",
     MODE_WEEKDAY_TOOLTIP: "평일 기준 시간표",
@@ -47,7 +46,6 @@ const YONSEI_STRINGS = {
     MODE_VACATION_TOOLTIP: "방학 · 휴일 기준 시간표",
 
     STATUS_DEPARTING_SOON: "곧 출발",
-    STATUS_MINUTES_LEFT: (min: number) => `${min}분 후`,
     STATUS_MINUTES_REL: (min: number) => `+${min}분`,
 
     SCHEDULE_APPLIED_ALL_DAYS: "매일",
@@ -78,7 +76,6 @@ const YONSEI_STRINGS = {
     FOOTNOTE_SCROLL_HINT: "좌우로 스크롤하여 확인",
     FOOTNOTE_ALL: "전체 보기",
     FOOTNOTE_CLEAR: "강조 해제",
-    FOOTNOTE_ACTIVE_DESC: (symbol: string, text: string) => `${symbol} "${text}" 비고 적용 시간 강조 중`,
     FOOTNOTE_COUNT_SUFFIX: (count: number) => `${count}회`,
     FOOTNOTE_TOOLTIP_ACTIVE: "클릭하여 이 비고 시간만 강조",
     FOOTNOTE_TOOLTIP_CLEAR: "클릭하여 각주 강조 해제",
@@ -100,7 +97,6 @@ const TIMETABLE_STRINGS = {
     STATS_BOOKMARKS: "즐겨찾기",
 
     BASE_DATETIME_LABEL: "기준 일시:",
-    CACHE_CRITERIA: (time: string) => `시간표 기준: ${time}`,
     CACHE_REFRESH_BUTTON: "시간표 갱신",
     CACHE_REFRESHING: "갱신 중...",
 
@@ -135,7 +131,6 @@ const TIMETABLE_STRINGS = {
     SEARCH_MODAL_PLACEHOLDER: "시간표 검색...",
     CLEAR_SEARCH_ARIA: "검색어 지우기",
     SEARCH_RESULTS_LABEL: "검색 결과:",
-    SEARCH_RESULTS_COUNT: (count: number) => `검색 결과: ${count}개 노선`,
     ROUTE_COUNT: (count: number) => `${count}개`,
     RESET_FILTER: "필터 초기화",
 
@@ -172,6 +167,112 @@ const TIMETABLE_STRINGS = {
 } as const;
 
 // ============================================================================
+// Yonsei Shuttle Strings
+// ============================================================================
+
+const YONSEI_SHUTTLE_STRINGS = {
+    SHUTTLE_TITLE: "셔틀버스",
+    SATURDAY_NO_RUN: "토요일 미운행",
+    SERVICE_ENDED: "운행 종료",
+    SATURDAY_NO_RUN_DESC: "토요일은 셔틀버스를 운행하지 않습니다 (시간표 및 정류장 위치 확인)",
+    SERVICE_ENDED_DESC: "오늘 셔틀버스 운행이 종료되었습니다 (전체 시간표 및 정류장 확인)",
+    VIEW_TIMETABLE: "시간표 보기",
+    SUNDAY_SPECIAL_RUN: "일요일 특별운행",
+    WEEKDAY_REGULAR_RUN: "평일 정규운행",
+    NEXT_TO_CAMPUS: "다음 등교 셔틀 (캠퍼스행)",
+    NEXT_FROM_CAMPUS: "다음 하교 셔틀 (캠퍼스발)",
+    DEPARTING_SOON: "곧 출발",
+    TIMETABLE_AND_STOPS: "시간표 & 정류장 위치",
+    VIEW_DETAIL: "자세히 보기",
+    TO_CAMPUS_TAB: "등교",
+    FROM_CAMPUS_TAB: "하교",
+    STOPS_LOCATION_TAB: "탑승 장소",
+    USAGE_GUIDE_TAB: "이용 안내",
+    SEARCH_PLACEHOLDER: "정류장명 (여주역, 터미널, 원주역, 세브란스 등) 또는 시간 검색...",
+    TOTAL_RUNS: (count: number) => `총 ${count}회 운행`,
+    VIA_AND_TIME: "경유 정류장 및 통과 시각",
+    DROP_ONLY_STOPS: "하차 경유 정류장",
+    EMPTY_TO_CAMPUS: "검색 조건에 일치하는 등교 셔틀버스가 없습니다.",
+    EMPTY_FROM_CAMPUS: "검색 조건에 일치하는 하교 셔틀버스가 없습니다.",
+} as const;
+
+// ============================================================================
+// Chat (Square) Strings
+// ============================================================================
+
+const CHAT_STRINGS = {
+    NO_MY_POSTS: "내가 작성한 글이 아직 없습니다.",
+    NO_POSTS: "등록된 이야기가 없습니다.",
+    FIRST_POST_HINT: "상단 입력창에서 첫 번째 스퀘어 이야기를 남겨보세요!",
+    ENCRYPTED_PROFILE: "암호화된 익명 프로필",
+    MY_PROFILE: "내 프로필",
+    REALTIME_TREND: "실시간 트렌드",
+    POPULAR_THREADS: "인기 스레드",
+    CHANGE_NICKNAME: "익명 닉네임 변경",
+    RANDOM_GENERATE: "랜덤 생성",
+    HOT_KEYWORDS: "실시간 화제의 키워드",
+    TOAST_POST_SUCCESS: "스퀘어 광장에 글이 등록되었습니다.",
+    TOAST_POST_ERROR: "글 등록 중 오류가 발생했습니다.",
+    TOAST_REPLY_SUCCESS: "답글이 등록되었습니다.",
+    TOAST_REPLY_ERROR: "답글 등록 중 오류가 발생했습니다.",
+    CONFIRM_DELETE: "정말 이 글을 삭제하시겠습니까?",
+    TOAST_DELETE_SUCCESS: "글이 삭제되었습니다.",
+    TOAST_DELETE_FORBIDDEN: "삭제할 수 없습니다.",
+    TOAST_LINK_COPIED: "글 링크가 클립보드에 복사되었습니다.",
+    DEFAULT_ANONYMOUS: "익명",
+    OPEN_PROFILE_TITLE: "내 스퀘어 프로필 열기",
+    REFRESH_NICKNAME_TITLE: "랜덤 닉네임 새로고침",
+    CHANGE_NICKNAME_BTN: "닉네임 변경",
+    INPUT_PLACEHOLDER: "무슨 일이 일어나고 있나요?",
+    POSTING: "게시 중...",
+    POST_SUBMIT: "게시하기",
+    SEARCH_TITLE: "검색",
+    REFRESH_TITLE: "새로고침",
+    RADAR_TITLE: "내 프로필 및 레이더 열기",
+    HOT_TAB: "인기",
+    SEARCH_PLACEHOLDER: "닉네임, #해시태그, 키워드 검색...",
+    CLEAR_FILTER_TITLE: "필터 해제",
+    STATUS_ACTIVE: "활동 중",
+    STATUS_PARTICIPATING: "참여 중",
+    MY_POSTS_COUNT_LABEL: "내 작성 글",
+    MY_LIKED_COUNT_LABEL: "공감한 글",
+    TREND_HASHTAGS: "실시간 트렌드 해시태그",
+    HOT_DEBATE: "지금 뜨거운 HOT 토론",
+    CLEAN_GUIDE: "스퀘어 클린 가이드",
+    REPLY_PLACEHOLDER: "답글 내용을 입력하세요...",
+    REPLY_POSTING: "등록 중...",
+    REPLY_SUBMIT: "답글 등록",
+    SHARE_TITLE: "공유",
+    DELETE_TITLE: "삭제",
+    REPLY_LABEL: "답글",
+    POST_FAIL: "스퀘어 글 등록에 실패했습니다.",
+    DELETE_FAIL: "스퀘어 글 삭제에 실패했습니다.",
+} as const;
+
+// ============================================================================
+// Route Select Strings
+// ============================================================================
+
+const ROUTE_SELECT_STRINGS = {
+    MODAL_TITLE: "노선 선택",
+    MODAL_ARIA: "실시간 노선 선택기",
+    SEARCH_PLACEHOLDER: "노선 번호 또는 행선지 검색 (예: 30, 연세대, 횡성, 문막...)",
+    CLEAR_SEARCH_ARIA: "검색어 지우기",
+    CATEGORY_YONSEI: "연세대 (30·34·34-1)",
+    CATEGORY_PUBLIC: "공영·순환",
+    CAMPUS_ROUTES_LABEL: "연세대 캠퍼스 노선",
+    RECENT_SEARCH_LABEL: "최근 조회:",
+    NO_BOOKMARKS_DESC: "즐겨찾기한 노선이 없습니다. 별표(★)를 눌러 노선을 등록해보세요.",
+    NO_RESULTS_DESC: "노선 번호나 행선지를 다시 확인해 주세요.",
+    BOOKMARK_ADD_TITLE: "즐겨찾기 등록",
+    BOOKMARK_REMOVE_TITLE: "즐겨찾기 해제",
+    STOP_CURRENT_ROUTE: "현재 노선",
+    STOP_NEARBY: "주변 정류장",
+    SELECT_OTHER_ROUTE_TITLE: "다른 노선 선택하기 (검색/목록)",
+    OPEN_ROUTE_SELECT_ARIA: "노선 선택 모달 열기",
+} as const;
+
+// ============================================================================
 // User Interface Text (Korean)
 // ============================================================================
 
@@ -185,7 +286,6 @@ export const UI_TEXT = {
         EXPAND: "펼치기",
         COLLAPSE: "접기",
         CLOSE: "닫기",
-        COUNT_ITEMS: (count: number) => `${count}개`,
         ROUTE_LABEL: (route: string) => `${route}번`,
     },
 
@@ -194,8 +294,13 @@ export const UI_TEXT = {
         CONNECTED: "실시간 연결됨",
         FALLBACK: "업데이트 중",
         SUSPENDED: "대기 상태",
+        SERVICE_ENDED: "운행 종료",
         STATUS_TOOLTIP: "실시간 연결 상태 (클릭 시 재연결)",
         DEGRADED: "(지연)",
+        TOOLTIP_CONNECTING: "실시간 위치 API 연결 대기 중",
+        TOOLTIP_WAITING: "화면 비활성화로 일시 대기 중",
+        TOOLTIP_DEGRADED: "실시간 버스 운행 중 (일부 데이터 지연)",
+        TOOLTIP_SERVICE_ENDED: "현재 운행 중인 버스가 없습니다 (운행 종료 또는 배차 대기)",
     },
 
     TIME: {
@@ -206,7 +311,6 @@ export const UI_TEXT = {
         JUST_NOW: "방금 전",
         SECONDS_AGO: (sec: number) => `${sec}초 전`,
         MINUTES_AGO: (min: number) => `${min}분 전`,
-        FORMAT_REMAINING: (min: number) => `${min}분`,
         REFRESH_AVAILABLE_NOW: "지금 갱신 가능",
         REFRESH_AVAILABLE_DAYS: (days: number, hours: number) => `${days}일 ${hours}시간 후 갱신 가능`,
         REFRESH_AVAILABLE_HOURS: (hours: number, mins: number) => `${hours}시간 ${mins}분 후 갱신 가능`,
@@ -242,22 +346,26 @@ export const UI_TEXT = {
         TAB_CHAT: "스퀘어",
         TAB_YONSEI: "연세대",
         TAB_ALL: "전체",
-        ROUTE_OPTION: (route: string) => `${route}번 노선`,
         RUNNING_LIST_BTN: (count: number) => `운행 목록 (${count})`,
         RUNNING_LIST_TITLE: (route: string, count: number) => `${route}번 노선 운행 목록 (${count}대)`,
         TOGGLE_THEME: "테마 변경",
         CHAT_ALL_FILTER: "전체",
         PICK_ROUTE_TITLE: "노선 선택",
+        SELECT_ROUTE_TITLE: "노선 선택 (검색/목록)",
+        DEFAULT_ROUTE_NAME: "노선",
     },
 
-    YONSEI: YONSEI_STRINGS, YONSEI_TIMETABLE: YONSEI_STRINGS,
+    YONSEI: YONSEI_STRINGS, YONSEI_TIMETABLE: YONSEI_STRINGS, YONSEI_SHUTTLE: YONSEI_SHUTTLE_STRINGS,
+
+    CHAT: CHAT_STRINGS,
+
+    ROUTE_SELECT: ROUTE_SELECT_STRINGS,
 
     BUS_SERVICE: {
         DATA_UPDATED: "시간표 데이터가 업데이트되었습니다.",
         TIMEOUT_MAINTAIN_CACHE: "서버 연결 시간 초과로 인해 신규 수집을 취소하고 기존 시간표를 유지합니다.",
         SERVER_TIMEOUT_FALLBACK: "서버 응답 지연으로 기존 시간표를 유지합니다.",
         REFRESH_ERROR: "시간표 갱신 처리 중 오류가 발생했습니다.",
-        MIN_INTERVAL_NOT_REACHED: (nextAvailableStr: string) => `최소 하한 갱신 시간이 지나지 않아 시간표를 갱신하지 않았습니다. (다음 갱신 가능: ${nextAvailableStr})`,
     },
 
     SCHEDULE: {
@@ -274,7 +382,6 @@ export const UI_TEXT = {
     BUS_LIST: {
         TITLE_ALL: "전체 버스 목록",
         TITLE_ROUTE: (route: string) => `${route}번 버스`,
-        COUNT_RUNNING: (count: number) => `${count}대 운행 중`,
         NO_RUNNING: "운행 중인 버스 없음",
         NO_RUNNING_DESC: "운행 중인 버스가 없습니다.",
         EMPTY_TODAY: "오늘 운행 예정인 버스가 없습니다.",
@@ -290,8 +397,6 @@ export const UI_TEXT = {
         DIRECTION_UP: "상행",
         DIRECTION_DOWN: "하행",
         DIRECTION_UNKNOWN: "방향 미정",
-        SPEED_KMH: (speed: number) => `${speed} km/h`,
-        PASSENGERS: (count: number) => `${count}명 탑승`,
         MINUTES_AGO: (min: number) => `${min}분 전`,
         JUST_NOW: "방금 전",
         STATUS_CHECKING: "정보 확인 중...",
@@ -336,13 +441,13 @@ export const UI_TEXT = {
         TAB_PINNED: "공지",
         PINNED_BADGE: "공지",
         BADGE_NEW: "최근",
-        PINNED_COUNT: (count: number) => `중요 공지 ${count}건`,
         PREV_NOTICE_ARIA: "이전 최신공지",
         NEXT_NOTICE_ARIA: "다음 최신공지",
         NOTICE_INDEX_ARIA: (index: number) => `공지 ${index}`,
         REFRESH: "새로고침",
         ATTACHMENT: "첨부파일",
         ATTACHMENT_COUNT: (count: number) => `첨부파일 (${count})`,
+        ATTACHMENT_EXIST_TITLE: "첨부파일 있음",
         HITS: "조회수",
         WRITER: "작성자",
         DATE: "등록일",
@@ -365,13 +470,7 @@ export const UI_TEXT = {
     },
 
     ROUTE_MAP: {
-        ORIGIN: "기점",
-        DESTINATION: "종점",
-        FIRST_BUS: "첫차",
-        LAST_BUS: "막차",
-        INTERVAL: "배차간격",
-        MINUTES_UNIT: "분",
-        ACTIVE_VEHICLES: (count: number) => `운행 중 ${count}대`,
+        ORIGIN: "기점", DESTINATION: "종점", FIRST_BUS: "첫차", LAST_BUS: "막차", INTERVAL: "배차간격", MINUTES_UNIT: "분",
     },
 
     FOOTER: {

@@ -1,11 +1,11 @@
+import React from "react";
+import {ArrowDown, ArrowUp, HelpCircle} from "lucide-react";
+
 import type {BusItem} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
 
 import {UI_TEXT} from "@shared/config/locale";
 import Pill from "@shared/ui/Pill";
-
-import {ArrowDown, ArrowUp, HelpCircle} from "lucide-react";
-import React from "react";
 
 type BusListItemProps = {
     bus: BusItem;

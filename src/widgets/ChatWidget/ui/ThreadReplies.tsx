@@ -5,6 +5,7 @@ import type {CommentItem} from "@entities/comment";
 
 import {formatRelativeTime} from "@shared/lib/timeUtils";
 import {getAvatarGradient} from "@widgets/ChatWidget";
+
 import {renderRichContent} from "../utils/textParser";
 
 interface ThreadRepliesProps {
