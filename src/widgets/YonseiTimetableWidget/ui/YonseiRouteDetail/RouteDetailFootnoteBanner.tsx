@@ -26,7 +26,7 @@ export const RouteDetailFootnoteBanner: React.FC<RouteDetailFootnoteBannerProps>
                     <span className="font-mono font-black mr-1 text-amber-700 dark:text-amber-300">
                         {selectedFootnoteInfo.symbol}
                     </span>
-                    &quot;{selectedFootnoteInfo.noteText}&quot; 각주 적용 시간표 강조 중
+                    {selectedFootnoteInfo.noteText}
                 </span>
                 <span
                     className="px-1.5 py-0.2 rounded-md bg-amber-500/20 text-amber-900 dark:text-amber-300 text-[10px] font-black shrink-0">
