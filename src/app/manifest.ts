@@ -1,10 +1,12 @@
 import type {MetadataRoute} from "next";
 
+import {UI_TEXT} from "@shared/config/locale";
+
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: "wBus",
-        short_name: "wBus",
-        description: "원주시 실시간 시내버스 위치 및 버스 시간표",
+        name: UI_TEXT.METADATA.SITE_NAME,
+        short_name: UI_TEXT.METADATA.SITE_NAME,
+        description: UI_TEXT.METADATA.DESC,
         start_url: "/",
         display: "standalone",
         orientation: "portrait",
