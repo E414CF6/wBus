@@ -14,113 +14,136 @@ const HEADERS = {
 
 const TARGET_RAW_NOS = ['30', '34(평일)', '34(방학,휴일)', '34-1(평일)', '34-1(방학,휴일)'];
 
-async function fetchList(onlyYonsei = false) {
+async function fetchList(onlyYonsei = false, maxRetries = 3) {
     console.log('Fetching route list from Wonju ITS...');
-    const res = await fetch(LIST_URL, {headers: HEADERS, signal: AbortSignal.timeout(8000)});
-    const html = await res.text();
+    let lastError;
 
-    // Extract CSRF token
-    const csrfMatch = html.match(/name=['"]CSRFToken['"]\s+value=['"]([^'"]+)['"]/);
-    const csrfToken = csrfMatch ? csrfMatch[1] : '';
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const res = await fetch(LIST_URL, {headers: HEADERS, signal: AbortSignal.timeout(12000)});
+            if (!res.ok) {
+                throw new Error(`Failed to fetch ITS list (Status: ${res.status})`);
+            }
+            const html = await res.text();
 
-    // Extract cookies if any set
-    const rawCookies = res.headers.getSetCookie ? res.headers.getSetCookie() : [];
-    const cookieStr = rawCookies.map(c => c.split(';')[0]).join('; ');
+            // Extract CSRF token
+            const csrfMatch = html.match(/name=['"]CSRFToken['"]\s+value=['"]([^'"]+)['"]/);
+            const csrfToken = csrfMatch ? csrfMatch[1] : '';
 
-    // Match table rows
-    const rowRegex = /<tr[^>]*>\s*<td[^>]*onclick=['"]goDetail\(['"]([^'"]+)['"]\);['"][^>]*>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/gs;
+            // Extract cookies if any set
+            const rawCookies = res.headers.getSetCookie ? res.headers.getSetCookie() : [];
+            const cookieStr = rawCookies.map(c => c.split(';')[0]).join('; ');
 
-    const routes = [];
-    let match;
-    while ((match = rowRegex.exec(html)) !== null) {
-        const detailId = match[1].trim();
-        const rawNo = match[2].replace(/<[^>]+>/g, '').trim();
+            // Match table rows
+            const rowRegex = /<tr[^>]*>\s*<td[^>]*onclick=['"]goDetail\(['"]([^'"]+)['"]\);['"][^>]*>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/gs;
 
-        if (onlyYonsei) {
-            const isTarget = TARGET_RAW_NOS.includes(rawNo) || rawNo.startsWith('30') || rawNo.startsWith('34');
-            if (!isTarget) continue;
+            const routes = [];
+            let match;
+            while ((match = rowRegex.exec(html)) !== null) {
+                const detailId = match[1].trim();
+                const rawNo = match[2].replace(/<[^>]+>/g, '').trim();
+
+                if (onlyYonsei) {
+                    const isTarget = TARGET_RAW_NOS.includes(rawNo) || rawNo.startsWith('30') || rawNo.startsWith('34');
+                    if (!isTarget) continue;
+                }
+
+                const cleanStationName = (name) => name ? name.replace(/장양리시내버스공영(정류장)?/g, '장양리') : name;
+                const origin = cleanStationName(match[3].replace(/<[^>]+>/g, '').trim());
+                const destination = cleanStationName(match[4].replace(/<[^>]+>/g, '').trim());
+                const firstBus = match[5].replace(/<[^>]+>/g, '').trim();
+                const lastBus = match[6].replace(/<[^>]+>/g, '').trim();
+                const runCount = match[7].replace(/<[^>]+>/g, '').trim();
+                const interval = match[8].replace(/<[^>]+>/g, '').trim();
+
+                // Standardize route number
+                let routeNo = rawNo;
+                let dayType = '매일';
+                const parenMatch = rawNo.match(/^(.*?)\((.*?)\)$/);
+                if (parenMatch) {
+                    routeNo = parenMatch[1].trim();
+                    dayType = parenMatch[2].trim();
+                }
+
+                routes.push({
+                    id: detailId,
+                    rawNo,
+                    routeNo,
+                    dayType,
+                    origin,
+                    destination,
+                    firstBus,
+                    lastBus,
+                    runCount,
+                    interval,
+                    timetable: []
+                });
+            }
+
+            return {csrfToken, cookieStr, routes};
+        } catch (err) {
+            lastError = err;
+            if (attempt < maxRetries) {
+                await new Promise((r) => setTimeout(r, 800 * attempt));
+            }
         }
-
-        const cleanStationName = (name) => name ? name.replace(/장양리시내버스공영(정류장)?/g, '장양리') : name;
-        const origin = cleanStationName(match[3].replace(/<[^>]+>/g, '').trim());
-        const destination = cleanStationName(match[4].replace(/<[^>]+>/g, '').trim());
-        const firstBus = match[5].replace(/<[^>]+>/g, '').trim();
-        const lastBus = match[6].replace(/<[^>]+>/g, '').trim();
-        const runCount = match[7].replace(/<[^>]+>/g, '').trim();
-        const interval = match[8].replace(/<[^>]+>/g, '').trim();
-
-        // Standardize route number
-        let routeNo = rawNo;
-        let dayType = '매일';
-        const parenMatch = rawNo.match(/^(.*?)\((.*?)\)$/);
-        if (parenMatch) {
-            routeNo = parenMatch[1].trim();
-            dayType = parenMatch[2].trim();
-        }
-
-        routes.push({
-            id: detailId,
-            rawNo,
-            routeNo,
-            dayType,
-            origin,
-            destination,
-            firstBus,
-            lastBus,
-            runCount,
-            interval,
-            timetable: []
-        });
     }
 
-    return {csrfToken, cookieStr, routes};
+    throw lastError;
 }
 
-async function fetchDetail(detailId, csrfToken, cookieStr) {
-    const formData = new URLSearchParams();
-    formData.append('CSRFToken', csrfToken);
-    formData.append('route_id', detailId);
+async function fetchDetail(detailId, csrfToken, cookieStr, maxRetries = 3) {
+    let lastError;
 
-    const res = await fetch(DETAIL_URL, {
-        method: 'POST', headers: {
-            ...HEADERS,
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Cookie': cookieStr,
-            'Origin': BASE_URL,
-            'Referer': LIST_URL
-        }, body: formData.toString(), signal: AbortSignal.timeout(8000)
-    });
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const formData = new URLSearchParams();
+            if (csrfToken) formData.append('CSRFToken', csrfToken);
+            formData.append('no', detailId);
+            formData.append('id', detailId);
 
-    if (!res.ok) {
-        throw new Error(`Detail HTTP error ${res.status}`);
-    }
+            const res = await fetch(DETAIL_URL, {
+                method: 'POST', headers: {
+                    ...HEADERS,
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Cookie': cookieStr,
+                    'Origin': BASE_URL,
+                    'Referer': LIST_URL
+                }, body: formData.toString(), signal: AbortSignal.timeout(12000)
+            });
 
-    const html = await res.text();
+            if (!res.ok) {
+                throw new Error(`Detail HTTP error ${res.status}`);
+            }
 
-    const tbodyMatch = html.match(/<tbody[^>]*>([\s\S]*?)<\/tbody>/i);
-    if (!tbodyMatch) return [];
+            const html = await res.text();
 
-    const tbodyHtml = tbodyMatch[1];
-    const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-    const timetable = [];
+            const rowRegex = /<tr[^>]*>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/gs;
 
-    let trMatch;
-    while ((trMatch = trRegex.exec(tbodyHtml)) !== null) {
-        const trContent = trMatch[1];
-        const tdMatches = [...trContent.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m => m[1].replace(/<[^>]+>/g, '').trim());
+            const timetable = [];
+            let match;
+            while ((match = rowRegex.exec(html)) !== null) {
+                const seq = parseInt(match[1].replace(/<[^>]+>/g, '').trim(), 10);
+                if (isNaN(seq)) continue;
 
-        if (tdMatches.length >= 4) {
-            const seq = parseInt(tdMatches[0], 10) || timetable.length + 1;
-            const originDepTime = tdMatches[1] || '-';
-            const destDepTime = tdMatches[2] || '-';
-            const type = tdMatches[3] || '공통';
-            const notes = tdMatches[4] || '';
+                const originDepTime = match[2].replace(/<[^>]+>/g, '').trim();
+                const destDepTime = match[3].replace(/<[^>]+>/g, '').trim();
+                const type = match[4].replace(/<[^>]+>/g, '').trim();
+                const notes = match[5].replace(/<[^>]+>/g, '').trim();
 
-            timetable.push({seq, originDepTime, destDepTime, type, notes});
+                timetable.push({seq, originDepTime, destDepTime, type, notes});
+            }
+
+            return timetable;
+        } catch (err) {
+            lastError = err;
+            if (attempt < maxRetries) {
+                await new Promise((r) => setTimeout(r, 600 * attempt));
+            }
         }
     }
 
-    return timetable;
+    throw lastError;
 }
 
 async function runScraper(options = {onlyYonsei: false}) {
@@ -130,7 +153,7 @@ async function runScraper(options = {onlyYonsei: false}) {
     const {csrfToken, cookieStr, routes} = await fetchList(options.onlyYonsei);
     console.log(`Found ${routes.length} routes. Crawling timetable details...`);
 
-    const BATCH_SIZE = 8;
+    const BATCH_SIZE = 2;
     for (let i = 0; i < routes.length; i += BATCH_SIZE) {
         const batch = routes.slice(i, i + BATCH_SIZE);
         await Promise.all(batch.map(async (route) => {
@@ -142,6 +165,9 @@ async function runScraper(options = {onlyYonsei: false}) {
             }
         }));
         process.stdout.write(`Progress: ${Math.min(i + BATCH_SIZE, routes.length)} / ${routes.length}\r`);
+        if (i + BATCH_SIZE < routes.length) {
+            await new Promise((r) => setTimeout(r, 80));
+        }
     }
 
     console.log('\nAll details fetched.');
