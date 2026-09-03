@@ -1,10 +1,5 @@
-import type {Metadata} from "next";
-import {MainApp} from "@widgets/AppShell";
-
-export const metadata: Metadata = {
-    title: "스퀘어", description: "실시간 소통, 제보 및 꿀팁 커뮤니티 광장",
-};
+import {redirect} from "next/navigation";
 
 export default function ChatPage() {
-    return <MainApp/>;
+    redirect("/square");
 }

@@ -323,7 +323,7 @@ export function AppShell() {
                     : "";
                 router.push(`/live${routeParam}`);
             } else if (tab === "chat") {
-                router.push("/chat");
+                router.push("/square");
             } else {
                 const subTabParam = timetableSubTab === "all" ? "?subTab=all" : "";
                 router.push(`/${subTabParam}`);

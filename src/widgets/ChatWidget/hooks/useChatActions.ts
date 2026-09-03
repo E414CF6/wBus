@@ -19,11 +19,7 @@ interface UseChatActionsProps {
 }
 
 export function useChatActions({
-                                   authorName,
-                                   userTag,
-                                   onAddComment,
-                                   onLikeComment,
-                                   onDeleteComment,
+                                   authorName, userTag, onAddComment, onLikeComment, onDeleteComment,
                                }: UseChatActionsProps) {
     const [composerContent, setComposerContent] = useState("");
     const [isComposerExpanded, setIsComposerExpanded] = useState(false);
@@ -81,10 +77,7 @@ export function useChatActions({
         setMyCommentIds((prev) => {
             const next = new Set(prev).add(id);
             try {
-                localStorage.setItem(
-                    "wbus_my_comments",
-                    JSON.stringify(Array.from(next))
-                );
+                localStorage.setItem("wbus_my_comments", JSON.stringify(Array.from(next)));
             } catch {
                 // Storage error
             }
@@ -106,23 +99,15 @@ export function useChatActions({
         setComposerContent(e.target.value);
         if (textareaRef.current) {
             textareaRef.current.style.height = "auto";
-            textareaRef.current.style.height = `${Math.min(
-                textareaRef.current.scrollHeight,
-                160
-            )}px`;
+            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
         }
     };
 
-    const handleInlineReplyTextareaChange = (
-        e: React.ChangeEvent<HTMLTextAreaElement>
-    ) => {
+    const handleInlineReplyTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setInlineReplyContent(e.target.value);
         if (inlineReplyTextareaRef.current) {
             inlineReplyTextareaRef.current.style.height = "auto";
-            inlineReplyTextareaRef.current.style.height = `${Math.min(
-                inlineReplyTextareaRef.current.scrollHeight,
-                120
-            )}px`;
+            inlineReplyTextareaRef.current.style.height = `${Math.min(inlineReplyTextareaRef.current.scrollHeight, 120)}px`;
         }
     };
 
@@ -158,9 +143,7 @@ export function useChatActions({
             showToast("스퀘어 광장에 글이 등록되었습니다.");
         } catch (err) {
             console.error("Failed to post thread:", err);
-            showToast(
-                err instanceof Error ? err.message : "글 등록 중 오류가 발생했습니다."
-            );
+            showToast(err instanceof Error ? err.message : "글 등록 중 오류가 발생했습니다.");
         } finally {
             setIsSubmitting(false);
         }
@@ -212,70 +195,57 @@ export function useChatActions({
             showToast("답글이 등록되었습니다.");
         } catch (err) {
             console.error("Failed to post reply:", err);
-            showToast(
-                err instanceof Error ? err.message : "답글 등록 중 오류가 발생했습니다."
-            );
+            showToast(err instanceof Error ? err.message : "답글 등록 중 오류가 발생했습니다.");
         } finally {
             setIsSubmittingReply(false);
         }
     };
 
     // Like Action
-    const handleLike = useCallback(
-        async (id: string) => {
-            if (!onLikeComment || likedCommentIds.has(id)) return;
+    const handleLike = useCallback(async (id: string) => {
+        if (!onLikeComment || likedCommentIds.has(id)) return;
 
-            setLikedCommentIds((prev) => {
-                const next = new Set(prev).add(id);
-                try {
-                    localStorage.setItem(
-                        "wbus_liked_comments",
-                        JSON.stringify(Array.from(next))
-                    );
-                } catch {
-                    // Storage error
-                }
-                return next;
-            });
-
+        setLikedCommentIds((prev) => {
+            const next = new Set(prev).add(id);
             try {
-                await onLikeComment(id);
-            } catch (err) {
-                console.error("Failed to like:", err);
+                localStorage.setItem("wbus_liked_comments", JSON.stringify(Array.from(next)));
+            } catch {
+                // Storage error
             }
-        },
-        [likedCommentIds, onLikeComment]
-    );
+            return next;
+        });
+
+        try {
+            await onLikeComment(id);
+        } catch (err) {
+            console.error("Failed to like:", err);
+        }
+    }, [likedCommentIds, onLikeComment]);
 
     // Delete Action
-    const handleDelete = useCallback(
-        async (id: string) => {
-            if (!onDeleteComment) return;
-            if (!window.confirm("정말 이 글을 삭제하시겠습니까?")) return;
+    const handleDelete = useCallback(async (id: string) => {
+        if (!onDeleteComment) return;
+        if (!window.confirm("정말 이 글을 삭제하시겠습니까?")) return;
 
-            setDeletingId(id);
-            try {
-                await onDeleteComment(id, userTag);
-                showToast("글이 삭제되었습니다.");
-            } catch (err) {
-                console.error("Failed to delete:", err);
-                showToast("삭제할 수 없습니다.");
-            } finally {
-                setDeletingId(null);
-            }
-        },
-        [onDeleteComment, userTag, showToast]
-    );
+        setDeletingId(id);
+        try {
+            await onDeleteComment(id, userTag);
+            showToast("글이 삭제되었습니다.");
+        } catch (err) {
+            console.error("Failed to delete:", err);
+            showToast("삭제할 수 없습니다.");
+        } finally {
+            setDeletingId(null);
+        }
+    }, [onDeleteComment, userTag, showToast]);
 
     // Share Action
     const handleShare = (thread: CommentItem) => {
-        const shareUrl = `${window.location.origin}/chat#thread-${thread.id}`;
+        const shareUrl = `${window.location.origin}/square#thread-${thread.id}`;
         if (navigator.share) {
             navigator
                 .share({
-                    title: `wBus 스퀘어 - ${thread.author}`,
-                    text: thread.content,
-                    url: shareUrl,
+                    title: `wBus 스퀘어 - ${thread.author}`, text: thread.content, url: shareUrl,
                 })
                 .catch(() => {
                 });
