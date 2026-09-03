@@ -1,10 +1,11 @@
 "use client";
 
 import React, {memo, useMemo} from "react";
+import {AlertCircle, Clock, MapPin} from "lucide-react";
+
 import {BusRoute} from "@shared/types/bus";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 import {UI_TEXT} from "@shared/config/locale";
-import {AlertCircle, ChevronRight, Clock, MapPin, Sparkles} from "lucide-react";
 
 interface YonseiRouteCardProps {
     route: BusRoute;
@@ -58,7 +59,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
         return null;
     }, [validDepartures]);
 
-    // Upcoming subsequent departure times (up to 4 upcoming times)
+    // Upcoming subsequent departure times (up to 2 upcoming times)
     const upcomingTimes = useMemo(() => {
         if (!validDepartures.length) return [];
 
@@ -73,7 +74,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
             })
             .filter((item) => item.minutes !== null && item.minutes >= currentMins);
 
-        return remaining.slice(1, 5);
+        return remaining.slice(1, 3);
     }, [validDepartures]);
 
     const getRouteBadgeGradient = (no: string) => {
@@ -100,7 +101,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
             className="backdrop-blur-2xl bg-white/90 dark:bg-[#141822]/90 rounded-3xl p-4 sm:p-6 flex flex-col justify-between relative group border border-slate-200/80 dark:border-slate-800/80 hover:border-blue-500/60 dark:hover:border-blue-500/60 transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer select-none active:scale-[0.98]"
         >
             <div>
-                {/* Top Section: Route Badge + Location Header & Realtime Map Button */}
+                {/* Top Section: Route Badge + Location Header & Total Runs / Realtime Map & Schedule Badge */}
                 <div className="flex items-center justify-between gap-2.5 mb-2.5 sm:mb-3">
                     <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                         <div
@@ -115,31 +116,30 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                                 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight truncate">
                                 {locationLabel}
                             </span>
+                            <span className="text-[11px] font-semibold text-slate-400 font-mono mt-0.5">
+                                {UI_TEXT.YONSEI.TOTAL_RUNS(validDepartures.length)}
+                            </span>
                         </div>
                     </div>
 
-                    {onSelectMapRoute && (
-                        <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    onSelectMapRoute(route.routeNo);
-                                }}
-                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-200/70 dark:border-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
-                                title={UI_TEXT.YONSEI.REALTIME_MAP_BTN}
-                            >
-                                <MapPin className="h-3 w-3 shrink-0"/>
-                                <span className="sm:inline">{UI_TEXT.YONSEI.REALTIME_MAP_BTN}</span>
-                            </button>
-                        </div>
-                    )}
-                </div>
-
-                {/* Schedule Mode Badge & Total Departures Count */}
-                <div className="flex items-center justify-between my-2 text-xs">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        {onSelectMapRoute && (
+                            <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onSelectMapRoute(route.routeNo);
+                                    }}
+                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-200/70 dark:border-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                    title={UI_TEXT.YONSEI.REALTIME_MAP_BTN}
+                                >
+                                    <MapPin className="h-3 w-3 shrink-0"/>
+                                    <span className="sm:inline">{UI_TEXT.YONSEI.REALTIME_MAP_BTN}</span>
+                                </button>
+                            </div>
+                        )}
                         <span
-                            className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${
+                            className={`px-2 py-1 rounded-xl text-[10px] sm:text-[11px] font-extrabold border shrink-0 ${
                                 route.routeNo === "30"
                                     ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
                                     : isVacationSchedule
@@ -154,9 +154,6 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                                     : UI_TEXT.YONSEI.SCHEDULE_APPLIED_WEEKDAY}
                         </span>
                     </div>
-                    <span className="text-[11px] font-semibold text-slate-400 font-mono">
-                        {UI_TEXT.YONSEI.TOTAL_RUNS(validDepartures.length)}
-                    </span>
                 </div>
 
                 {/* Next Upcoming Departure Spotlight Card */}
@@ -211,14 +208,9 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                     )}
                 </div>
 
-                {/* Upcoming Departure Times Timeline Chips */}
+                {/* Upcoming Departure Times Chips */}
                 {upcomingTimes.length > 0 && (
-                    <div className="mt-3.5">
-                        <div
-                            className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 flex items-center gap-1">
-                            <Sparkles className="w-3 h-3 text-blue-500"/>
-                            <span>{UI_TEXT.YONSEI.UPCOMING_DEP_TIMES}</span>
-                        </div>
+                    <div className="mt-2.5">
                         <div className="grid grid-cols-2 gap-1.5">
                             {upcomingTimes.map((item, idx) => (
                                 <div
@@ -236,24 +228,6 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                         </div>
                     </div>
                 )}
-            </div>
-
-            {/* View Full Timetable Footer Button */}
-            <div
-                className="pt-4 mt-4 border-t border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                    {UI_TEXT.YONSEI.FULL_TIMETABLE_DETAIL}
-                </span>
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectRoute(route);
-                    }}
-                    className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-blue-600/10 hover:bg-blue-600/20 text-blue-600 dark:text-blue-400 text-xs font-black border border-blue-500/20 transition-all cursor-pointer active:scale-95"
-                >
-                    <span>{UI_TEXT.YONSEI.VIEW_TIMETABLE_BTN}</span>
-                    <ChevronRight className="h-3.5 w-3.5"/>
-                </button>
             </div>
         </div>
     );

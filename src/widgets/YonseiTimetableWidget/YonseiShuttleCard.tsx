@@ -1,18 +1,20 @@
 "use client";
 
 import React, {memo, useMemo} from "react";
-import {AlertCircle, Bus, ChevronRight, Clock, GraduationCap, MapPin, Sparkles} from "lucide-react";
+import {AlertCircle, Bus, ChevronRight, Clock, GraduationCap, MapPin} from "lucide-react";
 
 import {YONSEI_SHUTTLE_SCHEDULE} from "@/data/yonseiShuttleSchedule";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 
 interface YonseiShuttleCardProps {
     onOpenModal: () => void;
+    onOpenMapModal?: (stopId?: string) => void;
     currentTime?: Date;
 }
 
 export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                                                                              onOpenModal,
+                                                                             onOpenMapModal,
                                                                              currentTime,
                                                                          }) => {
     const now = currentTime || new Date();
@@ -34,7 +36,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             })
             .slice()
             .sort((a, b) => (parseTimeToMinutes(a.departure_time) ?? 0) - (parseTimeToMinutes(b.departure_time) ?? 0));
-    }, [isSaturday, isSunday]);
+    }, []);
 
     const applicableOutboundList = useMemo(() => {
         if (isSaturday) return [];
@@ -48,7 +50,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             })
             .slice()
             .sort((a, b) => (parseTimeToMinutes(a.departure_time) ?? 0) - (parseTimeToMinutes(b.departure_time) ?? 0));
-    }, [isSaturday, isSunday]);
+    }, []);
 
     // Find next upcoming inbound shuttle (earliest time >= currentMins)
     const nextInbound = useMemo(() => {
@@ -63,7 +65,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             }
         }
         return null;
-    }, [applicableInboundList, currentMins]);
+    }, [applicableInboundList]);
 
     // Find next upcoming outbound shuttle (earliest time >= currentMins)
     const nextOutbound = useMemo(() => {
@@ -78,7 +80,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             }
         }
         return null;
-    }, [applicableOutboundList, currentMins]);
+    }, [applicableOutboundList]);
 
     const hasUpcomingShuttle = Boolean(nextInbound || nextOutbound);
 
@@ -97,7 +99,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
         return (
             <div
                 onClick={onOpenModal}
-                className="w-full backdrop-blur-2xl bg-gradient-to-r from-teal-900/[0.03] via-white/80 to-emerald-900/[0.03] dark:from-teal-950/25 dark:via-[#131926]/80 dark:to-emerald-950/20 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 border border-teal-500/20 dark:border-teal-500/20 hover:border-teal-500/60 dark:hover:border-teal-400/60 transition-all duration-300 shadow-xs hover:shadow-md cursor-pointer select-none active:scale-[0.99] flex items-center justify-between gap-3 group"
+                className="w-full backdrop-blur-2xl bg-gradient-to-r from-teal-900/[0.03] via-white/80 to-emerald-900/[0.03] dark:from-teal-950/25 dark:via-[#131926]/80 dark:to-emerald-950/20 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 border border-teal-500/20 dark:border-teal-500/20 hover:border-teal-500/60 dark:hover:border-teal-400/60 transition-all duration-300 shadow-xs hover:shadow-md cursor-pointer select-none active:scale-[0.99] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 group"
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => {
@@ -132,11 +134,27 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                     </div>
                 </div>
 
-                <div
-                    className="flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-teal-500/10 group-hover:bg-gradient-to-r group-hover:from-teal-600 group-hover:to-emerald-600 dark:bg-teal-500/15 text-teal-700 group-hover:text-white dark:text-teal-300 dark:group-hover:text-white text-xs font-black border border-teal-500/25 group-hover:border-transparent group-hover:shadow-md group-hover:shadow-teal-700/20 transition-all shrink-0">
-                    <GraduationCap className="w-3.5 h-3.5"/>
-                    <span>시간표 보기</span>
-                    <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"/>
+                <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                    {onOpenMapModal && (
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onOpenMapModal();
+                            }}
+                            className="flex items-center gap-1 px-3 py-1.5 sm:px-3 sm:py-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-black border border-blue-500/20 transition-all cursor-pointer active:scale-95"
+                        >
+                            <MapPin className="w-3.5 h-3.5"/>
+                            <span>정류장 지도</span>
+                        </button>
+                    )}
+
+                    <div
+                        className="flex items-center gap-1 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl bg-teal-500/10 group-hover:bg-gradient-to-r group-hover:from-teal-600 group-hover:to-emerald-600 dark:bg-teal-500/15 text-teal-700 group-hover:text-white dark:text-teal-300 dark:group-hover:text-white text-xs font-black border border-teal-500/25 group-hover:border-transparent group-hover:shadow-md group-hover:shadow-teal-700/20 transition-all">
+                        <GraduationCap className="w-3.5 h-3.5"/>
+                        <span>시간표 보기</span>
+                        <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"/>
+                    </div>
                 </div>
             </div>
         );
@@ -162,12 +180,31 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                                 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight truncate">
                                 {YONSEI_SHUTTLE_SCHEDULE.title}
                             </span>
+                            <span className="text-[11px] font-semibold text-slate-400 font-mono mt-0.5">
+                                등교 17회 / 하교 12회 운행
+                            </span>
                         </div>
                     </div>
 
-                    <div
-                        className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 text-[11px] font-extrabold border border-teal-200/80 dark:border-teal-500/30 shrink-0">
-                        <span>{isSunday ? "일요일 특별운행" : "평일 정규운행"}</span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        {onOpenMapModal && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onOpenMapModal();
+                                }}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-200/70 dark:border-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                title="셔틀 정류장 위치 및 로드뷰 지도 보기"
+                            >
+                                <MapPin className="h-3 w-3 shrink-0"/>
+                                <span className="sm:inline">정류장 지도</span>
+                            </button>
+                        )}
+                        <div
+                            className="flex items-center gap-1 px-2 py-1 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 text-[10px] sm:text-[11px] font-extrabold border border-teal-200/80 dark:border-teal-500/30 shrink-0">
+                            <span>{isSunday ? "일요일 특별운행" : "평일 정규운행"}</span>
+                        </div>
                     </div>
                 </div>
 
@@ -283,39 +320,6 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                         )}
                     </div>
                 </div>
-
-                {/* Quick features & stops count info */}
-                <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
-                    <span
-                        className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-white/[0.05] border border-black/5 dark:border-white/5 text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1">
-                        <Sparkles className="w-3 h-3 text-teal-500"/>
-                        <span>등교 17회 / 하교 12회 운행</span>
-                    </span>
-                    <span
-                        className="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-white/[0.05] border border-black/5 dark:border-white/5 text-slate-700 dark:text-slate-300 font-bold flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-emerald-500"/>
-                        <span>정류장 위치 안내 (6개 거점)</span>
-                    </span>
-                </div>
-            </div>
-
-            {/* Footer Action Button */}
-            <div
-                className="pt-3.5 mt-3.5 border-t border-teal-500/20 dark:border-teal-500/20 flex items-center justify-between">
-                <span className="text-[11px] font-bold text-teal-700 dark:text-teal-300 flex items-center gap-1">
-                    <GraduationCap className="w-3.5 h-3.5"/>
-                    <span>시간표 & 정류장 위치</span>
-                </span>
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenModal();
-                    }}
-                    className="flex items-center space-x-1 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-black shadow-md shadow-teal-700/20 transition-all cursor-pointer active:scale-95"
-                >
-                    <span>자세히 보기</span>
-                    <ChevronRight className="h-3.5 w-3.5"/>
-                </button>
             </div>
         </div>
     );

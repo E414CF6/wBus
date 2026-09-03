@@ -2,8 +2,11 @@
 
 import React, {useEffect, useState} from "react";
 import {createPortal} from "react-dom";
+
 import {useYonseiShuttleSchedule} from "./hooks/useYonseiShuttleSchedule";
+
 import type {DayFilter, ShuttleTab, YonseiShuttleModalProps} from "./types";
+
 import {ShuttleGuidelinesTab} from "./ui/YonseiShuttleModal/ShuttleGuidelinesTab";
 import {ShuttleHeader} from "./ui/YonseiShuttleModal/ShuttleHeader";
 import {ShuttleScheduleList} from "./ui/YonseiShuttleModal/ShuttleScheduleList";
@@ -12,6 +15,7 @@ import {ShuttleStopsTab} from "./ui/YonseiShuttleModal/ShuttleStopsTab";
 export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                                                                           isOpen,
                                                                           onClose,
+                                                                          onOpenMapModal,
                                                                           currentTime,
                                                                       }) => {
     const [mounted, setMounted] = useState(false);
@@ -47,7 +51,8 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
 
     const modalContent = (
         <div
-            className="fixed inset-0 z-9999 flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 dark:bg-black/80 backdrop-blur-lg animate-fadeIn pointer-events-auto"
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-6 bg-slate-950/60 dark:bg-black/80 backdrop-blur-lg animate-fadeIn pointer-events-auto"
+            style={{zIndex: 9999}}
             onClick={onClose}
         >
             <div
@@ -64,6 +69,7 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                     onSearchQueryChange={setSearchQuery}
                     filteredCount={filteredCount}
                     onClose={onClose}
+                    onOpenMapModal={onOpenMapModal}
                 />
 
                 {/* Modal Body */}
@@ -88,8 +94,10 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                         />
                     )}
 
-                    {/* TAB 3: Stop Locations (탑승 장소 안내) */}
-                    {activeTab === "stops" && <ShuttleStopsTab/>}
+                    {/* TAB 3: Stop Locations (탑승 장소 안내 -> 지도 & 마커 로드뷰) */}
+                    {activeTab === "stops" && (
+                        <ShuttleStopsTab onOpenMapModal={onOpenMapModal}/>
+                    )}
 
                     {/* TAB 4: Guidelines (이용 안내) */}
                     {activeTab === "guidelines" && <ShuttleGuidelinesTab/>}
