@@ -38,7 +38,6 @@ const YONSEI_STRINGS = {
 
     LOCATION_YONSEI: "연세대 출발",
     LOCATION_HOECHON: "회촌 출발",
-    TIMETABLE_TITLE: (label: string) => `${label} 시간표`,
 
     MODE_OVERRIDE_LABEL: "운행 기준",
     MODE_AUTO_TOOLTIP: "자동 감지 (오늘 요일 기준)",

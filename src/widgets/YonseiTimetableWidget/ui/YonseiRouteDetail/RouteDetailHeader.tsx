@@ -33,13 +33,7 @@ export const RouteDetailHeader: React.FC<RouteDetailHeaderProps> = ({
                 </div>
                 <div className="min-w-0">
                     <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-1.5 sm:gap-2 truncate">
-                        <span>{UI_TEXT.YONSEI.TIMETABLE_TITLE(locationLabel)}</span>
-                        {isSingleSchedule && (
-                            <span
-                                className="px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] font-black bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/30 shrink-0">
-                                {UI_TEXT.YONSEI.SCHEDULE_APPLIED_ALL_DAYS}
-                            </span>
-                        )}
+                        <span>{locationLabel}</span>
                     </h3>
                 </div>
             </div>
