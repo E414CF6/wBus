@@ -1,4 +1,5 @@
 import type {NoticeDetail, NoticeItem, NoticeListResponse} from "./types";
+import {APP_LOCALE, UI_TEXT} from "@shared/config/locale";
 
 const BASE_URL = "http://its.wonju.go.kr";
 const NOTICE_LIST_URL = `${BASE_URL}/center/notice.do`;
@@ -7,7 +8,7 @@ const NOTICE_VIEW_URL = `${BASE_URL}/center/noticeView.do`;
 const HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Language": APP_LOCALE.ACCEPT_LANGUAGE,
 };
 
 // In-Memory cache with TTL
@@ -122,23 +123,23 @@ export async function scrapeWonjuNoticeDetail(id: string): Promise<NoticeDetail>
 
     const html = await res.text();
 
-    const titleMatch = html.match(/<p[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/p>/i) || html.match(/<th[^>]*class="[^\"]*subject[^\"]*"[^>]*>(.*?)<\/th>/i) || html.match(/<td[^>]*class="[^\"]*subject[^\"]*"[^>]*>(.*?)<\/td>/i);
-    const title = titleMatch ? (titleMatch[1] || titleMatch[2] || "").replace(/<[^>]+>/g, "").trim() : "제목 없음";
+    const titleMatch = html.match(/<p[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/p>/i) || html.match(/<th[^>]*class="[^"]*subject[^"]*"[^>]*>(.*?)<\/th>/i) || html.match(/<td[^>]*class="[^"]*subject[^"]*"[^>]*>(.*?)<\/td>/i);
+    const title = titleMatch ? (titleMatch[1] || titleMatch[2] || "").replace(/<[^>]+>/g, "").trim() : "";
 
     const dateMatch = html.match(/<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/span>/i) || html.match(/(\d{4}-\d{2}-\d{2})/);
     const date = dateMatch ? (dateMatch[1] || "").trim() : "";
 
     const writerMatch = html.match(/<span[^>]*class="[^"]*writer[^"]*"[^>]*>([^<]+)<\/span>/i);
-    const writer = writerMatch ? writerMatch[1].trim() : "원주시 교통정보센터";
+    const writer = writerMatch ? writerMatch[1].trim() : UI_TEXT.NOTICE.DEFAULT_WRITER;
 
     const viewsMatch = html.match(/<span[^>]*class="[^"]*hit[^"]*"[^>]*>([^<]+)<\/span>/i);
     const views = viewsMatch ? viewsMatch[1].trim() : "0";
 
-    const contentMatch = html.match(/<div[^>]*class="[^"]*cont_area[^"]*"[^>]*>([\s\S]*?)<\/div>/i) || html.match(/<div[^>]*class="[^\"]*(?:board_view_con|view_con|con_area)[^\"]*"[^>]*>(.*?)<\/div>/i);
+    const contentMatch = html.match(/<div[^>]*class="[^"]*cont_area[^"]*"[^>]*>([\s\S]*?)<\/div>/i) || html.match(/<div[^>]*class="[^"]*(?:board_view_con|view_con|con_area)[^"]*"[^>]*>(.*?)<\/div>/i);
     let content = contentMatch ? contentMatch[1].trim() : "";
 
     if (!content) {
-        const bodyContentMatch = html.match(/<td[^>]*colspan="[^\"]*"[^>]*class="[^\"]*view[^\"]*"[^>]*>(.*?)<\/td>/i);
+        const bodyContentMatch = html.match(/<td[^>]*colspan="[^"]*"[^>]*class="[^"]*view[^"]*"[^>]*>(.*?)<\/td>/i);
         if (bodyContentMatch) {
             content = bodyContentMatch[1].trim();
         }

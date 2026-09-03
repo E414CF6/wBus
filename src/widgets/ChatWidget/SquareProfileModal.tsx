@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import React, {useEffect, useState} from "react";
 import {createPortal} from "react-dom";
+import {UI_TEXT} from "@shared/config/locale";
 import type {RankedThread, TrendingTag} from "./types";
 import {getAvatarGradient} from "./utils/avatarUtils";
 import {renderRichContent} from "./utils/textParser";
@@ -103,7 +104,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                             </div>
                             <p className="text-[10px] text-slate-400 flex items-center gap-1">
                                 <ShieldCheck className="w-3 h-3 text-emerald-500"/>
-                                <span>암호화된 익명 프로필</span>
+                                <span>{UI_TEXT.CHAT.ENCRYPTED_PROFILE}</span>
                             </p>
                         </div>
                     </div>
@@ -111,6 +112,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                     <button
                         onClick={onClose}
                         className="p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-all cursor-pointer"
+                        aria-label={UI_TEXT.COMMON.CLOSE}
                     >
                         <X className="h-4 w-4"/>
                     </button>
@@ -128,7 +130,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                         }`}
                     >
                         <User className="w-3.5 h-3.5"/>
-                        <span>내 프로필</span>
+                        <span>{UI_TEXT.CHAT.MY_PROFILE}</span>
                     </button>
                     <button
                         onClick={() => setTab("TRENDING")}
@@ -139,7 +141,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                         }`}
                     >
                         <Activity className="w-3.5 h-3.5"/>
-                        <span>실시간 트렌드</span>
+                        <span>{UI_TEXT.CHAT.REALTIME_TREND}</span>
                     </button>
                     <button
                         onClick={() => setTab("HOT_THREADS")}
@@ -150,7 +152,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                         }`}
                     >
                         <Flame className="w-3.5 h-3.5"/>
-                        <span>인기 스레드</span>
+                        <span>{UI_TEXT.CHAT.POPULAR_THREADS}</span>
                     </button>
                 </div>
 
@@ -174,7 +176,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                                         {myTotalPostsCount}
                                     </div>
                                     <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                                        내 작성글 / 댓글
+                                        {UI_TEXT.CHAT.MY_POSTS_AND_REPLIES}
                                     </div>
                                 </div>
 
@@ -187,7 +189,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                                         {likedCount}
                                     </div>
                                     <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                                        공감한 이야기
+                                        {UI_TEXT.CHAT.MY_LIKED_STORIES}
                                     </div>
                                 </div>
                             </div>
@@ -197,17 +199,17 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                                 className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/5 space-y-2">
                                 <div
                                     className="text-xs font-black text-slate-800 dark:text-slate-200 flex items-center justify-between">
-                                    <span>익명 닉네임 변경</span>
+                                    <span>{UI_TEXT.CHAT.CHANGE_NICKNAME}</span>
                                     <button
                                         onClick={onRerollNickname}
                                         className="px-2.5 py-1 rounded-xl bg-white dark:bg-[#181f2e] border border-slate-200 dark:border-white/10 hover:border-indigo-500 text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs"
                                     >
                                         <Dices className="w-3.5 h-3.5"/>
-                                        <span>랜덤 생성</span>
+                                        <span>{UI_TEXT.CHAT.RANDOM_GENERATE}</span>
                                     </button>
                                 </div>
                                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                                    새로운 닉네임을 발급받습니다. 기존 작성한 글은 계속 보존됩니다.
+                                    {UI_TEXT.CHAT.CHANGE_NICKNAME_DESC}
                                 </p>
                             </div>
                         </div>
@@ -218,7 +220,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                             <div
                                 className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                                 <Sparkles className="w-3.5 h-3.5 text-amber-500"/>
-                                <span>실시간 화제의 키워드</span>
+                                <span>{UI_TEXT.CHAT.HOT_KEYWORDS}</span>
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {trendingTags.map((tag) => (

@@ -1,4 +1,5 @@
 import type {BusRoute, RouteDataset, TimetableEntry} from "@shared/types/bus";
+import {APP_LOCALE} from "@shared/config/locale";
 
 const BASE_URL = "http://its.wonju.go.kr";
 const LIST_URL = `${BASE_URL}/bus/bus04.do`;
@@ -8,7 +9,7 @@ const HEADERS = {
     "User-Agent":
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Language": APP_LOCALE.ACCEPT_LANGUAGE,
 };
 
 const TARGET_RAW_NOS = [
@@ -36,7 +37,7 @@ export async function fetchList(filterYonseiOnly = false): Promise<{
     const html = await res.text();
 
     // Extract CSRF token
-    const csrfMatch = html.match(/name=["']CSRFToken["']\s+value=["']([^"']+)["']/);
+    const csrfMatch = html.match(/name=['"]CSRFToken['"]\s+value=['"]([^'"]+)['"]/);
     const csrfToken = csrfMatch ? csrfMatch[1] : "";
 
     // Extract cookies if any
@@ -45,7 +46,7 @@ export async function fetchList(filterYonseiOnly = false): Promise<{
 
     // Match table rows
     const rowRegex =
-        /<tr[^>]*>\s*<td[^>]*onclick=["']goDetail\(['"]([^'"]+)['"]\);["'][^>]*>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/gs;
+        /<tr[^>]*>\s*<td[^>]*onclick=['"]goDetail\(['"]([^'"]+)['"]\);['"][^>]*>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/gs;
 
     const routes: BusRoute[] = [];
     let match: RegExpExecArray | null;

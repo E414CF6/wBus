@@ -3,6 +3,7 @@
 import {YONSEI_SHUTTLE_SCHEDULE} from "@/data/yonseiShuttleSchedule";
 import {ShieldAlert} from "lucide-react";
 import React from "react";
+import {UI_TEXT} from "@shared/config/locale";
 
 export const ShuttleGuidelinesTab: React.FC = () => {
     return (
@@ -12,10 +13,10 @@ export const ShuttleGuidelinesTab: React.FC = () => {
                 <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"/>
                 <div>
                     <h4 className="text-xs sm:text-sm font-black">
-                        무료 셔틀버스 이용 시 준수사항
+                        {UI_TEXT.YONSEI_SHUTTLE.GUIDELINES_TITLE}
                     </h4>
                     <p className="text-xs font-medium text-amber-800 dark:text-amber-300 mt-0.5 leading-relaxed">
-                        안전하고 쾌적한 통학을 위해 아래 안내사항을 반드시 숙지하여 주시기 바랍니다.
+                        {UI_TEXT.YONSEI_SHUTTLE.GUIDELINES_DESC}
                     </p>
                 </div>
             </div>

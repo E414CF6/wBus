@@ -3,6 +3,7 @@
 import {YONSEI_SHUTTLE_SCHEDULE} from "@/data/yonseiShuttleSchedule";
 import {ArrowRight, Bus, Clock, Info, MapPin, Search, X} from "lucide-react";
 import React from "react";
+import {UI_TEXT} from "@shared/config/locale";
 import type {DayFilter, ShuttleTab} from "../../types";
 
 interface ShuttleHeaderProps {
@@ -37,14 +38,14 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                     <div
                         className="px-3 sm:px-3.5 py-1.5 rounded-2xl bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 text-white font-black text-sm sm:text-base tracking-tight shadow-md shadow-teal-700/20 shrink-0 flex items-center gap-1.5">
                         <Bus className="w-4 h-4 shrink-0"/>
-                        <span className="whitespace-nowrap">셔틀버스</span>
+                        <span className="whitespace-nowrap">{UI_TEXT.YONSEI_SHUTTLE.SHUTTLE_TITLE}</span>
                     </div>
                     <div className="min-w-0">
                         <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
                             {YONSEI_SHUTTLE_SCHEDULE.title}
                         </h3>
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
-                            연세대학교 미래캠퍼스 셔틀버스
+                            {UI_TEXT.YONSEI_SHUTTLE.HEADER_SUBTITLE}
                         </p>
                     </div>
                 </div>
@@ -52,6 +53,7 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                 <button
                     onClick={onClose}
                     className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-all cursor-pointer active:scale-95 shrink-0"
+                    aria-label={UI_TEXT.COMMON.CLOSE}
                 >
                     <X className="h-4 w-4"/>
                 </button>
@@ -72,7 +74,7 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                         }`}
                     >
                         <ArrowRight className="w-3.5 h-3.5 rotate-45 shrink-0"/>
-                        <span className="whitespace-nowrap">등교</span>
+                        <span className="whitespace-nowrap">{UI_TEXT.YONSEI_SHUTTLE.TO_CAMPUS_TAB}</span>
                         <span className="text-[10px] opacity-80 font-mono">17</span>
                     </button>
                     <button
@@ -84,7 +86,7 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                         }`}
                     >
                         <ArrowRight className="w-3.5 h-3.5 -rotate-45 shrink-0"/>
-                        <span className="whitespace-nowrap">하교</span>
+                        <span className="whitespace-nowrap">{UI_TEXT.YONSEI_SHUTTLE.FROM_CAMPUS_TAB}</span>
                         <span className="text-[10px] opacity-80 font-mono">12</span>
                     </button>
                     <button
@@ -96,7 +98,7 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                         }`}
                     >
                         <MapPin className="w-3.5 h-3.5 shrink-0"/>
-                        <span className="whitespace-nowrap">탑승 장소</span>
+                        <span className="whitespace-nowrap">{UI_TEXT.YONSEI_SHUTTLE.STOPS_LOCATION_TAB}</span>
                     </button>
                     <button
                         onClick={() => onTabChange("guidelines")}
@@ -107,7 +109,7 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                         }`}
                     >
                         <Info className="w-3.5 h-3.5 shrink-0"/>
-                        <span className="whitespace-nowrap">이용 안내</span>
+                        <span className="whitespace-nowrap">{UI_TEXT.YONSEI_SHUTTLE.USAGE_GUIDE_TAB}</span>
                     </button>
                 </div>
 
@@ -123,7 +125,7 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                                     : "bg-slate-50 dark:bg-white/[0.03] text-slate-500 border-slate-200 dark:border-white/5"
                             }`}
                         >
-                            전체
+                            {UI_TEXT.YONSEI_SHUTTLE.FILTER_ALL}
                         </button>
                         <button
                             onClick={() => onDayFilterChange("WEEKDAY")}
@@ -133,7 +135,7 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                                     : "bg-slate-50 dark:bg-white/[0.03] text-slate-500 border-slate-200 dark:border-white/5"
                             }`}
                         >
-                            평일 운행
+                            {UI_TEXT.YONSEI_SHUTTLE.FILTER_WEEKDAY}
                         </button>
                         <button
                             onClick={() => onDayFilterChange("SUNDAY")}
@@ -143,7 +145,7 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                                     : "bg-slate-50 dark:bg-white/[0.03] text-slate-500 border-slate-200 dark:border-white/5"
                             }`}
                         >
-                            일요일 특별편
+                            {UI_TEXT.YONSEI_SHUTTLE.FILTER_SUNDAY}
                         </button>
                     </div>
                 )}
@@ -159,13 +161,13 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                             type="text"
                             value={searchQuery}
                             onChange={(e) => onSearchQueryChange(e.target.value)}
-                            placeholder="정류장명 (여주역, 터미널, 원주역, 세브란스 등) 또는 시간 검색..."
+                            placeholder={UI_TEXT.YONSEI_SHUTTLE.SEARCH_PLACEHOLDER}
                             className="w-full pl-8 pr-4 py-1.5 rounded-xl bg-slate-100 dark:bg-white/[0.06] border border-transparent focus:border-teal-500/50 text-xs font-semibold text-slate-900 dark:text-white outline-none transition-all"
                         />
                     </div>
                     <div className="text-[11px] font-bold text-slate-400 shrink-0 flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400"/>
-                        <span>총 {filteredCount}회 운행</span>
+                        <span>{UI_TEXT.YONSEI_SHUTTLE.TOTAL_RUNS(filteredCount)}</span>
                     </div>
                 </div>
             )}

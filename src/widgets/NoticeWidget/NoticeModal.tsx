@@ -114,7 +114,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                 {selectedNoticeId ? (detailNotice?.title ? detailNotice.title : UI_TEXT.NOTICE.SECTION_TITLE) : UI_TEXT.NOTICE.WIDGET_TITLE}
                             </h2>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                                Wonju Notice Center
+                                {UI_TEXT.NOTICE.SUBTITLE}
                             </p>
                         </div>
                     </div>
@@ -193,7 +193,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
 
                                 <div className="flex items-center justify-between pt-0.5">
                                     <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-                                        전체 소식 {listData?.totalCount ? `(${listData.totalCount}건)` : ""}
+                                        {listData?.totalCount ? UI_TEXT.NOTICE.TOTAL_COUNT_FORMAT(listData.totalCount) : UI_TEXT.NOTICE.TOTAL_COUNT_LABEL}
                                     </span>
 
                                     <button
@@ -255,7 +255,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                                                 : "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300"
                                                         }`}
                                                     >
-                                                        {notice.isNotice ? "공지" : `#${notice.num}`}
+                                                        {notice.isNotice ? UI_TEXT.NOTICE.PINNED_BADGE : `#${notice.num}`}
                                                     </span>
                                                     <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors line-clamp-2 leading-snug">
                                                         {notice.title}
@@ -265,7 +265,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
                                                 {notice.hasFile && (
                                                     <div
                                                         className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-gray-200/60 dark:bg-white/10 text-gray-500 dark:text-gray-400"
-                                                        title="첨부파일 있음"
+                                                        title={UI_TEXT.NOTICE.ATTACHMENT_EXIST_TITLE}
                                                     >
                                                         <Paperclip className="w-3 h-3"/>
                                                     </div>

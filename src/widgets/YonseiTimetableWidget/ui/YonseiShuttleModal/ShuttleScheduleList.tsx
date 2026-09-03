@@ -2,6 +2,7 @@
 
 import {MapPin, Sparkles} from "lucide-react";
 import React from "react";
+import {UI_TEXT} from "@shared/config/locale";
 import type {ShuttleViaStop, YonseiShuttleItem} from "../../types";
 
 interface ShuttleScheduleListProps {
@@ -90,14 +91,15 @@ export const ShuttleScheduleList: React.FC<ShuttleScheduleListProps> = ({
                                 )}
                                 {!isInbound && (
                                     <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                                        출발: <strong>{item.departure_point}</strong>
+                                        {UI_TEXT.YONSEI_SHUTTLE.DEPARTURE_PREFIX}
+                                        <strong>{item.departure_point}</strong>
                                     </span>
                                 )}
                                 {isNext && (
                                     <span
                                         className={`px-2 py-0.5 rounded-lg ${theme.badgeBg} text-[10px] font-black shadow-xs animate-pulse`}
                                     >
-                                        다음 버스
+                                        {UI_TEXT.YONSEI_SHUTTLE.NEXT_BUS}
                                     </span>
                                 )}
                             </div>
@@ -105,10 +107,10 @@ export const ShuttleScheduleList: React.FC<ShuttleScheduleListProps> = ({
                             <div
                                 className={`text-xs font-black ${theme.destText} shrink-0 flex items-center gap-1`}
                             >
-                                <span>{isInbound ? item.destination : `→ ${item.destination} 행`}</span>
+                                <span>{isInbound ? item.destination : UI_TEXT.YONSEI_SHUTTLE.DESTINATION_SUFFIX(item.destination)}</span>
                                 {isInbound && (
                                     <span className="text-[10px] font-medium text-slate-400">
-                                        도착
+                                        {UI_TEXT.YONSEI_SHUTTLE.ARRIVAL_LABEL}
                                     </span>
                                 )}
                             </div>
@@ -120,7 +122,7 @@ export const ShuttleScheduleList: React.FC<ShuttleScheduleListProps> = ({
                                 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 mb-2.5">
                                 <MapPin className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0"/>
                                 <span>
-                                    출발지:{" "}
+                                    {UI_TEXT.YONSEI_SHUTTLE.DEPARTURE_ORIGIN_PREFIX}{" "}
                                     <strong className="text-teal-700 dark:text-teal-300">
                                         {item.departure_point}
                                     </strong>
@@ -143,8 +145,8 @@ export const ShuttleScheduleList: React.FC<ShuttleScheduleListProps> = ({
                                 className="p-2.5 rounded-xl bg-white/80 dark:bg-[#161c2b] border border-slate-200/60 dark:border-white/5">
                                 <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
                                     {isInbound
-                                        ? "경유 정류장 및 통과 시각"
-                                        : "하차 경유 정류장"}
+                                        ? UI_TEXT.YONSEI_SHUTTLE.VIA_AND_TIME
+                                        : UI_TEXT.YONSEI_SHUTTLE.DROP_ONLY_STOPS}
                                 </div>
                                 <div className="flex flex-wrap items-center gap-1.5">
                                     {item.via.map((v: ShuttleViaStop, vIdx: number) => (
@@ -170,7 +172,7 @@ export const ShuttleScheduleList: React.FC<ShuttleScheduleListProps> = ({
                             </div>
                         ) : (
                             <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500 italic">
-                                중간 경유지 없음 (직행 노선)
+                                {UI_TEXT.YONSEI_SHUTTLE.NO_VIA_EXPRESS}
                             </div>
                         )}
                     </div>

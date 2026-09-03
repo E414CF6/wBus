@@ -2,7 +2,7 @@
 
 import React from "react";
 import {CacheMetadata} from "@shared/types/bus";
-import {UI_TEXT} from "@shared/config/locale";
+import {LOCALE, UI_TEXT} from "@shared/config/locale";
 import {Clock, RefreshCw} from "lucide-react";
 
 interface CacheInfoBannerProps {
@@ -19,7 +19,7 @@ export const CacheInfoBanner: React.FC<CacheInfoBannerProps> = ({
     if (!meta) return null;
 
     const formattedDate = meta.updatedAt
-        ? new Date(meta.updatedAt).toLocaleString("ko-KR", {
+        ? new Date(meta.updatedAt).toLocaleString(LOCALE, {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",

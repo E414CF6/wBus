@@ -4,6 +4,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import {Bus, Check, Clock, GraduationCap, MapPin, Search, Star, X} from "lucide-react";
 import {getRouteMeta, RouteCategory, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
+import {UI_TEXT} from "@shared/config/locale";
 
 // ----------------------------------------------------------------------
 // Types & Constants
@@ -190,14 +191,14 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     const validRecentRoutes = recentRoutes.filter((r) => allRoutes.includes(r));
 
     const categories: { id: RouteCategory; label: string; icon?: React.ComponentType<{ className?: string }> }[] = [
-        {id: "ALL", label: `전체 (${sortedAllRoutes.length})`},
-        {id: "BOOKMARKS", label: `즐겨찾기 (${bookmarkedList.length})`, icon: Star},
-        {id: "YONSEI", label: "연세대 (30·34·34-1)", icon: GraduationCap},
-        {id: "1_19", label: "1~19번"},
-        {id: "20_49", label: "20~49번"},
-        {id: "50_99", label: "50~99번"},
-        {id: "100_PLUS", label: "100번대+"},
-        {id: "PUBLIC", label: "공영·순환"},
+        {id: "ALL", label: UI_TEXT.ROUTE_SELECT.CATEGORY_ALL(sortedAllRoutes.length)},
+        {id: "BOOKMARKS", label: UI_TEXT.ROUTE_SELECT.CATEGORY_BOOKMARKS(bookmarkedList.length), icon: Star},
+        {id: "YONSEI", label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI, icon: GraduationCap},
+        {id: "1_19", label: UI_TEXT.ROUTE_SELECT.CAT_1_19},
+        {id: "20_49", label: UI_TEXT.ROUTE_SELECT.CAT_20_49},
+        {id: "50_99", label: UI_TEXT.ROUTE_SELECT.CAT_50_99},
+        {id: "100_PLUS", label: UI_TEXT.ROUTE_SELECT.CAT_100_PLUS},
+        {id: "PUBLIC", label: UI_TEXT.ROUTE_SELECT.CATEGORY_PUBLIC},
     ];
 
     const modalContent = (
@@ -214,7 +215,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                 className="relative w-full max-w-2xl h-[78dvh] sm:h-[82dvh] max-h-[78dvh] sm:max-h-[82dvh] bg-white/95 dark:bg-[#12131a]/95 backdrop-blur-3xl border border-black/10 dark:border-white/10 shadow-[0_24px_70px_rgba(0,0,0,0.35)] dark:shadow-[0_24px_70px_rgba(0,0,0,0.85)] rounded-[28px] sm:rounded-[32px] overflow-hidden flex flex-col z-10 transition-all duration-300 transform animate-scaleUp"
                 role="dialog"
                 aria-modal="true"
-                aria-label="실시간 노선 선택기"
+                aria-label={UI_TEXT.ROUTE_SELECT.MODAL_ARIA}
             >
                 {/* Header Bar */}
                 <div
@@ -227,15 +228,15 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                         <div>
                             <div className="flex items-center gap-2">
                                 <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
-                                    노선 선택
+                                    {UI_TEXT.ROUTE_SELECT.MODAL_TITLE}
                                 </h2>
                                 <span
                                     className="px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-500/10 dark:bg-blue-400/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                                    현재: {selectedRoute}번
+                                    {UI_TEXT.ROUTE_SELECT.CURRENT_ROUTE_PREFIX(selectedRoute)}
                                 </span>
                             </div>
                             <p className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                                원주시 실시간 버스 {sortedAllRoutes.length}개 노선
+                                {UI_TEXT.ROUTE_SELECT.TOTAL_ROUTES_COUNT(sortedAllRoutes.length)}
                             </p>
                         </div>
                     </div>
@@ -246,7 +247,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                             type="button"
                             onClick={onClose}
                             className="p-2 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                            aria-label="닫기"
+                            aria-label={UI_TEXT.COMMON.CLOSE}
                         >
                             <X className="w-5 h-5"/>
                         </button>
@@ -262,7 +263,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="노선 번호 또는 행선지 검색 (예: 30, 연세대, 횡성, 문막...)"
+                            placeholder={UI_TEXT.ROUTE_SELECT.SEARCH_PLACEHOLDER}
                             className="w-full pl-10 pr-10 py-2.5 sm:py-3 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 rounded-2xl text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all shadow-inner"
                         />
                         {searchQuery && (
@@ -270,7 +271,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                 type="button"
                                 onClick={() => setSearchQuery("")}
                                 className="absolute right-3 p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
-                                aria-label="검색어 지우기"
+                                aria-label={UI_TEXT.ROUTE_SELECT.CLEAR_SEARCH_ARIA}
                             >
                                 <X className="w-4 h-4"/>
                             </button>
@@ -288,7 +289,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                             <div
                                 className="flex items-center gap-1 text-[11px] font-black text-blue-700 dark:text-blue-400 whitespace-nowrap shrink-0">
                                 <GraduationCap className="w-3.5 h-3.5"/>
-                                <span>연세대 캠퍼스 노선</span>
+                                <span>{UI_TEXT.ROUTE_SELECT.CAMPUS_ROUTES_LABEL}</span>
                             </div>
                             <div className="flex items-center gap-1.5 shrink-0">
                                 {["30", "34", "34-1"].map((r) => {
@@ -304,7 +305,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                     : "bg-[#003876]/10 dark:bg-[#003876]/30 text-[#003876] dark:text-blue-300 hover:bg-[#003876]/20 border border-[#003876]/20"
                                             }`}
                                         >
-                                            <span className="font-extrabold">{r}번</span>
+                                            <span className="font-extrabold">{UI_TEXT.COMMON.ROUTE_LABEL(r)}</span>
                                             {isCurrent && <Check className="w-3 h-3 stroke-[3]"/>}
                                         </button>
                                     );
@@ -317,8 +318,8 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                             <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar-hidden py-0.5">
                                 <div
                                     className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">
-                                    <Clock className="w-3 h-3"/>
-                                    <span>최근 조회:</span>
+                                    <Clock className="w-3.5 h-3.5"/>
+                                    <span>{UI_TEXT.ROUTE_SELECT.RECENT_SEARCH_LABEL}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
                                     {validRecentRoutes.map((r) => {
@@ -334,7 +335,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                         : "bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/5"
                                                 }`}
                                             >
-                                                {r}번
+                                                {UI_TEXT.COMMON.ROUTE_LABEL(r)}
                                             </button>
                                         );
                                     })}
@@ -381,12 +382,12 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                         <div className="flex flex-col items-center justify-center py-14 text-center text-slate-400">
                             <Bus className="w-10 h-10 mb-2.5 stroke-[1.4] opacity-40"/>
                             <p className="text-sm font-black text-slate-700 dark:text-slate-200">
-                                일치하는 노선이 없습니다
+                                {UI_TEXT.ROUTE_SELECT.NO_RESULTS_TITLE}
                             </p>
                             <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
                                 {selectedCategory === "BOOKMARKS"
-                                    ? "즐겨찾기한 노선이 없습니다. 별표(★)를 눌러 노선을 등록해보세요."
-                                    : "노선 번호나 행선지를 다시 확인해 주세요."}
+                                    ? UI_TEXT.ROUTE_SELECT.NO_BOOKMARKS_DESC
+                                    : UI_TEXT.ROUTE_SELECT.NO_RESULTS_DESC}
                             </p>
                             {selectedCategory !== "ALL" && (
                                 <button
@@ -395,9 +396,9 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                         setSelectedCategory("ALL");
                                         setSearchQuery("");
                                     }}
-                                    className="mt-4 px-3.5 py-1.5 rounded-full bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors"
+                                    className="mt-4 px-3.5 py-1.5 rounded-full bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 transition-colors cursor-pointer"
                                 >
-                                    전체 노선 보기
+                                    {UI_TEXT.ROUTE_SELECT.VIEW_ALL_ROUTES_BTN}
                                 </button>
                             )}
                         </div>
@@ -436,7 +437,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                             : "bg-slate-900 dark:bg-slate-800 text-white"
                                                 }`}
                                             >
-                                                <span>{route}번</span>
+                                                <span>{UI_TEXT.COMMON.ROUTE_LABEL(route)}</span>
                                             </div>
 
                                             {/* Route Info / Origins & Dest */}
@@ -449,7 +450,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                     {isYonsei && (
                                                         <span
                                                             className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
-                                                            연세대
+                                                            {UI_TEXT.ROUTE_SELECT.YONSEI_BADGE}
                                                         </span>
                                                     )}
                                                 </div>
@@ -471,8 +472,8 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                         ? "text-amber-500 hover:text-amber-600"
                                                         : "text-slate-300 dark:text-slate-600 hover:text-amber-500 dark:hover:text-amber-400"
                                                 }`}
-                                                title={isBookmarked ? "즐겨찾기 해제" : "즐겨찾기 등록"}
-                                                aria-label={isBookmarked ? "즐겨찾기 해제" : "즐겨찾기 등록"}
+                                                title={isBookmarked ? UI_TEXT.ROUTE_SELECT.BOOKMARK_REMOVE_TITLE : UI_TEXT.ROUTE_SELECT.BOOKMARK_ADD_TITLE}
+                                                aria-label={isBookmarked ? UI_TEXT.ROUTE_SELECT.BOOKMARK_REMOVE_TITLE : UI_TEXT.ROUTE_SELECT.BOOKMARK_ADD_TITLE}
                                             >
                                                 <Star className={`w-4 h-4 ${isBookmarked ? "fill-amber-500" : ""}`}/>
                                             </button>
@@ -490,14 +491,14 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                     <div className="flex items-center gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"/>
                         <span>
-                            현재 노선:{" "}
+                            {UI_TEXT.ROUTE_SELECT.CURRENT_ROUTE_LABEL}{" "}
                             <strong className="text-slate-900 dark:text-white font-extrabold">
-                                {selectedRoute}번
+                                {UI_TEXT.COMMON.ROUTE_LABEL(selectedRoute)}
                             </strong>
                             {" "}({routeMetaMap.get(selectedRoute)?.origin} ↔ {routeMetaMap.get(selectedRoute)?.destination})
                         </span>
                     </div>
-                    <span className="font-semibold">{filteredRoutes.length}개 표시 중</span>
+                    <span className="font-semibold">{UI_TEXT.ROUTE_SELECT.DISPLAYED_COUNT(filteredRoutes.length)}</span>
                 </div>
             </div>
         </div>

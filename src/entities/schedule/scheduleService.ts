@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import {loadFromVercelBlob, saveToVercelBlob} from "@shared/lib/blobService";
 import type {CacheMetadata, RouteDataset} from "@shared/types/bus";
+import {LOCALE} from "@shared/config/locale";
 import {scrapeWonjuBusDataset, scrapeWonjuItsYonsei} from "./itsScraper";
 
 export const MIN_REFRESH_INTERVAL_DAYS = 1;
@@ -216,7 +217,7 @@ export async function refreshSchedule(force = true): Promise<{
     }
 
     const nextAvailableStr = meta.nextRefreshAvailableAt
-        ? new Date(meta.nextRefreshAvailableAt).toLocaleString("ko-KR", {
+        ? new Date(meta.nextRefreshAvailableAt).toLocaleString(LOCALE, {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",

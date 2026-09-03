@@ -3,6 +3,7 @@
 import {YONSEI_SHUTTLE_SCHEDULE} from "@/data/yonseiShuttleSchedule";
 import {Info, MapPin} from "lucide-react";
 import React from "react";
+import {UI_TEXT} from "@shared/config/locale";
 
 export const ShuttleStopsTab: React.FC = () => {
     return (
@@ -10,10 +11,7 @@ export const ShuttleStopsTab: React.FC = () => {
             <div
                 className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-500/30 text-xs text-blue-900 dark:text-blue-200 font-medium flex items-center gap-2">
                 <Info className="w-4 h-4 text-blue-600 shrink-0"/>
-                <span>
-                    무료 셔틀버스는 지정된 탑승 장소에서만 승하차가 가능합니다. 출발 5분 전까지
-                    대기해주세요.
-                </span>
+                <span>{UI_TEXT.YONSEI_SHUTTLE.STOPS_NOTICE}</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

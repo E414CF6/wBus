@@ -5,8 +5,19 @@ export interface YonseiDaySchedule {
 
 /**
  * Localization & Text Constants
+ * APP_LOCALE: Locale, language codes, and scraper request headers
  * UI_TEXT: User-facing strings
  */
+
+export const APP_LOCALE = {
+    LOCALE: "ko-KR",
+    LANG: "ko",
+    OG_LOCALE: "ko_KR",
+    ACCEPT_LANGUAGE: "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+} as const;
+
+export const LOCALE = APP_LOCALE.LOCALE;
+export const HTML_LANG = APP_LOCALE.LANG;
 
 const YONSEI_STRINGS = {
     HERO_BADGE: "연세대 미래캠",
@@ -172,6 +183,7 @@ const TIMETABLE_STRINGS = {
 
 const YONSEI_SHUTTLE_STRINGS = {
     SHUTTLE_TITLE: "셔틀버스",
+    HEADER_SUBTITLE: "연세대학교 미래캠퍼스 셔틀버스",
     SATURDAY_NO_RUN: "토요일 미운행",
     SERVICE_ENDED: "운행 종료",
     SATURDAY_NO_RUN_DESC: "토요일은 셔틀버스를 운행하지 않습니다 (시간표 및 정류장 위치 확인)",
@@ -188,12 +200,24 @@ const YONSEI_SHUTTLE_STRINGS = {
     FROM_CAMPUS_TAB: "하교",
     STOPS_LOCATION_TAB: "탑승 장소",
     USAGE_GUIDE_TAB: "이용 안내",
+    FILTER_ALL: "전체",
+    FILTER_WEEKDAY: "평일 운행",
+    FILTER_SUNDAY: "일요일 특별편",
     SEARCH_PLACEHOLDER: "정류장명 (여주역, 터미널, 원주역, 세브란스 등) 또는 시간 검색...",
     TOTAL_RUNS: (count: number) => `총 ${count}회 운행`,
+    NEXT_BUS: "다음 버스",
+    DEPARTURE_PREFIX: "출발:",
+    DEPARTURE_ORIGIN_PREFIX: "출발지:",
+    ARRIVAL_LABEL: "도착",
+    DESTINATION_SUFFIX: (dest: string) => `→ ${dest} 행`,
     VIA_AND_TIME: "경유 정류장 및 통과 시각",
     DROP_ONLY_STOPS: "하차 경유 정류장",
+    NO_VIA_EXPRESS: "중간 경유지 없음 (직행 노선)",
     EMPTY_TO_CAMPUS: "검색 조건에 일치하는 등교 셔틀버스가 없습니다.",
     EMPTY_FROM_CAMPUS: "검색 조건에 일치하는 하교 셔틀버스가 없습니다.",
+    GUIDELINES_TITLE: "무료 셔틀버스 이용 시 준수사항",
+    GUIDELINES_DESC: "안전하고 쾌적한 통학을 위해 아래 안내사항을 반드시 숙지하여 주시기 바랍니다.",
+    STOPS_NOTICE: "무료 셔틀버스는 지정된 탑승 장소에서만 승하차가 가능합니다. 출발 5분 전까지 대기해주세요.",
 } as const;
 
 // ============================================================================
@@ -209,6 +233,7 @@ const CHAT_STRINGS = {
     REALTIME_TREND: "실시간 트렌드",
     POPULAR_THREADS: "인기 스레드",
     CHANGE_NICKNAME: "익명 닉네임 변경",
+    CHANGE_NICKNAME_DESC: "새로운 닉네임을 발급받습니다. 기존 작성한 글은 계속 보존됩니다.",
     RANDOM_GENERATE: "랜덤 생성",
     HOT_KEYWORDS: "실시간 화제의 키워드",
     TOAST_POST_SUCCESS: "스퀘어 광장에 글이 등록되었습니다.",
@@ -235,7 +260,9 @@ const CHAT_STRINGS = {
     STATUS_ACTIVE: "활동 중",
     STATUS_PARTICIPATING: "참여 중",
     MY_POSTS_COUNT_LABEL: "내 작성 글",
+    MY_POSTS_AND_REPLIES: "내 작성글 / 댓글",
     MY_LIKED_COUNT_LABEL: "공감한 글",
+    MY_LIKED_STORIES: "공감한 이야기",
     TREND_HASHTAGS: "실시간 트렌드 해시태그",
     HOT_DEBATE: "지금 뜨거운 HOT 토론",
     CLEAN_GUIDE: "스퀘어 클린 가이드",
@@ -258,14 +285,27 @@ const ROUTE_SELECT_STRINGS = {
     MODAL_ARIA: "실시간 노선 선택기",
     SEARCH_PLACEHOLDER: "노선 번호 또는 행선지 검색 (예: 30, 연세대, 횡성, 문막...)",
     CLEAR_SEARCH_ARIA: "검색어 지우기",
+    CATEGORY_ALL: (count: number) => `전체 (${count})`,
+    CATEGORY_BOOKMARKS: (count: number) => `즐겨찾기 (${count})`,
     CATEGORY_YONSEI: "연세대 (30·34·34-1)",
+    CAT_1_19: "1~19번",
+    CAT_20_49: "20~49번",
+    CAT_50_99: "50~99번",
+    CAT_100_PLUS: "100번대+",
     CATEGORY_PUBLIC: "공영·순환",
+    CURRENT_ROUTE_PREFIX: (route: string) => `현재: ${route}번`,
+    TOTAL_ROUTES_COUNT: (count: number) => `원주시 실시간 버스 ${count}개 노선`,
     CAMPUS_ROUTES_LABEL: "연세대 캠퍼스 노선",
     RECENT_SEARCH_LABEL: "최근 조회:",
+    NO_RESULTS_TITLE: "일치하는 노선이 없습니다",
     NO_BOOKMARKS_DESC: "즐겨찾기한 노선이 없습니다. 별표(★)를 눌러 노선을 등록해보세요.",
     NO_RESULTS_DESC: "노선 번호나 행선지를 다시 확인해 주세요.",
+    VIEW_ALL_ROUTES_BTN: "전체 노선 보기",
+    YONSEI_BADGE: "연세대",
     BOOKMARK_ADD_TITLE: "즐겨찾기 등록",
     BOOKMARK_REMOVE_TITLE: "즐겨찾기 해제",
+    CURRENT_ROUTE_LABEL: "현재 노선:",
+    DISPLAYED_COUNT: (count: number) => `${count}개 표시 중`,
     STOP_CURRENT_ROUTE: "현재 노선",
     STOP_NEARBY: "주변 정류장",
     SELECT_OTHER_ROUTE_TITLE: "다른 노선 선택하기 (검색/목록)",
@@ -311,6 +351,8 @@ export const UI_TEXT = {
         JUST_NOW: "방금 전",
         SECONDS_AGO: (sec: number) => `${sec}초 전`,
         MINUTES_AGO: (min: number) => `${min}분 전`,
+        HOURS_AGO: (hours: number) => `${hours}시간 전`,
+        DAYS_AGO: (days: number) => `${days}일 전`,
         REFRESH_AVAILABLE_NOW: "지금 갱신 가능",
         REFRESH_AVAILABLE_DAYS: (days: number, hours: number) => `${days}일 ${hours}시간 후 갱신 가능`,
         REFRESH_AVAILABLE_HOURS: (hours: number, mins: number) => `${hours}시간 ${mins}분 후 갱신 가능`,
@@ -338,7 +380,8 @@ export const UI_TEXT = {
         THEME_TOGGLE_LABEL: "화면 테마 변경",
     },
 
-    TIMETABLE: TIMETABLE_STRINGS, TIMETABLE_HEADER: TIMETABLE_STRINGS,
+    TIMETABLE: TIMETABLE_STRINGS,
+    TIMETABLE_HEADER: TIMETABLE_STRINGS,
 
     BOTTOM_NAV: {
         TAB_SCHEDULE: "시간표",
@@ -355,7 +398,9 @@ export const UI_TEXT = {
         DEFAULT_ROUTE_NAME: "노선",
     },
 
-    YONSEI: YONSEI_STRINGS, YONSEI_TIMETABLE: YONSEI_STRINGS, YONSEI_SHUTTLE: YONSEI_SHUTTLE_STRINGS,
+    YONSEI: YONSEI_STRINGS,
+    YONSEI_TIMETABLE: YONSEI_STRINGS,
+    YONSEI_SHUTTLE: YONSEI_SHUTTLE_STRINGS,
 
     CHAT: CHAT_STRINGS,
 
@@ -406,11 +451,13 @@ export const UI_TEXT = {
     },
 
     MAP: {
-        BUS_LOCATION_TITLE: "실시간 버스 위치", BUS_LOCATION_DESC: "지도에서 실시간으로 버스 위치를 확인하세요.",
+        BUS_LOCATION_TITLE: "실시간 버스 위치",
+        BUS_LOCATION_DESC: "지도에서 실시간으로 버스 위치를 확인하세요.",
     },
 
     STOP_POPUP: {
-        STATION_ID_LABEL: "정류장 ID", STATION_ID_FALLBACK: "N/A",
+        STATION_ID_LABEL: "정류장 ID",
+        STATION_ID_FALLBACK: "N/A",
     },
 
     ERROR: {
@@ -427,12 +474,27 @@ export const UI_TEXT = {
 
     METADATA: {
         SITE_NAME: "wBus",
-        TITLE: "원주 시내버스 실시간 위치 및 운행 시간표",
+        TITLE: "원주시 시내버스 실시간 위치 및 운행 시간표",
         TITLE_TEMPLATE: "wBus / %s",
         DESC: "원주시 시내버스 실시간 위치 지도, 정류장 도착 정보 및 연세대 미래캠퍼스(30번·34번·34-1번·셔틀) 노선별 최신 운행 시간표",
         SHORT_DESC: "원주 시내버스 실시간 도착 정보 & 시간표",
-        KEYWORDS: ["wBus", "더블유버스", "원주버스", "원주시내버스", "원주 버스 실시간", "원주 버스 시간표", "원주 버스 위치", "연세대 미래캠퍼스 버스", "연세대 미래캠 버스", "연세대 셔틀버스", "30번 버스", "34번 버스", "34-1번 버스", "원주시 교통정보",],
-        OG_LOCALE: "ko_KR",
+        KEYWORDS: [
+            "wBus",
+            "더블유버스",
+            "원주버스",
+            "원주시내버스",
+            "원주 버스 실시간",
+            "원주 버스 시간표",
+            "원주 버스 위치",
+            "연세대 미래캠퍼스 버스",
+            "연세대 미래캠 버스",
+            "연세대 셔틀버스",
+            "30번 버스",
+            "34번 버스",
+            "34-1번 버스",
+            "원주시 교통정보",
+        ],
+        OG_LOCALE: APP_LOCALE.OG_LOCALE,
         AUTHOR: "wBus",
     },
 
@@ -470,6 +532,9 @@ export const UI_TEXT = {
         PREV_PAGE: "이전",
         NEXT_PAGE: "다음",
         DEFAULT_WRITER: "원주시",
+        TOTAL_COUNT_FORMAT: (count: number) => `전체 소식 (${count}건)`,
+        TOTAL_COUNT_LABEL: "전체 소식",
+        SUBTITLE: "Wonju Notice Center",
     },
 
     DATA_LABELS: {
@@ -477,41 +542,55 @@ export const UI_TEXT = {
     },
 
     ROUTE_MAP: {
-        ORIGIN: "기점", DESTINATION: "종점", FIRST_BUS: "첫차", LAST_BUS: "막차", INTERVAL: "배차간격", MINUTES_UNIT: "분",
+        ORIGIN: "기점",
+        DESTINATION: "종점",
+        FIRST_BUS: "첫차",
+        LAST_BUS: "막차",
+        INTERVAL: "배차간격",
+        MINUTES_UNIT: "분",
     },
 
     FOOTER: {
         COPYRIGHT: "© 2026 wBus",
         DESCRIPTION: "시내버스 정보 서비스",
-        LINKS: [{label: "이용약관", href: "/terms"}, {label: "개인정보처리방침", href: "/privacy"},],
+        LINKS: [
+            {label: "이용약관", href: "/terms"},
+            {label: "개인정보처리방침", href: "/privacy"},
+        ],
         DISCLAIMER: "본 서비스는 참고용이며, 실제 운행 정보와 다를 수 있습니다.",
     },
 } as const;
 
 export const YONSEI_STATIC_TIMETABLES: Record<string, {
-    weekday: YonseiDaySchedule; vacation: YonseiDaySchedule;
+    weekday: YonseiDaySchedule;
+    vacation: YonseiDaySchedule;
 }> = {
     "30": {
         weekday: {
             origin: ["06:00", "06:30", "07:00", "07:20", "07:40", "08:00", "08:20", "08:40", "09:00", "09:20", "09:40", "10:00", "10:20", "10:40", "11:00", "11:20", "11:40", "12:00", "12:20", "12:40", "13:00", "13:20", "13:40", "14:00", "14:20", "14:40", "15:00", "15:20", "15:40", "16:00", "16:20", "16:40", "17:00", "17:20", "17:40", "18:00", "18:20", "18:40", "19:00", "19:20", "19:40", "20:00", "20:30", "21:00", "21:30", "22:00"],
             dest: ["06:40", "07:10", "07:45", "08:05", "08:25", "08:45", "09:05", "09:25", "09:45", "10:05", "10:25", "10:45", "11:05", "11:25", "11:45", "12:05", "12:25", "12:45", "13:05", "13:25", "13:45", "14:05", "14:25", "14:45", "15:05", "15:25", "15:45", "16:05", "16:25", "16:45", "17:05", "17:25", "17:45", "18:05", "18:25", "18:45", "19:05", "19:25", "19:45", "20:05", "20:25", "20:45", "21:15", "21:45", "22:15", "22:45"],
-        }, vacation: {
+        },
+        vacation: {
             origin: ["06:00", "06:35", "07:10", "07:45", "08:20", "08:55", "09:30", "10:05", "10:40", "11:15", "11:50", "12:25", "13:00", "13:35", "14:10", "14:45", "15:20", "15:55", "16:30", "17:05", "17:40", "18:15", "18:50", "19:25", "20:00", "20:40", "21:20", "22:00"],
             dest: ["06:40", "07:15", "07:55", "08:30", "09:05", "09:40", "10:15", "10:50", "11:25", "12:00", "12:35", "13:10", "13:45", "14:20", "14:55", "15:30", "16:05", "16:40", "17:15", "17:50", "18:25", "19:00", "19:35", "20:10", "20:45", "21:25", "22:05", "22:45"],
         },
-    }, "34": {
+    },
+    "34": {
         weekday: {
             origin: ["06:05", "06:45", "07:25", "08:05", "08:45", "09:25", "10:05", "10:45", "11:25", "12:05", "12:45", "13:25", "14:05", "14:45", "15:25", "16:05", "16:45", "17:25", "18:05", "18:45", "19:25", "20:05", "20:45", "21:25", "22:05"],
             dest: ["06:50", "07:30", "08:10", "08:50", "09:30", "10:10", "10:50", "11:30", "12:10", "12:50", "13:30", "14:10", "14:50", "15:30", "16:10", "16:50", "17:30", "18:10", "18:50", "19:30", "20:10", "20:50", "21:30", "22:10", "22:50"],
-        }, vacation: {
+        },
+        vacation: {
             origin: ["06:05", "06:55", "07:45", "08:35", "09:25", "10:15", "11:05", "11:55", "12:45", "13:35", "14:25", "15:15", "16:05", "16:55", "17:45", "18:35", "19:25", "20:15", "21:05", "21:55"],
             dest: ["06:50", "07:40", "08:30", "09:20", "10:10", "11:00", "11:50", "12:40", "13:30", "14:20", "15:10", "16:00", "16:50", "17:40", "18:30", "19:20", "20:10", "21:00", "21:50", "22:40"],
         },
-    }, "34-1": {
+    },
+    "34-1": {
         weekday: {
             origin: ["06:25", "07:05", "07:45", "08:25", "09:05", "09:45", "10:25", "11:05", "11:45", "12:25", "13:05", "13:45", "14:25", "15:05", "15:45", "16:25", "17:05", "17:45", "18:25", "19:05", "19:45", "20:25", "21:05", "21:45"],
             dest: ["07:10", "07:50", "08:30", "09:10", "09:50", "10:30", "11:10", "11:50", "12:30", "13:10", "13:50", "14:30", "15:10", "15:50", "16:30", "17:10", "17:50", "18:30", "19:10", "19:50", "20:30", "21:10", "21:50", "22:30"],
-        }, vacation: {
+        },
+        vacation: {
             origin: ["06:30", "07:20", "08:10", "09:00", "09:50", "10:40", "11:30", "12:20", "13:10", "14:00", "14:50", "15:40", "16:30", "17:20", "18:10", "19:00", "19:50", "20:40", "21:30"],
             dest: ["07:15", "08:05", "08:55", "09:45", "10:35", "11:25", "12:15", "13:05", "13:55", "14:45", "15:35", "16:25", "17:15", "18:05", "18:55", "19:45", "20:35", "21:25", "22:15"],
         },

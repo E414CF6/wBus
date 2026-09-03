@@ -1,5 +1,5 @@
 import {BusRoute, TimetableEntry} from "@shared/types/bus";
-import {UI_TEXT} from "@shared/config/locale";
+import {LOCALE, UI_TEXT} from "@shared/config/locale";
 
 /**
  * Parses "HH:mm" or "H:mm" to total minutes since 00:00.
@@ -44,7 +44,9 @@ export interface DepartureInfo {
  * from a list of timetable entries based on current time.
  */
 export function getUpcomingDepartures(timetable: TimetableEntry[], direction: "DEST" | "ORIGIN", currentDate: Date = new Date()): {
-    nextDeparture: DepartureInfo | null; subsequentDepartures: DepartureInfo[]; allValidDepartures: TimetableEntry[];
+    nextDeparture: DepartureInfo | null;
+    subsequentDepartures: DepartureInfo[];
+    allValidDepartures: TimetableEntry[];
 } {
     const currentMins = currentDate.getHours() * 60 + currentDate.getMinutes();
 
@@ -61,7 +63,10 @@ export function getUpcomingDepartures(timetable: TimetableEntry[], direction: "D
         const mins = parseTimeToMinutes(timeStr);
         if (mins !== null && mins >= currentMins) {
             parsedList.push({
-                entry: item, timeStr, minutes: mins, waitMins: mins - currentMins,
+                entry: item,
+                timeStr,
+                minutes: mins,
+                waitMins: mins - currentMins,
             });
         }
     }
@@ -73,7 +78,9 @@ export function getUpcomingDepartures(timetable: TimetableEntry[], direction: "D
     const subsequentDepartures = parsedList.slice(1, 5);
 
     return {
-        nextDeparture, subsequentDepartures, allValidDepartures,
+        nextDeparture,
+        subsequentDepartures,
+        allValidDepartures,
     };
 }
 
@@ -107,7 +114,10 @@ export function getNextDeparture(timetable: TimetableEntry[], currentDate: Date 
     originWaitMins: number | null;
     destWaitMins: number | null;
     soonest: {
-        type: "origin" | "dest"; time: string; waitMins: number; entry: TimetableEntry;
+        type: "origin" | "dest";
+        time: string;
+        waitMins: number;
+        entry: TimetableEntry;
     } | null;
 } {
     const currentMins = currentDate.getHours() * 60 + currentDate.getMinutes();
@@ -136,13 +146,19 @@ export function getNextDeparture(timetable: TimetableEntry[], currentDate: Date 
     if (originWaitMins !== null && (destWaitMins === null || originWaitMins <= destWaitMins)) {
         if (nextOrigin) {
             soonest = {
-                type: "origin" as const, time: nextOrigin.originDepTime, waitMins: originWaitMins, entry: nextOrigin,
+                type: "origin" as const,
+                time: nextOrigin.originDepTime,
+                waitMins: originWaitMins,
+                entry: nextOrigin,
             };
         }
     } else if (destWaitMins !== null) {
         if (nextDest) {
             soonest = {
-                type: "dest" as const, time: nextDest.destDepTime, waitMins: destWaitMins, entry: nextDest,
+                type: "dest" as const,
+                time: nextDest.destDepTime,
+                waitMins: destWaitMins,
+                entry: nextDest,
             };
         }
     }
@@ -154,18 +170,27 @@ export function getNextDeparture(timetable: TimetableEntry[], currentDate: Date 
  * Calculates remaining 24-hour cooldown time and formatted string.
  */
 export function formatCooldownRemaining(updatedAt: string | null | undefined, cooldownHours = 24): {
-    isReady: boolean; remainingMs: number; text: string; nextAvailableDate: Date | null;
+    isReady: boolean;
+    remainingMs: number;
+    text: string;
+    nextAvailableDate: Date | null;
 } {
     if (!updatedAt) {
         return {
-            isReady: true, remainingMs: 0, text: "지금 갱신 가능", nextAvailableDate: null,
+            isReady: true,
+            remainingMs: 0,
+            text: UI_TEXT.TIME.REFRESH_AVAILABLE_NOW,
+            nextAvailableDate: null,
         };
     }
 
     const lastMs = new Date(updatedAt).getTime();
     if (isNaN(lastMs)) {
         return {
-            isReady: true, remainingMs: 0, text: "지금 갱신 가능", nextAvailableDate: null,
+            isReady: true,
+            remainingMs: 0,
+            text: UI_TEXT.TIME.REFRESH_AVAILABLE_NOW,
+            nextAvailableDate: null,
         };
     }
 
@@ -176,7 +201,10 @@ export function formatCooldownRemaining(updatedAt: string | null | undefined, co
 
     if (diffMs <= 0) {
         return {
-            isReady: true, remainingMs: 0, text: "지금 갱신 가능", nextAvailableDate: new Date(nextMs),
+            isReady: true,
+            remainingMs: 0,
+            text: UI_TEXT.TIME.REFRESH_AVAILABLE_NOW,
+            nextAvailableDate: new Date(nextMs),
         };
     }
 
@@ -185,13 +213,16 @@ export function formatCooldownRemaining(updatedAt: string | null | undefined, co
 
     let text = "";
     if (hours > 0) {
-        text = `${hours}시간 ${mins}분 후 갱신 가능`;
+        text = UI_TEXT.TIME.REFRESH_AVAILABLE_HOURS(hours, mins);
     } else {
-        text = `${mins}분 후 갱신 가능`;
+        text = UI_TEXT.TIME.REFRESH_AVAILABLE_MINS(mins);
     }
 
     return {
-        isReady: false, remainingMs: diffMs, text, nextAvailableDate: new Date(nextMs),
+        isReady: false,
+        remainingMs: diffMs,
+        text,
+        nextAvailableDate: new Date(nextMs),
     };
 }
 
@@ -205,22 +236,23 @@ export function formatRelativeTime(isoString: string): string {
     const diffSec = Math.floor((Date.now() - timestamp) / 1000);
 
     if (diffSec < 60) {
-        return "방금 전";
+        return UI_TEXT.TIME.JUST_NOW;
     }
     const diffMin = Math.floor(diffSec / 60);
     if (diffMin < 60) {
-        return `${diffMin}분 전`;
+        return UI_TEXT.TIME.MINUTES_AGO(diffMin);
     }
     const diffHours = Math.floor(diffMin / 60);
     if (diffHours < 24) {
-        return `${diffHours}시간 전`;
+        return UI_TEXT.TIME.HOURS_AGO(diffHours);
     }
     const diffDays = Math.floor(diffHours / 24);
     if (diffDays < 7) {
-        return `${diffDays}일 전`;
+        return UI_TEXT.TIME.DAYS_AGO(diffDays);
     }
-    return new Date(timestamp).toLocaleDateString("ko-KR", {
-        month: "numeric", day: "numeric",
+    return new Date(timestamp).toLocaleDateString(LOCALE, {
+        month: "numeric",
+        day: "numeric",
     });
 }
 
