@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+
 import {UI_TEXT} from "@shared/config/locale";
 
 export function Footer() {

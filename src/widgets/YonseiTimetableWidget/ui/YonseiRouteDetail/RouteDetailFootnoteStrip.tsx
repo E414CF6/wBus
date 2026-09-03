@@ -29,15 +29,6 @@ export const RouteDetailFootnoteStrip: React.FC<RouteDetailFootnoteStripProps> =
                     <span>{UI_TEXT.YONSEI.FOOTNOTE_TITLE}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    {selectedFootnote !== null && (
-                        <button
-                            type="button"
-                            onClick={() => onSelectFootnote(null)}
-                            className="text-[10px] sm:text-[11px] font-black text-amber-700 dark:text-amber-300 hover:underline cursor-pointer"
-                        >
-                            {UI_TEXT.YONSEI.FOOTNOTE_CLEAR}
-                        </button>
-                    )}
                     <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 dark:text-slate-400">
                         {UI_TEXT.YONSEI.FOOTNOTE_SCROLL_HINT} →
                     </span>

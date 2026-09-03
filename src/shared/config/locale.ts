@@ -64,23 +64,23 @@ const YONSEI_STRINGS = {
     MAP_SHORT_BTN: "지도",
 
     SEARCH_MODAL_PLACEHOLDER: "출발 시각 또는 비고 검색...",
-    HOURS_DISPLAYED: (count: number) => `${count}개 시간대 표시 중`,
+    HOURS_DISPLAYED: (count: number) => `${count}개 시간대`,
     HOUR_LABEL: "시간",
     HOUR_SUFFIX: "시",
     CURRENT_HOUR_BADGE: "현재 시각",
     CURRENT_HOUR_STR: (hour: string) => `현재 ${hour}시`,
-    SINGLE_COLUMN_TITLE: "매일 운행 (평일 · 휴일 동일)",
+    SINGLE_COLUMN_TITLE: "매일",
     WEEKDAY_COLUMN: "평일",
     VACATION_COLUMN: "방학 / 휴일",
     NO_TIMES_MATCH: "검색 조건에 맞는 출발 시각이 없습니다.",
     NEXT_BUS_BADGE: "다음",
-    FOOTNOTE_TITLE: "각주 안내 (비고)",
+    FOOTNOTE_TITLE: "비고",
     FOOTNOTE_SCROLL_HINT: "좌우로 스크롤하여 확인",
     FOOTNOTE_ALL: "전체 보기",
     FOOTNOTE_CLEAR: "강조 해제",
     FOOTNOTE_COUNT_SUFFIX: (count: number) => `${count}회`,
-    FOOTNOTE_TOOLTIP_ACTIVE: "클릭하여 이 비고 시간만 강조",
-    FOOTNOTE_TOOLTIP_CLEAR: "클릭하여 각주 강조 해제",
+    FOOTNOTE_TOOLTIP_ACTIVE: "해당 시간만 강조",
+    FOOTNOTE_TOOLTIP_CLEAR: "강조 해제",
 
     REFRESH_SUCCESS: "시간표 데이터가 새로 수집되었습니다.",
     REFRESH_INFO: "최소 갱신 시간이 지나지 않아 기존 데이터를 사용합니다.",
@@ -94,7 +94,7 @@ const TIMETABLE_STRINGS = {
     HERO_BADGE: "원주시 시내버스 시간표",
     HERO_TITLE: "노선별 운행 시간표",
     HERO_SUBTITLE: "시내버스의 기점/종점 출발 시각 및 실시간 정보",
-    TITLE: "원주시내버스 운행 시간표",
+    TITLE: "원주 시내버스 운행 시간표",
     STATS_TOTAL_ROUTES: "등록 노선",
     STATS_BOOKMARKS: "즐겨찾기",
 
@@ -279,12 +279,12 @@ const ROUTE_SELECT_STRINGS = {
     CLEAR_SEARCH_ARIA: "검색어 지우기",
     CATEGORY_ALL: (count: number) => `전체 (${count})`,
     CATEGORY_BOOKMARKS: (count: number) => `즐겨찾기 (${count})`,
-    CATEGORY_YONSEI: "연세대 (30·34·34-1)",
-    CAT_1_19: "1~19번",
-    CAT_20_49: "20~49번",
-    CAT_50_99: "50~99번",
-    CAT_100_PLUS: "100번대+",
-    CATEGORY_PUBLIC: "공영·순환",
+    CATEGORY_YONSEI: "연세대 (30 / 34 / 34-1)",
+    CAT_1_19: "1 - 19번",
+    CAT_20_49: "20 - 49번",
+    CAT_50_99: "50 - 99번",
+    CAT_100_PLUS: "100번대",
+    CATEGORY_PUBLIC: "공영 / 순환",
     CURRENT_ROUTE_PREFIX: (route: string) => `현재: ${route}번`,
     TOTAL_ROUTES_COUNT: (count: number) => `원주시 실시간 버스 ${count}개 노선`,
     CAMPUS_ROUTES_LABEL: "연세대 캠퍼스 노선",
@@ -297,7 +297,7 @@ const ROUTE_SELECT_STRINGS = {
     BOOKMARK_ADD_TITLE: "즐겨찾기 등록",
     BOOKMARK_REMOVE_TITLE: "즐겨찾기 해제",
     CURRENT_ROUTE_LABEL: "현재 노선:",
-    DISPLAYED_COUNT: (count: number) => `${count}개 표시 중`,
+    DISPLAYED_COUNT: (count: number) => `${count}개`,
     STOP_CURRENT_ROUTE: "현재 노선",
     STOP_NEARBY: "주변 정류장",
     SELECT_OTHER_ROUTE_TITLE: "다른 노선 선택하기 (검색/목록)",
@@ -518,10 +518,11 @@ export const UI_TEXT = {
     },
 
     FOOTER: {
-        COPYRIGHT: "© 2026 wBus",
-        DESCRIPTION: "시내버스 정보 서비스",
-        LINKS: [{label: "이용약관", href: "/terms"}, {label: "개인정보처리방침", href: "/privacy"},],
-        DISCLAIMER: "본 서비스는 참고용이며, 실제 운행 정보와 다를 수 있습니다.",
+        COPYRIGHT: "© 2026 wBus", DESCRIPTION: "시내버스 정보 서비스", LINKS: [{
+            label: "소스코드", href: "https://github.com/E414CF6/wBus"
+        }, {
+            label: "이용약관", href: "/terms"
+        }, {label: "개인정보처리방침", href: "/privacy"},], DISCLAIMER: "본 서비스는 참고용이며, 실제 운행 정보와 다를 수 있습니다.",
     },
 } as const;
 

@@ -123,21 +123,6 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0">
-                        {onSelectMapRoute && (
-                            <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onSelectMapRoute(route.routeNo);
-                                    }}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-200/70 dark:border-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
-                                    title={UI_TEXT.YONSEI.REALTIME_MAP_BTN}
-                                >
-                                    <MapPin className="h-3 w-3 shrink-0"/>
-                                    <span className="sm:inline">{UI_TEXT.YONSEI.REALTIME_MAP_BTN}</span>
-                                </button>
-                            </div>
-                        )}
                         <span
                             className={`px-2 py-1 rounded-xl text-[10px] sm:text-[11px] font-extrabold border shrink-0 ${
                                 route.routeNo === "30"
@@ -153,6 +138,21 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                                     ? UI_TEXT.YONSEI.SCHEDULE_APPLIED_VACATION
                                     : UI_TEXT.YONSEI.SCHEDULE_APPLIED_WEEKDAY}
                         </span>
+                        {onSelectMapRoute && (
+                            <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onSelectMapRoute(route.routeNo);
+                                    }}
+                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-200/70 dark:border-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                    title={UI_TEXT.YONSEI.REALTIME_MAP_BTN}
+                                >
+                                    <MapPin className="h-3 w-3 shrink-0"/>
+                                    <span className="sm:inline">{UI_TEXT.YONSEI.REALTIME_MAP_BTN}</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
 
