@@ -1,7 +1,7 @@
 "use client";
 
 import React, {memo, useMemo} from "react";
-import {AlertCircle, Clock, MapPin} from "lucide-react";
+import {AlertCircle, ChevronRight, Clock, MapPin} from "lucide-react";
 
 import {BusRoute} from "@shared/types/bus";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
@@ -101,7 +101,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
             className="backdrop-blur-2xl bg-white/90 dark:bg-[#141822]/90 rounded-3xl p-4 sm:p-6 flex flex-col justify-between relative group border border-slate-200/80 dark:border-slate-800/80 hover:border-blue-500/60 dark:hover:border-blue-500/60 transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer select-none active:scale-[0.98]"
         >
             <div>
-                {/* Top Section: Route Badge + Location Header & Total Runs / Realtime Map & Schedule Badge */}
+                {/* Top Section: Route Badge + Location Header, Schedule Badge & Total Runs / Realtime Map Button */}
                 <div className="flex items-center justify-between gap-2.5 mb-2.5 sm:mb-3">
                     <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                         <div
@@ -116,44 +116,44 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                                 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight truncate">
                                 {locationLabel}
                             </span>
-                            <span className="text-[11px] font-semibold text-slate-400 font-mono mt-0.5">
-                                {UI_TEXT.YONSEI.TOTAL_RUNS(validDepartures.length)}
-                            </span>
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                                <span
+                                    className={`px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] font-extrabold border shrink-0 ${
+                                        route.routeNo === "30"
+                                            ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
+                                            : isVacationSchedule
+                                                ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30"
+                                                : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30"
+                                    }`}
+                                >
+                                    {route.routeNo === "30"
+                                        ? UI_TEXT.YONSEI.SCHEDULE_APPLIED_ALL_DAYS
+                                        : isVacationSchedule
+                                            ? UI_TEXT.YONSEI.SCHEDULE_APPLIED_VACATION
+                                            : UI_TEXT.YONSEI.SCHEDULE_APPLIED_WEEKDAY}
+                                </span>
+                                <span className="text-[11px] font-semibold text-slate-400 font-mono">
+                                    {UI_TEXT.YONSEI.TOTAL_RUNS(validDepartures.length)}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5 shrink-0">
-                        <span
-                            className={`px-2 py-1 rounded-xl text-[10px] sm:text-[11px] font-extrabold border shrink-0 ${
-                                route.routeNo === "30"
-                                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
-                                    : isVacationSchedule
-                                        ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30"
-                                        : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30"
-                            }`}
-                        >
-                            {route.routeNo === "30"
-                                ? UI_TEXT.YONSEI.SCHEDULE_APPLIED_ALL_DAYS
-                                : isVacationSchedule
-                                    ? UI_TEXT.YONSEI.SCHEDULE_APPLIED_VACATION
-                                    : UI_TEXT.YONSEI.SCHEDULE_APPLIED_WEEKDAY}
-                        </span>
-                        {onSelectMapRoute && (
-                            <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        onSelectMapRoute(route.routeNo);
-                                    }}
-                                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-200/70 dark:border-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
-                                    title={UI_TEXT.YONSEI.REALTIME_MAP_BTN}
-                                >
-                                    <MapPin className="h-3 w-3 shrink-0"/>
-                                    <span className="sm:inline">{UI_TEXT.YONSEI.REALTIME_MAP_BTN}</span>
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                    {onSelectMapRoute && (
+                        <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onSelectMapRoute(route.routeNo);
+                                }}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-200/70 dark:border-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                title={UI_TEXT.YONSEI.REALTIME_MAP_BTN}
+                            >
+                                <MapPin className="h-3 w-3 shrink-0"/>
+                                <span className="sm:inline">{UI_TEXT.YONSEI.REALTIME_MAP_BTN}</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Next Upcoming Departure Spotlight Card */}
@@ -228,6 +228,26 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                         </div>
                     </div>
                 )}
+            </div>
+
+            {/* View Full Timetable Footer Button */}
+            <div
+                className="pt-3.5 mt-3.5 border-t border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                    {UI_TEXT.YONSEI.FULL_TIMETABLE_DETAIL}
+                </span>
+                <button
+                    type="button"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectRoute(route);
+                    }}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold border border-blue-200/70 dark:border-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95 group/btn"
+                >
+                    <span>{UI_TEXT.SCHEDULE.SHOW_DETAILS}</span>
+                    <ChevronRight
+                        className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-0.5 group-hover:translate-x-0.5"/>
+                </button>
             </div>
         </div>
     );
