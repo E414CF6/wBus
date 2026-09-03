@@ -124,6 +124,7 @@ export default function RootLayout({
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{__html: JSON.stringify(jsonLd)}}
             />
+            <title>{UI_TEXT.METADATA.TITLE}</title>
         </head>
         <body className="min-h-screen bg-slate-50 text-slate-900 transition-colors duration-200">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>

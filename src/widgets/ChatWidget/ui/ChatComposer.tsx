@@ -1,7 +1,9 @@
 import React from "react";
 import {Dices, Hash, Send} from "lucide-react";
+
 import {QUICK_HASHTAGS} from "../types";
-import {getAvatarGradient} from "../utils/avatarUtils";
+
+import {getAvatarGradient} from "@widgets/ChatWidget";
 
 interface ChatComposerProps {
     authorName: string;
@@ -34,8 +36,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
                                                               onOpenProfileModal,
                                                               onSubmit,
                                                           }) => {
-    return (
-        <div
+    return (<div
             className="p-3.5 sm:p-4 rounded-3xl bg-slate-50/90 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/5 shadow-xs transition-all space-y-3">
             <div className="flex items-center justify-between gap-2">
                 <div
@@ -44,10 +45,7 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
                     title="내 스퀘어 프로필 열기"
                 >
                     <div
-                        className={`w-7 h-7 rounded-xl bg-gradient-to-tr ${getAvatarGradient(
-                            authorName,
-                            userTag
-                        )} text-white flex items-center justify-center font-black text-xs shadow-xs group-hover:scale-105 transition-transform`}
+                        className={`w-7 h-7 rounded-xl bg-gradient-to-tr ${getAvatarGradient(authorName, userTag)} text-white flex items-center justify-center font-black text-xs shadow-xs group-hover:scale-105 transition-transform`}
                     >
                         {authorName.charAt(0) || "?"}
                     </div>
@@ -56,11 +54,9 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
                             className="text-xs font-black text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {authorName}
                         </span>
-                        {userTag && (
-                            <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
+                        {userTag && (<span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">
                                 #{userTag.replace(/^#+/, "")}
-                            </span>
-                        )}
+                            </span>)}
                     </div>
                 </div>
 
@@ -87,23 +83,19 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
             />
 
             {/* Quick Hashtag Insertion Chips */}
-            {isComposerExpanded && (
-                <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar py-0.5">
+            {isComposerExpanded && (<div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar py-0.5">
                     <span className="text-[10px] font-bold text-slate-400 shrink-0 flex items-center gap-0.5">
                         <Hash className="w-3 h-3"/> 추천 태그:
                     </span>
-                    {QUICK_HASHTAGS.map((tag) => (
-                        <button
+                    {QUICK_HASHTAGS.map((tag) => (<button
                             key={tag}
                             type="button"
                             onClick={() => onInsertHashtag(tag)}
                             className="px-2 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/40 text-blue-600 dark:text-blue-400 text-[11px] font-bold border border-blue-200/60 dark:border-blue-800/40 transition-all cursor-pointer whitespace-nowrap"
                         >
                             {tag}
-                        </button>
-                    ))}
-                </div>
-            )}
+                        </button>))}
+                </div>)}
 
             {/* Submit Row */}
             <div className="flex items-center justify-end gap-2 pt-1">
@@ -119,15 +111,10 @@ export const ChatComposer: React.FC<ChatComposerProps> = ({
                     >
                         <Send className="w-3.5 h-3.5"/>
                         <span>
-                            {isSubmitting
-                                ? "게시 중..."
-                                : cooldown > 0
-                                    ? `${cooldown}초 후 가능`
-                                    : "게시하기"}
+                            {isSubmitting ? "게시 중..." : cooldown > 0 ? `${cooldown}초 후 가능` : "게시하기"}
                         </span>
                     </button>
                 </div>
             </div>
-        </div>
-    );
+        </div>);
 };

@@ -211,7 +211,7 @@ export function formatCooldownRemaining(updatedAt: string | null | undefined, co
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const mins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
 
-    let text = "";
+    let text: string;
     if (hours > 0) {
         text = UI_TEXT.TIME.REFRESH_AVAILABLE_HOURS(hours, mins);
     } else {
