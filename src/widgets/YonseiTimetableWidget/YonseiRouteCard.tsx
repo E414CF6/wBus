@@ -29,20 +29,6 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
     const now = currentTime || new Date();
     const currentMins = now.getHours() * 60 + now.getMinutes();
 
-    // Key via stops
-    const viaStops = useMemo(() => {
-        if (route.routeNo === "30") {
-            return UI_TEXT.YONSEI.VIA_30;
-        }
-        if (route.routeNo === "34") {
-            return UI_TEXT.YONSEI.VIA_34;
-        }
-        if (route.routeNo === "34-1") {
-            return UI_TEXT.YONSEI.VIA_34_1;
-        }
-        return "";
-    }, [route.routeNo]);
-
     // Day type label
     const isVacationSchedule = useMemo(() => {
         const dType = route.dayType || "";
@@ -148,25 +134,6 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                         </div>
                     )}
                 </div>
-
-                {/* Key via stop route strip with Marquee Animation */}
-                {viaStops && (
-                    <div
-                        className="relative flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-100/70 dark:bg-white/[0.04] text-[10px] font-medium text-slate-600 dark:text-slate-300 mb-2.5 sm:mb-3 border border-black/5 dark:border-white/5 overflow-hidden">
-                        <span
-                            className="font-extrabold text-blue-600 dark:text-blue-400 shrink-0 text-[10px] z-10 bg-slate-100/90 dark:bg-[#141822]/90 px-1.5 py-0.5 rounded-md shadow-2xs">
-                            {UI_TEXT.YONSEI.VIA_SHORT_LABEL}
-                        </span>
-                        <div className="relative overflow-hidden flex-1 flex items-center h-4">
-                            <div className="animate-marquee-fast flex shrink-0 items-center whitespace-nowrap">
-                                <span className="mr-8">{viaStops}</span>
-                                <span className="mr-8">{viaStops}</span>
-                            </div>
-                            <div
-                                className="pointer-events-none absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-slate-100/90 dark:from-[#141822] to-transparent z-10"/>
-                        </div>
-                    </div>
-                )}
 
                 {/* Schedule Mode Badge & Total Departures Count */}
                 <div className="flex items-center justify-between my-2 text-xs">
@@ -293,4 +260,3 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
 });
 
 YonseiRouteCard.displayName = "YonseiRouteCard";
-

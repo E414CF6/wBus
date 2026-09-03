@@ -1,16 +1,18 @@
 "use client";
 
 import {UI_TEXT} from "@shared/config/locale";
-import React, {useEffect, useMemo, useState} from "react";
+
+import React, {useEffect, useState} from "react";
 import {createPortal} from "react-dom";
-import {useYonseiRouteDetail} from "./hooks/useYonseiRouteDetail";
+
 import type {YonseiRouteDetailModalProps} from "./types";
+
+import {useYonseiRouteDetail} from "./hooks/useYonseiRouteDetail";
 import {RouteDetailFootnoteBanner} from "./ui/YonseiRouteDetail/RouteDetailFootnoteBanner";
 import {RouteDetailFootnoteStrip} from "./ui/YonseiRouteDetail/RouteDetailFootnoteStrip";
 import {RouteDetailHeader} from "./ui/YonseiRouteDetail/RouteDetailHeader";
 import {RouteDetailSearch} from "./ui/YonseiRouteDetail/RouteDetailSearch";
 import {RouteDetailTable} from "./ui/YonseiRouteDetail/RouteDetailTable";
-import {RouteDetailViaStrip} from "./ui/YonseiRouteDetail/RouteDetailViaStrip";
 
 export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                                                                   route,
@@ -42,14 +44,6 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
         }, 10000);
         return () => clearInterval(timer);
     }, []);
-
-    const viaStops = useMemo(() => {
-        if (!route) return "";
-        if (route.routeNo === "30") return UI_TEXT.YONSEI.VIA_30;
-        if (route.routeNo === "34") return UI_TEXT.YONSEI.VIA_34;
-        if (route.routeNo === "34-1") return UI_TEXT.YONSEI.VIA_34_1;
-        return "";
-    }, [route]);
 
     const {
         currentHourStr,
@@ -91,9 +85,6 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                     onClose={onClose}
                     onSelectMapRoute={onSelectMapRoute}
                 />
-
-                {/* Via Marquee Strip */}
-                <RouteDetailViaStrip viaStops={viaStops}/>
 
                 {/* Search Bar & Stats */}
                 <RouteDetailSearch
