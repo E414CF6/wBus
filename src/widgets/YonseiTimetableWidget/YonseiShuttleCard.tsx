@@ -119,7 +119,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                         <div className="flex items-center gap-2 flex-wrap">
                             <span
                                 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white leading-tight truncate">
-                                무료 셔틀버스
+                                연세대학교 미래캠퍼스 무료 셔틀버스
                             </span>
                             <span
                                 className="px-2 py-0.5 rounded-lg bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold border border-black/5 dark:border-white/5">
