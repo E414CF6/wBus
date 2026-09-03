@@ -6,7 +6,7 @@ export interface YonseiShuttleStop {
     lat: number;
     lng: number;
     locationDescription: string;
-    directionTag: "시내방면" | "학교방면" | "양방향";
+    directionTag: "시내방면" | "학교방면";
     tips?: string;
 }
 
@@ -38,7 +38,7 @@ export const YONSEI_SHUTTLE_STOPS: YonseiShuttleStop[] = [{
     lat: 37.33441368172501,
     lng: 127.92842445886538,
     locationDescription: "원주 시청사거리 - 원주중부교회와 SK엔크린 주유소 사이 대로변",
-    directionTag: "양방향",
+    directionTag: "시내방면",
     tips: "원주중부교회와 SK엔크린 주유소 사이 대로변 인도에서 승하차합니다.",
 }, {
     id: "maeji-city",

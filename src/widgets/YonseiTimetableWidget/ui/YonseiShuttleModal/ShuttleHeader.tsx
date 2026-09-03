@@ -12,9 +12,7 @@ interface ShuttleHeaderProps {
     onDayFilterChange: (filter: DayFilter) => void;
     searchQuery: string;
     onSearchQueryChange: (query: string) => void;
-    filteredCount: number;
     onClose: () => void;
-    onOpenMapModal?: (stopId?: string) => void;
 }
 
 export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
@@ -24,9 +22,7 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                                                                 onDayFilterChange,
                                                                 searchQuery,
                                                                 onSearchQueryChange,
-                                                                filteredCount,
                                                                 onClose,
-                                                                onOpenMapModal: _onOpenMapModal,
                                                             }) => {
     return (
         <div
@@ -167,17 +163,6 @@ export const ShuttleHeader: React.FC<ShuttleHeaderProps> = ({
                             </button>
                         )}
                     </div>
-                </div>
-            )}
-
-            {/* Results count hint */}
-            {(activeTab === "inbound" || activeTab === "outbound") && (
-                <div
-                    className="flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500 px-1 -mt-1">
-                    <span>
-                        총 <strong className="text-teal-600 dark:text-teal-400">{filteredCount}회</strong> 운행
-                    </span>
-                    <span>※ 교통 상황에 따라 5~10분 지연될 수 있습니다.</span>
                 </div>
             )}
         </div>

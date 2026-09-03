@@ -46,6 +46,6 @@ export type DayFilter = "ALL" | "WEEKDAY" | "SUNDAY";
 export interface YonseiShuttleModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onOpenMapModal?: (stopId?: string) => void;
+    initialTab?: ShuttleTab;
     currentTime?: Date;
 }

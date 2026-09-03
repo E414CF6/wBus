@@ -15,11 +15,11 @@ import {ShuttleStopsTab} from "./ui/YonseiShuttleModal/ShuttleStopsTab";
 export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                                                                           isOpen,
                                                                           onClose,
-                                                                          onOpenMapModal,
+                                                                          initialTab,
                                                                           currentTime,
                                                                       }) => {
     const [mounted, setMounted] = useState(false);
-    const [activeTab, setActiveTab] = useState<ShuttleTab>("inbound");
+    const [activeTab, setActiveTab] = useState<ShuttleTab>(initialTab || "inbound");
     const [dayFilter, setDayFilter] = useState<DayFilter>("ALL");
     const [searchQuery, setSearchQuery] = useState("");
     const [now, setNow] = useState<Date>(() => currentTime || new Date());
@@ -27,6 +27,12 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    useEffect(() => {
+        if (initialTab) {
+            setActiveTab(initialTab);
+        }
+    }, [initialTab, isOpen]);
 
     useEffect(() => {
         if (currentTime) setNow(currentTime);
@@ -67,9 +73,7 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                     onDayFilterChange={setDayFilter}
                     searchQuery={searchQuery}
                     onSearchQueryChange={setSearchQuery}
-                    filteredCount={filteredCount}
                     onClose={onClose}
-                    onOpenMapModal={onOpenMapModal}
                 />
 
                 {/* Modal Body */}
@@ -95,13 +99,25 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                     )}
 
                     {/* TAB 3: Stop Locations (탑승 장소 안내 -> 지도 & 마커 로드뷰) */}
-                    {activeTab === "stops" && (
-                        <ShuttleStopsTab onOpenMapModal={onOpenMapModal}/>
-                    )}
+                    {activeTab === "stops" && <ShuttleStopsTab/>}
 
                     {/* TAB 4: Guidelines (이용 안내) */}
                     {activeTab === "guidelines" && <ShuttleGuidelinesTab/>}
                 </div>
+
+                {/* Modal Footer: Results count & operation notice */}
+                {(activeTab === "inbound" || activeTab === "outbound") && (
+                    <div
+                        className="px-4 py-2.5 sm:px-6 sm:py-3 border-t border-slate-200/80 dark:border-white/10 bg-slate-50/80 dark:bg-[#0c1018]/80 flex items-center justify-between gap-2 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 shrink-0">
+                        <span className="font-medium">
+                            총 <strong
+                            className="text-teal-600 dark:text-teal-400 font-extrabold">{filteredCount}회</strong> 운행
+                        </span>
+                        <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500">
+                            ※ 교통 상황에 따라 5~10분 지연될 수 있습니다.
+                        </span>
+                    </div>
+                )}
             </div>
         </div>
     );

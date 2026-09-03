@@ -9,7 +9,8 @@ import {YonseiRouteCard} from "./YonseiRouteCard";
 import {YonseiRouteDetailModal} from "./YonseiRouteDetailModal";
 import {YonseiShuttleCard} from "./YonseiShuttleCard";
 import {YonseiShuttleModal} from "./YonseiShuttleModal";
-import {YonseiShuttleMapModal} from "./YonseiShuttleMapModal";
+
+import type {ShuttleTab} from "./types";
 
 import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
 import {CacheInfoBanner} from "@widgets/TimetableWidget/CacheInfoBanner";
@@ -44,8 +45,7 @@ export default function YonseiTimetableWidget({
     // Modals
     const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
     const [isShuttleModalOpen, setIsShuttleModalOpen] = useState<boolean>(false);
-    const [isShuttleMapModalOpen, setIsShuttleMapModalOpen] = useState<boolean>(false);
-    const [selectedShuttleStopId, setSelectedShuttleStopId] = useState<string | undefined>(undefined);
+    const [shuttleModalInitialTab, setShuttleModalInitialTab] = useState<ShuttleTab>("inbound");
     const [isNoticeModalOpen, setIsNoticeModalOpen] = useState<boolean>(false);
     const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
 
@@ -86,11 +86,6 @@ export default function YonseiTimetableWidget({
         setIsNoticeModalOpen(true);
     };
 
-    const handleOpenShuttleMapModal = (stopId?: string) => {
-        setSelectedShuttleStopId(stopId);
-        setIsShuttleMapModalOpen(true);
-    };
-
     return (
         <div className="w-full max-w-6xl mx-auto flex flex-col gap-4 sm:gap-6 animate-fadeIn md:my-auto">
             {/* Toast Message Notification */}
@@ -129,8 +124,10 @@ export default function YonseiTimetableWidget({
 
             {/* Free Shuttle Bus Card (Yeoju / Wonju <-> Yonsei Mirae Campus) */}
             <YonseiShuttleCard
-                onOpenModal={() => setIsShuttleModalOpen(true)}
-                onOpenMapModal={handleOpenShuttleMapModal}
+                onOpenModal={(tab?: ShuttleTab) => {
+                    setShuttleModalInitialTab(tab || "inbound");
+                    setIsShuttleModalOpen(true);
+                }}
                 currentTime={currentTime}
             />
 
@@ -187,18 +184,8 @@ export default function YonseiTimetableWidget({
             <YonseiShuttleModal
                 isOpen={isShuttleModalOpen}
                 onClose={() => setIsShuttleModalOpen(false)}
-                onOpenMapModal={handleOpenShuttleMapModal}
+                initialTab={shuttleModalInitialTab}
                 currentTime={currentTime}
-            />
-
-            {/* Shuttle Bus Stops & Roadview Map Modal */}
-            <YonseiShuttleMapModal
-                isOpen={isShuttleMapModalOpen}
-                onClose={() => {
-                    setIsShuttleMapModalOpen(false);
-                    setSelectedShuttleStopId(undefined);
-                }}
-                initialStopId={selectedShuttleStopId}
             />
 
             {/* Wonju ITS Notice Center Modal */}
