@@ -60,7 +60,27 @@ export const YONSEI_SHUTTLE_STOPS: YonseiShuttleStop[] = [{
     locationDescription: "청솔아파트 횡단보도 부근 (학교/등교 방면)",
     directionTag: "학교방면",
     tips: "등교 시 청솔아파트 횡단보도 부근에서 승차합니다.",
-},];
+}, {
+    id: "mirae-hall",
+    number: 6,
+    name: "미래관",
+    shortName: "미래관",
+    lat: 37.28347600204204,
+    lng: 127.90065673400042,
+    locationDescription: "연세대학교 미래캠퍼스 미래관 앞 승하차장",
+    directionTag: "시내방면",
+    tips: "하교 시내 방면(터미널·원주역·만종역·세브란스·여주역) 셔틀버스 출발 및 하차 장소입니다.",
+}, {
+    id: "yonsei-plaza",
+    number: 7,
+    name: "연세플라자",
+    shortName: "연세플라자",
+    lat: 37.277262214217906,
+    lng: 127.90319571239979,
+    locationDescription: "연세대학교 미래캠퍼스 연세플라자 앞",
+    directionTag: "시내방면",
+    tips: "연세플라자 앞 정류장에서 승하차합니다.",
+}];
 
 /**
  * 카카오맵 로드뷰 링크 생성
