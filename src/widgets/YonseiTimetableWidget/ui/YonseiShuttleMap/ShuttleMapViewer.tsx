@@ -6,7 +6,7 @@ import * as maplibregl from "maplibre-gl";
 import {setWorkerUrl} from "maplibre-gl";
 
 import {useTheme} from "next-themes";
-import {Bus, Camera, ExternalLink, MapPin} from "lucide-react";
+import {Bus, MapPin} from "lucide-react";
 import React, {useCallback, useEffect, useMemo, useRef} from "react";
 import MapGL, {MapRef, Marker, NavigationControl} from "react-map-gl/maplibre";
 
@@ -101,27 +101,6 @@ export const ShuttleMapViewer: React.FC<ShuttleMapViewerProps> = ({
                                     >
                                         <span>{stop.shortName}</span>
                                     </div>
-
-                                    {/* 위치 마커 상단 로드뷰 버튼 */}
-                                    <a
-                                        href={roadviewUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onSelectStop(stop);
-                                        }}
-                                        className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10.5px] font-black border transition-all active:scale-95 cursor-pointer shadow-md ${
-                                            isSelected
-                                                ? "bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white border-white/50 shadow-teal-700/30 ring-2 ring-teal-400/40"
-                                                : "bg-white/95 dark:bg-[#142622] hover:bg-teal-50 text-teal-700 dark:text-teal-300 border-teal-300/80 dark:border-teal-500/30"
-                                        }`}
-                                        title={`${stop.name} 로드뷰 보기 (새 탭)`}
-                                    >
-                                        <Camera className="w-3 h-3 text-teal-200"/>
-                                        <span>로드뷰</span>
-                                        <ExternalLink className="w-2.5 h-2.5 opacity-80"/>
-                                    </a>
                                 </div>
 
                                 {/* Pin Icon */}
