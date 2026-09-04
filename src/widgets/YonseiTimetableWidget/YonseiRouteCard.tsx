@@ -36,6 +36,13 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
         return dType.includes("방학") || dType.includes("휴일") || dType.includes("토요일") || dType.includes("공휴일");
     }, [route.dayType]);
 
+    const dayTypeLabel = useMemo(() => {
+        if (route.routeNo === "30") return UI_TEXT.YONSEI.SCHEDULE_APPLIED_ALL_DAYS;
+        return isVacationSchedule
+            ? UI_TEXT.YONSEI.SCHEDULE_APPLIED_VACATION
+            : UI_TEXT.YONSEI.SCHEDULE_APPLIED_WEEKDAY;
+    }, [route.routeNo, isVacationSchedule]);
+
     // Valid departure times from 연세대 (30, 34) or 회촌 (34-1)
     const validDepartures = useMemo(() => {
         return (route.timetable || []).filter(
@@ -101,7 +108,7 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
             className="backdrop-blur-2xl bg-white/90 dark:bg-[#141822]/90 rounded-3xl p-4 sm:p-6 flex flex-col justify-between relative group border border-slate-200/80 dark:border-slate-800/80 hover:border-blue-500/60 dark:hover:border-blue-500/60 transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-0.5 cursor-pointer select-none active:scale-[0.98]"
         >
             <div>
-                {/* Top Section: Route Badge + Location Header, Schedule Badge & Total Runs / Realtime Map Button */}
+                {/* Top Section: Route Badge + Location Header, Total Runs / Realtime Map Button */}
                 <div className="flex items-center justify-between gap-2.5 mb-2.5 sm:mb-3">
                     <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                         <div
@@ -116,26 +123,9 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                                 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight truncate">
                                 {locationLabel}
                             </span>
-                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                                <span
-                                    className={`px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] font-extrabold border shrink-0 ${
-                                        route.routeNo === "30"
-                                            ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
-                                            : isVacationSchedule
-                                                ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30"
-                                                : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30"
-                                    }`}
-                                >
-                                    {route.routeNo === "30"
-                                        ? UI_TEXT.YONSEI.SCHEDULE_APPLIED_ALL_DAYS
-                                        : isVacationSchedule
-                                            ? UI_TEXT.YONSEI.SCHEDULE_APPLIED_VACATION
-                                            : UI_TEXT.YONSEI.SCHEDULE_APPLIED_WEEKDAY}
-                                </span>
-                                <span className="text-[11px] font-semibold text-slate-400 font-mono">
-                                    {UI_TEXT.YONSEI.TOTAL_RUNS(validDepartures.length)}
-                                </span>
-                            </div>
+                            <span className="text-[11px] font-semibold text-slate-400 font-mono mt-0.5">
+                                {UI_TEXT.YONSEI.TOTAL_RUNS(validDepartures.length)}
+                            </span>
                         </div>
                     </div>
 
@@ -165,25 +155,38 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                     }`}
                 >
                     <div
-                        className="text-[11px] font-bold uppercase tracking-wider mb-1 flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-blue-700 dark:text-blue-300">
-                            <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"/>
-                            <span>{UI_TEXT.YONSEI.NEXT_LOCATION_DEP(locationLabel)}</span>
+                        className="text-[11px] font-bold uppercase tracking-wider mb-1 flex items-center justify-between gap-2">
+                        <span className="flex items-center gap-1.5 text-blue-700 dark:text-blue-300 min-w-0 truncate">
+                            <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0"/>
+                            <span className="truncate">{UI_TEXT.YONSEI.NEXT_LOCATION_DEP(locationLabel)}</span>
                         </span>
-                        {nextInfo && (
+                        <div className="flex items-center gap-1.5 shrink-0">
                             <span
-                                className={`px-2.5 py-0.5 rounded-lg text-[11px] border ${getWaitBadgeStyle(
-                                    nextInfo.waitMins
-                                )}`}
+                                className={`px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] font-extrabold border shrink-0 ${
+                                    route.routeNo === "30"
+                                        ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
+                                        : isVacationSchedule
+                                            ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-500/30"
+                                            : "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-500/30"
+                                }`}
                             >
-                                {nextInfo.waitMins <= 5 && (
-                                    <AlertCircle className="w-3 h-3 inline mr-1 -mt-0.5"/>
-                                )}
-                                {nextInfo.waitMins === 0
-                                    ? UI_TEXT.YONSEI.STATUS_DEPARTING_SOON
-                                    : UI_TEXT.TIMETABLE.WAIT_MINUTES(nextInfo.waitMins)}
+                                {dayTypeLabel}
                             </span>
-                        )}
+                            {nextInfo && (
+                                <span
+                                    className={`px-2 sm:px-2.5 py-0.5 rounded-lg text-[11px] border shrink-0 ${getWaitBadgeStyle(
+                                        nextInfo.waitMins
+                                    )}`}
+                                >
+                                    {nextInfo.waitMins <= 5 && (
+                                        <AlertCircle className="w-3 h-3 inline mr-1 -mt-0.5"/>
+                                    )}
+                                    {nextInfo.waitMins === 0
+                                        ? UI_TEXT.YONSEI.STATUS_DEPARTING_SOON
+                                        : UI_TEXT.TIMETABLE.WAIT_MINUTES(nextInfo.waitMins)}
+                                </span>
+                            )}
+                        </div>
                     </div>
 
                     {nextInfo ? (
