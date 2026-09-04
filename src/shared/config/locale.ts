@@ -67,7 +67,7 @@ const YONSEI_STRINGS = {
     HOUR_LABEL: "시간",
     HOUR_SUFFIX: "시",
     CURRENT_HOUR_BADGE: "현재 시각",
-    CURRENT_HOUR_STR: (hour: string) => `현재 ${hour}시`,
+    CURRENT_HOUR_STR: (hour: string) => `${hour}시`,
     SINGLE_COLUMN_TITLE: "매일",
     WEEKDAY_COLUMN: "평일",
     VACATION_COLUMN: "방학 / 휴일",

@@ -1,8 +1,10 @@
 "use client";
 
-import {UI_TEXT} from "@shared/config/locale";
-import {MapPin, X} from "lucide-react";
 import React from "react";
+import {Clock, MapPin, X} from "lucide-react";
+
+import {UI_TEXT} from "@shared/config/locale";
+
 import {getRouteBadgeGradient} from "../../utils/footnoteUtils";
 
 interface RouteDetailHeaderProps {
@@ -11,6 +13,8 @@ interface RouteDetailHeaderProps {
     isSingleSchedule: boolean;
     onClose: () => void;
     onSelectMapRoute?: (routeName: string) => void;
+    currentHourStr?: string;
+    totalHoursCount?: number;
 }
 
 export const RouteDetailHeader: React.FC<RouteDetailHeaderProps> = ({
@@ -19,6 +23,8 @@ export const RouteDetailHeader: React.FC<RouteDetailHeaderProps> = ({
                                                                         isSingleSchedule,
                                                                         onClose,
                                                                         onSelectMapRoute,
+                                                                        currentHourStr,
+                                                                        totalHoursCount,
                                                                     }) => {
     return (
         <div
@@ -32,9 +38,24 @@ export const RouteDetailHeader: React.FC<RouteDetailHeaderProps> = ({
                     {UI_TEXT.COMMON.ROUTE_LABEL(targetRouteNo)}
                 </div>
                 <div className="min-w-0">
-                    <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-1.5 sm:gap-2 truncate">
+                    <h3 className="text-sm sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-1.5 sm:gap-2 truncate leading-tight">
                         <span>{locationLabel}</span>
                     </h3>
+                    {(currentHourStr || totalHoursCount !== undefined) && (
+                        <div
+                            className="text-[11px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5">
+                            {currentHourStr && (
+                                <span className="flex items-center gap-1 text-blue-600 dark:text-blue-400">
+                                    <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 shrink-0"/>
+                                    <span>{UI_TEXT.YONSEI.CURRENT_HOUR_STR(currentHourStr)}</span>
+                                </span>
+                            )}
+                            {currentHourStr && totalHoursCount !== undefined && <span>·</span>}
+                            {totalHoursCount !== undefined && (
+                                <span>{UI_TEXT.YONSEI.HOURS_DISPLAYED(totalHoursCount)}</span>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
 

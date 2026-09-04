@@ -84,14 +84,14 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                     isSingleSchedule={isSingleSchedule}
                     onClose={onClose}
                     onSelectMapRoute={onSelectMapRoute}
+                    currentHourStr={currentHourStr}
+                    totalHoursCount={dualHourlyTimetable.length}
                 />
 
-                {/* Search Bar & Stats */}
+                {/* Search Bar */}
                 <RouteDetailSearch
                     tableSearch={tableSearch}
                     onSearchChange={setTableSearch}
-                    currentHourStr={currentHourStr}
-                    totalHoursCount={dualHourlyTimetable.length}
                 />
 
                 {/* Active Footnote Filter Banner */}
