@@ -22,6 +22,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
     const dayOfWeek = now.getDay();
     const isSunday = dayOfWeek === 0;
     const isSaturday = dayOfWeek === 6;
+    const dayTypeLabel = isSunday ? "일요일" : "평일";
 
     // Filter by today's day type and sort chronologically by departure time
     const applicableInboundList = useMemo(() => {
@@ -196,10 +197,6 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                             <MapPin className="h-3 w-3 shrink-0"/>
                             <span className="sm:inline">정류장 지도</span>
                         </button>
-                        <div
-                            className="flex items-center gap-1 px-2 py-1 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-300 text-[10px] sm:text-[11px] font-extrabold border border-teal-200/80 dark:border-teal-500/30 shrink-0">
-                            <span>{isSunday ? "일요일" : "평일"}</span>
-                        </div>
                     </div>
                 </div>
 
@@ -232,15 +229,25 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                         className="p-3 sm:p-3.5 rounded-2xl bg-teal-50/70 dark:bg-teal-950/30 border border-teal-200/70 dark:border-teal-500/25 hover:border-teal-500/60 dark:hover:border-teal-400/60 hover:bg-teal-50/95 dark:hover:bg-teal-950/50 hover:shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between group/inbound active:scale-[0.99]"
                     >
                         <div
-                            className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider mb-1">
-                            <span className="flex items-center gap-1 text-teal-800 dark:text-teal-200 font-black">
-                                <Clock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400"/>
-                                <span>다음 등교 셔틀 (캠퍼스행)</span>
+                            className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider mb-1 gap-2">
+                            <span
+                                className="flex items-center gap-1 text-teal-800 dark:text-teal-200 font-black min-w-0 truncate">
+                                <Clock className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 shrink-0"/>
+                                <span className="truncate">다음 등교 셔틀 (캠퍼스행)</span>
                             </span>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <span
+                                    className={`px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] font-extrabold border shrink-0 ${
+                                        isSunday
+                                            ? "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-500/30"
+                                            : "bg-teal-50 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-500/30"
+                                    }`}
+                                >
+                                    {dayTypeLabel}
+                                </span>
                                 {nextInbound && (
                                     <span
-                                        className={`px-2 py-0.5 rounded-lg text-[10px] border ${getWaitBadgeStyle(
+                                        className={`px-2 py-0.5 rounded-lg text-[10px] border shrink-0 ${getWaitBadgeStyle(
                                             nextInbound.waitMins
                                         )}`}
                                     >
@@ -300,15 +307,25 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                         className="p-3 sm:p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-500/25 hover:border-emerald-500/60 dark:hover:border-emerald-400/60 hover:bg-emerald-50/95 dark:hover:bg-emerald-950/50 hover:shadow-xs transition-all duration-200 cursor-pointer flex flex-col justify-between group/outbound active:scale-[0.99]"
                     >
                         <div
-                            className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider mb-1">
-                            <span className="flex items-center gap-1 text-emerald-800 dark:text-emerald-200 font-black">
-                                <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"/>
-                                <span>다음 하교 셔틀 (캠퍼스발)</span>
+                            className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider mb-1 gap-2">
+                            <span
+                                className="flex items-center gap-1 text-emerald-800 dark:text-emerald-200 font-black min-w-0 truncate">
+                                <Clock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0"/>
+                                <span className="truncate">다음 하교 셔틀 (캠퍼스발)</span>
                             </span>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 shrink-0">
+                                <span
+                                    className={`px-1.5 sm:px-2 py-0.5 rounded-lg text-[10px] font-extrabold border shrink-0 ${
+                                        isSunday
+                                            ? "bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-500/30"
+                                            : "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/30"
+                                    }`}
+                                >
+                                    {dayTypeLabel}
+                                </span>
                                 {nextOutbound && (
                                     <span
-                                        className={`px-2 py-0.5 rounded-lg text-[10px] border ${getWaitBadgeStyle(
+                                        className={`px-2 py-0.5 rounded-lg text-[10px] border shrink-0 ${getWaitBadgeStyle(
                                             nextOutbound.waitMins
                                         )}`}
                                     >
