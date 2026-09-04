@@ -7,7 +7,9 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
     try {
         const forceReload = request.nextUrl.searchParams.get("force") === "true";
-        const comments = await getComments(forceReload);
+        const limitParam = request.nextUrl.searchParams.get("limit");
+        const limit = limitParam ? Math.min(Math.max(1, parseInt(limitParam, 10)), 200) : 50;
+        const comments = await getComments(forceReload, limit);
 
         return NextResponse.json(
             {

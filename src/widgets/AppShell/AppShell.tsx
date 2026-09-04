@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import React, {useCallback, useEffect, useMemo, useState} from "react";
-import {usePathname, useRouter, useSearchParams} from "next/navigation";
+import {usePathname, useSearchParams} from "next/navigation";
 
 import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 
@@ -29,17 +29,42 @@ const RouteLayer = dynamic(() => import("@widgets/MapContainer/RouteLayer"), {
     ssr: false,
 });
 
+function resolveTabFromPathname(path: string): NavTab {
+    if (path.startsWith("/live") || path.startsWith("/map")) return "map";
+    if (path.startsWith("/chat") || path.startsWith("/square")) return "chat";
+    return "schedule";
+}
+
 export function AppShell() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const router = useRouter();
 
-    // Derive active tab from current URL pathname
-    const activeTab: NavTab = useMemo(() => {
-        if (pathname.startsWith("/live") || pathname.startsWith("/map")) return "map";
-        if (pathname.startsWith("/chat") || pathname.startsWith("/square")) return "chat";
-        return "schedule";
+    // Derive active tab with client-side state preservation across tab switches (avoids destroying map & SSE)
+    const [activeTab, setActiveTab] = useState<NavTab>(() => resolveTabFromPathname(pathname));
+
+    // Keep activeTab in sync if pathname changes externally
+    useEffect(() => {
+        setActiveTab(resolveTabFromPathname(pathname));
     }, [pathname]);
+
+    // Handle browser Back/Forward (popstate) navigation cleanly
+    useEffect(() => {
+        const handlePopState = () => {
+            if (typeof window === "undefined") return;
+            const nextTab = resolveTabFromPathname(window.location.pathname);
+            setActiveTab(nextTab);
+            const search = new URLSearchParams(window.location.search);
+            const queryRoute = search.get("route");
+            if (queryRoute) setSelectedRoute(queryRoute);
+            const querySubTab = search.get("subTab");
+            if (querySubTab === "yonsei" || querySubTab === "all") {
+                setTimetableSubTab(querySubTab);
+            }
+        };
+
+        window.addEventListener("popstate", handlePopState);
+        return () => window.removeEventListener("popstate", handlePopState);
+    }, []);
 
     // Scroll to top when changing tabs so map/chat start cleanly
     useEffect(() => {
@@ -286,13 +311,13 @@ export function AppShell() {
             }
             if (
                 typeof window !== "undefined" &&
-                (pathname === "/" || pathname === "/schedule")
+                activeTab === "schedule"
             ) {
                 const query = subTab === "yonsei" ? "/" : "/?subTab=all";
                 window.history.replaceState(null, "", query);
             }
         },
-        [pathname]
+        [activeTab]
     );
 
     // Only fetch route map & telemetry when real-time map is active or visited
@@ -313,28 +338,35 @@ export function AppShell() {
     // Live telemetry for active map route
     const liveBusData = useBusSortedList(activeRoute, hasVisitedMap && isMapActive);
 
-    // Handle tab change and push to browser history
+    // Handle tab change and push to browser history without unmounting AppShell
     const handleTabChange = useCallback(
         (tab: NavTab) => {
+            setActiveTab(tab);
+            let targetUrl = "/";
             if (tab === "map") {
                 setHasVisitedMap(true);
                 const routeParam = selectedRoute
                     ? `?route=${encodeURIComponent(selectedRoute)}`
                     : "";
-                router.push(`/live${routeParam}`);
+                targetUrl = `/live${routeParam}`;
             } else if (tab === "chat") {
-                router.push("/square");
+                targetUrl = "/square";
             } else {
                 const subTabParam = timetableSubTab === "all" ? "?subTab=all" : "";
-                router.push(`/${subTabParam}`);
+                targetUrl = `/${subTabParam}`;
             }
+
+            if (typeof window !== "undefined") {
+                window.history.pushState(null, "", targetUrl);
+            }
+
             try {
                 localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, tab);
             } catch {
                 // Ignore
             }
         },
-        [router, selectedRoute, timetableSubTab]
+        [selectedRoute, timetableSubTab]
     );
 
     // Persist route selection to state, localStorage & URL
@@ -356,7 +388,7 @@ export function AppShell() {
             }
             if (
                 typeof window !== "undefined" &&
-                (pathname.startsWith("/live") || pathname.startsWith("/map"))
+                activeTab === "map"
             ) {
                 window.history.replaceState(
                     null,
@@ -365,7 +397,7 @@ export function AppShell() {
                 );
             }
         },
-        [pathname]
+        [activeTab]
     );
 
     useEffect(() => {
@@ -387,9 +419,16 @@ export function AppShell() {
         (routeName: string) => {
             handleRouteChange(routeName);
             setHasVisitedMap(true);
-            router.push(`/live?route=${encodeURIComponent(routeName)}`);
+            setActiveTab("map");
+            if (typeof window !== "undefined") {
+                window.history.pushState(
+                    null,
+                    "",
+                    `/live?route=${encodeURIComponent(routeName)}`
+                );
+            }
         },
-        [handleRouteChange, router]
+        [handleRouteChange]
     );
 
     const isFixedLayout = activeTab !== "schedule";

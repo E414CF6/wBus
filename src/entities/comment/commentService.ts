@@ -6,13 +6,19 @@ import {type CommentItem, type CommentRow, commentToRow, rowToComment} from "./t
 /**
  * Fetch comments directly from Supabase Postgres
  */
-export async function getComments(_forceFresh = false): Promise<CommentItem[]> {
+export async function getComments(_forceFresh = false, limit = 50): Promise<CommentItem[]> {
     try {
         const supabase = await createClient();
-        const {data, error} = await supabase
+        let query = supabase
             .from("comments")
             .select("*")
             .order("created_at", {ascending: false});
+
+        if (limit > 0) {
+            query = query.limit(limit);
+        }
+
+        const {data, error} = await query;
 
         if (error) {
             console.error("[Comments] Supabase select error:", error.message);
@@ -82,10 +88,28 @@ export async function addComment(params: {
 
 /**
  * Increment likes on a comment in Supabase Postgres
+ * Tries atomic RPC first; gracefully falls back to read-modify-write if RPC is not yet created.
  */
 export async function likeComment(id: string): Promise<CommentItem | null> {
     try {
         const supabase = await createClient();
+
+        // 1. Try atomic Supabase RPC increment first to prevent race condition lost updates
+        try {
+            const {data: rpcData, error: rpcErr} = await supabase.rpc("increment_comment_likes", {
+                comment_id: id,
+            });
+            if (!rpcErr && rpcData) {
+                const row = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+                if (row && typeof row === "object" && "id" in row) {
+                    return rowToComment(row as CommentRow);
+                }
+            }
+        } catch {
+            // RPC not deployed in Supabase yet, proceed to graceful fallback
+        }
+
+        // 2. Graceful fallback: Read-Modify-Write
         const {data: current, error: getErr} = await supabase
             .from("comments")
             .select("*")
@@ -120,18 +144,13 @@ export async function likeComment(id: string): Promise<CommentItem | null> {
 /**
  * Soft-delete a comment in Supabase Postgres
  */
-export async function deleteComment(
-    id: string,
-    userTag?: string,
-    ipHash?: string
-): Promise<CommentItem | null> {
+export async function deleteComment(id: string, userTag?: string, ipHash?: string): Promise<CommentItem | null> {
     try {
         const supabase = await createClient();
         let query = supabase
             .from("comments")
             .update({
-                is_deleted: true,
-                content: "삭제된 메시지입니다.",
+                is_deleted: true, content: "삭제된 메시지입니다.",
             })
             .eq("id", id);
 

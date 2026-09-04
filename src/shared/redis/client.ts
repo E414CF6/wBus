@@ -108,14 +108,21 @@ export async function getRedisClient(): Promise<RedisClientType | null> {
 /**
  * Universal Redis Get Helper (Upstash REST or TCP node-redis)
  */
-async function readFromRedisLayer(key: string): Promise<string | null> {
-    // 1. Try Upstash REST API first if configured
+async function readFromRedisLayer<T>(key: string): Promise<CachedData<T> | null> {
+    // 1. Try Upstash REST API first if configured (Upstash auto-deserializes JSON objects)
     const upstash = getUpstashRedis();
     if (upstash) {
         try {
-            const val = await upstash.get(key);
+            const val = await upstash.get<CachedData<T> | string>(key);
             if (val) {
-                return typeof val === "string" ? val : JSON.stringify(val);
+                if (typeof val === "string") {
+                    try {
+                        return JSON.parse(val) as CachedData<T>;
+                    } catch {
+                        return null;
+                    }
+                }
+                return val as CachedData<T>;
             }
             return null;
         } catch (e) {
@@ -127,7 +134,10 @@ async function readFromRedisLayer(key: string): Promise<string | null> {
     const redis = await getRedisClient();
     if (redis?.isOpen) {
         try {
-            return await redis.get(key);
+            const raw = await redis.get(key);
+            if (raw) {
+                return JSON.parse(raw) as CachedData<T>;
+            }
         } catch (e) {
             console.warn(`[Redis] Failed to read key '${key}':`, e);
         }
@@ -139,25 +149,22 @@ async function readFromRedisLayer(key: string): Promise<string | null> {
 /**
  * Universal Redis Set Helper (Upstash REST or TCP node-redis)
  */
-async function writeToRedisLayer(key: string, value: string, expireSeconds: number): Promise<void> {
-    // 1. Write to Upstash REST API if configured
+async function writeToRedisLayer<T>(key: string, entry: CachedData<T>, expireSeconds: number): Promise<void> {
+    // 1. Write to Upstash REST API if configured (native object support without double stringify/parse)
     const upstash = getUpstashRedis();
     if (upstash) {
         try {
-            const parsed = JSON.parse(value);
-            await upstash.set(key, parsed, {ex: expireSeconds});
+            await upstash.set(key, entry, {ex: expireSeconds});
             return;
-        } catch {
-            await upstash.set(key, value, {ex: expireSeconds}).catch(() => {
-            });
-            return;
+        } catch (e) {
+            console.warn(`[Upstash] Failed to write key '${key}':`, e);
         }
     }
 
-    // 2. Write to TCP Redis
+    // 2. Write to TCP Redis (requires string)
     const redis = await getRedisClient();
     if (redis?.isOpen) {
-        await redis.set(key, value, {EX: expireSeconds}).catch((err) => {
+        await redis.set(key, JSON.stringify(entry), {EX: expireSeconds}).catch((err) => {
             console.warn(`[Redis] Failed to write key '${key}':`, err);
         });
     }
@@ -201,31 +208,26 @@ export async function getCachedOrFetch<T>(
         }
 
         // 2. Check L2 Redis Cache (Upstash REST or TCP Redis)
-        const raw = await readFromRedisLayer(key);
-        if (raw) {
-            try {
-                const redisEntry: CachedData<T> = typeof raw === "string" ? JSON.parse(raw) : raw;
-                const ageMs = now - redisEntry.timestamp;
-                const ttlMs = ttlSeconds * 1000;
-                const swrMs = swrSeconds * 1000;
+        const redisEntry = await readFromRedisLayer<T>(key);
+        if (redisEntry && redisEntry.timestamp) {
+            const ageMs = now - redisEntry.timestamp;
+            const ttlMs = ttlSeconds * 1000;
+            const swrMs = swrSeconds * 1000;
 
-                memoryCache.set(key, redisEntry);
+            memoryCache.set(key, redisEntry);
 
-                if (ageMs <= ttlMs) {
-                    return {
-                        ...redisEntry,
-                        meta: {status: "hit", layer: "redis", ageMs},
-                    };
-                }
-                if (ageMs <= ttlMs + swrMs) {
-                    triggerBackgroundRevalidate(key, fetcher, ttlSeconds, redisEntry);
-                    return {
-                        ...redisEntry,
-                        meta: {status: "stale", layer: "redis", ageMs},
-                    };
-                }
-            } catch (e) {
-                console.warn(`[Redis] Failed to parse cached payload for key '${key}':`, e);
+            if (ageMs <= ttlMs) {
+                return {
+                    ...redisEntry,
+                    meta: {status: "hit", layer: "redis", ageMs},
+                };
+            }
+            if (ageMs <= ttlMs + swrMs) {
+                triggerBackgroundRevalidate(key, fetcher, ttlSeconds, redisEntry);
+                return {
+                    ...redisEntry,
+                    meta: {status: "stale", layer: "redis", ageMs},
+                };
             }
         }
     }
@@ -285,7 +287,7 @@ async function fetchAndStore<T>(
             memoryCache.set(key, entry);
 
             const expireSec = ttlSeconds + DEFAULT_STALE_WHILE_REVALIDATE_SECONDS;
-            await writeToRedisLayer(key, JSON.stringify(entry), expireSec);
+            await writeToRedisLayer(key, entry, expireSec);
 
             return entry;
         } catch (err) {
