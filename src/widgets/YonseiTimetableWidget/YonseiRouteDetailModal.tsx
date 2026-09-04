@@ -8,7 +8,6 @@ import {createPortal} from "react-dom";
 import type {YonseiRouteDetailModalProps} from "./types";
 
 import {useYonseiRouteDetail} from "./hooks/useYonseiRouteDetail";
-import {RouteDetailFootnoteBanner} from "./ui/YonseiRouteDetail/RouteDetailFootnoteBanner";
 import {RouteDetailFootnoteStrip} from "./ui/YonseiRouteDetail/RouteDetailFootnoteStrip";
 import {RouteDetailHeader} from "./ui/YonseiRouteDetail/RouteDetailHeader";
 import {RouteDetailSearch} from "./ui/YonseiRouteDetail/RouteDetailSearch";
@@ -51,7 +50,6 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
         dualHourlyTimetable,
         isSingleSchedule,
         footnoteCounts,
-        selectedFootnoteInfo,
     } = useYonseiRouteDetail({
         route,
         allYonseiRoutes,
@@ -92,12 +90,6 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                 <RouteDetailSearch
                     tableSearch={tableSearch}
                     onSearchChange={setTableSearch}
-                />
-
-                {/* Active Footnote Filter Banner */}
-                <RouteDetailFootnoteBanner
-                    selectedFootnoteInfo={selectedFootnoteInfo}
-                    onClearFootnote={() => setSelectedFootnote(null)}
                 />
 
                 {/* Timetable Table */}

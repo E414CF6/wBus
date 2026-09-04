@@ -1,8 +1,10 @@
 "use client";
 
-import {UI_TEXT} from "@shared/config/locale";
-import {Info} from "lucide-react";
 import React from "react";
+import {Info, RotateCcw} from "lucide-react";
+
+import {UI_TEXT} from "@shared/config/locale";
+
 import {getFootnoteSymbol} from "../../utils/footnoteUtils";
 
 interface RouteDetailFootnoteStripProps {
@@ -28,7 +30,17 @@ export const RouteDetailFootnoteStrip: React.FC<RouteDetailFootnoteStripProps> =
                     <Info className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"/>
                     <span>{UI_TEXT.YONSEI.FOOTNOTE_TITLE}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
+                    {selectedFootnote !== null && (
+                        <button
+                            type="button"
+                            onClick={() => onSelectFootnote(null)}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 text-[11px] font-black transition-all cursor-pointer shrink-0 active:scale-95 animate-fadeIn"
+                        >
+                            <RotateCcw className="w-3 h-3"/>
+                            <span>{UI_TEXT.YONSEI.FOOTNOTE_CLEAR}</span>
+                        </button>
+                    )}
                     <span className="text-[10px] sm:text-[11px] font-semibold text-slate-400 dark:text-slate-400">
                         {UI_TEXT.YONSEI.FOOTNOTE_SCROLL_HINT} →
                     </span>
