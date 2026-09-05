@@ -230,7 +230,7 @@ export function isRouteInServiceWindow(routeIdOrNo: string, now: Date = new Date
 
     // 2. Check time window bounds
     const {startMinutes, endMinutes} = window;
-    let inService = false;
+    let inService: boolean;
 
     if (endMinutes < 1440) {
         // Window is entirely within the same calendar day (e.g. 05:40 ~ 23:30)

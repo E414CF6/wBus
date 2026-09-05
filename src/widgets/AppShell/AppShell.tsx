@@ -342,7 +342,7 @@ export function AppShell() {
     const handleTabChange = useCallback(
         (tab: NavTab) => {
             setActiveTab(tab);
-            let targetUrl = "/";
+            let targetUrl: string;
             if (tab === "map") {
                 setHasVisitedMap(true);
                 const routeParam = selectedRoute

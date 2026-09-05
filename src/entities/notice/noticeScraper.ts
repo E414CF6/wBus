@@ -97,7 +97,7 @@ export async function scrapeWonjuNoticeList(page = 1, searchText = "", searchGb 
             // Extract totalPages and totalCount
             const paginateMatch = html.match(/<div[^>]*class=['"][^'"]*paginate[^'"]*['"][\s\S]*?<\/div>/i);
             const paginationHtml = paginateMatch ? paginateMatch[0] : "";
-            const pageNums = [...paginationHtml.matchAll(/(?:goSearch\((\d+)\)|<strong>(\d+)<\/strong>)/g)]
+            const pageNums = [...paginationHtml.matchAll(/goSearch\((\d+)\)|<strong>(\d+)<\/strong>/g)]
                 .map((m) => parseInt(m[1] || m[2], 10))
                 .filter((n) => !isNaN(n));
             const totalPages = pageNums.length > 0 ? Math.max(...pageNums) : 1;
