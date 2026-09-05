@@ -11,6 +11,10 @@ export async function GET(request: NextRequest) {
         const limit = limitParam ? Math.min(Math.max(1, parseInt(limitParam, 10)), 200) : 50;
         const comments = await getComments(forceReload, limit);
 
+        const cacheControl = forceReload
+            ? "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
+            : "public, max-age=1, s-maxage=2, stale-while-revalidate=4";
+
         return NextResponse.json(
             {
                 success: true,
@@ -21,10 +25,7 @@ export async function GET(request: NextRequest) {
             },
             {
                 headers: {
-                    "Cache-Control":
-                        "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
-                    Pragma: "no-cache",
-                    Expires: "0",
+                    "Cache-Control": cacheControl,
                 },
             }
         );

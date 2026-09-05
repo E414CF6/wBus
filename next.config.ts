@@ -12,8 +12,22 @@ const blobUrl = getBlobBaseUrl();
 const hasExplicitUrl = process.env.NEXT_PUBLIC_STATIC_API_URL?.startsWith("http");
 
 const nextConfig: NextConfig = {
-    reactStrictMode: true, env: {
+    reactStrictMode: true,
+    env: {
         ...(blobUrl && !hasExplicitUrl ? {NEXT_PUBLIC_STATIC_API_URL: blobUrl} : {}),
+    },
+    async headers() {
+        return [
+            {
+                source: "/data/:path*",
+                headers: [
+                    {
+                        key: "Cache-Control",
+                        value: "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000",
+                    },
+                ],
+            },
+        ];
     },
 };
 

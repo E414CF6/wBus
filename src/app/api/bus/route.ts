@@ -2,15 +2,19 @@ import {NextResponse} from "next/server";
 import {getOrFetchSchedule} from "@entities/schedule";
 import {buildCacheControl} from "@shared/cache/cachePolicy";
 
+// Edge CDN ISR Cache: Revalidate every 24 hours (86400 seconds)
+export const revalidate = 86400;
+
 export async function GET() {
     const startTime = Date.now();
     try {
         const {data, meta} = await getOrFetchSchedule(false);
         const cacheControl = buildCacheControl({
-            ttlSeconds: 3600, maxAgeSeconds: 300, // Browser Cache: 5 min
-            sMaxAgeSeconds: 3600, // CDN Cache: 1 hour
-            staleWhileRevalidateSeconds: 86400, // SWR: 24 hours
-            staleIfErrorSeconds: 86400,
+            ttlSeconds: 86400,
+            maxAgeSeconds: 300, // Browser Cache: 5 min
+            sMaxAgeSeconds: 86400, // CDN Cache: 24 hours
+            staleWhileRevalidateSeconds: 604800, // SWR: 7 days
+            staleIfErrorSeconds: 2592000,
         });
 
         return NextResponse.json({

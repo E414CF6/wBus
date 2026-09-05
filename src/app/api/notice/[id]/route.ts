@@ -1,7 +1,8 @@
 import {scrapeWonjuNoticeDetail} from "@entities/notice";
 import {type NextRequest, NextResponse} from "next/server";
 
-export const dynamic = "force-dynamic";
+// Edge CDN ISR Cache: Revalidate every 2 hours (7200 seconds)
+export const revalidate = 7200;
 
 export async function GET(
     _request: NextRequest,

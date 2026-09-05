@@ -5,7 +5,8 @@ import {CacheManager} from "@shared/cache/CacheManager";
 import {buildCacheControl} from "@shared/cache/cachePolicy";
 import {NextResponse} from "next/server";
 
-export const dynamic = "force-dynamic";
+// Edge CDN ISR Cache: Revalidate every 24 hours (86400 seconds)
+export const revalidate = 86400;
 
 const memoryCache = new CacheManager<BusStop[]>(100);
 

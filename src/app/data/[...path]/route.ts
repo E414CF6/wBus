@@ -2,8 +2,8 @@ import {API_CONFIG, getBlobBaseUrl} from "@shared/config/env";
 import {head} from "@vercel/blob";
 import {NextResponse} from "next/server";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 3600;
+// Edge CDN ISR Cache: Revalidate every 24 hours (86400 seconds)
+export const revalidate = 86400;
 
 export async function GET(_request: Request, {params}: { params: Promise<{ path: string[] }> }) {
     const {path} = await params;
@@ -20,7 +20,7 @@ export async function GET(_request: Request, {params}: { params: Promise<{ path:
 
     const headers: Record<string, string> = {
         "Content-Type": relativePath.endsWith(".geojson") ? "application/geo+json; charset=utf-8" : "application/json; charset=utf-8",
-        "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400",
+        "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000, stale-if-error=2592000",
     };
 
     // 1. Try local filesystem (for local dev or bundled assets)
