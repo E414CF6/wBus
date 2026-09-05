@@ -1,11 +1,13 @@
-import {refreshSchedule} from "@entities/schedule";
+import {revalidatePath} from "next/cache";
 import {type NextRequest, NextResponse} from "next/server";
+
+import {refreshSchedule} from "@entities/schedule";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 export const maxDuration = 60;
 
-export async function POST(request: NextRequest) {
+async function handleRefresh(request: NextRequest) {
     const startTime = Date.now();
     try {
         const cronSecret = process.env.CRON_SECRET || process.env.ADMIN_KEY;
@@ -16,6 +18,16 @@ export async function POST(request: NextRequest) {
         // Only authorized requests (e.g. Vercel Cron with secret) can force-bypass the refresh cooldown
         const force = isAuthorized && forceParam;
         const {refreshed, message, data, meta} = await refreshSchedule(force);
+
+        // Instantly purge Edge CDN cache if schedule was freshly scraped/updated
+        if (refreshed) {
+            try {
+                revalidatePath("/api/schedule");
+                revalidatePath("/schedule");
+            } catch (revalidateErr) {
+                console.warn("[ScheduleRefresh] revalidatePath error:", revalidateErr);
+            }
+        }
 
         return NextResponse.json({
             success: true, refreshed, message, data, meta, elapsedMs: Date.now() - startTime,
@@ -32,4 +44,12 @@ export async function POST(request: NextRequest) {
             success: false, error: error instanceof Error ? error.message : "시간표 갱신 실패",
         }, {status: 500});
     }
+}
+
+export async function GET(request: NextRequest) {
+    return handleRefresh(request);
+}
+
+export async function POST(request: NextRequest) {
+    return handleRefresh(request);
 }

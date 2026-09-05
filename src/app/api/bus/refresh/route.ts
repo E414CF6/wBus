@@ -1,4 +1,6 @@
 import {NextRequest, NextResponse} from "next/server";
+import {revalidatePath} from "next/cache";
+
 import {refreshSchedule} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
 
@@ -12,6 +14,15 @@ export async function POST(request: NextRequest) {
         const forceParam = request.nextUrl.searchParams.get("force") === "true";
         const force = isAuthorized && forceParam;
         const {refreshed, message, data, meta} = await refreshSchedule(force);
+
+        if (refreshed) {
+            try {
+                revalidatePath("/api/schedule");
+                revalidatePath("/schedule");
+            } catch (revalidateErr) {
+                console.warn("[BusRefresh] revalidatePath error:", revalidateErr);
+            }
+        }
 
         return NextResponse.json({
             success: true, refreshed, message, data, meta, elapsedMs: Date.now() - startTime,
