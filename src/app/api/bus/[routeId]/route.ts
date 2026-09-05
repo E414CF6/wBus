@@ -1,5 +1,5 @@
 import {createApiHandler} from "@shared/api/createApiHandler";
-import {fetchBusLocations, getAdaptiveTtlSeconds, type RawBusLocation} from "@shared/redis/publicApi";
+import {fetchBusLocations, getAdaptiveTtlSeconds, type RawBusLocation} from "@shared/api/publicApi";
 
 // Always treat this route as dynamic to avoid prepended 404s on deploy
 export const dynamic = "force-dynamic";

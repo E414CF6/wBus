@@ -37,7 +37,17 @@ export default function TimetableWidget({
                                             dayMode,
                                             onDayModeChange,
                                         }: TimetableWidgetProps) {
-    const [internalSubTab, setInternalSubTab] = useState<TimetableSubTab>("yonsei");
+    const [internalSubTab, _setInternalSubTab] = useState<TimetableSubTab>(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const savedSubTab = localStorage.getItem(STORAGE_KEYS.TIMETABLE_SUBTAB) as TimetableSubTab | null;
+                if (savedSubTab === "yonsei" || savedSubTab === "all") return savedSubTab;
+            } catch {
+                // Storage error
+            }
+        }
+        return "yonsei";
+    });
     const subTab = externalSubTab ?? internalSubTab;
 
     // Single source of truth: useSchedule hook (SWR managed, zero infinite loop)
@@ -56,20 +66,6 @@ export default function TimetableWidget({
     const [isNoticeOpen, setIsNoticeOpen] = useState<boolean>(false);
     const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
 
-    // Restore saved timetable subtab preference from localStorage if uncontrolled
-    useEffect(() => {
-        if (!externalSubTab) {
-            try {
-                const savedSubTab = localStorage.getItem(STORAGE_KEYS.TIMETABLE_SUBTAB) as TimetableSubTab | null;
-                if (savedSubTab === "yonsei" || savedSubTab === "all") {
-                    setInternalSubTab(savedSubTab);
-                }
-            } catch (e) {
-                console.error("Failed to load timetable subtab from localStorage:", e);
-            }
-        }
-    }, [externalSubTab]);
-
     const handleOpenNotice = (noticeId?: string) => {
         setSelectedNoticeId(noticeId || null);
         setIsNoticeOpen(true);
@@ -83,7 +79,17 @@ export default function TimetableWidget({
 
     // Modal & Bookmark States
     const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
-    const [bookmarks, setBookmarks] = useState<string[]>([]);
+    const [bookmarks, setBookmarks] = useState<string[]>(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const saved = localStorage.getItem("wonju_bus_bookmarks");
+                if (saved) return JSON.parse(saved);
+            } catch {
+                // Storage error
+            }
+        }
+        return DEFAULT_BOOKMARK_ROUTES;
+    });
     const [now, setNow] = useState<Date>(() => new Date());
 
     // Update live clock every 10 seconds
@@ -92,20 +98,6 @@ export default function TimetableWidget({
             setNow(new Date());
         }, 10000);
         return () => clearInterval(timer);
-    }, []);
-
-    // Load bookmarks from localStorage
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem("wonju_bus_bookmarks");
-            if (saved) {
-                setBookmarks(JSON.parse(saved));
-            } else {
-                setBookmarks(DEFAULT_BOOKMARK_ROUTES);
-            }
-        } catch {
-            setBookmarks(DEFAULT_BOOKMARK_ROUTES);
-        }
     }, []);
 
     const toggleBookmark = (routeId: string) => {

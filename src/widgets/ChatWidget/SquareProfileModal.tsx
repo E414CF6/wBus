@@ -13,12 +13,15 @@ import {
     User,
     X,
 } from "lucide-react";
-import React, {useEffect, useState} from "react";
+import React, {useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
 import {UI_TEXT} from "@shared/config/locale";
 import type {RankedThread, TrendingTag} from "./types";
 import {getAvatarGradient} from "./utils/avatarUtils";
 import {renderRichContent} from "./utils/textParser";
+
+const emptySubscribe = () => () => {
+};
 
 export type ModalTab = "OVERVIEW" | "TRENDING" | "HOT_THREADS";
 export {getAvatarGradient} from "./utils/avatarUtils";
@@ -56,20 +59,11 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                                                                           topRankedThreads,
                                                                           onSelectThread,
                                                                       }) => {
-    const [tab, setTab] = useState<ModalTab>(initialTab);
-    const [mounted, setMounted] = useState(false);
+    const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
+    const [selectedTab, setSelectedTab] = useState<ModalTab | null>(null);
+    const tab = selectedTab ?? initialTab;
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    useEffect(() => {
-        if (isOpen) {
-            setTab(initialTab);
-        }
-    }, [isOpen, initialTab]);
-
-    if (!isOpen || !mounted) return null;
+    if (!isOpen || !isClient) return null;
 
     const modalContent = (
         <div
@@ -124,7 +118,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                 <div
                     className="px-4 pt-3 pb-2 border-b border-slate-100 dark:border-white/5 flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden">
                     <button
-                        onClick={() => setTab("OVERVIEW")}
+                        onClick={() => setSelectedTab("OVERVIEW")}
                         className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                             tab === "OVERVIEW"
                                 ? "bg-indigo-600 text-white shadow-xs"
@@ -135,7 +129,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                         <span>{UI_TEXT.CHAT.MY_PROFILE}</span>
                     </button>
                     <button
-                        onClick={() => setTab("TRENDING")}
+                        onClick={() => setSelectedTab("TRENDING")}
                         className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                             tab === "TRENDING"
                                 ? "bg-indigo-600 text-white shadow-xs"
@@ -146,7 +140,7 @@ export const SquareProfileModal: React.FC<SquareProfileModalProps> = ({
                         <span>{UI_TEXT.CHAT.REALTIME_TREND}</span>
                     </button>
                     <button
-                        onClick={() => setTab("HOT_THREADS")}
+                        onClick={() => setSelectedTab("HOT_THREADS")}
                         className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ${
                             tab === "HOT_THREADS"
                                 ? "bg-indigo-600 text-white shadow-xs"

@@ -1,4 +1,4 @@
-import {ROUTE_CONFIG} from "@/data/yonseiRoutes";
+import {ROUTE_CONFIG} from "@data/yonseiRoutes";
 
 export interface RouteMeta {
     routeNo: string;
@@ -10,15 +10,7 @@ export interface RouteMeta {
     category: RouteCategory;
 }
 
-export type RouteCategory =
-    | "ALL"
-    | "BOOKMARKS"
-    | "YONSEI"
-    | "1_19"
-    | "20_49"
-    | "50_99"
-    | "100_PLUS"
-    | "PUBLIC";
+export type RouteCategory = | "ALL" | "BOOKMARKS" | "YONSEI" | "1_19" | "20_49" | "50_99" | "100_PLUS" | "PUBLIC";
 
 export const YONSEI_ROUTE_SET = new Set(["30", "34", "34-1"]);
 
@@ -44,16 +36,12 @@ export const STATIC_ROUTE_METADATA: Record<string, { origin: string; destination
     "24": {origin: "장양리", destination: "운학", description: "장양리 ↔ 신림 ↔ 운학"},
     "25": {origin: "장양리", destination: "주천", description: "장양리 ↔ 신림 ↔ 주천"},
     "30": {
-        origin: "장양리",
-        destination: "연세대",
-        description: ROUTE_CONFIG["30"]?.description || "장양리 ↔ 터미널 ↔ 원주역 ↔ 연세대",
+        origin: "장양리", destination: "연세대", description: ROUTE_CONFIG["30"]?.description || "장양리 ↔ 터미널 ↔ 원주역 ↔ 연세대",
     },
     "31": {origin: "장양리", destination: "귀래·운남·용암", description: "장양리 ↔ 터미널 ↔ 귀래"},
     "32": {origin: "장양리", destination: "서곡리", description: "장양리 ↔ 터미널 ↔ 서곡리"},
     "34": {
-        origin: "장양리",
-        destination: "연세대",
-        description: ROUTE_CONFIG["34"]?.description || "장양리 ↔ 남부시장 ↔ 한라대/흥업 ↔ 연세대",
+        origin: "장양리", destination: "연세대", description: ROUTE_CONFIG["34"]?.description || "장양리 ↔ 남부시장 ↔ 한라대/흥업 ↔ 연세대",
     },
     "34-1": {
         origin: "장양리",
@@ -108,12 +96,6 @@ export function getRouteMeta(routeName: string): RouteMeta {
     const viaStops = yonseiConfig?.viaStops;
 
     return {
-        routeNo: routeName,
-        origin,
-        destination,
-        description,
-        viaStops,
-        isYonsei,
-        category: getRouteCategory(routeName),
+        routeNo: routeName, origin, destination, description, viaStops, isYonsei, category: getRouteCategory(routeName),
     };
 }

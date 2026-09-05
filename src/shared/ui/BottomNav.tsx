@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useEffect, useState} from "react";
+import React, {useState, useSyncExternalStore} from "react";
 import {
     Bus,
     Calendar,
@@ -28,6 +28,9 @@ import {YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 import type {BusItem} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
 import type {SSEConnectionStatus} from "@features/live-tracking/useBusLocation";
+
+const emptySubscribe = () => () => {
+};
 
 export type NavTab = "schedule" | "map" | "chat";
 export type TimetableSubTab = "yonsei" | "all";
@@ -85,32 +88,26 @@ export default function BottomNav({
                                   }: BottomNavProps) {
     const {map} = useAppMapContext();
     const {setTheme, resolvedTheme} = useTheme();
-    const [mounted, setMounted] = useState(false);
-    const [localIsDark, setLocalIsDark] = useState(false);
+    const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const [isBusListOpen, setIsBusListOpen] = useState(false);
     const [isRoutePickerOpen, setIsRoutePickerOpen] = useState(false);
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    useEffect(() => {
-        if (mounted) {
-            setLocalIsDark(resolvedTheme === "dark" || document.documentElement.classList.contains("dark"));
-        }
-    }, [mounted, resolvedTheme]);
-
     // Close bus list sheet and route picker when switching away from map tab
-    useEffect(() => {
+    const [prevActiveTab, setPrevActiveTab] = useState(activeTab);
+    if (activeTab !== prevActiveTab) {
+        setPrevActiveTab(activeTab);
         if (activeTab !== "map") {
             setIsBusListOpen(false);
             setIsRoutePickerOpen(false);
         }
-    }, [activeTab]);
+    }
+
+    const isDark = mounted
+        ? resolvedTheme === "dark" || (typeof document !== "undefined" && document.documentElement.classList.contains("dark"))
+        : false;
 
     const toggleTheme = () => {
-        const nextTheme = localIsDark ? "light" : "dark";
-        setLocalIsDark(!localIsDark);
+        const nextTheme = isDark ? "light" : "dark";
         setTheme(nextTheme);
 
         if (typeof document !== "undefined") {
@@ -437,7 +434,7 @@ export default function BottomNav({
                         aria-label={UI_TEXT.NAV.THEME_TOGGLE_LABEL}
                         className="p-2 rounded-full text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0"
                     >
-                        {localIsDark ? (
+                        {isDark ? (
                             <Moon className="w-4 h-4 text-blue-400 stroke-[2.2] animate-fadeIn"/>
                         ) : (
                             <Sun className="w-4 h-4 text-amber-500 stroke-[2.2] animate-fadeIn"/>

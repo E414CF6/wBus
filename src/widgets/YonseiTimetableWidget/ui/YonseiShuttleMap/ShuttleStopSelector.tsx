@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import {YonseiShuttleStop} from "@/data/yonseiShuttleStops";
+
+import {YonseiShuttleStop} from "@data/yonseiShuttleStops";
 
 interface ShuttleStopSelectorProps {
     stops: YonseiShuttleStop[];

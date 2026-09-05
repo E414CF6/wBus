@@ -2,7 +2,7 @@
 
 import {UI_TEXT} from "@shared/config/locale";
 
-import React, {useEffect, useState} from "react";
+import React, {useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
 
 import type {YonseiRouteDetailModalProps} from "./types";
@@ -13,6 +13,9 @@ import {RouteDetailHeader} from "./ui/YonseiRouteDetail/RouteDetailHeader";
 import {RouteDetailSearch} from "./ui/YonseiRouteDetail/RouteDetailSearch";
 import {RouteDetailTable} from "./ui/YonseiRouteDetail/RouteDetailTable";
 
+const emptySubscribe = () => () => {
+};
+
 export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                                                                   route,
                                                                                   allYonseiRoutes,
@@ -22,27 +25,10 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
                                                                                   onSelectMapRoute,
                                                                                   currentTime,
                                                                               }) => {
-    const [mounted, setMounted] = useState(false);
+    const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const [tableSearch, setTableSearch] = useState("");
     const [selectedFootnote, setSelectedFootnote] = useState<number | null>(null);
-    const [now, setNow] = useState<Date>(() => currentTime || new Date());
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    useEffect(() => {
-        if (currentTime) {
-            setNow(currentTime);
-        }
-    }, [currentTime]);
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setNow(new Date());
-        }, 10000);
-        return () => clearInterval(timer);
-    }, []);
+    const now = currentTime || new Date();
 
     const {
         currentHourStr,
@@ -58,7 +44,7 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
         selectedFootnote,
     });
 
-    if (!route || !mounted) return null;
+    if (!route || !isClient) return null;
 
     const targetRouteNo = route.routeNo;
     const isHoechon = targetRouteNo === "34-1";

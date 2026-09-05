@@ -20,7 +20,7 @@ interface RouteDetailHeaderProps {
 export const RouteDetailHeader: React.FC<RouteDetailHeaderProps> = ({
                                                                         targetRouteNo,
                                                                         locationLabel,
-                                                                        isSingleSchedule,
+                                                                        isSingleSchedule: _isSingleSchedule,
                                                                         onClose,
                                                                         onSelectMapRoute,
                                                                         currentHourStr,

@@ -22,7 +22,7 @@ export const MinuteBadge: React.FC<MinuteBadgeProps> = ({
     const isDimmed = isFootnoteActive && !isMatchingFootnote;
     const hasFootnote = Boolean(item.footnoteNumber);
 
-    let chipStyle = "";
+    let chipStyle: string;
     if (isMatchingFootnote) {
         chipStyle =
             "bg-amber-400 dark:bg-amber-500 text-slate-950 dark:text-black border-amber-500 dark:border-amber-400 ring-2 ring-amber-400/90 dark:ring-amber-300 shadow-lg scale-105 sm:scale-110 z-10 font-black animate-pulse";

@@ -544,7 +544,7 @@ export function useAnimatedPosition(
                     dist = Math.min(dist + dwellAdvance, hardCeilingDist);
                     markerDistRef.current = dist;
                 } else {
-                    let effectiveVelocity = 0;
+                    let effectiveVelocity: number;
 
                     if (gap > 0) {
                         // --------------------------------------------------------

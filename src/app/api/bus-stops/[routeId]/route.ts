@@ -1,6 +1,6 @@
 import {CacheManager} from "@shared/cache/CacheManager";
 import {buildCacheControl} from "@shared/cache/cachePolicy";
-import {fetchRouteStops, type RawBusStop} from "@shared/redis/publicApi";
+import {fetchRouteStops, type RawBusStop} from "@shared/api/publicApi";
 import {NextResponse} from "next/server";
 
 // Edge CDN ISR Cache: Revalidate every 24 hours (86400 seconds)

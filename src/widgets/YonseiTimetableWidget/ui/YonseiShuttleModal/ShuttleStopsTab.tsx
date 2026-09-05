@@ -2,7 +2,7 @@
 
 import React, {useMemo, useState} from "react";
 
-import {YONSEI_SHUTTLE_STOPS} from "@/data/yonseiShuttleStops";
+import {YONSEI_SHUTTLE_STOPS} from "@data/yonseiShuttleStops";
 
 import {ShuttleStopSelector} from "../YonseiShuttleMap/ShuttleStopSelector";
 import {ShuttleMapViewer} from "../YonseiShuttleMap/ShuttleMapViewer";

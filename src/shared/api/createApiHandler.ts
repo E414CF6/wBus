@@ -1,5 +1,5 @@
 import {buildCacheControl} from "@shared/cache/cachePolicy";
-import {type CacheOptions, getCachedOrFetch} from "@shared/redis/client";
+import {type CacheOptions, getCachedOrFetch} from "@shared/cache";
 import {NextResponse} from "next/server";
 
 export interface ApiHandlerConfig<T> {
@@ -15,7 +15,7 @@ export interface ApiHandlerConfig<T> {
 }
 
 /**
- * Creates a Next.js GET route handler with layered caching (memory + Redis + CDN headers).
+ * Creates a Next.js GET route handler with layered caching (in-memory LRU + Edge CDN headers).
  * Use for APIs that benefit from a shared cache across instances.
  */
 export function createApiHandler<T>(config: ApiHandlerConfig<T>) {

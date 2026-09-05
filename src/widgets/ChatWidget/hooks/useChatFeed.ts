@@ -91,10 +91,10 @@ export function useChatFeed({comments, userTag, myCommentIds}: UseChatFeedProps)
             }
         }
 
-        const now = Date.now();
+        const refTime = comments[0] ? new Date(comments[0].createdAt).getTime() : 0;
         const ranked: TrendingTag[] = [];
         for (const [tag, data] of counts.entries()) {
-            const hoursAgo = Math.max(0.1, (now - data.recentTime) / (1000 * 60 * 60));
+            const hoursAgo = Math.max(0.1, (refTime - data.recentTime) / (1000 * 60 * 60));
             const score = data.count / Math.pow(hoursAgo + 2, 1.2);
             ranked.push({tag, count: data.count, score});
         }
@@ -104,13 +104,13 @@ export function useChatFeed({comments, userTag, myCommentIds}: UseChatFeedProps)
 
     // Compute top ranked threads
     const topRankedThreads = useMemo<RankedThread[]>(() => {
-        const now = Date.now();
+        const refTime = parentThreads[0] ? new Date(parentThreads[0].createdAt).getTime() : 0;
         const ranked: RankedThread[] = parentThreads.map((t) => {
             const rCount = repliesByThreadId[t.id]?.length || 0;
             const likes = t.likes || 0;
             const hoursAgo = Math.max(
                 0.2,
-                (now - new Date(t.createdAt).getTime()) / (1000 * 60 * 60)
+                (refTime - new Date(t.createdAt).getTime()) / (1000 * 60 * 60)
             );
             const score = (likes * 2 + rCount * 3 + 1) / Math.pow(hoursAgo + 2, 1.5);
             return {thread: t, replyCount: rCount, score};

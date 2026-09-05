@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useEffect, useState} from "react";
+import React, {useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
 
 import {useYonseiShuttleSchedule} from "./hooks/useYonseiShuttleSchedule";
@@ -12,39 +12,21 @@ import {ShuttleHeader} from "./ui/YonseiShuttleModal/ShuttleHeader";
 import {ShuttleScheduleList} from "./ui/YonseiShuttleModal/ShuttleScheduleList";
 import {ShuttleStopsTab} from "./ui/YonseiShuttleModal/ShuttleStopsTab";
 
+const emptySubscribe = () => () => {
+};
+
 export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                                                                           isOpen,
                                                                           onClose,
                                                                           initialTab,
                                                                           currentTime,
                                                                       }) => {
-    const [mounted, setMounted] = useState(false);
-    const [activeTab, setActiveTab] = useState<ShuttleTab>(initialTab || "inbound");
+    const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
+    const [selectedTab, setSelectedTab] = useState<ShuttleTab | null>(null);
+    const activeTab = selectedTab ?? (initialTab || "inbound");
     const [dayFilter, setDayFilter] = useState<DayFilter>("ALL");
     const [searchQuery, setSearchQuery] = useState("");
-    const [now, setNow] = useState<Date>(() => currentTime || new Date());
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    useEffect(() => {
-        if (initialTab) {
-            setActiveTab(initialTab);
-        }
-        if (isOpen) {
-            setSearchQuery("");
-        }
-    }, [initialTab, isOpen]);
-
-    useEffect(() => {
-        if (currentTime) setNow(currentTime);
-    }, [currentTime]);
-
-    useEffect(() => {
-        const timer = setInterval(() => setNow(new Date()), 10000);
-        return () => clearInterval(timer);
-    }, []);
+    const now = currentTime || new Date();
 
     const {filteredInbound, filteredOutbound, nextInboundIdx, nextOutboundIdx} =
         useYonseiShuttleSchedule({
@@ -53,7 +35,7 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
             now,
         });
 
-    if (!isOpen || !mounted) return null;
+    if (!isOpen || !isClient) return null;
 
     const filteredCount =
         activeTab === "inbound" ? filteredInbound.length : filteredOutbound.length;
@@ -71,7 +53,7 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
                 {/* Header with tabs, filter pills, search bar */}
                 <ShuttleHeader
                     activeTab={activeTab}
-                    onTabChange={setActiveTab}
+                    onTabChange={setSelectedTab}
                     dayFilter={dayFilter}
                     onDayFilterChange={setDayFilter}
                     searchQuery={searchQuery}

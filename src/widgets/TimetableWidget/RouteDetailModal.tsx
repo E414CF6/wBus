@@ -1,11 +1,14 @@
 "use client";
 
-import React, {useEffect, useState} from "react";
+import React, {useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
 import {BusRoute} from "@shared/types/bus";
 import {getNextDeparture} from "@shared/lib/timeUtils";
 import {UI_TEXT} from "@shared/config/locale";
 import {ArrowRight, MapPin, Search, Star, X} from "lucide-react";
+
+const emptySubscribe = () => () => {
+};
 
 interface RouteDetailModalProps {
     route: BusRoute | null;
@@ -24,28 +27,11 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
                                                                       onSelectMapRoute,
                                                                       currentTime,
                                                                   }) => {
-    const [mounted, setMounted] = useState(false);
+    const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const [tableSearch, setTableSearch] = useState("");
-    const [now, setNow] = useState<Date>(() => currentTime || new Date());
+    const now = currentTime || new Date();
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    useEffect(() => {
-        if (currentTime) {
-            setNow(currentTime);
-        }
-    }, [currentTime]);
-
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setNow(new Date());
-        }, 10000);
-        return () => clearInterval(timer);
-    }, []);
-
-    if (!route || !mounted) return null;
+    if (!route || !isClient) return null;
 
     const {nextOrigin, nextDest, originWaitMins, destWaitMins} = getNextDeparture(route.timetable, now);
 

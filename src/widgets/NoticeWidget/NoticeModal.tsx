@@ -1,5 +1,7 @@
 "use client";
 
+import React, {useState, useSyncExternalStore} from "react";
+import {createPortal} from "react-dom";
 import {useNoticeDetail, useNoticeList} from "@entities/notice/hooks";
 import {UI_TEXT} from "@shared/config/locale";
 import {
@@ -16,8 +18,9 @@ import {
     Search,
     X,
 } from "lucide-react";
-import React, {useEffect, useState} from "react";
-import {createPortal} from "react-dom";
+
+const emptySubscribe = () => () => {
+};
 
 interface NoticeModalProps {
     isOpen: boolean;
@@ -26,21 +29,17 @@ interface NoticeModalProps {
 }
 
 export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: NoticeModalProps) {
-    const [mounted, setMounted] = useState(false);
+    const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const [page, setPage] = useState(1);
     const [searchInput, setSearchInput] = useState("");
     const [activeSearch, setActiveSearch] = useState("");
     const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(initialNoticeId);
+    const [prevInitialNoticeId, setPrevInitialNoticeId] = useState<string | null>(initialNoticeId);
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    useEffect(() => {
-        if (isOpen) {
-            setSelectedNoticeId(initialNoticeId);
-        }
-    }, [isOpen, initialNoticeId]);
+    if (initialNoticeId !== prevInitialNoticeId) {
+        setPrevInitialNoticeId(initialNoticeId);
+        setSelectedNoticeId(initialNoticeId);
+    }
 
     const {data: listData, loading: listLoading, error: listError, refresh} = useNoticeList(page, activeSearch);
     const {notice: detailNotice, loading: detailLoading, error: detailError} = useNoticeDetail(selectedNoticeId);
@@ -68,7 +67,7 @@ export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: N
     const notices = listData?.notices ?? [];
     const totalPages = listData?.totalPages || (listData?.totalCount ? Math.ceil(listData.totalCount / 10) : 1);
 
-    if (!isOpen || !mounted) return null;
+    if (!isOpen || !isClient) return null;
 
     const modalContent = (
         <div

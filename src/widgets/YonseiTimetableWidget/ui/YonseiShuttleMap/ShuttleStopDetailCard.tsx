@@ -1,8 +1,9 @@
 "use client";
 
 import React from "react";
-import {getKakaoMapUrl, getKakaoRoadviewUrl, YonseiShuttleStop,} from "@/data/yonseiShuttleStops";
 import {Camera, ExternalLink, Info, MapPin, Navigation} from "lucide-react";
+
+import {getKakaoMapUrl, getKakaoRoadviewUrl, YonseiShuttleStop,} from "@data/yonseiShuttleStops";
 
 interface ShuttleStopDetailCardProps {
     stop: YonseiShuttleStop;

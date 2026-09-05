@@ -1,7 +1,8 @@
-import {YONSEI_SHUTTLE_SCHEDULE} from "@/data/yonseiShuttleSchedule";
-import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 import {useMemo} from "react";
 import type {DayFilter} from "../types";
+
+import {YONSEI_SHUTTLE_SCHEDULE} from "@data/yonseiShuttleSchedule";
+import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 
 interface UseYonseiShuttleScheduleOptions {
     dayFilter: DayFilter;
@@ -10,9 +11,7 @@ interface UseYonseiShuttleScheduleOptions {
 }
 
 export function useYonseiShuttleSchedule({
-                                             dayFilter,
-                                             searchQuery,
-                                             now,
+                                             dayFilter, searchQuery, now,
                                          }: UseYonseiShuttleScheduleOptions) {
     const currentMins = now.getHours() * 60 + now.getMinutes();
     const isSunday = now.getDay() === 0;
@@ -33,18 +32,13 @@ export function useYonseiShuttleSchedule({
                     const matchDest = item.destination.toLowerCase().includes(q);
                     const matchVia = item.via.some((v) => v.name.toLowerCase().includes(q));
                     const matchNote = item.note ? item.note.toLowerCase().includes(q) : false;
-                    if (!matchPoint && !matchTime && !matchDest && !matchVia && !matchNote)
-                        return false;
+                    if (!matchPoint && !matchTime && !matchDest && !matchVia && !matchNote) return false;
                 }
 
                 return true;
             })
             .slice()
-            .sort(
-                (a, b) =>
-                    (parseTimeToMinutes(a.departure_time) ?? 0) -
-                    (parseTimeToMinutes(b.departure_time) ?? 0)
-            );
+            .sort((a, b) => (parseTimeToMinutes(a.departure_time) ?? 0) - (parseTimeToMinutes(b.departure_time) ?? 0));
     }, [dayFilter, searchQuery]);
 
     // Filter and Sort Outbound Items by departure_time ascending
@@ -63,18 +57,13 @@ export function useYonseiShuttleSchedule({
                     const matchDest = item.destination.toLowerCase().includes(q);
                     const matchVia = item.via.some((v) => v.name.toLowerCase().includes(q));
                     const matchNote = item.note ? item.note.toLowerCase().includes(q) : false;
-                    if (!matchPoint && !matchTime && !matchDest && !matchVia && !matchNote)
-                        return false;
+                    if (!matchPoint && !matchTime && !matchDest && !matchVia && !matchNote) return false;
                 }
 
                 return true;
             })
             .slice()
-            .sort(
-                (a, b) =>
-                    (parseTimeToMinutes(a.departure_time) ?? 0) -
-                    (parseTimeToMinutes(b.departure_time) ?? 0)
-            );
+            .sort((a, b) => (parseTimeToMinutes(a.departure_time) ?? 0) - (parseTimeToMinutes(b.departure_time) ?? 0));
     }, [dayFilter, searchQuery]);
 
     // Next upcoming index for inbound (based on earliest time >= currentMins)
@@ -106,9 +95,6 @@ export function useYonseiShuttleSchedule({
     }, [filteredOutbound, currentMins, isSunday, dayFilter]);
 
     return {
-        filteredInbound,
-        filteredOutbound,
-        nextInboundIdx,
-        nextOutboundIdx,
+        filteredInbound, filteredOutbound, nextInboundIdx, nextOutboundIdx,
     };
 }

@@ -40,10 +40,7 @@ function usePolylineSnapshot(routeIds: string[]): Map<string, PolylineData> {
     const routeKey = useMemo(() => buildRouteIdsKey(routeIds, "|"), [routeIds]);
 
     useEffect(() => {
-        if (!routeKey) {
-            setSnapshot({key: "", map: EMPTY_POLYLINE_MAP});
-            return;
-        }
+        if (!routeKey) return;
 
         let mounted = true;
         const ids = routeKey.split("|").filter(Boolean);

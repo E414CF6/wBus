@@ -1,4 +1,4 @@
-import {getPublicApiHealth} from "@shared/redis/publicApi";
+import {getPublicApiHealth} from "@shared/api/publicApi";
 import {NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";

@@ -3,7 +3,7 @@
 import React, {memo, useMemo} from "react";
 import {AlertCircle, Bus, ChevronRight, Clock, GraduationCap, MapPin} from "lucide-react";
 
-import {YONSEI_SHUTTLE_SCHEDULE} from "@/data/yonseiShuttleSchedule";
+import {YONSEI_SHUTTLE_SCHEDULE} from "@data/yonseiShuttleSchedule";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 
 import type {ShuttleTab} from "./types";
@@ -37,7 +37,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             })
             .slice()
             .sort((a, b) => (parseTimeToMinutes(a.departure_time) ?? 0) - (parseTimeToMinutes(b.departure_time) ?? 0));
-    }, []);
+    }, [isSaturday, isSunday]);
 
     const applicableOutboundList = useMemo(() => {
         if (isSaturday) return [];
@@ -51,7 +51,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             })
             .slice()
             .sort((a, b) => (parseTimeToMinutes(a.departure_time) ?? 0) - (parseTimeToMinutes(b.departure_time) ?? 0));
-    }, []);
+    }, [isSaturday, isSunday]);
 
     // Find next upcoming inbound shuttle (earliest time >= currentMins)
     const nextInbound = useMemo(() => {
@@ -66,7 +66,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             }
         }
         return null;
-    }, [applicableInboundList]);
+    }, [applicableInboundList, currentMins]);
 
     // Find next upcoming outbound shuttle (earliest time >= currentMins)
     const nextOutbound = useMemo(() => {
@@ -81,7 +81,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             }
         }
         return null;
-    }, [applicableOutboundList]);
+    }, [applicableOutboundList, currentMins]);
 
     const hasUpcomingShuttle = Boolean(nextInbound || nextOutbound);
 

@@ -6,13 +6,13 @@ import {usePathname, useSearchParams} from "next/navigation";
 
 import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 
-import {type CommentItem, type CommentRow, rowToComment} from "@entities/comment";
+import {useSquareComments} from "@entities/comment";
 import {useBusRouteMap} from "@entities/route/hooks";
 
 import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
 
-import {createClient} from "@shared/supabase/client";
+import {isWeekend} from "@shared/lib/timeUtils";
 import BottomNav, {type DayMode, type NavTab, type TimetableSubTab} from "@shared/ui/BottomNav";
 
 import {ChatView} from "@widgets/ChatWidget";
@@ -41,6 +41,11 @@ export function AppShell() {
 
     // Derive active tab with client-side state preservation across tab switches (avoids destroying map & SSE)
     const [activeTab, setActiveTab] = useState<NavTab>(() => resolveTabFromPathname(pathname));
+    const [prevPathname, setPrevPathname] = useState(pathname);
+    if (pathname !== prevPathname) {
+        setPrevPathname(pathname);
+        setActiveTab(resolveTabFromPathname(pathname));
+    }
 
     // Timetable Sub-tab & Day Mode
     const [timetableSubTab, setTimetableSubTab] = useState<TimetableSubTab>(() => {
@@ -59,11 +64,23 @@ export function AppShell() {
 
     const isMapActive = activeTab === "map";
     const [hasVisitedMap, setHasVisitedMap] = useState<boolean>(() => isMapActive);
+    if (isMapActive && !hasVisitedMap) {
+        setHasVisitedMap(true);
+    }
 
-    // Keep activeTab in sync if pathname changes externally
-    useEffect(() => {
-        setActiveTab(resolveTabFromPathname(pathname));
-    }, [pathname]);
+    // Synchronize route & timetable subtab when searchParams change
+    const [prevSearchParams, setPrevSearchParams] = useState(searchParams);
+    if (searchParams !== prevSearchParams) {
+        setPrevSearchParams(searchParams);
+        const queryRoute = searchParams.get("route");
+        if (queryRoute && queryRoute !== selectedRoute) {
+            setSelectedRoute(queryRoute);
+        }
+        const querySubTab = searchParams.get("subTab");
+        if (querySubTab === "yonsei" || querySubTab === "all") {
+            setTimetableSubTab(querySubTab);
+        }
+    }
 
     // Handle browser Back/Forward (popstate) navigation cleanly
     useEffect(() => {
@@ -91,210 +108,50 @@ export function AppShell() {
         }
     }, [activeTab]);
 
-    // Square / Comments State
-    const [comments, setComments] = useState<CommentItem[]>([]);
-    const [isRefreshingComments, setIsRefreshingComments] = useState<boolean>(false);
+    // Square / Comments State & Realtime live sync (encapsulated)
+    const {
+        comments,
+        isRefreshing: isRefreshingComments,
+        refreshComments,
+        addComment: handleAddComment,
+        likeComment: handleLikeComment,
+        deleteComment: handleDeleteComment,
+    } = useSquareComments();
 
-    // Live clock for holiday / weekend detection
-    const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
+    // Live weekend check for timetable badge (updates on minute change, re-renders only at midnight transition)
+    const [isTodayWeekendOrHoliday, setIsTodayWeekendOrHoliday] = useState<boolean>(() => isWeekend());
     useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 10000);
+        const timer = setInterval(() => {
+            const current = isWeekend();
+            setIsTodayWeekendOrHoliday((prev) => (prev !== current ? current : prev));
+        }, 60000);
         return () => clearInterval(timer);
     }, []);
 
-    const isTodayWeekendOrHoliday = useMemo(() => {
-        const day = currentTime.getDay();
-        return day === 0 || day === 6;
-    }, [currentTime]);
-
-    // Synchronize state when URL / searchParams change (e.g. Browser Back/Forward navigation)
-    useEffect(() => {
-        if (isMapActive) {
-            setHasVisitedMap(true);
-        }
-    }, [isMapActive]);
-
-    useEffect(() => {
-        const queryRoute = searchParams.get("route");
-        if (queryRoute && queryRoute !== selectedRoute) {
-            setSelectedRoute(queryRoute);
-        }
-    }, [searchParams, selectedRoute]);
-
-    useEffect(() => {
-        const querySubTab = searchParams.get("subTab");
-        if (querySubTab === "yonsei" || querySubTab === "all") {
-            setTimetableSubTab(querySubTab);
-        }
-    }, [searchParams]);
-
     // Restore saved preferences on initial client mount if not in URL
     useEffect(() => {
-        try {
-            const savedSubTab = localStorage.getItem(
-                STORAGE_KEYS.TIMETABLE_SUBTAB
-            ) as TimetableSubTab | null;
-            if (savedSubTab && !searchParams.get("subTab")) {
-                if (savedSubTab === "yonsei" || savedSubTab === "all") {
-                    setTimetableSubTab(savedSubTab);
-                }
-            }
-
-            const savedRoute = localStorage.getItem(STORAGE_KEYS.ROUTE_ID);
-            if (savedRoute && !searchParams.get("route")) {
-                setSelectedRoute(savedRoute);
-            }
-        } catch (e) {
-            if (APP_CONFIG.IS_DEV) {
-                console.warn("[AppShell] Failed to load preferences from localStorage", e);
-            }
-        }
-    }, [searchParams]);
-
-    // Load comments from API
-    const fetchComments = useCallback(async (force = false) => {
-        setIsRefreshingComments(true);
-        try {
-            const res = await fetch(
-                `/api/comments?force=${force ? "true" : "false"}&t=${Date.now()}`,
-                {
-                    cache: "no-store",
-                    headers: {"Cache-Control": "no-cache"},
-                }
-            );
-            const json = await res.json();
-            if (json.success && Array.isArray(json.comments)) {
-                setComments(json.comments);
-            }
-        } catch (err) {
-            console.warn("[AppShell] Failed to fetch comments:", err);
-        } finally {
-            setIsRefreshingComments(false);
-        }
-    }, []);
-
-    // Initial load + Supabase Realtime live sync
-    useEffect(() => {
-        fetchComments(false);
-
-        try {
-            const supabase = createClient();
-            const channel = supabase
-                .channel("comments_live_channel")
-                .on(
-                    "postgres_changes",
-                    {
-                        event: "*",
-                        schema: "public",
-                        table: "comments",
-                    },
-                    (payload) => {
-                        if (payload.eventType === "INSERT") {
-                            const newComment = rowToComment(payload.new as CommentRow);
-                            setComments((prev) => {
-                                if (prev.some((c) => c.id === newComment.id)) return prev;
-                                return [newComment, ...prev];
-                            });
-                        } else if (payload.eventType === "UPDATE") {
-                            const updated = rowToComment(payload.new as CommentRow);
-                            setComments((prev) =>
-                                prev.map((c) => (c.id === updated.id ? updated : c))
-                            );
-                        } else if (payload.eventType === "DELETE") {
-                            const deletedId = (payload.old as { id: string })?.id;
-                            if (deletedId) {
-                                setComments((prev) =>
-                                    prev.filter((c) => c.id !== deletedId)
-                                );
-                            }
-                        }
-                    }
-                )
-                .subscribe();
-
-            return () => {
-                supabase.removeChannel(channel);
-            };
-        } catch (err) {
-            console.warn("[AppShell] Supabase Realtime subscription error:", err);
-        }
-    }, [fetchComments]);
-
-    const handleAddComment = async (data: {
-        author?: string;
-        content: string;
-        parentId?: string;
-        replyToAuthor?: string;
-        authorTag?: string;
-        replyToAuthorTag?: string;
-    }) => {
-        const res = await fetch("/api/comments", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify(data),
-        });
-        const json = await res.json();
-        if (!json.success) {
-            throw new Error(json.error || "스퀘어 글 등록에 실패했습니다.");
-        }
-        if (json.comment) {
-            setComments((prev) => {
-                if (prev.some((c) => c.id === json.comment.id)) return prev;
-                return [json.comment, ...prev];
-            });
+        requestAnimationFrame(() => {
             try {
-                const saved = localStorage.getItem("wbus_my_comments");
-                const list: string[] = saved ? JSON.parse(saved) : [];
-                if (!list.includes(json.comment.id)) {
-                    list.push(json.comment.id);
-                    localStorage.setItem("wbus_my_comments", JSON.stringify(list));
+                const savedSubTab = localStorage.getItem(
+                    STORAGE_KEYS.TIMETABLE_SUBTAB
+                ) as TimetableSubTab | null;
+                if (savedSubTab && !searchParams.get("subTab")) {
+                    if (savedSubTab === "yonsei" || savedSubTab === "all") {
+                        setTimetableSubTab(savedSubTab);
+                    }
                 }
-            } catch {
-                // Ignore
-            }
-        }
-    };
 
-    const handleLikeComment = async (id: string) => {
-        try {
-            const res = await fetch("/api/comments", {
-                method: "PATCH",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({id, action: "like"}),
-            });
-            const json = await res.json();
-            if (json.success && json.comment) {
-                setComments((prev) =>
-                    prev.map((c) => (c.id === id ? json.comment : c))
-                );
+                const savedRoute = localStorage.getItem(STORAGE_KEYS.ROUTE_ID);
+                if (savedRoute && !searchParams.get("route")) {
+                    setSelectedRoute(savedRoute);
+                }
+            } catch (e) {
+                if (APP_CONFIG.IS_DEV) {
+                    console.warn("[AppShell] Failed to load preferences from localStorage", e);
+                }
             }
-        } catch (err) {
-            console.warn("[AppShell] Failed to like comment:", err);
-        }
-    };
-
-    const handleDeleteComment = async (id: string, authorTag?: string) => {
-        try {
-            const params = new URLSearchParams({id});
-            if (authorTag) params.set("authorTag", authorTag);
-            const res = await fetch(`/api/comments?${params.toString()}`, {
-                method: "DELETE",
-            });
-            const json = await res.json();
-            if (json.success) {
-                setComments((prev) =>
-                    prev.map((c) =>
-                        c.id === id ? json.comment || {...c, isDeleted: true} : c
-                    )
-                );
-            } else {
-                throw new Error(json.error || "스퀘어 글 삭제에 실패했습니다.");
-            }
-        } catch (err) {
-            console.warn("[AppShell] Failed to delete comment:", err);
-            throw err;
-        }
-    };
+        });
+    }, [searchParams]);
 
     const handleScheduleSubTabChange = useCallback(
         (subTab: TimetableSubTab) => {
@@ -494,7 +351,7 @@ export function AppShell() {
                         onAddComment={handleAddComment}
                         onLikeComment={handleLikeComment}
                         onDeleteComment={handleDeleteComment}
-                        onRefresh={fetchComments}
+                        onRefresh={refreshComments}
                         isRefreshing={isRefreshingComments}
                     />
                 </div>

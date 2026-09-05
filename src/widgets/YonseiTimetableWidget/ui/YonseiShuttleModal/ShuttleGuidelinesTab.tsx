@@ -1,8 +1,10 @@
 "use client";
 
-import {YONSEI_SHUTTLE_SCHEDULE} from "@/data/yonseiShuttleSchedule";
-import {ShieldAlert} from "lucide-react";
 import React from "react";
+import {ShieldAlert} from "lucide-react";
+
+import {YONSEI_SHUTTLE_SCHEDULE} from "@data/yonseiShuttleSchedule";
+
 import {UI_TEXT} from "@shared/config/locale";
 
 export const ShuttleGuidelinesTab: React.FC = () => {

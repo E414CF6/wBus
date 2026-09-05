@@ -1,6 +1,7 @@
-import {YONSEI_STATIC_TIMETABLES} from "@/data/yonseiStaticTimetables";
 import fs from "fs";
 import path from "path";
+
+import {YONSEI_STATIC_TIMETABLES} from "@data/yonseiStaticTimetables";
 
 /**
  * Operating Service Window Engine for Wonju City Buses

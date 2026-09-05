@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
 import {Bus, Check, Clock, GraduationCap, MapPin, Search, Star, X} from "lucide-react";
 import {getRouteMeta, RouteCategory, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
@@ -23,6 +23,9 @@ const RECENT_ROUTES_STORAGE_KEY = "wbus_recent_map_routes";
 const BOOKMARKS_STORAGE_KEY = "wonju_bus_bookmarks";
 const DEFAULT_BOOKMARK_ROUTES = ["30", "34", "34-1"];
 
+const emptySubscribe = () => () => {
+};
+
 function sortRoutes(routes: string[]): string[] {
     return [...routes].sort((a, b) =>
         a.localeCompare(b, undefined, {numeric: true, sensitivity: "base"})
@@ -40,29 +43,38 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                                       selectedRoute,
                                                                       onSelectRoute,
                                                                   }) => {
+    const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<RouteCategory>("ALL");
-    const [bookmarks, setBookmarks] = useState<string[]>(DEFAULT_BOOKMARK_ROUTES);
-    const [recentRoutes, setRecentRoutes] = useState<string[]>([]);
-    const [mounted, setMounted] = useState(false);
+    const [bookmarks, setBookmarks] = useState<string[]>(() => {
+        if (typeof window === "undefined") return DEFAULT_BOOKMARK_ROUTES;
+        try {
+            const saved = localStorage.getItem(BOOKMARKS_STORAGE_KEY);
+            if (saved) return JSON.parse(saved);
+        } catch {
+        }
+        return DEFAULT_BOOKMARK_ROUTES;
+    });
+    const [recentRoutes, setRecentRoutes] = useState<string[]>(() => {
+        if (typeof window === "undefined") return [];
+        try {
+            const saved = localStorage.getItem(RECENT_ROUTES_STORAGE_KEY);
+            if (saved) return JSON.parse(saved);
+        } catch {
+        }
+        return [];
+    });
     const searchInputRef = useRef<HTMLInputElement>(null);
 
-    // Initial mount & preferences load
-    useEffect(() => {
-        setMounted(true);
-        try {
-            const savedBookmarks = localStorage.getItem(BOOKMARKS_STORAGE_KEY);
-            if (savedBookmarks) {
-                setBookmarks(JSON.parse(savedBookmarks));
-            }
-            const savedRecent = localStorage.getItem(RECENT_ROUTES_STORAGE_KEY);
-            if (savedRecent) {
-                setRecentRoutes(JSON.parse(savedRecent));
-            }
-        } catch {
-            // Ignore localStorage parse errors
+    // Reset search when modal is opened
+    const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+    if (isOpen !== prevIsOpen) {
+        setPrevIsOpen(isOpen);
+        if (isOpen) {
+            setSearchQuery("");
+            setSelectedCategory("ALL");
         }
-    }, []);
+    }
 
     // Toggle bookmark helper
     const toggleBookmark = useCallback((e: React.MouseEvent, route: string) => {
@@ -98,14 +110,13 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         [onSelectRoute, onClose]
     );
 
-    // Reset state & auto-focus on open
+    // Auto-focus on open
     useEffect(() => {
         if (isOpen) {
-            setSearchQuery("");
-            setSelectedCategory("ALL");
-            setTimeout(() => {
+            const timer = setTimeout(() => {
                 searchInputRef.current?.focus();
             }, 60);
+            return () => clearTimeout(timer);
         }
     }, [isOpen]);
 
@@ -185,7 +196,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         return list;
     }, [sortedAllRoutes, selectedCategory, searchQuery, bookmarks, routeMetaMap]);
 
-    if (!isOpen || !mounted) return null;
+    if (!isOpen || !isClient) return null;
 
     const bookmarkedList = sortedAllRoutes.filter((r) => bookmarks.includes(r));
     const validRecentRoutes = recentRoutes.filter((r) => allRoutes.includes(r));

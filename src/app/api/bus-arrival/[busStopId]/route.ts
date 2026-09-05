@@ -1,5 +1,5 @@
 import {createApiHandler} from "@shared/api/createApiHandler";
-import {fetchBusArrivals, type RawBusArrival} from "@shared/redis/publicApi";
+import {fetchBusArrivals, type RawBusArrival} from "@shared/api/publicApi";
 
 export const dynamic = "force-dynamic";
 

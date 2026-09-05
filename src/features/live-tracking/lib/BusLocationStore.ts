@@ -1,6 +1,6 @@
 import type {BusItem} from "@entities/bus/types";
 import {API_CONFIG} from "@shared/config/env";
-import type {CachedData} from "@shared/redis/types";
+import type {CachedData} from "@shared/cache";
 import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import {type BusLocationState, EMPTY_BUS_LIST, EMPTY_STATE, type Listener,} from "../model/types";
 

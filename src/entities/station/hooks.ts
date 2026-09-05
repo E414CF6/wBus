@@ -2,7 +2,7 @@ import {useMemo} from "react";
 import useSWR from "swr";
 
 import type {BusStop, BusStopArrival, StationLocation} from "@entities/station/types";
-import type {CachedData} from "@shared/redis/types";
+import type {CachedData} from "@shared/cache";
 import {UI_TEXT} from "@shared/config/locale";
 
 // Fetcher for the new API
@@ -10,7 +10,7 @@ const apiFetcher = async (url: string) => {
     const res = await fetch(url);
     if (!res.ok) throw new Error("Failed to fetch stops");
     const data = await res.json();
-    return data.data; // Redis cached response wrapper has .data
+    return data.data; // Cached response wrapper has .data
 };
 
 // useBusStop (stops for a specific route)

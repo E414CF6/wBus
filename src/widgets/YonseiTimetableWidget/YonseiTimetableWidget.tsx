@@ -3,8 +3,6 @@
 import React, {useEffect, useMemo, useState} from "react";
 import {CheckCircle2, Info, X} from "lucide-react";
 
-import {BusRoute} from "@shared/types/bus";
-
 import {YonseiRouteCard} from "./YonseiRouteCard";
 import {YonseiRouteDetailModal} from "./YonseiRouteDetailModal";
 import {YonseiShuttleCard} from "./YonseiShuttleCard";
@@ -15,8 +13,9 @@ import type {ShuttleTab} from "./types";
 import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
 import {CacheInfoBanner} from "@widgets/TimetableWidget/CacheInfoBanner";
 
-import {TARGET_ROUTE_NUMBERS} from "@/data/yonseiRoutes";
+import {TARGET_ROUTE_NUMBERS} from "@data/yonseiRoutes";
 
+import {BusRoute} from "@shared/types/bus";
 import {Footer} from "@shared/ui/Footer";
 import {selectRouteVariant} from "@shared/lib/timeUtils";
 
@@ -66,7 +65,7 @@ export default function YonseiTimetableWidget({
         if (dayMode === "WEEKDAY") return false;
         if (dayMode === "VACATION") return true;
         return isTodayWeekendOrHoliday;
-    }, [isTodayWeekendOrHoliday]);
+    }, [isTodayWeekendOrHoliday, dayMode]);
 
     // Pair each target routeNo (30, 34, 34-1) with its matching active schedule variant
     const activeRoutes = useMemo(() => {

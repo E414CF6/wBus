@@ -31,12 +31,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick, className = 
     // Keep top 5 latest notices for cycling carousel
     const latestNotices = useMemo(() => sortedNotices.slice(0, 5), [sortedNotices]);
 
-    // Reset index if out of bounds
-    useEffect(() => {
-        if (currentIndex >= latestNotices.length) {
-            setCurrentIndex(0);
-        }
-    }, [latestNotices.length, currentIndex]);
+    const safeIndex = currentIndex < latestNotices.length ? currentIndex : 0;
 
     // Auto cycle through top latest notices every 5 seconds
     useEffect(() => {
@@ -47,17 +42,17 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick, className = 
         return () => clearInterval(timer);
     }, [isHovered, latestNotices.length]);
 
-    const currentNotice = latestNotices[currentIndex] ?? null;
+    const currentNotice = latestNotices[safeIndex] ?? null;
 
     // Check if notice is recent (within 14 days) or is top 1 latest notice
     const isNew = useMemo(() => {
-        if (!currentNotice?.date) return currentIndex === 0;
+        if (!currentNotice?.date) return safeIndex === 0;
         const noticeDate = new Date(currentNotice.date);
-        if (isNaN(noticeDate.getTime())) return currentIndex === 0;
+        if (isNaN(noticeDate.getTime())) return safeIndex === 0;
         const now = new Date();
         const diffDays = Math.ceil(Math.abs(now.getTime() - noticeDate.getTime()) / (1000 * 60 * 60 * 24));
-        return diffDays <= 14 || currentIndex === 0;
-    }, [currentIndex]);
+        return diffDays <= 14 || safeIndex === 0;
+    }, [safeIndex, currentNotice?.date]);
 
     const handlePrev = (e: React.MouseEvent) => {
         e.stopPropagation();
