@@ -154,11 +154,19 @@ export async function deleteComment(id: string, userTag?: string, ipHash?: strin
             })
             .eq("id", id);
 
+        if (!ipHash && !userTag) {
+            console.warn("[Comments] Unauthorized delete attempt: no credentials provided for", id);
+            return null;
+        }
+
+        // ip_hash is server-verified and unforgeable by external attackers
+        if (ipHash) {
+            query = query.eq("ip_hash", ipHash);
+        }
+
         if (userTag) {
             const cleanTag = userTag.replace(/^#+/, "").trim();
             query = query.in("author_tag", [cleanTag, `#${cleanTag}`]);
-        } else if (ipHash) {
-            query = query.eq("ip_hash", ipHash);
         }
 
         const {data, error} = await query.select().single();

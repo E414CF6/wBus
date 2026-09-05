@@ -42,6 +42,24 @@ export function AppShell() {
     // Derive active tab with client-side state preservation across tab switches (avoids destroying map & SSE)
     const [activeTab, setActiveTab] = useState<NavTab>(() => resolveTabFromPathname(pathname));
 
+    // Timetable Sub-tab & Day Mode
+    const [timetableSubTab, setTimetableSubTab] = useState<TimetableSubTab>(() => {
+        const querySubTab = searchParams.get("subTab");
+        if (querySubTab === "yonsei" || querySubTab === "all") return querySubTab;
+        return "yonsei";
+    });
+    const [dayMode, setDayMode] = useState<DayMode>("AUTO");
+
+    // Route & Map Activation State
+    const [selectedRoute, setSelectedRoute] = useState<string>(() => {
+        const queryRoute = searchParams.get("route");
+        if (queryRoute) return queryRoute;
+        return MAP_SETTINGS.DEFAULT_ROUTE;
+    });
+
+    const isMapActive = activeTab === "map";
+    const [hasVisitedMap, setHasVisitedMap] = useState<boolean>(() => isMapActive);
+
     // Keep activeTab in sync if pathname changes externally
     useEffect(() => {
         setActiveTab(resolveTabFromPathname(pathname));
@@ -72,24 +90,6 @@ export function AppShell() {
             window.scrollTo({top: 0, left: 0, behavior: "instant"});
         }
     }, [activeTab]);
-
-    // Timetable Sub-tab & Day Mode
-    const [timetableSubTab, setTimetableSubTab] = useState<TimetableSubTab>(() => {
-        const querySubTab = searchParams.get("subTab");
-        if (querySubTab === "yonsei" || querySubTab === "all") return querySubTab;
-        return "yonsei";
-    });
-    const [dayMode, setDayMode] = useState<DayMode>("AUTO");
-
-    // Route & Map Activation State
-    const [selectedRoute, setSelectedRoute] = useState<string>(() => {
-        const queryRoute = searchParams.get("route");
-        if (queryRoute) return queryRoute;
-        return MAP_SETTINGS.DEFAULT_ROUTE;
-    });
-
-    const isMapActive = activeTab === "map";
-    const [hasVisitedMap, setHasVisitedMap] = useState<boolean>(() => isMapActive);
 
     // Square / Comments State
     const [comments, setComments] = useState<CommentItem[]>([]);

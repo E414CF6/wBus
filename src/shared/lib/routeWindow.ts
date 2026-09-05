@@ -1,4 +1,4 @@
-import {YONSEI_STATIC_TIMETABLES} from "@shared/config/locale";
+import {YONSEI_STATIC_TIMETABLES} from "@/data/yonseiStaticTimetables";
 import fs from "fs";
 import path from "path";
 

@@ -1,5 +1,6 @@
 import type {NoticeDetail, NoticeItem, NoticeListResponse} from "./types";
 import {APP_LOCALE, UI_TEXT} from "@shared/config/locale";
+import {CacheManager} from "@shared/cache/CacheManager";
 
 const BASE_URL = "http://its.wonju.go.kr";
 const NOTICE_LIST_URL = `${BASE_URL}/center/notice.do`;
@@ -11,9 +12,14 @@ const HEADERS = {
     "Accept-Language": APP_LOCALE.ACCEPT_LANGUAGE,
 };
 
-// In-Memory cache with TTL
-const listCache = new Map<string, { data: NoticeListResponse; expiresAt: number }>();
-const detailCache = new Map<string, { data: NoticeDetail; expiresAt: number }>();
+interface CacheEntry<T> {
+    data: T;
+    expiresAt: number;
+}
+
+// In-Memory cache with LRU memory management
+const listCache = new CacheManager<CacheEntry<NoticeListResponse>>(50);
+const detailCache = new CacheManager<CacheEntry<NoticeDetail>>(200);
 
 const LIST_TTL_MS = 10 * 60 * 1000; // 10 mins in memory
 const DETAIL_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours in memory

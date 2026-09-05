@@ -16,8 +16,8 @@ const PUBLIC_API_BASE = "https://apis.data.go.kr/1613000";
 const CITY_CODE = "32020"; // Wonju
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_BASE_DELAY_MS = 300;
-const KEY_COOLDOWN_MS = 10 * 60 * 1000; // 10 minutes cooldown for rate-limited / quota-exhausted keys
-const CIRCUIT_COOLDOWN_MS = 30 * 1000; // 30 seconds circuit breaker open time
+const KEY_COOLDOWN_MS = 20 * 1000; // 20 seconds cooldown (prevents long lockouts on transient burst QPS throttles)
+const CIRCUIT_COOLDOWN_MS = 15 * 1000; // 15 seconds circuit breaker cooldown
 const DEFAULT_PARAMS = {
     numOfRows: "1024", pageNo: "1", _type: "json", cityCode: CITY_CODE,
 };
@@ -218,7 +218,7 @@ export function getRouteBusCount(routeId: string): number | undefined {
  * - Inside window with active buses: High-frequency activeTtl (e.g. 4s).
  * - Inside window with 0 buses: Backoff idleTtl (e.g. 20s).
  */
-export function getAdaptiveTtlSeconds(routeId: string, activeTtl = 4, idleTtl = 20): number {
+export function getAdaptiveTtlSeconds(routeId: string, activeTtl = 2, idleTtl = 15): number {
     const status = isRouteInServiceWindow(routeId);
     if (!status.inService) {
         return status.retryAfterSeconds;
@@ -293,7 +293,7 @@ async function rawFetchPublicApi<T>(path: string, params: Record<string, string>
             const res = await fetch(url, {
                 headers: {
                     Client: "wBus", Connection: "keep-alive",
-                }, signal: AbortSignal.timeout(8000), cache: "no-store",
+                }, signal: AbortSignal.timeout(4000), cache: "no-store",
             });
 
             if (res.ok) {
@@ -425,8 +425,7 @@ export interface RawBusLocation {
 }
 
 export async function fetchBusLocations(routeId: string, options?: {
-    force?: boolean;
-    priority?: number
+    force?: boolean; priority?: number
 }): Promise<RawBusLocation[]> {
     // 1. Check Operating Service Window (Short-circuit during midnight / non-operating hours)
     const serviceStatus = isRouteInServiceWindow(routeId);

@@ -52,6 +52,13 @@ export default tseslint.config(// Ignored paths
             "no-redeclare": "off", // Conflicts with TS overloads
             "no-unused-vars": "off", // Use TS version below
 
+            // React hooks set-state in effect warning
+            "react-hooks/set-state-in-effect": "warn",
+            "react-hooks/purity": "warn",
+            "react-hooks/preserve-manual-memoization": "warn",
+            "react-hooks/immutability": "warn",
+            "no-useless-assignment": "warn",
+
             // Allow unused vars prefixed with underscore
             "@typescript-eslint/no-unused-vars": ["warn", {
                 argsIgnorePattern: "^_", varsIgnorePattern: "^_",
@@ -70,7 +77,8 @@ export default tseslint.config(// Ignored paths
             },],
 
             // Allow "use client" / "use server" directives
-            "no-unused-expressions": "off", "@typescript-eslint/no-unused-expressions": ["error", {
+            "no-unused-expressions": "off",
+            "@typescript-eslint/no-unused-expressions": ["error", {
                 ignoreDirectives: true, allowShortCircuit: true, allowTernary: true, allowTaggedTemplates: true,
             },],
         },

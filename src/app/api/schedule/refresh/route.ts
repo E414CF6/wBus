@@ -8,8 +8,13 @@ export const maxDuration = 60;
 export async function POST(request: NextRequest) {
     const startTime = Date.now();
     try {
-        const forceParam = request.nextUrl.searchParams.get("force");
-        const force = forceParam === null ? true : forceParam === "true";
+        const cronSecret = process.env.CRON_SECRET || process.env.ADMIN_KEY;
+        const authHeader = request.headers.get("authorization");
+        const isAuthorized = cronSecret ? authHeader === `Bearer ${cronSecret}` : process.env.NODE_ENV === "development";
+
+        const forceParam = request.nextUrl.searchParams.get("force") === "true";
+        // Only authorized requests (e.g. Vercel Cron with secret) can force-bypass the refresh cooldown
+        const force = isAuthorized && forceParam;
         const {refreshed, message, data, meta} = await refreshSchedule(force);
 
         return NextResponse.json({

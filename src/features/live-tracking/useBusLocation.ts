@@ -8,8 +8,7 @@ export {getBusLocationStore, BusLocationStore} from "./lib/BusLocationStore";
 
 /**
  * Fetch bus locations for multiple routeIds.
- * Primary transport: SSE stream (/api/bus/stream).
- * Fallback: periodic polling via /api/bus/[routeId].
+ * Backed by high-performance CDN micro-cached REST polling (/api/bus/[routeId]).
  */
 export function useBusLocationData(routeIds: string[]): BusLocationState {
     const routeIdsKey = useMemo(() => buildRouteIdsKey(routeIds), [routeIds]);

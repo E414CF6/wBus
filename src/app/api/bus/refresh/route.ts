@@ -1,13 +1,17 @@
 import {NextRequest, NextResponse} from "next/server";
-import {refreshBusData} from "@shared/lib/busService";
+import {refreshSchedule} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
 
 export async function POST(request: NextRequest) {
     const startTime = Date.now();
     try {
-        const forceParam = request.nextUrl.searchParams.get("force");
-        const force = forceParam === null ? true : forceParam === "true";
-        const {refreshed, message, data, meta} = await refreshBusData(force);
+        const cronSecret = process.env.CRON_SECRET || process.env.ADMIN_KEY;
+        const authHeader = request.headers.get("authorization");
+        const isAuthorized = cronSecret ? authHeader === `Bearer ${cronSecret}` : process.env.NODE_ENV === "development";
+
+        const forceParam = request.nextUrl.searchParams.get("force") === "true";
+        const force = isAuthorized && forceParam;
+        const {refreshed, message, data, meta} = await refreshSchedule(force);
 
         return NextResponse.json({
             success: true, refreshed, message, data, meta, elapsedMs: Date.now() - startTime,
@@ -19,7 +23,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error("API /api/bus/refresh error:", error);
         try {
-            const fallback = await refreshBusData(false);
+            const fallback = await refreshSchedule(false);
             return NextResponse.json({
                 success: true,
                 refreshed: false,

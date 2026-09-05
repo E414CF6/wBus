@@ -5,20 +5,14 @@ import {
     DEFAULT_STALE_WHILE_REVALIDATE_SECONDS,
 } from "@shared/cache/cachePolicy";
 import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
-import {createClient, type RedisClientType} from "redis";
-import {getUpstashRedis} from "./upstash";
 import type {CachedData} from "./types";
 
 /**
- * Redis Client for Live Transit Telemetry Caching
+ * In-Memory Client for Transit Telemetry Caching
  *
- * This Redis instance is dedicated strictly to high-frequency live transit data:
- * - Live bus locations (bus:${routeId})
- * - Real-time arrival predictions (arrival:${busStopId})
- *
- * Supports both:
- * 1. Upstash REST API (@upstash/redis) via UPSTASH_REDIS_REST_URL & UPSTASH_REDIS_REST_TOKEN
- * 2. Standard TCP Redis (redis) via REDIS_URL
+ * Provides ultra-fast L1 in-memory caching with request deduplication (coalescing),
+ * stale-while-revalidate background fetching, and stale-if-error fallback.
+ * Works hand-in-hand with Vercel Edge CDN micro-caching (s-maxage).
  */
 
 export interface CacheOptions {
@@ -31,147 +25,12 @@ export interface CacheOptions {
 const MEMORY_CACHE_MAX_KEYS = 500;
 const REVALIDATE_COOLDOWN_MS = 1000;
 
-let client: RedisClientType | null = null;
-let connecting: Promise<RedisClientType | null> | null = null;
-let hasLoggedMissingRedisUrl = false;
-
 const pendingRequests = new Map<string, Promise<CachedData<unknown>>>();
 const memoryCache = new CacheManager<CachedData<unknown>>(MEMORY_CACHE_MAX_KEYS);
 const revalidateState = new Map<string, { nextAllowedAt: number; failureCount: number }>();
 
-export function getRedisUrl(): string | undefined {
-    return (
-        process.env.REDIS_URL ||
-        process.env.KV_URL ||
-        process.env.UPSTASH_REDIS_URL ||
-        process.env.STORAGE_REDIS_URL ||
-        process.env.REDIS_TLS_URL ||
-        process.env.REDIS_URI
-    );
-}
-
-export async function getRedisClient(): Promise<RedisClientType | null> {
-    if (client?.isOpen) return client;
-
-    // Prevent race condition: concurrent requests share the same connection promise
-    if (connecting) return connecting;
-
-    connecting = (async () => {
-        const url = getRedisUrl();
-        if (!url) {
-            const upstash = getUpstashRedis();
-            if (!upstash && !hasLoggedMissingRedisUrl) {
-                hasLoggedMissingRedisUrl = true;
-                console.warn("[Redis] No REDIS_URL or Upstash REST credentials set. Falling back to in-memory cache only.");
-            }
-            return null;
-        }
-
-        const newClient = createClient({
-            url,
-            socket: {
-                keepAlive: true,
-                connectTimeout: 5000, // Important for serverless
-                reconnectStrategy: (retries) => {
-                    if (retries > 10) {
-                        return new Error("Max Redis retries reached");
-                    }
-                    return Math.min(retries * 50, 500);
-                },
-            },
-        });
-
-        newClient.on("error", (err) => {
-            console.error("[Redis] Connection error:", err);
-            if (!newClient.isOpen && client === newClient) {
-                client = null;
-            }
-        });
-
-        try {
-            await newClient.connect();
-            client = newClient as RedisClientType;
-            return client;
-        } catch (err) {
-            console.error("[Redis] Failed to connect TCP Redis. Trying Upstash fallback / Memory.", err);
-            return null;
-        }
-    })();
-
-    try {
-        return await connecting;
-    } finally {
-        connecting = null;
-    }
-}
-
 /**
- * Universal Redis Get Helper (Upstash REST or TCP node-redis)
- */
-async function readFromRedisLayer<T>(key: string): Promise<CachedData<T> | null> {
-    // 1. Try Upstash REST API first if configured (Upstash auto-deserializes JSON objects)
-    const upstash = getUpstashRedis();
-    if (upstash) {
-        try {
-            const val = await upstash.get<CachedData<T> | string>(key);
-            if (val) {
-                if (typeof val === "string") {
-                    try {
-                        return JSON.parse(val) as CachedData<T>;
-                    } catch {
-                        return null;
-                    }
-                }
-                return val as CachedData<T>;
-            }
-            return null;
-        } catch (e) {
-            console.warn(`[Upstash] Failed to read key '${key}':`, e);
-        }
-    }
-
-    // 2. Try TCP Redis client
-    const redis = await getRedisClient();
-    if (redis?.isOpen) {
-        try {
-            const raw = await redis.get(key);
-            if (raw) {
-                return JSON.parse(raw) as CachedData<T>;
-            }
-        } catch (e) {
-            console.warn(`[Redis] Failed to read key '${key}':`, e);
-        }
-    }
-
-    return null;
-}
-
-/**
- * Universal Redis Set Helper (Upstash REST or TCP node-redis)
- */
-async function writeToRedisLayer<T>(key: string, entry: CachedData<T>, expireSeconds: number): Promise<void> {
-    // 1. Write to Upstash REST API if configured (native object support without double stringify/parse)
-    const upstash = getUpstashRedis();
-    if (upstash) {
-        try {
-            await upstash.set(key, entry, {ex: expireSeconds});
-            return;
-        } catch (e) {
-            console.warn(`[Upstash] Failed to write key '${key}':`, e);
-        }
-    }
-
-    // 2. Write to TCP Redis (requires string)
-    const redis = await getRedisClient();
-    if (redis?.isOpen) {
-        await redis.set(key, JSON.stringify(entry), {EX: expireSeconds}).catch((err) => {
-            console.warn(`[Redis] Failed to write key '${key}':`, err);
-        });
-    }
-}
-
-/**
- * High-performance Cache-Aside pattern with Memory L1 + Redis L2 fallback.
+ * High-performance Cache-Aside pattern with Memory LRU + SWR.
  */
 export async function getCachedOrFetch<T>(
     key: string,
@@ -206,33 +65,9 @@ export async function getCachedOrFetch<T>(
                 };
             }
         }
-
-        // 2. Check L2 Redis Cache (Upstash REST or TCP Redis)
-        const redisEntry = await readFromRedisLayer<T>(key);
-        if (redisEntry && redisEntry.timestamp) {
-            const ageMs = now - redisEntry.timestamp;
-            const ttlMs = ttlSeconds * 1000;
-            const swrMs = swrSeconds * 1000;
-
-            memoryCache.set(key, redisEntry);
-
-            if (ageMs <= ttlMs) {
-                return {
-                    ...redisEntry,
-                    meta: {status: "hit", layer: "redis", ageMs},
-                };
-            }
-            if (ageMs <= ttlMs + swrMs) {
-                triggerBackgroundRevalidate(key, fetcher, ttlSeconds, redisEntry);
-                return {
-                    ...redisEntry,
-                    meta: {status: "stale", layer: "redis", ageMs},
-                };
-            }
-        }
     }
 
-    // 3. Cache Miss: Fetch and store
+    // 2. Cache Miss: Fetch and store
     const memEntry = memoryCache.get(key) as CachedData<T> | undefined;
     return fetchAndStore(key, fetcher, ttlSeconds, memEntry, staleIfErrorSeconds);
 }
@@ -285,10 +120,6 @@ async function fetchAndStore<T>(
             };
 
             memoryCache.set(key, entry);
-
-            const expireSec = ttlSeconds + DEFAULT_STALE_WHILE_REVALIDATE_SECONDS;
-            await writeToRedisLayer(key, entry, expireSec);
-
             return entry;
         } catch (err) {
             if (staleFallback) {
@@ -331,7 +162,17 @@ function triggerBackgroundRevalidate<T>(
     state.nextAllowedAt = now + REVALIDATE_COOLDOWN_MS;
     revalidateState.set(key, state);
 
-    fetchAndStore(key, fetcher, ttlSeconds, currentData).catch((err) => {
-        console.warn(`[Cache] Background revalidation failed for '${key}':`, err);
-    });
+    fetchAndStore(key, fetcher, ttlSeconds, currentData)
+        .then(() => {
+            state.failureCount = 0;
+            state.nextAllowedAt = 0;
+            revalidateState.set(key, state);
+        })
+        .catch((err) => {
+            state.failureCount += 1;
+            const backoffMs = Math.min(10000, 1000 * 2 ** (state.failureCount - 1));
+            state.nextAllowedAt = Date.now() + backoffMs;
+            revalidateState.set(key, state);
+            console.warn(`[CacheManager] Background revalidation failed for '${key}':`, err);
+        });
 }

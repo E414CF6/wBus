@@ -41,12 +41,6 @@
       "@shared/*": [
         "./src/shared/*"
       ],
-      "@lib/*": [
-        "./src/lib/*"
-      ],
-      "@types/*": [
-        "./src/types/*"
-      ],
       "@data/*": [
         "./src/data/*"
       ]

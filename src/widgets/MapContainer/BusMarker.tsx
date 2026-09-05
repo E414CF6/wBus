@@ -155,9 +155,9 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
 
     const [selectedBusKey, setSelectedBusKey] = useState<string | null>(null);
 
-    const isLiveStream = connectionStatus === "connected";
-    const effectiveAnimationDuration = isLiveStream ? 3000 : MAP_SETTINGS.ANIMATION.BUS_MOVE_MS;
-    const effectivePollingIntervalMs = isLiveStream ? 3000 : API_CONFIG.LIVE.POLLING_INTERVAL_MS;
+    const isLiveConnected = connectionStatus === "connected";
+    const effectiveAnimationDuration = isLiveConnected ? 3000 : MAP_SETTINGS.ANIMATION.BUS_MOVE_MS;
+    const effectivePollingIntervalMs = isLiveConnected ? 3000 : API_CONFIG.LIVE.POLLING_INTERVAL_MS;
     const effectiveDataDelayMs = API_CONFIG.LIVE.DATA_DELAY_MS;
 
     const routeIndicesMap = useMemo(() => {

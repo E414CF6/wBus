@@ -1,11 +1,8 @@
 import crypto from "crypto";
 import type {NextRequest} from "next/server";
 
-// Secret salt for privacy-preserving salted IP hashing
-const IP_SALT =
-    process.env.IP_SALT ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.slice(0, 24) ||
-    "wbus_secure_community_salt_2026";
+// Secret salt for privacy-preserving salted IP hashing (server-only secrets)
+const IP_SALT = process.env.IP_SALT || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.CRON_SECRET || "wbus_secure_community_salt_2026_internal";
 
 /**
  * Extract client IP address accurately from standard reverse-proxy headers
@@ -55,9 +52,9 @@ interface LikeLimitRecord {
 const postRateLimitMap = new Map<string, RateLimitRecord>();
 const likeRateLimitMap = new Map<string, LikeLimitRecord>();
 
-// Clean up memory cache periodically (every 10 minutes)
+// Clean up memory cache periodically if running in long-lived container
 if (typeof setInterval !== "undefined") {
-    setInterval(() => {
+    const timer = setInterval(() => {
         const now = Date.now();
         for (const [key, record] of postRateLimitMap.entries()) {
             if (now - record.lastPostTime > 15 * 60 * 1000) {
@@ -71,6 +68,9 @@ if (typeof setInterval !== "undefined") {
             }
         }
     }, 10 * 60 * 1000);
+    if (timer && typeof timer.unref === "function") {
+        timer.unref();
+    }
 }
 
 const POST_COOLDOWN_MS = 3000; // 3 seconds between posts
@@ -98,10 +98,7 @@ export function checkPostRateLimit(ipHash: string, content: string): RateLimitRe
 
     if (!record) {
         record = {
-            lastPostTime: 0,
-            postTimestamps: [],
-            lastContentHash: "",
-            lastContentTime: 0,
+            lastPostTime: 0, postTimestamps: [], lastContentHash: "", lastContentTime: 0,
         };
         postRateLimitMap.set(ipHash, record);
     }
@@ -111,23 +108,16 @@ export function checkPostRateLimit(ipHash: string, content: string): RateLimitRe
     if (timeSinceLast < POST_COOLDOWN_MS) {
         const waitSec = Math.ceil((POST_COOLDOWN_MS - timeSinceLast) / 1000);
         return {
-            allowed: false,
-            reason: `너무 빠르게 글을 작성하고 있습니다. ${waitSec}초 후 다시 시도해주세요.`,
-            retryAfterSec: waitSec,
+            allowed: false, reason: `너무 빠르게 글을 작성하고 있습니다. ${waitSec}초 후 다시 시도해주세요.`, retryAfterSec: waitSec,
         };
     }
 
     // 2. Duplicate content check within 45 seconds
-    if (
-        record.lastContentHash === contentHash &&
-        now - record.lastContentTime < DUPLICATE_COOLDOWN_MS
-    ) {
+    if (record.lastContentHash === contentHash && now - record.lastContentTime < DUPLICATE_COOLDOWN_MS) {
         return {
             allowed: false,
             reason: "동일한 내용의 글을 연속해서 등록할 수 없습니다.",
-            retryAfterSec: Math.ceil(
-                (DUPLICATE_COOLDOWN_MS - (now - record.lastContentTime)) / 1000
-            ),
+            retryAfterSec: Math.ceil((DUPLICATE_COOLDOWN_MS - (now - record.lastContentTime)) / 1000),
         };
     }
 
@@ -135,9 +125,7 @@ export function checkPostRateLimit(ipHash: string, content: string): RateLimitRe
     record.postTimestamps = record.postTimestamps.filter((t) => now - t < POST_WINDOW_MS);
     if (record.postTimestamps.length >= MAX_POSTS_PER_WINDOW) {
         return {
-            allowed: false,
-            reason: "단시간에 너무 많은 글을 등록했습니다. 잠시 후 다시 이용해주세요.",
-            retryAfterSec: 60,
+            allowed: false, reason: "단시간에 너무 많은 글을 등록했습니다. 잠시 후 다시 이용해주세요.", retryAfterSec: 60,
         };
     }
 
@@ -165,9 +153,7 @@ export function checkLikeRateLimit(ipHash: string): RateLimitResult {
     record.likeTimestamps = record.likeTimestamps.filter((t) => now - t < 60 * 1000);
     if (record.likeTimestamps.length >= MAX_LIKES_PER_MINUTE) {
         return {
-            allowed: false,
-            reason: "좋아요 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
-            retryAfterSec: 10,
+            allowed: false, reason: "좋아요 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.", retryAfterSec: 10,
         };
     }
 
@@ -180,21 +166,14 @@ export function checkLikeRateLimit(ipHash: string): RateLimitResult {
 // ---------------------------------------------------------------------------
 
 // Banned malicious / spam / phishing patterns
-const SPAM_PATTERNS: RegExp[] = [
-    // Illegal gambling / toto
-    /(카지노|바카라|토토사이트|스포츠토토|꽁머니|먹튀검증|롤링|슬롯머신|사설토토|파워볼사이트)/i,
-    // Adult spam & illicit services
-    /(출장안마|출장마사지|조건만남|섹파|오피스텔걸|성인용품|유흥알바)/i,
-    // Phishing / Telegram spam links
-    /(t\.me\/[a-zA-Z0-9_]+|telegram\.me\/[a-zA-Z0-9_]+)/i,
-    // Suspicious shortened URL spams commonly used in phishing
-    /(bit\.ly|tinyurl\.com|is\.gd|cutt\.ly|url\.kr)\/[a-zA-Z0-9_-]+/i,
-];
+const SPAM_PATTERNS: RegExp[] = [// Illegal gambling / toto
+    /(카지노|바카라|토토사이트|스포츠토토|꽁머니|먹튀검증|롤링|슬롯머신|사설토토|파워볼사이트)/i, // Adult spam & illicit services
+    /(출장안마|출장마사지|조건만남|섹파|오피스텔걸|성인용품|유흥알바)/i, // Phishing / Telegram spam links
+    /(t\.me\/[a-zA-Z0-9_]+|telegram\.me\/[a-zA-Z0-9_]+)/i, // Suspicious shortened URL spams commonly used in phishing
+    /(bit\.ly|tinyurl\.com|is\.gd|cutt\.ly|url\.kr)\/[a-zA-Z0-9_-]+/i,];
 
 // Slurs & excessive profanity patterns (Regex)
-const PROFANITY_PATTERNS: RegExp[] = [
-    /(시발|씨발|씨바|시바|병신|븅신|개새끼|개색히|새끼|존나|좆|지랄|느검|애미|애비|느개비|호로|창녀|보지|자지|틀딱|한남충|한녀충|맘충)/i,
-];
+const PROFANITY_PATTERNS: RegExp[] = [/(시발|씨발|씨바|시바|병신|븅신|개새끼|개색히|새끼|존나|좆|지랄|느검|애미|애비|느개비|호로|창녀|보지|자지|틀딱|한남충|한녀충|맘충)/i,];
 
 export interface ContentValidationResult {
     isValid: boolean;
@@ -206,10 +185,7 @@ export interface ContentValidationResult {
 /**
  * Sanitize and validate post content and author name against abuse, XSS, and spam
  */
-export function validateAndSanitizeContent(
-    rawContent: string,
-    rawAuthor?: string
-): ContentValidationResult {
+export function validateAndSanitizeContent(rawContent: string, rawAuthor?: string): ContentValidationResult {
     // 1. Sanitize text
     let content = (rawContent || "").trim();
     let author = (rawAuthor || "").trim();
@@ -231,19 +207,13 @@ export function validateAndSanitizeContent(
     // 2. Length validation
     if (content.length < 2) {
         return {
-            isValid: false,
-            error: "내용을 최소 2자 이상 입력해주세요.",
-            sanitizedContent: content,
-            sanitizedAuthor: author,
+            isValid: false, error: "내용을 최소 2자 이상 입력해주세요.", sanitizedContent: content, sanitizedAuthor: author,
         };
     }
 
     if (content.length > 1000) {
         return {
-            isValid: false,
-            error: "내용은 최대 1000자까지 입력 가능합니다.",
-            sanitizedContent: content,
-            sanitizedAuthor: author,
+            isValid: false, error: "내용은 최대 1000자까지 입력 가능합니다.", sanitizedContent: content, sanitizedAuthor: author,
         };
     }
 
@@ -272,8 +242,6 @@ export function validateAndSanitizeContent(
     }
 
     return {
-        isValid: true,
-        sanitizedContent: content,
-        sanitizedAuthor: author,
+        isValid: true, sanitizedContent: content, sanitizedAuthor: author,
     };
 }

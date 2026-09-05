@@ -16,7 +16,7 @@ import MapGL, {MapRef, NavigationControl} from "react-map-gl/maplibre";
 
 // Set MapLibre GL JS v6 Web Worker path via CDN
 if (typeof window !== "undefined") {
-    setWorkerUrl("https://unpkg.com/maplibre-gl@6.6.0/dist/maplibre-gl-worker.mjs");
+    setWorkerUrl("https://unpkg.com/maplibre-gl@^6.0.0/dist/maplibre-gl-worker.mjs");
 }
 
 // ----------------------------------------------------------------------
@@ -56,7 +56,8 @@ export default function Map({onReady, children}: MapProps) {
     }, [onReady, setMap]);
 
     const handleError = useCallback((e: unknown) => {
-        console.warn("[MapGL] Map error encountered, falling back to ready state:", e);
+        const errDetail = (e as { error?: Error })?.error?.message || (e as { error?: Error })?.error || e;
+        console.warn("[MapGL] Map error encountered, falling back to ready state:", errDetail);
         handleLoad();
     }, [handleLoad]);
 
