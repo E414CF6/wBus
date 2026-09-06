@@ -125,6 +125,10 @@ export const BUS_ITEM_STRINGS = {
 export const MAP_STRINGS = {
     BUS_LOCATION_TITLE: "실시간 버스 위치",
     BUS_LOCATION_DESC: "지도에서 실시간으로 버스 위치를 확인하세요.",
+    GEOLOCATE_TITLE: "내 위치 찾기",
+    GEOLOCATE_OUT_OF_BOUNDS: "현재 위치가 원주시 서비스 범위를 벗어났습니다.",
+    GEOLOCATE_PERMISSION_DENIED: "위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해 주세요.",
+    GEOLOCATE_UNAVAILABLE: "현재 위치를 확인할 수 없습니다. GPS 신호를 확인해 주세요.",
 } as const;
 
 export const STOP_POPUP_STRINGS = {

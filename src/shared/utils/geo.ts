@@ -131,3 +131,15 @@ function clamp(value: number, min: number, max: number): number {
 export function isFiniteNumber(value: unknown): value is number {
     return typeof value === "number" && Number.isFinite(value);
 }
+
+/**
+ * Checks if a [lat, lng] coordinate is within a bounding box [[minLng, minLat], [maxLng, maxLat]]
+ */
+export function isCoordinateWithinBounds(
+    coord: CoordinateLike,
+    bounds: readonly [readonly [number, number], readonly [number, number]]
+): boolean {
+    const [lat, lng] = [coord[0], coord[1]];
+    const [[minLng, minLat], [maxLng, maxLat]] = bounds;
+    return lng >= minLng && lng <= maxLng && lat >= minLat && lat <= maxLat;
+}

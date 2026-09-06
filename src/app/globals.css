@@ -165,6 +165,79 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+/* MapLibre Controls Positioning & Glassmorphism */
+.maplibregl-ctrl-top-right {
+    top: 92px !important;
+    right: 12px !important;
+}
+
+@media (min-width: 640px) {
+    .maplibregl-ctrl-top-right {
+        top: 14px !important;
+        right: 16px !important;
+    }
+}
+
+.maplibregl-ctrl-group {
+    background: rgba(255, 255, 255, 0.88) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    overflow: hidden;
+    margin-bottom: 8px !important;
+}
+
+.maplibregl-ctrl-group button {
+    width: 36px !important;
+    height: 36px !important;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.maplibregl-ctrl-group button:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.maplibregl-ctrl-group button:active {
+    transform: scale(0.92);
+}
+
+.dark .maplibregl-ctrl-group {
+    background: rgba(18, 22, 34, 0.88) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+}
+
+.dark .maplibregl-ctrl-group button:hover {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Invert default monochrome SVG icons in dark mode */
+.dark .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+    filter: invert(1) brightness(1.7);
+}
+
+/* Keep active/waiting geolocate status icon colors crisp */
+.maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-active .maplibregl-ctrl-icon,
+.maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-waiting .maplibregl-ctrl-icon,
+.maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-background .maplibregl-ctrl-icon,
+.dark .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-active .maplibregl-ctrl-icon,
+.dark .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-waiting .maplibregl-ctrl-icon,
+.dark .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-background .maplibregl-ctrl-icon {
+    filter: none !important;
+}
+
+/* User Location GPS Dot & Accuracy Circle */
+.maplibregl-user-location-dot,
+.maplibregl-user-location-dot:before {
+    background-color: #2563eb !important;
+}
+
+.maplibregl-user-location-accuracy-circle {
+    background-color: rgba(37, 99, 235, 0.18) !important;
+}
+
 /* Utilities & Animations */
 @layer utilities {
     .scrollbar-hide {

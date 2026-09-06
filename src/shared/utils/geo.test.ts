@@ -6,6 +6,7 @@ import {
     getHaversineDistance,
     getHaversineDistanceMeters,
     interpolateAngle,
+    isCoordinateWithinBounds,
     normalizeAngle,
     snapPointToPolyline,
 } from "./geo";
@@ -93,6 +94,24 @@ describe("geo utils", () => {
             expect(snapped.segmentIndex).toBe(1);
             expect(snapped.position[0]).toBeCloseTo(37.0, 4);
             expect(snapped.position[1]).toBeCloseTo(127.15, 4);
+        });
+    });
+
+    describe("isCoordinateWithinBounds", () => {
+        const wonjuBounds = [[127.60, 37.10], [128.30, 37.60]] as const;
+
+        it("returns true for coordinates inside Wonju", () => {
+            // Wonju City Hall [lat: 37.3421, lng: 127.9197]
+            expect(isCoordinateWithinBounds([37.3421, 127.9197], wonjuBounds)).toBe(true);
+            // Yonsei Mirae Campus [lat: 37.2838, lng: 127.9002]
+            expect(isCoordinateWithinBounds([37.2838, 127.9002], wonjuBounds)).toBe(true);
+        });
+
+        it("returns false for coordinates outside Wonju", () => {
+            // Seoul City Hall [lat: 37.5665, lng: 126.9780]
+            expect(isCoordinateWithinBounds([37.5665, 126.9780], wonjuBounds)).toBe(false);
+            // Busan [lat: 35.1796, lng: 129.0756]
+            expect(isCoordinateWithinBounds([35.1796, 129.0756], wonjuBounds)).toBe(false);
         });
     });
 });

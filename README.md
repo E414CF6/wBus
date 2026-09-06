@@ -34,6 +34,9 @@ real-time passenger discussion square.
   navigates to the Real-Time Map tab.
 - **Zero Overhead on Schedules**: Browsing timetables triggers zero background map tile transfers or telemetry requests,
   maximizing battery life and conserving mobile data.
+- **Live User Geolocation ("내 위치")**: Integrated high-accuracy GPS user positioning with real-time tracking, pulsing
+  location indicator, accuracy radius circle, service boundary validation with out-of-bounds notifications, and
+  glassmorphic control integration.
 - **Polyline Map-Matching**: Bus GPS coordinates from the national transit portal are matched onto high-precision OSRM
   route polylines with 3-second animated transition smoothing.
 - **Directional Clarity**: Automatic detection of UP (outbound) and DOWN (inbound) vehicle paths, vehicle occupancy
