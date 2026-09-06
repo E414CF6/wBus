@@ -20,6 +20,7 @@ import {
     POST_TARGET_VELOCITY_RATIO,
     SCALAR_LOOP_RESTART_THRESHOLD_METERS,
     STATE_UPDATE_THROTTLE_MS,
+    STATIONARY_CONFIRM_MS,
     STOP_ACCEL_ZONE,
     STOP_DECEL_ZONE,
     STOP_DWELL_MS,
@@ -110,7 +111,9 @@ export function useAnimatedPosition(
     const lastFrameRef = useRef(0);
 
     // ---- Timing & Extrapolation ----
-    const lastDataTimeRef = useRef(0); // performance.now() of last data arrival
+    const lastDataTimeRef = useRef(0); // performance.now() of last data arrival (network heartbeat)
+    const lastRealMoveTimeRef = useRef(0); // performance.now() of last REAL GPS movement
+    const lastRealMoveDistRef = useRef(0); // raw scalar distance of last REAL GPS movement
     const prevRawDistRef = useRef(0); // raw scalar distance of previous GPS data
     const hasDataRef = useRef(false);
     const sampleCountRef = useRef(0);
@@ -163,6 +166,8 @@ export function useAnimatedPosition(
         velocityRef.current = CITY_BUS_BASE_VELOCITY;
         currentVelocityRef.current = CITY_BUS_BASE_VELOCITY;
         lastDataTimeRef.current = 0;
+        lastRealMoveTimeRef.current = 0;
+        lastRealMoveDistRef.current = 0;
         prevRawDistRef.current = 0;
         hasDataRef.current = false;
         isFirstDataRef.current = true;
@@ -202,8 +207,10 @@ export function useAnimatedPosition(
             markerDistRef.current = initialDist;
             targetDistRef.current = initialDist;
             prevRawDistRef.current = dist;
+            lastRealMoveDistRef.current = dist;
             hasDataRef.current = true;
             lastDataTimeRef.current = performance.now();
+            lastRealMoveTimeRef.current = lastDataTimeRef.current;
 
             const {segIdx, t} = scalarToSegT(cumDist, initialDist);
             const {position: pos, angle: pathAngle} = positionFromSegT(polyline, segIdx, t);
@@ -265,8 +272,11 @@ export function useAnimatedPosition(
 
                 markerDistRef.current = initialDist;
                 prevRawDistRef.current = dist;
+                lastRealMoveDistRef.current = dist;
                 hasDataRef.current = true;
-                lastDataTimeRef.current = performance.now();
+                const nowInit = performance.now();
+                lastDataTimeRef.current = nowInit;
+                lastRealMoveTimeRef.current = nowInit;
                 sampleCountRef.current = 0;
                 isOvershotOnDataRef.current = false;
 
@@ -290,30 +300,43 @@ export function useAnimatedPosition(
             return;
         }
 
-        // Same position from API polling -> bus is dwelling or stationary at a stop/terminal
         const prev = prevTargetRef.current;
-        if (targetPosition[0] === prev[0] && targetPosition[1] === prev[1]) {
-            lastDataTimeRef.current = performance.now();
-            velocityRef.current = 0;
-            currentVelocityRef.current = 0;
-            if (cumDistRef.current.length >= 2) {
-                const snapped = snapPointToPolyline(targetPosition, polyline, {
-                    segmentHint: snapIndexHint,
-                    searchRadius: snapIndexRange,
-                });
-                targetDistRef.current = polylineScalarDist(
-                    cumDistRef.current,
-                    snapped.segmentIndex,
-                    snapped.t
-                );
-            }
-            return;
-        }
+        const isDuplicateCoords = targetPosition[0] === prev[0] && targetPosition[1] === prev[1];
         prevTargetRef.current = targetPosition;
 
         if (!shouldSnap || !hasPolyline) return;
         const cumDist = cumDistRef.current;
         if (cumDist.length < 2) return;
+
+        const now = performance.now();
+
+        // ----------------------------------------------------------------
+        // Duplicate GPS coordinate handling (TAGO 10-15s batch cycle vs client 3s polling)
+        // ----------------------------------------------------------------
+        if (isDuplicateCoords) {
+            lastDataTimeRef.current = now; // update network heartbeat
+            const stationaryDuration =
+                lastRealMoveTimeRef.current > 0 ? now - lastRealMoveTimeRef.current : 0;
+
+            if (stationaryDuration > STATIONARY_CONFIRM_MS) {
+                // If coordinates have not changed for >20 seconds (spanning multiple upstream update windows),
+                // the vehicle is genuinely stopped (signal light, long passenger boarding, terminus standby).
+                // Gradually decelerate to a stop at current raw position.
+                velocityRef.current = 0;
+                currentVelocityRef.current = Math.max(0, currentVelocityRef.current * 0.85);
+
+                const snapped = snapPointToPolyline(targetPosition, polyline, {
+                    segmentHint: snapIndexHint,
+                    searchRadius: snapIndexRange,
+                });
+                const rawDist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
+                targetDistRef.current = rawDist;
+                isOvershotOnDataRef.current = markerDistRef.current > rawDist + 0.00005;
+            }
+            // If stationaryDuration <= STATIONARY_CONFIRM_MS, upstream simply hasn't ticked yet!
+            // DO NOT reset velocity to 0 or rewind target. Maintain smooth cruising & dead reckoning.
+            return;
+        }
 
         const snapped = snapPointToPolyline(targetPosition, polyline, {
             segmentHint: snapIndexHint,
@@ -322,7 +345,6 @@ export function useAnimatedPosition(
         const rawDist = polylineScalarDist(cumDist, snapped.segmentIndex, snapped.t);
         const totalDist = cumDist[cumDist.length - 1];
         const lagMeters = getApproxDistanceMeters(currentPosRef.current, snapped.position);
-        const now = performance.now();
 
         // ----------------------------------------------------------------
         // TELEPORT / TURNAROUND RE-ANCHOR: Only for extreme jumps or route resets
@@ -355,6 +377,8 @@ export function useAnimatedPosition(
             lastDwelledStopIdxRef.current = -1;
             dwellStartTimeRef.current = 0;
             prevRawDistRef.current = rawDist;
+            lastRealMoveDistRef.current = rawDist;
+            lastRealMoveTimeRef.current = now;
             lastDataTimeRef.current = now;
 
             const {segIdx, t} = scalarToSegT(cumDist, initialDist);
@@ -379,10 +403,13 @@ export function useAnimatedPosition(
 
         // ----------------------------------------------------------------
         // NORMAL PROGRESS & DELTA-AWARE SLOWDOWN:
-        // Detect delta changes in incoming data and adapt speed / projection
+        // Use last REAL movement timestamp and distance for accurate velocity estimation
         // ----------------------------------------------------------------
-        const dtMs = lastDataTimeRef.current > 0 ? now - lastDataTimeRef.current : 0;
-        const moved = rawDist - prevRawDistRef.current;
+        const dtMs =
+            lastRealMoveTimeRef.current > 0
+                ? now - lastRealMoveTimeRef.current
+                : (lastDataTimeRef.current > 0 ? now - lastDataTimeRef.current : 0);
+        const moved = rawDist - lastRealMoveDistRef.current;
         const isStationary = Math.abs(moved) < 0.00003; // moved < ~3 meters
 
         if (isStationary) {
@@ -427,8 +454,6 @@ export function useAnimatedPosition(
             targetDistRef.current = newTargetDist;
 
             // ---- Delta Discrepancy & Overshoot Detection (새 정보의 델타 감지 및 감속 로직) ----
-            // If the marker's current position is ahead of the newly calculated 1st target distance,
-            // the real bus moved less than previous prediction. Mark as overshot and damp speed.
             const currentDist = markerDistRef.current;
             const overshoot = currentDist - newTargetDist;
             if (overshoot > 0.00005) {
@@ -444,6 +469,8 @@ export function useAnimatedPosition(
         }
 
         prevRawDistRef.current = rawDist;
+        lastRealMoveDistRef.current = rawDist;
+        lastRealMoveTimeRef.current = now;
         lastDataTimeRef.current = now;
         hasDataRef.current = true;
 
@@ -570,7 +597,7 @@ export function useAnimatedPosition(
                     } else {
                         // --------------------------------------------------------
                         // 1차 예측 지점 이후 (2차 연장 외삽 구간):
-                        // 공격적인 지속 주행: 기본 속도의 85%를 유지하며 원거리 시에도 완만하게(최소 64%) 유지
+                        // 공격적인 지속 주행: 기본 속도의 90%를 유지하며 원거리 시에도 완만하게(최소 67.5%) 유지
                         // --------------------------------------------------------
                         const leadBeyondTarget = Math.max(0, dist - target);
                         const maxExtraLead = MAX_DEAD_RECKONING_LEAD_COORD;

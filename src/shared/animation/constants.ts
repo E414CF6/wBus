@@ -20,8 +20,8 @@ export const MAX_DEAD_RECKONING_LEAD_COORD = 0.0160;
 // 1차 예측 지점: API 지연 보정 목표 거리
 export const MAX_LATENCY_PROJECTION_COORD = 0.0036;
 
-// 1차 예측 지점 통과 후 2차 외삽 예측 속도 비율 (기본 주행 속도의 85%를 유지하여 적극적으로 전진 주행)
-export const POST_TARGET_VELOCITY_RATIO = 0.85;
+// 1차 예측 지점 통과 후 2차 외삽 예측 속도 비율 (기본 주행 속도의 90%를 유지하여 10초 배치 주기 간격 동안 시원하게 지속 전진)
+export const POST_TARGET_VELOCITY_RATIO = 0.90;
 
 // React state update throttle — 20 Hz (50ms) for UI popup consumers
 export const STATE_UPDATE_THROTTLE_MS = 50;
@@ -34,14 +34,14 @@ export const MAX_DT_MS = 200;
 export const CITY_BUS_BASE_VELOCITY = 0.000000085;
 
 // Velocity limits (coord-units / ms)
-// Min crawling speed (~10 km/h), Max cruising (~95 km/h), Rapid Catchup sprint (~350 km/h scalar)
-export const MIN_MOVING_VELOCITY = 0.000000025;
-export const MAX_VELOCITY = 0.00000024;
+// Min crawling speed (~4 km/h for dense market crawls), Max cruising (~100 km/h for expressway segments), Rapid Catchup (~350 km/h scalar)
+export const MIN_MOVING_VELOCITY = 0.000000010;
+export const MAX_VELOCITY = 0.00000025;
 export const MAX_CATCHUP_VELOCITY = 0.00000085;
 export const STOP_THRESHOLD = 0.000000005;
 
 // Velocity smoothing factor (EMA weight on new measurement)
-export const VELOCITY_SMOOTHING = 0.70;
+export const VELOCITY_SMOOTHING = 0.75;
 // Deceleration smoothing factor (faster adaptation when new API delta shows bus slowed down)
 export const VELOCITY_DECEL_SMOOTHING = 0.88;
 
@@ -51,7 +51,19 @@ export const VELOCITY_PRIOR_BLEND_MAX = 0.95;
 export const VELOCITY_PRIOR_RAMP_SAMPLES = 2;
 
 // Default estimated latency between real bus and client reception (ms)
+// 물리 지연(차량 단말->ITS->TAGO: ~3.5s) + TAGO 배치 갱신 대기(~5s) + wBus 캐시/폴링(~2.5s) ≈ 11-12s
 export const DEFAULT_DATA_DELAY_MS = 12000;
+
+// User-measured physical GPS terminal -> Wonju ITS -> TAGO pipeline latency (ms)
+export const PHYSICAL_BUS_DELAY_MS = 3500;
+
+// Stationary threshold for GPS jitter vs real crawling movement (~3.5m ≈ 0.000032 deg)
+export const STATIONARY_COORD_THRESHOLD = 0.000032;
+
+// Duration to confirm bus is truly stationary (ms)
+// Upstream TAGO updates every 10-15s. Duplicate coords during 3s polling are normal;
+// only after 20s without movement do we confirm signal wait/passenger boarding/terminus dwell.
+export const STATIONARY_CONFIRM_MS = 20000;
 
 // Dead reckoning duration:
 // Smooth forward extrapolation for up to 60s between GPS updates (capped by MAX_DEAD_RECKONING_LEAD_COORD)
@@ -60,11 +72,11 @@ export const DEAD_RECKONING_CRUISE_MS = 60000;
 export const DEAD_RECKONING_FADEOUT_MS = 40000;
 
 // Rapid Catch-Up time constant:
-// Fast exponential convergence (~500ms) with non-linear boost to rapidly catch up when slow API data arrives
-export const CATCHUP_TAU_MS = 500;
+// Fast exponential convergence (~400ms) with non-linear boost to rapidly catch up when fresh API data arrives
+export const CATCHUP_TAU_MS = 400;
 
 // Acceleration/deceleration transition easing (ms) - rapid throttle-up
-export const VELOCITY_TAU_MS = 100;
+export const VELOCITY_TAU_MS = 80;
 
 // Angular smoothing
 export const ANGULAR_LOOKAHEAD_THRESHOLD = 0.65;
