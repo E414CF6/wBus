@@ -178,21 +178,27 @@ body {
     }
 }
 
+/* Base Light Mode Navigation Control Group */
 .maplibregl-ctrl-group {
-    background: rgba(255, 255, 255, 0.88) !important;
-    backdrop-filter: blur(16px) !important;
-    -webkit-backdrop-filter: blur(16px) !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
     border: 1px solid rgba(0, 0, 0, 0.08) !important;
     border-radius: 14px !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.08), 0 2px 6px -1px rgba(0, 0, 0, 0.04) !important;
     overflow: hidden;
     margin-bottom: 8px !important;
+    transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .maplibregl-ctrl-group button {
     width: 36px !important;
     height: 36px !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
     transition: background-color 0.15s ease, transform 0.1s ease;
+    background-color: transparent !important;
 }
 
 .maplibregl-ctrl-group button:hover {
@@ -200,32 +206,86 @@ body {
 }
 
 .maplibregl-ctrl-group button:active {
+    background-color: rgba(0, 0, 0, 0.08) !important;
     transform: scale(0.92);
 }
 
+.maplibregl-ctrl-group button:focus-visible {
+    outline: 2px solid #2563eb !important;
+    outline-offset: -2px;
+}
+
+.maplibregl-ctrl-group button + button {
+    border-top: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Light Mode Navigation Icons */
+.maplibregl-ctrl-group button.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2229%22%20height%3D%2229%22%20fill%3D%22%231e293b%22%20viewBox%3D%220%200%2029%2029%22%3E%3Cpath%20d%3D%22M14.5%208.5c-.75%200-1.5.75-1.5%201.5v3h-3c-.75%200-1.5.75-1.5%201.5S9.25%2016%2010%2016h3v3c0%20.75.75%201.5%201.5%201.5S16%2019.75%2016%2019v-3h3c.75%200%201.5-.75%201.5-1.5S19.75%2013%2019%2013h-3v-3c0-.75-.75-1.5-1.5-1.5%22%2F%3E%3C%2Fsvg%3E") !important;
+}
+
+.maplibregl-ctrl-group button.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2229%22%20height%3D%2229%22%20fill%3D%22%231e293b%22%20viewBox%3D%220%200%2029%2029%22%3E%3Cpath%20d%3D%22M10%2013c-.75%200-1.5.75-1.5%201.5S9.25%2016%2010%2016h9c.75%200%201.5-.75%201.5-1.5S19.75%2013%2019%2013z%22%2F%3E%3C%2Fsvg%3E") !important;
+}
+
+.maplibregl-ctrl-group button.maplibregl-ctrl-compass .maplibregl-ctrl-icon {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2229%22%20height%3D%2229%22%20viewBox%3D%220%200%2029%2029%22%3E%3Cpath%20fill%3D%22%23ef4444%22%20d%3D%22m10.5%2014%204-8%204%208z%22%2F%3E%3Cpath%20fill%3D%22%2364748b%22%20d%3D%22m10.5%2016%204%208%204-8z%22%2F%3E%3C%2Fsvg%3E") !important;
+}
+
+.maplibregl-ctrl-group button.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2229%22%20height%3D%2229%22%20fill%3D%22%231e293b%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20d%3D%22M10%204C9%204%209%205%209%205v.1A5%205%200%200%200%205.1%209H5s-1%200-1%201%201%201%201%201h.1A5%205%200%200%200%209%2014.9v.1s0%201%201%201%201-1%201-1v-.1a5%205%200%200%200%203.9-3.9h.1s1%200%201-1-1-1-1-1h-.1A5%205%200%200%200%2011%205.1V5s0-1-1-1m0%202.5a3.5%203.5%200%201%201%200%207%203.5%203.5%200%201%201%200-7%22%2F%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2210%22%20r%3D%222%22%2F%3E%3C%2Fsvg%3E") !important;
+}
+
+/* Dark Mode Navigation Control Group */
 .dark .maplibregl-ctrl-group {
-    background: rgba(18, 22, 34, 0.88) !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45) !important;
+    background: rgba(15, 23, 42, 0.88) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.5), 0 2px 8px -2px rgba(0, 0, 0, 0.3) !important;
 }
 
 .dark .maplibregl-ctrl-group button:hover {
     background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-/* Invert default monochrome SVG icons in dark mode */
-.dark .maplibregl-ctrl-group button .maplibregl-ctrl-icon {
-    filter: invert(1) brightness(1.7);
+.dark .maplibregl-ctrl-group button:active {
+    background-color: rgba(255, 255, 255, 0.16) !important;
 }
 
-/* Keep active/waiting geolocate status icon colors crisp */
+.dark .maplibregl-ctrl-group button:focus-visible {
+    outline: 2px solid #38bdf8 !important;
+    outline-offset: -2px;
+}
+
+.dark .maplibregl-ctrl-group button + button {
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Dark Mode Navigation Icons */
+.dark .maplibregl-ctrl-group button.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2229%22%20height%3D%2229%22%20fill%3D%22%23f8fafc%22%20viewBox%3D%220%200%2029%2029%22%3E%3Cpath%20d%3D%22M14.5%208.5c-.75%200-1.5.75-1.5%201.5v3h-3c-.75%200-1.5.75-1.5%201.5S9.25%2016%2010%2016h3v3c0%20.75.75%201.5%201.5%201.5S16%2019.75%2016%2019v-3h3c.75%200%201.5-.75%201.5-1.5S19.75%2013%2019%2013h-3v-3c0-.75-.75-1.5-1.5-1.5%22%2F%3E%3C%2Fsvg%3E") !important;
+}
+
+.dark .maplibregl-ctrl-group button.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2229%22%20height%3D%2229%22%20fill%3D%22%23f8fafc%22%20viewBox%3D%220%200%2029%2029%22%3E%3Cpath%20d%3D%22M10%2013c-.75%200-1.5.75-1.5%201.5S9.25%2016%2010%2016h9c.75%200%201.5-.75%201.5-1.5S19.75%2013%2019%2013z%22%2F%3E%3C%2Fsvg%3E") !important;
+}
+
+.dark .maplibregl-ctrl-group button.maplibregl-ctrl-compass .maplibregl-ctrl-icon {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2229%22%20height%3D%2229%22%20viewBox%3D%220%200%2029%2029%22%3E%3Cpath%20fill%3D%22%23f87171%22%20d%3D%22m10.5%2014%204-8%204%208z%22%2F%3E%3Cpath%20fill%3D%22%23cbd5e1%22%20d%3D%22m10.5%2016%204%208%204-8z%22%2F%3E%3C%2Fsvg%3E") !important;
+}
+
+.dark .maplibregl-ctrl-group button.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2229%22%20height%3D%2229%22%20fill%3D%22%23f8fafc%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20d%3D%22M10%204C9%204%209%205%209%205v.1A5%205%200%200%200%205.1%209H5s-1%200-1%201%201%201%201%201h.1A5%205%200%200%200%209%2014.9v.1s0%201%201%201%201-1%201-1v-.1a5%205%200%200%200%203.9-3.9h.1s1%200%201-1-1-1-1-1h-.1A5%205%200%200%200%2011%205.1V5s0-1-1-1m0%202.5a3.5%203.5%200%201%201%200%207%203.5%203.5%200%201%201%200-7%22%2F%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2210%22%20r%3D%222%22%2F%3E%3C%2Fsvg%3E") !important;
+}
+
+/* Geolocate Active & Tracking states */
 .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-active .maplibregl-ctrl-icon,
-.maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-waiting .maplibregl-ctrl-icon,
-.maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-background .maplibregl-ctrl-icon,
+.maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-background .maplibregl-ctrl-icon {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2229%22%20height%3D%2229%22%20fill%3D%22%232563eb%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20d%3D%22M10%204C9%204%209%205%209%205v.1A5%205%200%200%200%205.1%209H5s-1%200-1%201%201%201%201%201h.1A5%205%200%200%200%209%2014.9v.1s0%201%201%201%201-1%201-1v-.1a5%205%200%200%200%203.9-3.9h.1s1%200%201-1-1-1-1-1h-.1A5%205%200%200%200%2011%205.1V5s0-1-1-1m0%202.5a3.5%203.5%200%201%201%200%207%203.5%203.5%200%201%201%200-7%22%2F%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2210%22%20r%3D%222%22%2F%3E%3C%2Fsvg%3E") !important;
+}
+
 .dark .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-active .maplibregl-ctrl-icon,
-.dark .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-waiting .maplibregl-ctrl-icon,
 .dark .maplibregl-ctrl-geolocate.maplibregl-ctrl-geolocate-background .maplibregl-ctrl-icon {
-    filter: none !important;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2229%22%20height%3D%2229%22%20fill%3D%22%2338bdf8%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20d%3D%22M10%204C9%204%209%205%209%205v.1A5%205%200%200%200%205.1%209H5s-1%200-1%201%201%201%201%201h.1A5%205%200%200%200%209%2014.9v.1s0%201%201%201%201-1%201-1v-.1a5%205%200%200%200%203.9-3.9h.1s1%200%201-1-1-1-1-1h-.1A5%205%200%200%200%2011%205.1V5s0-1-1-1m0%202.5a3.5%203.5%200%201%201%200%207%203.5%203.5%200%201%201%200-7%22%2F%3E%3Ccircle%20cx%3D%2210%22%20cy%3D%2210%22%20r%3D%222%22%2F%3E%3C%2Fsvg%3E") !important;
 }
 
 /* User Location GPS Dot & Accuracy Circle */
@@ -235,7 +295,47 @@ body {
 }
 
 .maplibregl-user-location-accuracy-circle {
-    background-color: rgba(37, 99, 235, 0.18) !important;
+    background-color: rgba(37, 99, 235, 0.16) !important;
+}
+
+.dark .maplibregl-user-location-dot,
+.dark .maplibregl-user-location-dot:before {
+    background-color: #38bdf8 !important;
+}
+
+.dark .maplibregl-user-location-accuracy-circle {
+    background-color: rgba(56, 189, 248, 0.22) !important;
+}
+
+/* Attribution & Scale controls theme styling */
+.maplibregl-ctrl.maplibregl-ctrl-attrib {
+    background-color: rgba(255, 255, 255, 0.8) !important;
+    backdrop-filter: blur(8px) !important;
+    border-radius: 6px !important;
+    color: #475569 !important;
+}
+
+.dark .maplibregl-ctrl.maplibregl-ctrl-attrib {
+    background-color: rgba(15, 23, 42, 0.8) !important;
+    color: #94a3b8 !important;
+}
+
+.dark .maplibregl-ctrl.maplibregl-ctrl-attrib a {
+    color: #cbd5e1 !important;
+}
+
+.maplibregl-ctrl-scale {
+    background-color: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(8px) !important;
+    border-color: #334155 !important;
+    color: #334155 !important;
+    border-radius: 0 0 4px 4px !important;
+}
+
+.dark .maplibregl-ctrl-scale {
+    background-color: rgba(15, 23, 42, 0.85) !important;
+    border-color: #94a3b8 !important;
+    color: #f1f5f9 !important;
 }
 
 /* Utilities & Animations */

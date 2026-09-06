@@ -37,6 +37,11 @@ real-time passenger discussion square.
 - **Live User Geolocation ("내 위치")**: Integrated high-accuracy GPS user positioning with real-time tracking, pulsing
   location indicator, accuracy radius circle, service boundary validation with out-of-bounds notifications, and
   glassmorphic control integration.
+- **Theme-Adaptive Navigation Controls**: Map control buttons (`NavigationControl` for zoom in/out and 3D pitch/bearing
+  compass, plus `GeolocateControl`) dynamically adapt to the active color theme. In light mode, controls render with
+  clean frosted glass, subtle gray dividers, and high-contrast slate icons; in dark mode, controls transition to an
+  obsidian midnight glass palette with delicate bright borders, glowing sky-blue GPS indicators, a vivid red North
+  needle on the compass, and full Korean screen-reader accessibility labels.
 - **Polyline Map-Matching**: Bus GPS coordinates from the national transit portal are matched onto high-precision OSRM
   route polylines with 3-second animated transition smoothing.
 - **Directional Clarity**: Automatic detection of UP (outbound) and DOWN (inbound) vehicle paths, vehicle occupancy

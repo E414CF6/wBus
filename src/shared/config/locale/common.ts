@@ -129,11 +129,13 @@ export const MAP_STRINGS = {
     GEOLOCATE_OUT_OF_BOUNDS: "현재 위치가 원주시 서비스 범위를 벗어났습니다.",
     GEOLOCATE_PERMISSION_DENIED: "위치 권한이 거부되었습니다. 브라우저 설정에서 위치 권한을 허용해 주세요.",
     GEOLOCATE_UNAVAILABLE: "현재 위치를 확인할 수 없습니다. GPS 신호를 확인해 주세요.",
+    ZOOM_IN_TITLE: "지도 확대",
+    ZOOM_OUT_TITLE: "지도 축소",
+    COMPASS_TITLE: "북쪽으로 회전 (방위 초기화)",
 } as const;
 
 export const STOP_POPUP_STRINGS = {
-    STATION_ID_LABEL: "정류장 ID",
-    STATION_ID_FALLBACK: "N/A",
+    STATION_ID_LABEL: "정류장 ID", STATION_ID_FALLBACK: "N/A",
 } as const;
 
 export const ERROR_STRINGS = {
@@ -154,12 +156,7 @@ export const METADATA_STRINGS = {
     TITLE_TEMPLATE: "wBus / %s",
     DESC: "원주시 시내버스 실시간 위치 지도, 정류장 도착 정보 및 연세대 미래캠퍼스(30번·34번·34-1번·셔틀) 노선별 최신 운행 시간표",
     SHORT_DESC: "원주 시내버스 실시간 도착 정보 & 시간표",
-    KEYWORDS: [
-        "wBus", "더블유버스", "원주버스", "원주시내버스", "원주 버스 실시간",
-        "원주 버스 시간표", "원주 버스 위치", "연세대 미래캠퍼스 버스",
-        "연세대 미래캠 버스", "연세대 셔틀버스", "30번 버스", "34번 버스",
-        "34-1번 버스", "원주시 교통정보",
-    ],
+    KEYWORDS: ["wBus", "더블유버스", "원주버스", "원주시내버스", "원주 버스 실시간", "원주 버스 시간표", "원주 버스 위치", "연세대 미래캠퍼스 버스", "연세대 미래캠 버스", "연세대 셔틀버스", "30번 버스", "34번 버스", "34-1번 버스", "원주시 교통정보",],
     OG_LOCALE: APP_LOCALE.OG_LOCALE,
     AUTHOR: "wBus",
 } as const;
@@ -169,20 +166,12 @@ export const DATA_LABELS_STRINGS = {
 } as const;
 
 export const ROUTE_MAP_STRINGS = {
-    ORIGIN: "기점",
-    DESTINATION: "종점",
-    FIRST_BUS: "첫차",
-    LAST_BUS: "막차",
-    INTERVAL: "배차간격",
-    MINUTES_UNIT: "분",
+    ORIGIN: "기점", DESTINATION: "종점", FIRST_BUS: "첫차", LAST_BUS: "막차", INTERVAL: "배차간격", MINUTES_UNIT: "분",
 } as const;
 
 export const FOOTER_STRINGS = {
     COPYRIGHT: "© 2026 wBus",
     DESCRIPTION: "시내버스 정보 서비스",
-    LINKS: [
-        {label: "이용약관", href: "/terms"},
-        {label: "개인정보처리방침", href: "/privacy"},
-    ],
+    LINKS: [{label: "이용약관", href: "/terms"}, {label: "개인정보처리방침", href: "/privacy"},],
     DISCLAIMER: "본 서비스는 참고용이며, 실제 운행 정보와 다를 수 있습니다.",
 } as const;

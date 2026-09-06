@@ -121,17 +121,32 @@ export default function Map({onReady, children}: MapProps) {
         };
     }, [setMap]);
 
-    // Set Korean title / aria-label on the GeolocateControl button
+    // Set Korean title / aria-label on the GeolocateControl & NavigationControl buttons
     useEffect(() => {
-        const updateGeolocateAria = () => {
-            const btn = document.querySelector<HTMLButtonElement>(".maplibregl-ctrl-geolocate");
-            if (btn) {
-                btn.setAttribute("title", UI_TEXT.MAP.GEOLOCATE_TITLE);
-                btn.setAttribute("aria-label", UI_TEXT.MAP.GEOLOCATE_TITLE);
+        const updateControlAriaLabels = () => {
+            const geolocateBtn = document.querySelector<HTMLButtonElement>(".maplibregl-ctrl-geolocate");
+            if (geolocateBtn) {
+                geolocateBtn.setAttribute("title", UI_TEXT.MAP.GEOLOCATE_TITLE);
+                geolocateBtn.setAttribute("aria-label", UI_TEXT.MAP.GEOLOCATE_TITLE);
+            }
+            const zoomInBtn = document.querySelector<HTMLButtonElement>(".maplibregl-ctrl-zoom-in");
+            if (zoomInBtn) {
+                zoomInBtn.setAttribute("title", UI_TEXT.MAP.ZOOM_IN_TITLE);
+                zoomInBtn.setAttribute("aria-label", UI_TEXT.MAP.ZOOM_IN_TITLE);
+            }
+            const zoomOutBtn = document.querySelector<HTMLButtonElement>(".maplibregl-ctrl-zoom-out");
+            if (zoomOutBtn) {
+                zoomOutBtn.setAttribute("title", UI_TEXT.MAP.ZOOM_OUT_TITLE);
+                zoomOutBtn.setAttribute("aria-label", UI_TEXT.MAP.ZOOM_OUT_TITLE);
+            }
+            const compassBtn = document.querySelector<HTMLButtonElement>(".maplibregl-ctrl-compass");
+            if (compassBtn) {
+                compassBtn.setAttribute("title", UI_TEXT.MAP.COMPASS_TITLE);
+                compassBtn.setAttribute("aria-label", UI_TEXT.MAP.COMPASS_TITLE);
             }
         };
-        updateGeolocateAria();
-        const timer = setTimeout(updateGeolocateAria, 600);
+        updateControlAriaLabels();
+        const timer = setTimeout(updateControlAriaLabels, 600);
         return () => clearTimeout(timer);
     }, []);
 
@@ -176,7 +191,11 @@ export default function Map({onReady, children}: MapProps) {
                     onError={handleGeolocateError}
                     onOutOfMaxBounds={handleOutOfMaxBounds}
                 />
-                <NavigationControl position="top-right" showCompass={true}/>
+                <NavigationControl
+                    position="top-right"
+                    showCompass={true}
+                    visualizePitch={true}
+                />
                 {children}
             </MapGL>
 
