@@ -16,7 +16,7 @@ import MapGL, {MapRef, NavigationControl} from "react-map-gl/maplibre";
 
 // Set MapLibre GL JS v6 Web Worker path via CDN
 if (typeof window !== "undefined") {
-    setWorkerUrl("https://unpkg.com/maplibre-gl@^6.0.0/dist/maplibre-gl-worker.mjs");
+    setWorkerUrl("https://unpkg.com/maplibre-gl@^6.7.0/dist/maplibre-gl-worker.mjs");
 }
 
 // ----------------------------------------------------------------------
