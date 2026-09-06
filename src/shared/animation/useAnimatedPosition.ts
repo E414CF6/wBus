@@ -17,13 +17,16 @@ import {
     MAX_LATENCY_PROJECTION_COORD,
     MAX_VELOCITY,
     MIN_MOVING_VELOCITY,
+    PHYSICAL_BUS_DELAY_MS,
     POST_TARGET_VELOCITY_RATIO,
     SCALAR_LOOP_RESTART_THRESHOLD_METERS,
     STATE_UPDATE_THROTTLE_MS,
     STATIONARY_CONFIRM_MS,
+    STATIONARY_COORD_THRESHOLD,
     STOP_ACCEL_ZONE,
     STOP_DECEL_ZONE,
     STOP_DWELL_MS,
+    STOP_DWELL_PROXIMITY,
     STOP_THRESHOLD,
     TELEPORT_COORD_THRESHOLD,
     TELEPORT_DISTANCE_METERS,
@@ -42,8 +45,9 @@ import {blendVelocityWithPrior, getStopSpeedMultiplier} from "./speedModulation"
 import type {AnimatedPositionState, UseAnimatedPositionOptions} from "./types";
 
 /**
- * Animates a bus marker along a polyline with continuous smooth linear interpolation,
- * rapid catch-up sprint on new API updates, delta discrepancy slowdown detection, and anti-teleport / anti-drift safeguards.
+ * Animates a bus marker along a polyline with continuous real-time dead-reckoning,
+ * origin 10s batch cycle adaptation, latency-compensated continuous forward projection,
+ * and stop-aware overrun prevention.
  */
 export function useAnimatedPosition(
     targetPosition: Coordinate,
@@ -105,7 +109,7 @@ export function useAnimatedPosition(
     const polylineRef = useRef(polyline);
     const cumDistRef = useRef<number[]>([]);
     const markerDistRef = useRef(0); // where marker currently is along polyline
-    const targetDistRef = useRef(0); // 1차 예측 목표 지점 (API 보정 지점)
+    const targetDistRef = useRef(0); // dynamic target distance along polyline
     const velocityRef = useRef(CITY_BUS_BASE_VELOCITY); // estimated cruising velocity (coord-units / ms)
     const currentVelocityRef = useRef(CITY_BUS_BASE_VELOCITY); // smoothed dynamic velocity
     const lastFrameRef = useRef(0);
@@ -321,7 +325,6 @@ export function useAnimatedPosition(
             if (stationaryDuration > STATIONARY_CONFIRM_MS) {
                 // If coordinates have not changed for >20 seconds (spanning multiple upstream update windows),
                 // the vehicle is genuinely stopped (signal light, long passenger boarding, terminus standby).
-                // Gradually decelerate to a stop at current raw position.
                 velocityRef.current = 0;
                 currentVelocityRef.current = Math.max(0, currentVelocityRef.current * 0.85);
 
@@ -334,7 +337,7 @@ export function useAnimatedPosition(
                 isOvershotOnDataRef.current = markerDistRef.current > rawDist + 0.00005;
             }
             // If stationaryDuration <= STATIONARY_CONFIRM_MS, upstream simply hasn't ticked yet!
-            // DO NOT reset velocity to 0 or rewind target. Maintain smooth cruising & dead reckoning.
+            // Maintain smooth cruising & dead reckoning without dropping speed.
             return;
         }
 
@@ -402,7 +405,7 @@ export function useAnimatedPosition(
         }
 
         // ----------------------------------------------------------------
-        // NORMAL PROGRESS & DELTA-AWARE SLOWDOWN:
+        // NORMAL PROGRESS & SPEED CALCULATION:
         // Use last REAL movement timestamp and distance for accurate velocity estimation
         // ----------------------------------------------------------------
         const dtMs =
@@ -410,7 +413,7 @@ export function useAnimatedPosition(
                 ? now - lastRealMoveTimeRef.current
                 : (lastDataTimeRef.current > 0 ? now - lastDataTimeRef.current : 0);
         const moved = rawDist - lastRealMoveDistRef.current;
-        const isStationary = Math.abs(moved) < 0.00003; // moved < ~3 meters
+        const isStationary = Math.abs(moved) < STATIONARY_COORD_THRESHOLD; // < ~3.5 meters GPS jitter
 
         if (isStationary) {
             velocityRef.current = 0;
@@ -439,21 +442,13 @@ export function useAnimatedPosition(
                 MAX_VELOCITY
             );
 
-            // Forward project target position by latency compensation (scaled by dynamic velocity)
+            // Initial latency projection upon data arrival
             const v = Math.max(velocityRef.current, MIN_MOVING_VELOCITY);
-            const effectiveDelay = Math.max(0, Math.min(dataDelayMs, 25000));
-            const maxAllowedProj = Math.max(
-                0,
-                Math.min(
-                    v * effectiveDelay,
-                    MAX_LATENCY_PROJECTION_COORD,
-                    totalDist - rawDist - STOP_DECEL_ZONE * 0.5
-                )
-            );
-            const newTargetDist = Math.min(rawDist + maxAllowedProj, totalDist);
+            const effectivePhysicalDelay = Math.max(0, Math.min(PHYSICAL_BUS_DELAY_MS, 15000));
+            const newTargetDist = Math.min(rawDist + v * effectivePhysicalDelay, totalDist);
             targetDistRef.current = newTargetDist;
 
-            // ---- Delta Discrepancy & Overshoot Detection (새 정보의 델타 감지 및 감속 로직) ----
+            // Overshoot detection: if marker is ahead of newly projected position
             const currentDist = markerDistRef.current;
             const overshoot = currentDist - newTargetDist;
             if (overshoot > 0.00005) {
@@ -494,7 +489,7 @@ export function useAnimatedPosition(
     ]);
 
     // ----------------------------------------------------------------
-    // Animation loop — Continuous 60fps Rapid Catch-Up & Dead Reckoning
+    // Animation loop — Continuous 60fps Rapid Catch-Up & Continuous Dead Reckoning
     // ----------------------------------------------------------------
     useEffect(() => {
         const tick = (now: number) => {
@@ -520,6 +515,36 @@ export function useAnimatedPosition(
 
             const totalDist = cumDist[cumDist.length - 1];
             let dist = markerDistRef.current;
+
+            // ----------------------------------------------------------------
+            // Dynamic Real-Time Target Projection:
+            // Continuously project target forward based on elapsed time since real observation
+            // ----------------------------------------------------------------
+            const timeSinceRealMove =
+                lastRealMoveTimeRef.current > 0 ? now - lastRealMoveTimeRef.current : 0;
+            const effectiveElapsedMs = PHYSICAL_BUS_DELAY_MS + timeSinceRealMove;
+            const dynamicLead = Math.min(
+                activeV * effectiveElapsedMs,
+                MAX_DEAD_RECKONING_LEAD_COORD
+            );
+            let dynamicTarget = Math.min(
+                lastRealMoveDistRef.current + dynamicLead,
+                totalDist
+            );
+
+            // Stop-aware overrun clamp: if bus is approaching an unpassed stop and cruising speed is low/decelerating,
+            // clamp forward projection to stop position so marker doesn't fly past station during dwell
+            const stopDists = stopDistancesRef.current;
+            const nextStopIdx = stopDists.findIndex((d) => d > lastRealMoveDistRef.current);
+            if (nextStopIdx !== -1) {
+                const nextStopDist = stopDists[nextStopIdx];
+                const distToStop = nextStopDist - lastRealMoveDistRef.current;
+                if (distToStop < STOP_DECEL_ZONE && activeV < CITY_BUS_BASE_VELOCITY * 1.1) {
+                    dynamicTarget = Math.min(dynamicTarget, nextStopDist + STOP_DWELL_PROXIMITY * 0.5);
+                }
+            }
+
+            targetDistRef.current = dynamicTarget;
             const target = targetDistRef.current;
             const gap = target - dist; // positive = marker behind target, negative = marker past target
 
@@ -575,7 +600,7 @@ export function useAnimatedPosition(
 
                     if (gap > 0) {
                         // --------------------------------------------------------
-                        // 1차 예측 지점 도달 전: 빠른 캐치업 가속 주행
+                        // Catch-up phase: marker is tracking toward live projected position
                         // --------------------------------------------------------
                         const baseVelocity = activeV * deadReckoningFactor * stopMult;
                         const linearBoost = gap / CATCHUP_TAU_MS;
@@ -590,14 +615,13 @@ export function useAnimatedPosition(
                         );
                     } else if (isOvershotOnDataRef.current) {
                         // --------------------------------------------------------
-                        // 새 API 데이터 수신 시 과예측(오버슈트) 판정된 경우: 대기 / 제동
+                        // Overshoot phase: real bus stopped or slowed down, soft-brake marker
                         // --------------------------------------------------------
                         currentVelocityRef.current = Math.max(0, currentVelocityRef.current * 0.9);
                         effectiveVelocity = 0;
                     } else {
                         // --------------------------------------------------------
-                        // 1차 예측 지점 이후 (2차 연장 외삽 구간):
-                        // 공격적인 지속 주행: 기본 속도의 90%를 유지하며 원거리 시에도 완만하게(최소 67.5%) 유지
+                        // Cruising lock phase: marker is aligned with dynamic live target
                         // --------------------------------------------------------
                         const leadBeyondTarget = Math.max(0, dist - target);
                         const maxExtraLead = MAX_DEAD_RECKONING_LEAD_COORD;

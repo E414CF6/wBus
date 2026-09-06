@@ -3,18 +3,44 @@ import {blendVelocityWithPrior, getStopSpeedMultiplier} from "./speedModulation"
 import {
     CITY_BUS_BASE_VELOCITY,
     DEFAULT_DATA_DELAY_MS,
+    MAX_VELOCITY,
+    MIN_MOVING_VELOCITY,
+    PHYSICAL_BUS_DELAY_MS,
     POST_TARGET_VELOCITY_RATIO,
     STATIONARY_CONFIRM_MS,
+    STATIONARY_COORD_THRESHOLD,
     STOP_DWELL_PROXIMITY,
 } from "./constants";
 import {computeCumulativeDistances, polylineScalarDist, positionFromSegT, scalarToSegT,} from "./scalarGeometry";
 import type {Coordinate} from "@shared/utils/geo";
 
 describe("animation / predictive dead-reckoning engine", () => {
-    describe("constants validation", () => {
+    describe("constants validation calibrated from origin API empirical test", () => {
         it("has valid stationary confirmation time greater than upstream batch cycle", () => {
             // TAGO upstream batch interval is 10-15s, so confirmation must be >= 20s
             expect(STATIONARY_CONFIRM_MS).toBeGreaterThanOrEqual(20000);
+        });
+
+        it("has physical bus pipeline delay calibrated from real transit measurement", () => {
+            // User measured 3-4s physical delay on actual bus ride
+            expect(PHYSICAL_BUS_DELAY_MS).toBeGreaterThanOrEqual(3000);
+            expect(PHYSICAL_BUS_DELAY_MS).toBeLessThanOrEqual(4000);
+        });
+
+        it("has stationary threshold that filters GPS jitter (~0.8m) while capturing micro-crawls (>10m)", () => {
+            // Jitter: 0.8m / 111000 ≈ 0.0000072 < threshold
+            // Micro-crawl: 13.3m / 111000 ≈ 0.000120 > threshold
+            const jitterCoord = 0.8 / 111000;
+            const crawlCoord = 13.3 / 111000;
+            expect(jitterCoord).toBeLessThan(STATIONARY_COORD_THRESHOLD);
+            expect(crawlCoord).toBeGreaterThan(STATIONARY_COORD_THRESHOLD);
+        });
+
+        it("covers velocity range from market crawling (~4km/h) to expressway cruising (~100km/h)", () => {
+            // 4 km/h in coord-units/ms ≈ 1.0e-8
+            // 95-100 km/h in coord-units/ms ≈ 2.4e-7 - 2.5e-7
+            expect(MIN_MOVING_VELOCITY).toBeLessThanOrEqual(0.000000015);
+            expect(MAX_VELOCITY).toBeGreaterThanOrEqual(0.00000024);
         });
 
         it("has latency compensation projection calibrated for real bus transit (~12s)", () => {
