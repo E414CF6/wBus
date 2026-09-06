@@ -1,24 +1,36 @@
 import {getOrFetchSchedule} from "@entities/schedule";
-import {NextResponse} from "next/server";
+import {type NextRequest, NextResponse} from "next/server";
 
-// Edge CDN ISR Cache: Revalidate every 24 hours (86400 seconds)
-export const revalidate = 86400;
+export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     const startTime = Date.now();
     try {
         const {data, meta} = await getOrFetchSchedule(false);
 
-        // Generate strong ETag based on updatedAt and total route count
+        // Generate strong ETag based on updatedAt timestamp and route count
         const etag = `W/"wbus-sched-${meta.updatedAt ? new Date(meta.updatedAt).getTime() : "latest"}-${data.routes?.length || 0}"`;
 
-        const cacheControlHeader = "public, max-age=300, s-maxage=86400, stale-while-revalidate=604800, stale-if-error=2592000";
+        const cacheControlHeader = "public, max-age=60, stale-while-revalidate=300, must-revalidate";
+
+        // Conditional GET validation
+        const ifNoneMatch = request.headers.get("if-none-match");
+        if (ifNoneMatch && ifNoneMatch === etag) {
+            return new NextResponse(null, {
+                status: 304,
+                headers: {
+                    ETag: etag,
+                    "Cache-Control": cacheControlHeader,
+                },
+            });
+        }
 
         return NextResponse.json({
             success: true, data, meta, elapsedMs: Date.now() - startTime,
         }, {
             headers: {
-                ETag: etag, "Cache-Control": cacheControlHeader,
+                ETag: etag,
+                "Cache-Control": cacheControlHeader,
             },
         });
     } catch (error) {

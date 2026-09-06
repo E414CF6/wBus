@@ -1,7 +1,7 @@
 import {revalidatePath} from "next/cache";
 import {type NextRequest, NextResponse} from "next/server";
 
-import {refreshSchedule} from "@entities/schedule";
+import {invalidateScheduleTag, refreshSchedule} from "@entities/schedule";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -15,17 +15,19 @@ async function handleRefresh(request: NextRequest) {
         const isAuthorized = cronSecret ? authHeader === `Bearer ${cronSecret}` : process.env.NODE_ENV === "development";
 
         const forceParam = request.nextUrl.searchParams.get("force") === "true";
-        // Only authorized requests (e.g. Vercel Cron with secret) can force-bypass the refresh cooldown
-        const force = isAuthorized && forceParam;
-        const {refreshed, message, data, meta} = await refreshSchedule(force);
+        // Allow force refresh from client requests (with rate limit protection inside refreshSchedule)
+        // or always for authorized requests (Vercel Cron / Admin)
+        const force = forceParam || isAuthorized;
+        const {refreshed, message, data, meta} = await refreshSchedule(force, isAuthorized);
 
-        // Instantly purge Edge CDN cache if schedule was freshly scraped/updated
+        // Instantly purge Next.js Data Cache Tag and ISR paths if schedule was freshly scraped/updated
         if (refreshed) {
             try {
+                invalidateScheduleTag();
                 revalidatePath("/api/schedule");
                 revalidatePath("/schedule");
             } catch (revalidateErr) {
-                console.warn("[ScheduleRefresh] revalidatePath error:", revalidateErr);
+                console.warn("[ScheduleRefresh] revalidate error:", revalidateErr);
             }
         }
 

@@ -1,7 +1,7 @@
-import {NextRequest, NextResponse} from "next/server";
+import {type NextRequest, NextResponse} from "next/server";
 import {revalidatePath} from "next/cache";
 
-import {refreshSchedule} from "@entities/schedule";
+import {invalidateScheduleTag, refreshSchedule} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
 
 export async function POST(request: NextRequest) {
@@ -12,15 +12,16 @@ export async function POST(request: NextRequest) {
         const isAuthorized = cronSecret ? authHeader === `Bearer ${cronSecret}` : process.env.NODE_ENV === "development";
 
         const forceParam = request.nextUrl.searchParams.get("force") === "true";
-        const force = isAuthorized && forceParam;
-        const {refreshed, message, data, meta} = await refreshSchedule(force);
+        const force = forceParam || isAuthorized;
+        const {refreshed, message, data, meta} = await refreshSchedule(force, isAuthorized);
 
         if (refreshed) {
             try {
+                invalidateScheduleTag();
                 revalidatePath("/api/schedule");
                 revalidatePath("/schedule");
             } catch (revalidateErr) {
-                console.warn("[BusRefresh] revalidatePath error:", revalidateErr);
+                console.warn("[BusRefresh] revalidate error:", revalidateErr);
             }
         }
 
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error("API /api/bus/refresh error:", error);
         try {
-            const fallback = await refreshSchedule(false);
+            const fallback = await refreshSchedule(false, false);
             return NextResponse.json({
                 success: true,
                 refreshed: false,
@@ -50,4 +51,3 @@ export async function POST(request: NextRequest) {
         }
     }
 }
-
