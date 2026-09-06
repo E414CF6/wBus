@@ -7,8 +7,8 @@
  *   node scripts/upload-to-blob.mjs
  *
  * Requires BLOB_READ_WRITE_TOKEN in .env.local or environment.
- * Uploads static data files under public/data/ preserving path structure,
- * while excluding data/cache/ and data/routeDetails.json.
+ * Uploads JSON and GeoJSON static data files under public/ preserving path structure,
+ * while excluding cache directories and non-data assets.
  */
 
 import {put} from "@vercel/blob";
@@ -20,7 +20,7 @@ import {config} from "dotenv";
 config({path: ".env.local"});
 config({path: ".env"});
 
-const DATA_DIR = join(process.cwd(), "public", "data");
+const PUBLIC_DIR = join(process.cwd(), "public");
 const PREFIX = process.env.BLOB_PREFIX || ""; // Optional Blob path prefix
 
 const CONTENT_TYPES = {
@@ -29,11 +29,11 @@ const CONTENT_TYPES = {
 };
 
 /**
- * Check if a relative path inside public/data should be excluded from upload.
+ * Check if a relative path inside public should be excluded from upload.
  */
 function isExcluded(relPath) {
     const normalized = relPath.replace(/\\/g, "/");
-    // Exclude data/cache directory and data/routeDetails.json
+    // Exclude cache directory and routeDetails.json
     if (normalized === "cache" || normalized.startsWith("cache/")) {
         return true;
     }
@@ -51,7 +51,7 @@ function walkDir(dir) {
         if (entry.startsWith(".")) continue;
 
         const fullPath = join(dir, entry);
-        const relPath = relative(DATA_DIR, fullPath).replace(/\\/g, "/");
+        const relPath = relative(PUBLIC_DIR, fullPath).replace(/\\/g, "/");
 
         if (isExcluded(relPath)) {
             continue;
@@ -60,18 +60,21 @@ function walkDir(dir) {
         if (statSync(fullPath).isDirectory()) {
             results.push(...walkDir(fullPath));
         } else {
-            results.push(fullPath);
+            const ext = extname(fullPath);
+            if (ext === ".json" || ext === ".geojson") {
+                results.push(fullPath);
+            }
         }
     }
     return results;
 }
 
 async function upload() {
-    const files = walkDir(DATA_DIR);
-    console.log(`Found ${files.length} files to upload/overwrite in Vercel Blob (excluding data/cache and data/routeDetails.json).\n`);
+    const files = walkDir(PUBLIC_DIR);
+    console.log(`Found ${files.length} JSON/GeoJSON files to upload/overwrite in Vercel Blob.\n`);
 
     if (files.length === 0) {
-        console.log("No files found under public/data to upload.");
+        console.log("No data files found under public to upload.");
         return;
     }
 
@@ -83,7 +86,7 @@ async function upload() {
 
         await Promise.all(
             chunk.map(async (file) => {
-                const relPath = relative(DATA_DIR, file).replace(/\\/g, "/");
+                const relPath = relative(PUBLIC_DIR, file).replace(/\\/g, "/");
                 const blobPath = PREFIX ? `${PREFIX.replace(/\/$/, "")}/${relPath}` : relPath;
                 const ext = extname(file);
                 const contentType = CONTENT_TYPES[ext] || "application/octet-stream";

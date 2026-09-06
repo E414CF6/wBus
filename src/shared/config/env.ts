@@ -8,10 +8,12 @@ export const STATIC_FILE_NAMES = {
     ROUTE_MAP: "routeMap.json",
     STATION_MAP: "stationMap.json",
     SCHEDULE: "schedule.json",
-    STYLE: "style.json",
-    STYLE_DARK: "style-dark.json",
+    STYLE: "styles/liberty.json",
+    STYLE_DARK: "styles/darker.json",
+    STYLE_LIBERTY: "styles/liberty.json",
+    STYLE_DARKER: "styles/darker.json",
     SEGMENTS: "segment.json",
-    ROUTE_DIR: "route",
+    ROUTE_DIR: "routes",
 } as const;
 
 /**
@@ -66,8 +68,8 @@ export const API_CONFIG = {
         PATHS: {
             ROUTE_DIR: STATIC_FILE_NAMES.ROUTE_DIR,
             SEGMENTS: STATIC_FILE_NAMES.SEGMENTS,
-            MAP_STYLE: STATIC_FILE_NAMES.STYLE,
-            MAP_STYLE_DARK: STATIC_FILE_NAMES.STYLE_DARK,
+            MAP_STYLE: STATIC_FILE_NAMES.STYLE_LIBERTY,
+            MAP_STYLE_DARK: STATIC_FILE_NAMES.STYLE_DARKER,
             ROUTE_MAP: STATIC_FILE_NAMES.ROUTE_MAP,
             STATION_MAP: STATIC_FILE_NAMES.STATION_MAP,
             SCHEDULE: STATIC_FILE_NAMES.SCHEDULE,

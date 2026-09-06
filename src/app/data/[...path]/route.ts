@@ -29,7 +29,9 @@ export async function GET(_request: Request, {params}: { params: Promise<{ path:
         const {existsSync} = await import("fs");
         const {join} = await import("path");
 
-        const localPaths = [join(process.cwd(), "public", "data", relativePath), join(process.cwd(), "public", relativePath),];
+        const localPaths = [join(process.cwd(), "public", relativePath), join(process.cwd(), "public", "data", relativePath), // Map style alias fallbacks
+            ...(relativePath.endsWith("style.json") || relativePath.endsWith("liberty.json") ? [join(process.cwd(), "public", "styles", "liberty.json")] : []), ...(relativePath.endsWith("style-dark.json") || relativePath.endsWith("darker.json") ? [join(process.cwd(), "public", "styles", "darker.json")] : []), // Route dir alias fallbacks (data/route/* -> public/routes/*)
+            ...(relativePath.startsWith("route/") ? [join(process.cwd(), "public", "routes", relativePath.slice(6))] : []),];
 
         for (const localPath of localPaths) {
             if (existsSync(/*turbopackIgnore: true*/ localPath)) {
@@ -67,7 +69,7 @@ export async function GET(_request: Request, {params}: { params: Promise<{ path:
     // 3. Fetch via Direct Blob Storage Base URL
     const baseUrl = getBlobBaseUrl();
     if (baseUrl) {
-        const candidateUrls = [`${baseUrl}/${relativePath}`, `${baseUrl}/data/${relativePath}`,];
+        const candidateUrls = [`${baseUrl}/${relativePath}`, `${baseUrl}/data/${relativePath}`];
         for (const directUrl of candidateUrls) {
             try {
                 const res = await fetch(directUrl, {
@@ -84,7 +86,7 @@ export async function GET(_request: Request, {params}: { params: Promise<{ path:
     }
 
     // 4. Fallback for map style files if not found in Blob or local filesystem
-    if (relativePath === "style-dark.json" || relativePath.endsWith("/style-dark.json")) {
+    if (relativePath === "style-dark.json" || relativePath.endsWith("/style-dark.json") || relativePath.endsWith("darker.json")) {
         try {
             const fallbackRes = await fetch(API_CONFIG.MAP_STYLE_DARK_FALLBACK, {next: {revalidate: 86400}});
             if (fallbackRes.ok) {
@@ -94,7 +96,7 @@ export async function GET(_request: Request, {params}: { params: Promise<{ path:
         } catch {
             // Ignore
         }
-    } else if (relativePath === "style.json" || relativePath.endsWith("/style.json")) {
+    } else if (relativePath === "style.json" || relativePath.endsWith("/style.json") || relativePath.endsWith("liberty.json")) {
         try {
             const fallbackRes = await fetch(API_CONFIG.MAP_STYLE_FALLBACK, {next: {revalidate: 86400}});
             if (fallbackRes.ok) {

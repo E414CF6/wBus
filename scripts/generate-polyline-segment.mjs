@@ -8,14 +8,14 @@
  *
  * Pipeline Flow:
  *   1. Generates & caches all outputs in `scripts/cache/`
- *   2. Synchronizes polyline artifacts (`routeMap.json`, `stationMap.json`, `segment.json`, `route/*.json`)
- *      into `public/data/` while leaving other files (e.g. `schedule.json`, `style.json`) intact.
+ *   2. Synchronizes polyline artifacts (`routeMap.json`, `stationMap.json`, `segment.json`, `routes/*.json`)
+ *      into `public/` while leaving other files (e.g. `schedule.json`, `styles/*`) intact.
  *
  * Features:
  *   - Independent UP (ud=1) and DOWN (ud=0) route snapping and polyline assembly
  *   - OSRM route snapping with automatic straight-line fallback if OSRM is unavailable
  *   - Segment hashing (MD5) matching wBus polylineService schema
- *   - Cache-first output strategy for safe atomic publishing to public/data
+ *   - Cache-first output strategy for safe atomic publishing to public/
  *   - Complete telemetry and error reporting
  *
  * Usage:
@@ -363,7 +363,7 @@ async function processDirectionLeg(dirStops, stationMap, osrmUrl = DEFAULT_OSRM_
     return {segmentHashes, segmentsMap, totalDist};
 }
 
-// Synchronize cached polyline files from scripts/cache to public/data
+// Synchronize cached polyline files from scripts/cache to public
 function syncCacheToPublic(cacheDir, publicDir) {
     if (!existsSync(publicDir)) mkdirSync(publicDir, {recursive: true});
 
@@ -379,14 +379,14 @@ function syncCacheToPublic(cacheDir, publicDir) {
         }
     }
 
-    // Sync route/*.json
+    // Sync route/*.json to public/routes/*.json
     const cacheRouteDir = join(cacheDir, "route");
-    const publicRouteDir = join(publicDir, "route");
+    const publicRoutesDir = join(publicDir, "routes");
     if (existsSync(cacheRouteDir)) {
-        if (!existsSync(publicRouteDir)) mkdirSync(publicRouteDir, {recursive: true});
+        if (!existsSync(publicRoutesDir)) mkdirSync(publicRoutesDir, {recursive: true});
         const routeFiles = readdirSync(cacheRouteDir).filter(f => f.endsWith(".json"));
         for (const file of routeFiles) {
-            copyFileSync(join(cacheRouteDir, file), join(publicRouteDir, file));
+            copyFileSync(join(cacheRouteDir, file), join(publicRoutesDir, file));
             copiedFiles++;
         }
     }
@@ -397,7 +397,7 @@ function syncCacheToPublic(cacheDir, publicDir) {
 // Main Pipeline Logic
 async function runRoutePipeline(options) {
     const scriptsCacheDir = options.cacheDir || join(process.cwd(), "scripts", "cache");
-    const outputDir = options.outputDir || join(process.cwd(), "public", "data");
+    const outputDir = options.outputDir || join(process.cwd(), "public");
     const routesCacheFile = join(scriptsCacheDir, "routes.json");
     const cacheDerivedDir = join(scriptsCacheDir, "route");
 
@@ -509,7 +509,7 @@ async function runRoutePipeline(options) {
         return;
     }
 
-    // Load station map for stop coordinate resolution (check cache first, fallback to public/data)
+    // Load station map for stop coordinate resolution (check cache first, fallback to public)
     let stationMap = {};
     const cacheStationMapFile = join(scriptsCacheDir, "stationMap.json");
     const publicStationMapFile = join(outputDir, "stationMap.json");
@@ -600,7 +600,7 @@ async function runRoutePipeline(options) {
         }
     }
 
-    // Existing segment.json preservation & merge (cache first, then public/data)
+    // Existing segment.json preservation & merge (cache first, then public)
     let finalSegmentsMap = {...masterSegmentsMap};
     const cacheSegmentsPath = join(scriptsCacheDir, "segment.json");
     const publicSegmentsPath = join(outputDir, "segment.json");
@@ -619,9 +619,9 @@ async function runRoutePipeline(options) {
     writeFileSync(cacheSegmentsPath, JSON.stringify(finalSegmentsMap, null, 2));
     console.log(`[Polly Phase 2] Complete. Processed ${processedCount} routes. Saved cache/segment.json with ${Object.keys(finalSegmentsMap).length} segments.`);
 
-    // Phase 3: Synchronize cache output into public/data
+    // Phase 3: Synchronize cache output into public
     if (!options.noSync) {
-        console.log("[Polly Phase 3] Synchronizing cached polyline artifacts to public/data...");
+        console.log("[Polly Phase 3] Synchronizing cached polyline artifacts to public...");
         syncCacheToPublic(scriptsCacheDir, outputDir);
     }
 }
@@ -638,7 +638,7 @@ async function main() {
         noSync: args.includes("--no-sync"),
         osrmUrl: DEFAULT_OSRM_URL,
         cacheDir: join(process.cwd(), "scripts", "cache"),
-        outputDir: join(process.cwd(), "public", "data"),
+        outputDir: join(process.cwd(), "public"),
     };
 
     const routeIdx = args.indexOf("--route");

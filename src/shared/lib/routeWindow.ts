@@ -98,15 +98,17 @@ let cachedScheduleJson: {
 
 function getScheduleData() {
     if (cachedScheduleJson) return cachedScheduleJson;
-    try {
-        const localPath = path.join(process.cwd(), "public", "data", "schedule.json");
-        if (fs.existsSync(localPath)) {
-            const raw = fs.readFileSync(localPath, "utf-8");
-            cachedScheduleJson = JSON.parse(raw);
-            return cachedScheduleJson;
+    const candidates = [path.join(process.cwd(), "public", "schedule.json"), path.join(process.cwd(), "public", "data", "schedule.json"),];
+    for (const localPath of candidates) {
+        try {
+            if (fs.existsSync(/*turbopackIgnore: true*/ localPath)) {
+                const raw = fs.readFileSync(/*turbopackIgnore: true*/ localPath, "utf-8");
+                cachedScheduleJson = JSON.parse(raw);
+                return cachedScheduleJson;
+            }
+        } catch {
+            // Fallback gracefully in constrained environments
         }
-    } catch {
-        // Fallback gracefully in constrained environments
     }
     return null;
 }

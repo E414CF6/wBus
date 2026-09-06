@@ -3,8 +3,8 @@ import {API_CONFIG} from "@shared/config/env";
 
 /**
  * Loads static JSON/GeoJSON data.
- * @param fileName The name or relative path inside the `public/data/` directory.
- *                 For example, "routeMap.json" or "polylines/route1.geojson"
+ * @param fileName The name or relative path inside the `public/` directory.
+ *                 For example, "routeMap.json" or "routes/WJB251000004.json"
  */
 export async function loadStaticData<T>(fileName: string): Promise<T> {
     const isServer = typeof window === "undefined";
@@ -29,13 +29,13 @@ export async function loadStaticData<T>(fileName: string): Promise<T> {
             }
         }
 
-        // 2. Read from local project directory public/data or /tmp
+        // 2. Read from local project directory public (or /tmp fallback)
         try {
             const {readFile} = await import("fs/promises");
             const {existsSync} = await import("fs");
             const {join} = await import("path");
 
-            const pathsToTry = [
+            const pathsToTry = [join(process.cwd(), "public", cleanFileName),
                 join(process.cwd(), "public", "data", cleanFileName),
                 join("/tmp", cleanFileName),
             ];
@@ -47,7 +47,7 @@ export async function loadStaticData<T>(fileName: string): Promise<T> {
                 }
             }
         } catch (error) {
-            console.error(`[loadStaticData] FS Read Error: data/${cleanFileName}`, error);
+            console.error(`[loadStaticData] FS Read Error: ${cleanFileName}`, error);
         }
     }
 
@@ -60,7 +60,7 @@ export async function loadStaticData<T>(fileName: string): Promise<T> {
     ) {
         url = `${API_CONFIG.STATIC.BASE_URL}/${cleanFileName}`;
     } else {
-        url = `/data/${cleanFileName}`;
+        url = `/${cleanFileName}`;
     }
 
     return fetchAPI<T>(url);

@@ -19,7 +19,7 @@ function joinUrl(base: string, path: string): string {
  * Priority:
  * 1. Explicit Override via Environment Variable (NEXT_PUBLIC_MAP_URL / NEXT_PUBLIC_MAP_DARK_URL)
  * 2. Remote Static Server / Blob (if NEXT_PUBLIC_STATIC_API_URL or BASE_URL is set)
- * 3. Internal /data proxy route (Serves from Vercel Blob / Local public data)
+ * 3. Static asset route from public directory (/styles/liberty.json, /styles/darker.json)
  */
 export function getMapStyleUrl(theme?: string | boolean): string {
     let isDark = false;
@@ -40,13 +40,13 @@ export function getMapStyleUrl(theme?: string | boolean): string {
     }
 
     const {STATIC} = API_CONFIG;
-    const styleFileName = isDark ? (STATIC.PATHS.MAP_STYLE_DARK || "style-dark.json") : (STATIC.PATHS.MAP_STYLE || "style.json");
+    const stylePath = isDark ? (STATIC.PATHS.MAP_STYLE_DARK || "styles/darker.json") : (STATIC.PATHS.MAP_STYLE || "styles/liberty.json");
 
     // 1. If explicit Remote Base URL is configured with http(s)
     if (STATIC.BASE_URL && STATIC.BASE_URL !== "NOT_SET" && STATIC.BASE_URL.startsWith("http")) {
-        return joinUrl(STATIC.BASE_URL, styleFileName);
+        return joinUrl(STATIC.BASE_URL, stylePath);
     }
 
-    // 2. Default to internal /data route (served via Next.js route handler from Vercel Blob or local files)
-    return `/data/${styleFileName}`;
+    // 2. Default to static asset route (served statically by Next.js from public/)
+    return `/${stylePath}`;
 }

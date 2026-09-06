@@ -14,21 +14,23 @@ let inMemoryCache: {
 } | null = null;
 
 function getLocalCachePath(): string {
-    return path.join(process.cwd(), "public", "data", "schedule.json");
+    return path.join(process.cwd(), "public", "schedule.json");
 }
 
 function loadFromLocalFile(): RouteDataset | null {
-    // 1. Check public/data directory
-    const publicDataPath = getLocalCachePath();
-    if (fs.existsSync(/*turbopackIgnore: true*/ publicDataPath)) {
-        try {
-            const raw = fs.readFileSync(/*turbopackIgnore: true*/ publicDataPath, "utf-8");
-            const parsed: RouteDataset = JSON.parse(raw);
-            if (parsed && Array.isArray(parsed.routes) && parsed.routes.length > 0) {
-                return parsed;
+    // 1. Check public directory (and public/data fallback)
+    const candidates = [getLocalCachePath(), path.join(process.cwd(), "public", "data", "schedule.json"),];
+    for (const candidatePath of candidates) {
+        if (fs.existsSync(/*turbopackIgnore: true*/ candidatePath)) {
+            try {
+                const raw = fs.readFileSync(/*turbopackIgnore: true*/ candidatePath, "utf-8");
+                const parsed: RouteDataset = JSON.parse(raw);
+                if (parsed && Array.isArray(parsed.routes) && parsed.routes.length > 0) {
+                    return parsed;
+                }
+            } catch {
+                // Ignore
             }
-        } catch {
-            // Ignore
         }
     }
 
@@ -92,7 +94,7 @@ async function saveCache(data: RouteDataset): Promise<void> {
         console.warn("[ScheduleService] Vercel Blob save skipped:", err);
     }
 
-    // 3. Save to public/data/schedule.json
+    // 3. Save to public/schedule.json
     try {
         const p = getLocalCachePath();
         const dir = path.dirname(p);
@@ -133,7 +135,7 @@ export async function getOrFetchSchedule(force = false): Promise<{ data: RouteDa
             console.warn("[ScheduleService] Vercel Blob load fallback:", err);
         }
 
-        // 3. Check local public/data or /tmp
+        // 3. Check local public or /tmp
         const fromFile = loadFromLocalFile();
         if (fromFile) {
             const meta = getCacheMetadata(fromFile);
