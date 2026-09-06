@@ -117,19 +117,19 @@ src/
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                          EXTERNAL DATA SOURCES                          │
-│  apis.data.go.kr (TAGO API)    its.wonju.go.kr    Vercel Blob / Static  │
+│  apis.data.go.kr (TAGO API)    its.wonju.go.kr    Static Assets (CDN)   │
 │  (Live Bus Telemetry)          (ITS Schedules)    (GeoJSON & Maps)      │
 └───────────┬──────────────────────────┬─────────────────────┬────────────┘
             │                          │                     │
        ┌────▼────┐               ┌─────▼───────┐        ┌────▼─────┐
        │ Upstash │               │ Local Cache │        │ Browser  │
-       │  Redis  │               │ (Blob/JSON) │        │ Storage  │
+       │  Redis  │               │   (JSON)    │        │ Storage  │
        └────┬────┘               └─────┬───────┘        └──────────┘
             │                          │
        ┌────▼──────────────────────────▼──────────────────────────────────┐
        │                       API ROUTES (Server)                        │
        │  GET  /api/bus                   → Timetable Cache & Meta        │
-       │  POST /api/bus/refresh           → ITS Scraper + Blob Update     │
+       │  POST /api/bus/refresh           → ITS Scraper + Local Cache     │
        │  GET  /api/bus/stream            → SSE Telemetry Stream          │
        │  GET  /api/notice                → Wonju ITS Announcements       │
        │  GET/POST/PATCH/DELETE /api/comments → Live Thread Community     │
@@ -157,7 +157,7 @@ src/
 | **Map Rendering**            | MapLibre GL JS via `react-map-gl`                              |
 | **Live Telemetry & Sync**    | Server-Sent Events (`EventSource`), Dynamic Polling            |
 | **Data Scraping & Pipeline** | Node.js Fetch, Cheerio, OSRM Polyline Snapping                 |
-| **Cache & Persistence**      | Upstash Redis (@upstash/redis REST), Vercel Blob, LocalStorage |
+| **Cache & Persistence**      | Upstash Redis (@upstash/redis REST), Supabase, LocalStorage    |
 
 ---
 
@@ -227,7 +227,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 | `npm run lint`      | Runs ESLint code style and quality check             |
 | `npm run polyline`  | Runs full polyline processing pipeline               |
 | `npm run schedule`  | Scrapes official timetables from Wonju ITS           |
-| `npm run upload`    | Uploads static asset files to Vercel Blob storage    |
 
 ---
 

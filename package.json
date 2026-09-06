@@ -11,14 +11,12 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "polyline": "node scripts/generate-polyline-segment.mjs",
-    "schedule": "node scripts/scrape-wonju-its.mjs",
-    "upload": "node scripts/upload-to-blob.mjs"
+    "schedule": "node scripts/scrape-wonju-its.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.114.0",
     "@vercel/analytics": "^2.0.1",
-    "@vercel/blob": "^2.8.0",
     "@vercel/speed-insights": "^2.0.0",
     "lucide-react": "^1.39.0",
     "maplibre-gl": "^6.7.0",

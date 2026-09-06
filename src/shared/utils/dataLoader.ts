@@ -10,9 +10,8 @@ export async function loadStaticData<T>(fileName: string): Promise<T> {
     const isServer = typeof window === "undefined";
     const cleanFileName = fileName.startsWith("/") ? fileName.slice(1) : fileName;
 
-    // Server-side: Try reading from local filesystem or Remote Blob URL if configured
+    // Server-side: Read from public directory (bundled at build time) or /tmp
     if (isServer) {
-        // 1. If explicit remote static URL is configured, try fetching first
         if (
             API_CONFIG.STATIC.USE_REMOTE &&
             API_CONFIG.STATIC.BASE_URL &&
@@ -29,7 +28,6 @@ export async function loadStaticData<T>(fileName: string): Promise<T> {
             }
         }
 
-        // 2. Read from local project directory public (or /tmp fallback)
         try {
             const {readFile} = await import("fs/promises");
             const {existsSync} = await import("fs");
@@ -51,17 +49,10 @@ export async function loadStaticData<T>(fileName: string): Promise<T> {
         }
     }
 
-    // Client-side (Browser)
-    let url: string;
-    if (
+    // Client-side (Browser): Fetch directly from public asset URL
+    const url =
         API_CONFIG.STATIC.USE_REMOTE &&
-        API_CONFIG.STATIC.BASE_URL &&
-        API_CONFIG.STATIC.BASE_URL.startsWith("http")
-    ) {
-        url = `${API_CONFIG.STATIC.BASE_URL}/${cleanFileName}`;
-    } else {
-        url = `/${cleanFileName}`;
-    }
+        API_CONFIG.STATIC.BASE_URL && API_CONFIG.STATIC.BASE_URL.startsWith("http") ? `${API_CONFIG.STATIC.BASE_URL}/${cleanFileName}` : `/${cleanFileName}`;
 
     return fetchAPI<T>(url);
 }

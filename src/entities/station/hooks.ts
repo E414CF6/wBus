@@ -3,6 +3,7 @@ import useSWR from "swr";
 
 import type {BusStop, BusStopArrival, StationLocation} from "@entities/station/types";
 import type {CachedData} from "@shared/cache";
+
 import {UI_TEXT} from "@shared/config/locale";
 
 // Fetcher for the new API
@@ -33,7 +34,7 @@ const stationMapFetcher = async (url: string): Promise<Record<string, StationLoc
 
 // useAllStations (all bus stops from stationMap.json)
 export function useAllStations(): BusStop[] {
-    const {data} = useSWR<Record<string, StationLocation>>("/data/stationMap.json", stationMapFetcher, {
+    const {data} = useSWR<Record<string, StationLocation>>("/stationMap.json", stationMapFetcher, {
         revalidateOnFocus: false, revalidateIfStale: false, dedupingInterval: 300000,
     });
 

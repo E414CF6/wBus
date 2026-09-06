@@ -18,7 +18,7 @@ function joinUrl(base: string, path: string): string {
  * Switches between light and dark map styles according to the current theme.
  * Priority:
  * 1. Explicit Override via Environment Variable (NEXT_PUBLIC_MAP_URL / NEXT_PUBLIC_MAP_DARK_URL)
- * 2. Remote Static Server / Blob (if NEXT_PUBLIC_STATIC_API_URL or BASE_URL is set)
+ * 2. Remote Static Server (if NEXT_PUBLIC_STATIC_API_URL or BASE_URL is set)
  * 3. Static asset route from public directory (/styles/liberty.json, /styles/darker.json)
  */
 export function getMapStyleUrl(theme?: string | boolean): string {

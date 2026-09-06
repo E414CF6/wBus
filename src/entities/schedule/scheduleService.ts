@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import {loadFromVercelBlob, saveToVercelBlob} from "@shared/lib/blobService";
+
 import type {CacheMetadata, RouteDataset} from "@shared/types/bus";
 import {LOCALE} from "@shared/config/locale";
 import {scrapeWonjuBusDataset, scrapeWonjuItsYonsei} from "./itsScraper";
@@ -87,14 +87,7 @@ async function saveCache(data: RouteDataset): Promise<void> {
         data, meta, timestamp: Date.now(),
     };
 
-    // 2. Save to Vercel Blob
-    try {
-        await saveToVercelBlob(data, "schedule.json");
-    } catch (err) {
-        console.warn("[ScheduleService] Vercel Blob save skipped:", err);
-    }
-
-    // 3. Save to public/schedule.json
+    // 2. Save to public/schedule.json
     try {
         const p = getLocalCachePath();
         const dir = path.dirname(p);
@@ -106,7 +99,7 @@ async function saveCache(data: RouteDataset): Promise<void> {
         // Ignore in read-only environment
     }
 
-    // 4. Save to /tmp for serverless container caching
+    // 3. Save to /tmp for serverless container caching
     try {
         fs.writeFileSync(/*turbopackIgnore: true*/ "/tmp/schedule.json", jsonStr, "utf-8");
     } catch {
@@ -123,19 +116,7 @@ export async function getOrFetchSchedule(force = false): Promise<{ data: RouteDa
     }
 
     if (!force) {
-        // 2. Check Vercel Blob (OIDC / Token)
-        try {
-            const blobData = await loadFromVercelBlob<RouteDataset>();
-            if (blobData) {
-                const meta = getCacheMetadata(blobData);
-                inMemoryCache = {data: blobData, meta, timestamp: Date.now()};
-                return {data: blobData, meta};
-            }
-        } catch (err) {
-            console.warn("[ScheduleService] Vercel Blob load fallback:", err);
-        }
-
-        // 3. Check local public or /tmp
+        // 2. Check local public or /tmp
         const fromFile = loadFromLocalFile();
         if (fromFile) {
             const meta = getCacheMetadata(fromFile);

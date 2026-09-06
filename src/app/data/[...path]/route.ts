@@ -1,6 +1,6 @@
-import {API_CONFIG, getBlobBaseUrl} from "@shared/config/env";
-import {head} from "@vercel/blob";
 import {NextResponse} from "next/server";
+
+import {API_CONFIG} from "@shared/config/env";
 
 // Edge CDN ISR Cache: Revalidate every 24 hours (86400 seconds)
 export const revalidate = 86400;
@@ -23,7 +23,7 @@ export async function GET(_request: Request, {params}: { params: Promise<{ path:
         "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000, stale-if-error=2592000",
     };
 
-    // 1. Try local filesystem (for local dev or bundled assets)
+    // 1. Try local filesystem (from public directory)
     try {
         const {readFile} = await import("fs/promises");
         const {existsSync} = await import("fs");
@@ -40,52 +40,10 @@ export async function GET(_request: Request, {params}: { params: Promise<{ path:
             }
         }
     } catch {
-        // Fallback to Vercel Blob
+        // Continue to fallbacks
     }
 
-    // 2. Fetch from Vercel Blob via SDK head() (Supports Vercel OIDC or Token)
-    try {
-        const blobPathsToTry = [relativePath, `data/${relativePath}`];
-        for (const candidatePath of blobPathsToTry) {
-            try {
-                const blobInfo = await head(candidatePath);
-                if (blobInfo?.url) {
-                    const blobRes = await fetch(blobInfo.url, {
-                        next: {revalidate: 3600},
-                    });
-                    if (blobRes.ok) {
-                        const data = await blobRes.text();
-                        return new NextResponse(data, {status: 200, headers});
-                    }
-                }
-            } catch {
-                // Continue to next candidate path
-            }
-        }
-    } catch {
-        // Continue to direct URL fallback
-    }
-
-    // 3. Fetch via Direct Blob Storage Base URL
-    const baseUrl = getBlobBaseUrl();
-    if (baseUrl) {
-        const candidateUrls = [`${baseUrl}/${relativePath}`, `${baseUrl}/data/${relativePath}`];
-        for (const directUrl of candidateUrls) {
-            try {
-                const res = await fetch(directUrl, {
-                    next: {revalidate: 3600},
-                });
-                if (res.ok) {
-                    const data = await res.text();
-                    return new NextResponse(data, {status: 200, headers});
-                }
-            } catch {
-                // Continue
-            }
-        }
-    }
-
-    // 4. Fallback for map style files if not found in Blob or local filesystem
+    // 2. Fallback for map style files if not found in local filesystem
     if (relativePath === "style-dark.json" || relativePath.endsWith("/style-dark.json") || relativePath.endsWith("darker.json")) {
         try {
             const fallbackRes = await fetch(API_CONFIG.MAP_STYLE_DARK_FALLBACK, {next: {revalidate: 86400}});

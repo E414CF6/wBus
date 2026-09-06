@@ -16,27 +16,6 @@ export const STATIC_FILE_NAMES = {
     ROUTE_DIR: "routes",
 } as const;
 
-/**
- * Resolves the public base URL for Vercel Blob store.
- * Supports explicit CDN base URL, OIDC/Token store ID extraction, or fallback.
- */
-export function getBlobBaseUrl(): string | undefined {
-    const customUrl = process.env.NEXT_PUBLIC_STATIC_API_URL || process.env.NEXT_PUBLIC_BLOB_BASE_URL;
-    if (customUrl && customUrl.startsWith("http")) {
-        return customUrl.replace(/\/+$/, "");
-    }
-
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    if (!token) return undefined;
-
-    const match = token.match(/^vercel_blob_rw_([^_]+)_/);
-    if (match) {
-        return `https://${match[1].toLowerCase()}.public.blob.vercel-storage.com`;
-    }
-
-    return undefined;
-}
-
 // Default Geolocation Coordinates (Wonju City Hall / Central Station Area)
 const DEFAULT_CENTER_COORDINATES = "37.3421,127.91976";
 const RAW_POSITION = getEnv(process.env.NEXT_PUBLIC_MAP_DEFAULT_POSITION, DEFAULT_CENTER_COORDINATES);
@@ -62,8 +41,8 @@ export const API_CONFIG = {
         DATA_DELAY_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_DATA_DELAY, 12000),
     },
     STATIC: {
-        BASE_URL: getBlobBaseUrl() || "",
-        USE_REMOTE: getEnvBoolean(process.env.NEXT_PUBLIC_USE_REMOTE_STATIC_DATA, true),
+        BASE_URL: getEnv(process.env.NEXT_PUBLIC_STATIC_API_URL, ""),
+        USE_REMOTE: getEnvBoolean(process.env.NEXT_PUBLIC_USE_REMOTE_STATIC_DATA, false),
         REVALIDATE_SEC: 3600,
         PATHS: {
             ROUTE_DIR: STATIC_FILE_NAMES.ROUTE_DIR,
