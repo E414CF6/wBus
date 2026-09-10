@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import {CacheMetadata} from "@shared/types/bus";
+import type {CacheMetadata} from "../types";
 import {LOCALE, UI_TEXT} from "@shared/config/locale";
 import {Clock, RefreshCw} from "lucide-react";
 

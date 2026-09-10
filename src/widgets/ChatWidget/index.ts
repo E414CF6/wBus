@@ -1,5 +1,6 @@
 export {ChatView} from "./ChatView";
-export {SquareProfileModal, getAvatarGradient} from "./SquareProfileModal";
+export {SquareProfileModal} from "./SquareProfileModal";
+export {getAvatarGradient} from "./utils/avatarUtils";
 
 export * from "./types";
 export * from "./hooks/useChatIdentity";

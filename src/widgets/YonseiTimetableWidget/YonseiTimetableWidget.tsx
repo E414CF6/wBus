@@ -11,13 +11,10 @@ import {YonseiShuttleModal} from "./YonseiShuttleModal";
 import type {ShuttleTab} from "./types";
 
 import {NoticeBanner, NoticeModal} from "@entities/notice";
-import {CacheInfoBanner} from "@entities/schedule";
+import {type BusRoute, CacheInfoBanner, selectRouteVariant} from "@entities/schedule";
 
-import {TARGET_ROUTE_NUMBERS} from "@data/yonseiRoutes";
-
-import {BusRoute} from "@shared/types/bus";
+import {TARGET_ROUTE_NUMBERS} from "@entities/route";
 import {Footer} from "@shared/ui/Footer";
-import {selectRouteVariant} from "@shared/lib/timeUtils";
 
 import {useSchedule} from "@entities/schedule/hooks";
 

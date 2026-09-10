@@ -1,5 +1,5 @@
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
-import type {BusRoute} from "@shared/types/bus";
+import type {BusRoute} from "@entities/schedule";
 import {useMemo} from "react";
 import type {HourlyRow, MinuteItem, SelectedFootnoteInfo} from "../types";
 import {getFootnoteSymbol} from "../utils/footnoteUtils";

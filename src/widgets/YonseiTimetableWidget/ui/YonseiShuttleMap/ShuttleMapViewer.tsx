@@ -11,7 +11,7 @@ import React, {useCallback, useEffect, useMemo, useRef} from "react";
 import MapGL, {MapRef, Marker, NavigationControl} from "react-map-gl/maplibre";
 
 import {getMapStyleUrl} from "@features/map-view/getMapData";
-import {getKakaoRoadviewUrl, YonseiShuttleStop} from "@data/yonseiShuttleStops";
+import {getKakaoRoadviewUrl, type YonseiShuttleStop} from "@entities/station";
 
 // Set MapLibre GL JS v6 Web Worker via official CDN (^6.7.0 pinned major) as per migration guide
 if (typeof window !== "undefined") {

@@ -1,6 +1,6 @@
 import {useState} from "react";
 
-import {generateUserTag, getRandomNickname} from "@data/nicknames";
+import {generateUserTag, getRandomNickname} from "@entities/comment";
 
 export function useChatIdentity() {
     const [authorName, setAuthorName] = useState(() => {

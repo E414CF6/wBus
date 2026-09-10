@@ -1,27 +1,15 @@
 "use client";
 
 import React, {useState, useSyncExternalStore} from "react";
-import {
-    Bus,
-    Calendar,
-    ChevronDown,
-    GraduationCap,
-    Loader2,
-    MapIcon,
-    MapPin,
-    MessageSquare,
-    Moon,
-    Sparkles,
-    Sun,
-    X,
-} from "lucide-react";
+import {Bus, Calendar, ChevronDown, GraduationCap, MapIcon, MapPin, MessageSquare, Moon, Sun,} from "lucide-react";
 import {useTheme} from "next-themes";
 
 import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 
-import {BusListItem} from "./ui/BusListItem";
+import {BusListDrawer} from "./ui/BusListDrawer";
+import {DayModeToggleGroup} from "./ui/DayModeToggleGroup";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
 import {YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 
@@ -158,64 +146,15 @@ export default function BottomNav({
                 className={`fixed bottom-[calc(env(safe-area-inset-bottom,0)+1rem)] left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-3 max-w-[95vw] ${className}`}
             >
                 {/* Expandable Floating Running Bus List Sheet (Map Tab) */}
-                {activeTab === "map" && isBusListOpen && (
-                    <div
-                        className="w-full max-w-sm backdrop-blur-2xl bg-white/90 dark:bg-[#121212]/90 border border-black/10 dark:border-white/10 shadow-[0_16px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_16px_50px_rgba(0,0,0,0.7)] rounded-[28px] overflow-hidden transition-all duration-300 animate-fadeIn">
-                        <div
-                            className="flex items-center justify-between px-4 py-3 border-b border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02]">
-                            <div className="flex items-center space-x-2">
-                                <div
-                                    className="flex items-center justify-center w-7 h-7 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                                    <Bus className="w-4 h-4"/>
-                                </div>
-                                <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white">
-                                    {isConnecting
-                                        ? `${selectedRoute}번 실시간 연결 중`
-                                        : runningBuses.length > 0
-                                            ? UI_TEXT.BOTTOM_NAV.RUNNING_LIST_TITLE(selectedRoute, runningBuses.length)
-                                            : `${selectedRoute}번 운행 종료 (0대)`}
-                                </span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setIsBusListOpen(false)}
-                                className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
-                            >
-                                <X className="w-4 h-4"/>
-                            </button>
-                        </div>
-
-                        <ul className="text-xs sm:text-sm text-black dark:text-white max-h-[35svh] overflow-y-auto p-2.5 space-y-1.5 custom-scrollbar">
-                            {isConnecting ? (
-                                <li className="flex flex-col items-center justify-center py-8 text-amber-600 dark:text-amber-400 gap-2">
-                                    <Loader2 className="w-5 h-5 animate-spin"/>
-                                    <span className="text-xs font-semibold">
-                                        실시간 위치 정보를 확인하고 있습니다...
-                                    </span>
-                                </li>
-                            ) : runningBuses.length === 0 ? (
-                                <li className="text-center py-7 text-slate-500 dark:text-slate-400 text-xs font-medium space-y-1">
-                                    <p className="font-bold text-slate-700 dark:text-slate-300">
-                                        현재 운행 중인 버스가 없습니다.
-                                    </p>
-                                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                                        운행 종료 시간대이거나 차고지 배차 대기 중입니다.
-                                    </p>
-                                </li>
-                            ) : (
-                                runningBuses.map((bus) => (
-                                    <BusListItem
-                                        key={`${selectedRoute}-${bus.vehicleno}`}
-                                        bus={bus}
-                                        routeName={selectedRoute}
-                                        getDirection={getDirection || (() => 0)}
-                                        onClick={(lat, lng) => handleDefaultBusClick(lat, lng)}
-                                    />
-                                ))
-                            )}
-                        </ul>
-                    </div>
-                )}
+                <BusListDrawer
+                    isOpen={activeTab === "map" && isBusListOpen}
+                    onClose={() => setIsBusListOpen(false)}
+                    selectedRoute={selectedRoute}
+                    runningBuses={runningBuses}
+                    isConnecting={isConnecting}
+                    getDirection={getDirection}
+                    onBusClick={handleDefaultBusClick}
+                />
 
                 {/* Unified Bottom Floating Pill Navigation Bar */}
                 <nav
@@ -324,50 +263,11 @@ export default function BottomNav({
                                     {/* Divider */}
                                     <div
                                         className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0 animate-fadeIn"/>
-
-                                    <div className="flex items-center gap-1 shrink-0 animate-fadeIn">
-                                        <button
-                                            type="button"
-                                            onClick={() => onDayModeChange("AUTO")}
-                                            className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                                                dayMode === "AUTO"
-                                                    ? "bg-blue-600 text-white shadow-xs scale-[1.02]"
-                                                    : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/10"
-                                            }`}
-                                            title={`자동 감지 (${isTodayWeekendOrHoliday ? "휴일" : "평일"})`}
-                                        >
-                                            <Sparkles className="w-3 h-3"/>
-                                            <span className="whitespace-nowrap">자동</span>
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => onDayModeChange("WEEKDAY")}
-                                            className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                                                dayMode === "WEEKDAY"
-                                                    ? "bg-amber-600 text-white shadow-xs scale-[1.02]"
-                                                    : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/10"
-                                            }`}
-                                            title="평일 시간표"
-                                        >
-                                            <GraduationCap className="w-3 h-3"/>
-                                            <span className="whitespace-nowrap">평일</span>
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={() => onDayModeChange("VACATION")}
-                                            className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
-                                                dayMode === "VACATION"
-                                                    ? "bg-indigo-600 text-white shadow-xs scale-[1.02]"
-                                                    : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/10"
-                                            }`}
-                                            title="방학·휴일 시간표"
-                                        >
-                                            <Bus className="w-3.5 h-3.5"/>
-                                            <span className="whitespace-nowrap">방학·휴일</span>
-                                        </button>
-                                    </div>
+                                    <DayModeToggleGroup
+                                        dayMode={dayMode}
+                                        onDayModeChange={onDayModeChange}
+                                        isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                                    />
                                 </>
                             )}
                         </>

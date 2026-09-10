@@ -12,6 +12,7 @@ import BusStopMarker from "./BusStopMarker";
 interface RouteLayerProps {
     routeName: string;
     onRouteChange?: (routeName: string) => void;
+    enabled?: boolean;
 }
 
 // ----------------------------------------------------------------------
@@ -22,14 +23,18 @@ interface RouteLayerProps {
  * Renders all map layers for a single route (markers, stops, polyline).
  * Memoized to prevent re-rendering ALL routes when only one route's data updates.
  */
-const RouteLayer = memo(({routeName, onRouteChange}: RouteLayerProps) => {
+const RouteLayer = memo(({routeName, onRouteChange, enabled = true}: RouteLayerProps) => {
     return (<>
-        <BusMarker routeName={routeName}/>
+        <BusMarker routeName={routeName} enabled={enabled}/>
         <BusStopMarker routeName={routeName} onRouteChange={onRouteChange}/>
         <BusRoutePolyline routeName={routeName}/>
     </>);
 }, (prev, next) => {
-    return (prev.routeName === next.routeName && prev.onRouteChange === next.onRouteChange);
+    return (
+        prev.routeName === next.routeName &&
+        prev.onRouteChange === next.onRouteChange &&
+        prev.enabled === next.enabled
+    );
 });
 
 RouteLayer.displayName = "RouteLayer";

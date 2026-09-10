@@ -1,13 +1,11 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useState} from "react";
-import {BusRoute} from "@shared/types/bus";
+import type {BusRoute} from "@entities/schedule";
+import {CacheInfoBanner} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
-import {STORAGE_KEYS} from "@shared/config/env";
 import {NoticeBanner, NoticeModal} from "@entities/notice";
 import {Footer} from "@shared/ui/Footer";
-import {YonseiTimetableWidget} from "@widgets/YonseiTimetableWidget";
-import {CacheInfoBanner} from "@entities/schedule";
 import {BookmarkedDeparturesBanner} from "./BookmarkedDeparturesBanner";
 import {RouteFilter} from "./RouteFilter";
 import {RouteCard} from "./RouteCard";
@@ -15,14 +13,11 @@ import {RouteDetailModal} from "./RouteDetailModal";
 import {useSchedule} from "@entities/schedule/hooks";
 import {AlertTriangle, Bus, CheckCircle2, Info, X} from "lucide-react";
 
-import type {DayMode, TimetableSubTab} from "@shared/types/navigation";
+import type {DayMode} from "@shared/types/navigation";
 
-export type {DayMode, TimetableSubTab};
+export type {DayMode};
 
 interface TimetableWidgetProps {
-    subTab?: TimetableSubTab;
-    onSubTabChange?: (subTab: TimetableSubTab) => void;
-    initialRoute?: string;
     onSelectMapRoute?: (routeName: string) => void;
     dayMode?: DayMode;
     onDayModeChange?: (mode: DayMode) => void;
@@ -31,26 +26,10 @@ interface TimetableWidgetProps {
 const DEFAULT_BOOKMARK_ROUTES = ["30", "34", "34-1"];
 
 export default function TimetableWidget({
-                                            subTab: externalSubTab,
-                                            onSubTabChange: _onSubTabChange,
-                                            initialRoute: _initialRoute,
                                             onSelectMapRoute,
-                                            dayMode,
-                                            onDayModeChange,
+                                            dayMode: _dayMode,
+                                            onDayModeChange: _onDayModeChange,
                                         }: TimetableWidgetProps) {
-    const [internalSubTab, _setInternalSubTab] = useState<TimetableSubTab>(() => {
-        if (typeof window !== "undefined") {
-            try {
-                const savedSubTab = localStorage.getItem(STORAGE_KEYS.TIMETABLE_SUBTAB) as TimetableSubTab | null;
-                if (savedSubTab === "yonsei" || savedSubTab === "all") return savedSubTab;
-            } catch {
-                // Storage error
-            }
-        }
-        return "yonsei";
-    });
-    const subTab = externalSubTab ?? internalSubTab;
-
     // Single source of truth: useSchedule hook (SWR managed, zero infinite loop)
     const {
         data,
@@ -180,160 +159,149 @@ export default function TimetableWidget({
     }, [routes, bookmarks.length, isRouteBookmarked]);
 
     return (
-        <div className="w-full flex-1 flex flex-col">
-            {subTab === "yonsei" ? (
-                <YonseiTimetableWidget
-                    onSelectMapRoute={onSelectMapRoute}
-                    isEmbedded={true}
-                    dayMode={dayMode}
-                    onDayModeChange={onDayModeChange}
-                />
-            ) : (
-                <div className="w-full flex flex-col gap-4 sm:gap-6 animate-fadeIn">
-                    {/* Refresh Toast Banner */}
-                    {refreshToast && (
-                        <div
-                            className={`p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between transition-all animate-fadeIn shadow-sm ${
-                                refreshToast.type === "success"
-                                    ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
-                                    : refreshToast.type === "error"
-                                        ? "bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200"
-                                        : "bg-blue-50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-500/40 text-blue-800 dark:text-blue-200"
-                            }`}
-                        >
-                            <div className="flex items-center space-x-2.5">
-                                {refreshToast.type === "success" ? (
-                                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"/>
-                                ) : (
-                                    <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"/>
-                                )}
-                                <span className="text-xs sm:text-sm font-semibold">{refreshToast.message}</span>
-                            </div>
-                            <button
-                                onClick={clearRefreshToast}
-                                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors shrink-0 ml-2 cursor-pointer"
-                                title="닫기"
-                            >
-                                <X className="h-4 w-4"/>
-                            </button>
-                        </div>
-                    )}
-
-                    {/* ITS Live Notice Banner */}
-                    <NoticeBanner onClick={handleOpenNotice}/>
-
-                    {/* Bookmarked Live Departures Banner */}
-                    {routes && routes.length > 0 && (
-                        <BookmarkedDeparturesBanner
-                            routes={routes}
-                            bookmarks={bookmarks}
-                            currentTime={now}
-                            onSelectRoute={(route) => setSelectedRoute(route)}
-                        />
-                    )}
-
-                    {/* Search & Category Filter Bar */}
-                    <RouteFilter
-                        searchQuery={searchQuery}
-                        setSearchQuery={setSearchQuery}
-                        selectedDayType={selectedDayType}
-                        setSelectedDayType={setSelectedDayType}
-                        selectedCategory={selectedCategory}
-                        setSelectedCategory={setSelectedCategory}
-                        showOnlyBookmarks={showOnlyBookmarks}
-                        setShowOnlyBookmarks={setShowOnlyBookmarks}
-                        bookmarkCount={activeBookmarkCount}
-                        totalFilteredCount={totalFilteredCount}
-                    />
-
-                    {/* Error Banner */}
-                    {error && (
-                        <div
-                            className="p-3.5 sm:p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/30 text-rose-800 dark:text-rose-300 flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <AlertTriangle
-                                    className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-rose-600 dark:text-rose-400"/>
-                                <span className="text-xs sm:text-sm font-medium">{error}</span>
-                            </div>
-                            <button
-                                onClick={() => refresh(false)}
-                                className="px-2.5 sm:px-3 py-1 rounded-xl bg-rose-200 dark:bg-rose-500/20 hover:bg-rose-300 dark:hover:bg-rose-500/30 text-xs font-semibold transition-colors cursor-pointer"
-                            >
-                                {UI_TEXT.COMMON.RETRY}
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Route Cards Grid */}
-                    {isLoading && (!data || routes.length === 0) ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
-                            {[1, 2, 3, 4, 5, 6].map((i) => (
-                                <div
-                                    key={i}
-                                    className="h-48 sm:h-52 backdrop-blur-xl bg-white/40 dark:bg-[#121212]/40 rounded-3xl animate-pulse border border-black/5 dark:border-white/5"
-                                />
-                            ))}
-                        </div>
-                    ) : filteredRoutes.length === 0 ? (
-                        <div
-                            className="backdrop-blur-xl bg-white/80 dark:bg-[#121212]/80 rounded-3xl p-8 sm:p-12 text-center my-6 border border-slate-200 dark:border-slate-800">
-                            <Bus className="h-8 w-8 sm:h-10 sm:w-10 mx-auto text-slate-400 mb-2 sm:mb-3"/>
-                            <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
-                                {UI_TEXT.TIMETABLE.NO_ROUTES_FOUND}
-                            </h3>
-                            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                {UI_TEXT.TIMETABLE.NO_ROUTES_DESC}
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
-                            {filteredRoutes.map((route) => (
-                                <RouteCard
-                                    key={route.id}
-                                    route={route}
-                                    isBookmarked={isRouteBookmarked(route)}
-                                    onToggleBookmark={(id) => toggleBookmark(id)}
-                                    onSelectRoute={(r) => setSelectedRoute(r)}
-                                    onSelectMapRoute={onSelectMapRoute}
-                                    currentTime={now}
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Cache Information Banner & Manual Refresh */}
-                    <CacheInfoBanner
-                        meta={meta}
-                        onRefresh={() => refresh(true)}
-                        isRefreshing={isRefreshing}
-                    />
-
-                    {/* Footer Links */}
-                    <Footer/>
-
-                    {/* Detail Modal */}
-                    {selectedRoute && (
-                        <RouteDetailModal
-                            route={selectedRoute}
-                            isBookmarked={isRouteBookmarked(selectedRoute)}
-                            onToggleBookmark={(id) => toggleBookmark(id)}
-                            onSelectMapRoute={onSelectMapRoute}
-                            onClose={() => setSelectedRoute(null)}
-                            currentTime={now}
-                        />
-                    )}
-
-                    {/* Notice Detail Modal */}
-                    <NoticeModal
-                        isOpen={isNoticeOpen}
-                        onClose={() => {
-                            setIsNoticeOpen(false);
-                            setSelectedNoticeId(null);
-                        }}
-                        initialNoticeId={selectedNoticeId}
-                    />
+        <div className="w-full flex flex-col gap-4 sm:gap-6 animate-fadeIn">
+            {/* Refresh Toast Banner */}
+            {refreshToast && (
+                <div
+                    className={`p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between transition-all animate-fadeIn shadow-sm ${
+                        refreshToast.type === "success"
+                            ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
+                            : refreshToast.type === "error"
+                                ? "bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200"
+                                : "bg-blue-50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-500/40 text-blue-800 dark:text-blue-200"
+                    }`}
+                >
+                    <div className="flex items-center space-x-2.5">
+                        {refreshToast.type === "success" ? (
+                            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"/>
+                        ) : (
+                            <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"/>
+                        )}
+                        <span className="text-xs sm:text-sm font-semibold">{refreshToast.message}</span>
+                    </div>
+                    <button
+                        onClick={clearRefreshToast}
+                        className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors shrink-0 ml-2 cursor-pointer"
+                        title="닫기"
+                    >
+                        <X className="h-4 w-4"/>
+                    </button>
                 </div>
             )}
+
+            {/* ITS Live Notice Banner */}
+            <NoticeBanner onClick={handleOpenNotice}/>
+
+            {/* Bookmarked Live Departures Banner */}
+            {routes && routes.length > 0 && (
+                <BookmarkedDeparturesBanner
+                    routes={routes}
+                    bookmarks={bookmarks}
+                    currentTime={now}
+                    onSelectRoute={(route) => setSelectedRoute(route)}
+                />
+            )}
+
+            {/* Search & Category Filter Bar */}
+            <RouteFilter
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                selectedDayType={selectedDayType}
+                setSelectedDayType={setSelectedDayType}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                showOnlyBookmarks={showOnlyBookmarks}
+                setShowOnlyBookmarks={setShowOnlyBookmarks}
+                bookmarkCount={activeBookmarkCount}
+                totalFilteredCount={totalFilteredCount}
+            />
+
+            {/* Error Banner */}
+            {error && (
+                <div
+                    className="p-3.5 sm:p-4 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/30 text-rose-800 dark:text-rose-300 flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                        <AlertTriangle
+                            className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 text-rose-600 dark:text-rose-400"/>
+                        <span className="text-xs sm:text-sm font-medium">{error}</span>
+                    </div>
+                    <button
+                        onClick={() => refresh(false)}
+                        className="px-2.5 sm:px-3 py-1 rounded-xl bg-rose-200 dark:bg-rose-500/20 hover:bg-rose-300 dark:hover:bg-rose-500/30 text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                        {UI_TEXT.COMMON.RETRY}
+                    </button>
+                </div>
+            )}
+
+            {/* Route Cards Grid */}
+            {isLoading && (!data || routes.length === 0) ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div
+                            key={i}
+                            className="h-48 sm:h-52 backdrop-blur-xl bg-white/40 dark:bg-[#121212]/40 rounded-3xl animate-pulse border border-black/5 dark:border-white/5"
+                        />
+                    ))}
+                </div>
+            ) : filteredRoutes.length === 0 ? (
+                <div
+                    className="backdrop-blur-xl bg-white/80 dark:bg-[#121212]/80 rounded-3xl p-8 sm:p-12 text-center my-6 border border-slate-200 dark:border-slate-800">
+                    <Bus className="h-8 w-8 sm:h-10 sm:w-10 mx-auto text-slate-400 mb-2 sm:mb-3"/>
+                    <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200">
+                        {UI_TEXT.TIMETABLE.NO_ROUTES_FOUND}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        {UI_TEXT.TIMETABLE.NO_ROUTES_DESC}
+                    </p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-6">
+                    {filteredRoutes.map((route) => (
+                        <RouteCard
+                            key={route.id}
+                            route={route}
+                            isBookmarked={isRouteBookmarked(route)}
+                            onToggleBookmark={(id) => toggleBookmark(id)}
+                            onSelectRoute={(r) => setSelectedRoute(r)}
+                            onSelectMapRoute={onSelectMapRoute}
+                            currentTime={now}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {/* Cache Information Banner & Manual Refresh */}
+            <CacheInfoBanner
+                meta={meta}
+                onRefresh={() => refresh(true)}
+                isRefreshing={isRefreshing}
+            />
+
+            {/* Footer Links */}
+            <Footer/>
+
+            {/* Detail Modal */}
+            {selectedRoute && (
+                <RouteDetailModal
+                    route={selectedRoute}
+                    isBookmarked={isRouteBookmarked(selectedRoute)}
+                    onToggleBookmark={(id) => toggleBookmark(id)}
+                    onSelectMapRoute={onSelectMapRoute}
+                    onClose={() => setSelectedRoute(null)}
+                    currentTime={now}
+                />
+            )}
+
+            {/* Notice Detail Modal */}
+            <NoticeModal
+                isOpen={isNoticeOpen}
+                onClose={() => {
+                    setIsNoticeOpen(false);
+                    setSelectedNoticeId(null);
+                }}
+                initialNoticeId={selectedNoticeId}
+            />
         </div>
     );
 }

@@ -3,7 +3,7 @@
 import React from "react";
 import {Camera, ExternalLink, Info, MapPin, Navigation} from "lucide-react";
 
-import {getKakaoMapUrl, getKakaoRoadviewUrl, YonseiShuttleStop,} from "@data/yonseiShuttleStops";
+import {getKakaoMapUrl, getKakaoRoadviewUrl, type YonseiShuttleStop} from "@entities/station";
 
 interface ShuttleStopDetailCardProps {
     stop: YonseiShuttleStop;

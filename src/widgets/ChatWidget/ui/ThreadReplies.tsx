@@ -4,7 +4,7 @@ import {Ban, Heart, MessageCircle, Trash2} from "lucide-react";
 import type {CommentItem} from "@entities/comment";
 
 import {formatRelativeTime} from "@shared/lib/timeUtils";
-import {getAvatarGradient} from "@widgets/ChatWidget";
+import {getAvatarGradient} from "../utils/avatarUtils";
 
 import {renderRichContent} from "../utils/textParser";
 

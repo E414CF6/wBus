@@ -1,4 +1,4 @@
-import {scrapeWonjuNoticeDetail} from "@entities/notice";
+import {scrapeWonjuNoticeDetail} from "@entities/notice/server";
 import {type NextRequest, NextResponse} from "next/server";
 
 // Edge CDN ISR Cache: Revalidate every 2 hours (7200 seconds)

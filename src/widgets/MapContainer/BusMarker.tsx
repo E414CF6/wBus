@@ -137,11 +137,12 @@ BusPopupContent.displayName = "BusPopupContent";
 
 interface BusMarkerProps {
     routeName: string;
+    enabled?: boolean;
     onPopupOpen?: (routeName: string) => void;
     onPopupClose?: () => void;
 }
 
-export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMarkerProps) {
+export default function BusMarker({routeName, enabled = true, onPopupOpen, onPopupClose}: BusMarkerProps) {
     // Data Fetching
     const {
         routeInfo,
@@ -151,7 +152,7 @@ export default function BusMarker({routeName, onPopupOpen, onPopupClose}: BusMar
         fallbackPolylines,
         activeRouteId,
         connectionStatus,
-    } = useBusData(routeName);
+    } = useBusData(routeName, enabled);
 
     const [selectedBusKey, setSelectedBusKey] = useState<string | null>(null);
 

@@ -3,7 +3,7 @@
 import useSWR from "swr";
 import {useCallback, useEffect, useState} from "react";
 
-import {ApiResponse, BusCacheData, CacheMetadata} from "@shared/types/bus";
+import type {BusCacheData, CacheMetadata, ScheduleApiResponse} from "./types";
 import {STORAGE_KEYS} from "@shared/config/env";
 
 const SCHEDULE_SWR_OPTIONS = {
@@ -39,7 +39,7 @@ async function fetchScheduleApi(): Promise<{ data: BusCacheData; meta: CacheMeta
         const local = getLocalScheduleFallback();
         if (local) return local;
     }
-    const json: ApiResponse<BusCacheData> = await res.json();
+    const json: ScheduleApiResponse = await res.json();
     if (!json.success || !json.data) {
         throw new Error(json.error || "시간표 데이터를 불러올 수 없습니다.");
     }
@@ -86,7 +86,7 @@ export function useSchedule() {
                 method,
                 ...(force ? {cache: "no-store", headers: {"Cache-Control": "no-cache"}} : {}),
             });
-            const json: ApiResponse<BusCacheData> = await res.json();
+            const json: ScheduleApiResponse = await res.json();
             if (!json.success || !json.data) {
                 throw new Error(json.error || "시간표 갱신에 실패했습니다.");
             }

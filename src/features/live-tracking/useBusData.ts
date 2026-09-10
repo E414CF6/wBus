@@ -30,12 +30,13 @@ interface UseBusData {
  * @param routeName - The name of the route (e.g., "30", "34")
  * @returns An object containing all bus data for the route
  */
-export function useBusData(routeName: string): UseBusData {
-    const routeInfo = useRouteInfo(routeName);
+export function useBusData(routeName: string, enabled: boolean = true): UseBusData {
+    const routeInfo = useRouteInfo(routeName, enabled);
     const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
+    const activeRouteIds = useMemo(() => (enabled ? routeIds : []), [enabled, routeIds]);
     const {
         data: busList, connectionStatus, hasFetched, error, lastUpdated, isDegraded, reconnect
-    } = useBusLocationData(routeIds);
+    } = useBusLocationData(activeRouteIds);
     const directionFn = useBusDirection(routeName);
 
     const activeRouteId = useMemo(() => {

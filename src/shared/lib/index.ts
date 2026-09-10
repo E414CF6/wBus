@@ -2,10 +2,9 @@ export {
     formatCooldownRemaining,
     formatRelativeTime,
     formatRemainingTime,
-    getNextDeparture,
-    getUpcomingDepartures,
+    formatMinutesToTime,
+    parseTimeToMinutes,
     isWeekend,
-    selectRouteVariant,
 } from "./timeUtils";
 export * from "./security";
 

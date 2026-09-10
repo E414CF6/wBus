@@ -1,8 +1,7 @@
 "use client";
 
 import React, {memo} from "react";
-import {BusRoute} from "@shared/types/bus";
-import {getNextDeparture} from "@shared/lib/timeUtils";
+import {type BusRoute, getNextDeparture} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
 import {ArrowRight, ChevronRight, Clock, Star} from "lucide-react";
 

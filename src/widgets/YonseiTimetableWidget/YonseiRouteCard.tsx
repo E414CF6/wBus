@@ -3,7 +3,7 @@
 import React, {memo, useMemo} from "react";
 import {AlertCircle, ChevronRight, Clock, MapPin} from "lucide-react";
 
-import {BusRoute} from "@shared/types/bus";
+import type {BusRoute} from "@entities/schedule";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 import {UI_TEXT} from "@shared/config/locale";
 

@@ -1,4 +1,4 @@
-import {generateUserTag, getRandomNickname} from "@data/nicknames";
+import {generateUserTag, getRandomNickname} from "./nicknames";
 
 import {validateAndSanitizeContent} from "@shared/lib/security";
 import {createClient} from "@shared/supabase/server";

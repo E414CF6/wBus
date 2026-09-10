@@ -1,4 +1,4 @@
-import type {BusRoute, RouteDataset, TimetableEntry} from "@shared/types/bus";
+import type {BusRoute, RouteDataset, TimetableEntry} from "./types";
 import {APP_LOCALE} from "@shared/config/locale";
 
 const BASE_URL = "http://its.wonju.go.kr";

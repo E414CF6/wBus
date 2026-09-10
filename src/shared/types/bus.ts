@@ -1,58 +1,15 @@
 export type LiveConnectionStatus = "connecting" | "connected" | "fallback" | "suspended";
 export type SSEConnectionStatus = LiveConnectionStatus; // Backward-compatibility alias
 
-export interface TimetableEntry {
-    seq: number;
-    originDepTime: string;
-    destDepTime: string;
-    type: string;
-    notes: string;
-}
-
-export interface BusRoute {
-    id: string;
-    rawNo: string;
-    routeNo: string;
-    dayType: string;
-    origin: string;
-    destination: string;
-    firstBus: string;
-    lastBus: string;
-    runCount: string;
-    interval: string;
-    timetable: TimetableEntry[];
-}
-
-export interface BusCacheData {
-    updatedAt: string;
-    sourceUrl: string;
-    totalRoutes: number;
-    routes: BusRoute[];
-}
-
-export type RouteDataset = BusCacheData;
-
-export interface CacheMetadata {
-    filePath?: string;
-    exists: boolean;
-    sizeBytes?: number;
-    updatedAt: string | null;
-    totalRoutes: number;
-    minRefreshIntervalDays: number;
-    canRefresh: boolean;
-    nextRefreshAvailableAt: string | null;
-}
-
-export interface ApiResponse<T> {
+export interface ApiResponse<T = unknown, M = unknown> {
     success: boolean;
     refreshed?: boolean;
     message?: string;
     data?: T;
-    meta?: CacheMetadata;
+    meta?: M;
     error?: string;
     elapsedMs?: number;
 }
 
 export type {DayMode} from "./navigation";
 
-export type DepartureDirection = "DEST" | "ORIGIN";

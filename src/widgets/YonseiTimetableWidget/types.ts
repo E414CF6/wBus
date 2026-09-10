@@ -1,5 +1,4 @@
-import type {ShuttleInboundItem, ShuttleOutboundItem, ShuttleViaStop,} from "@data/yonseiShuttleSchedule";
-import type {BusRoute} from "@shared/types/bus";
+import type {BusRoute, ShuttleInboundItem, ShuttleOutboundItem, ShuttleViaStop} from "@entities/schedule";
 
 export type YonseiShuttleItem = ShuttleInboundItem | ShuttleOutboundItem;
 export type {ShuttleViaStop};

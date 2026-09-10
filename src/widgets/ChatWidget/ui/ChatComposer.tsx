@@ -3,7 +3,7 @@ import {Dices, Hash, Send} from "lucide-react";
 
 import {QUICK_HASHTAGS} from "../types";
 
-import {getAvatarGradient} from "@widgets/ChatWidget";
+import {getAvatarGradient} from "../utils/avatarUtils";
 
 interface ChatComposerProps {
     authorName: string;

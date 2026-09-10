@@ -3,7 +3,7 @@
 import React, {memo, useMemo} from "react";
 import {AlertCircle, Bus, ChevronRight, Clock, GraduationCap, MapPin} from "lucide-react";
 
-import {YONSEI_SHUTTLE_SCHEDULE} from "@data/yonseiShuttleSchedule";
+import {YONSEI_SHUTTLE_SCHEDULE} from "@entities/schedule";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 
 import type {ShuttleTab} from "./types";

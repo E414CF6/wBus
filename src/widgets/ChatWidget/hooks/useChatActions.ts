@@ -1,8 +1,6 @@
 import React, {useCallback, useEffect, useRef, useState} from "react";
 
-import {generateUserTag, getRandomNickname} from "@data/nicknames";
-
-import type {CommentItem} from "@entities/comment";
+import {type CommentItem, generateUserTag, getRandomNickname} from "@entities/comment";
 
 import type {ReplyTarget} from "../types";
 

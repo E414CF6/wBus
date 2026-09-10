@@ -36,7 +36,7 @@ function clampIndex(value: number, max: number): number {
     return Math.max(0, Math.min(value, max));
 }
 
-function getStopCoordIndex(stopIndexMap: StopIndexMap | null | undefined, nodeid: string | null | undefined, nodeord: number, direction: number | null): number | null {
+export function getStopCoordIndex(stopIndexMap: StopIndexMap | null | undefined, nodeid: string | null | undefined, nodeord: number, direction: number | null): number | null {
     if (!stopIndexMap) return null;
 
     const cleanedId = typeof nodeid === "string" ? nodeid.trim() : "";
@@ -72,7 +72,7 @@ function getSegmentHint(coordIndex: number | null, lineLength: number): number |
     return clampIndex(coordIndex, lineLength - 2);
 }
 
-function getSegmentBounds(stopIndexMap: StopIndexMap | null | undefined, nodeord: number, dir: number | null, lineLength: number): {
+export function getSegmentBounds(stopIndexMap: StopIndexMap | null | undefined, nodeord: number, dir: number | null, lineLength: number): {
     minIdx: number | null, maxIdx: number | null
 } {
     if (!stopIndexMap) return {minIdx: null, maxIdx: null};

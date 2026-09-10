@@ -1,7 +1,7 @@
 import {useMemo} from "react";
 import type {DayFilter} from "../types";
 
-import {YONSEI_SHUTTLE_SCHEDULE} from "@data/yonseiShuttleSchedule";
+import {YONSEI_SHUTTLE_SCHEDULE} from "@entities/schedule";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 
 interface UseYonseiShuttleScheduleOptions {

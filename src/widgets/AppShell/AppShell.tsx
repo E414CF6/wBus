@@ -16,6 +16,7 @@ import {BottomNav} from "@widgets/BottomNav";
 
 import {ChatView} from "@widgets/ChatWidget";
 import {TimetableWidget} from "@widgets/TimetableWidget";
+import {YonseiTimetableWidget} from "@widgets/YonseiTimetableWidget";
 import {useAppNavigation} from "./hooks/useAppNavigation";
 
 /**
@@ -130,6 +131,7 @@ export function AppShell() {
                         <RouteLayer
                             routeName={activeRoute}
                             onRouteChange={handleRouteChange}
+                            enabled={isMapActive}
                         />
                     </MapWrapper>
                 </div>
@@ -140,13 +142,19 @@ export function AppShell() {
                 <main
                     className="w-full min-h-dvh px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-32 sm:pb-36 flex flex-col items-center">
                     <div className="w-full max-w-6xl flex-1 flex flex-col">
-                        <TimetableWidget
-                            subTab={timetableSubTab}
-                            onSubTabChange={handleScheduleSubTabChange}
-                            onSelectMapRoute={handleSelectMapRoute}
-                            dayMode={dayMode}
-                            onDayModeChange={setDayMode}
-                        />
+                        {timetableSubTab === "yonsei" ? (
+                            <YonseiTimetableWidget
+                                onSelectMapRoute={handleSelectMapRoute}
+                                dayMode={dayMode}
+                                onDayModeChange={setDayMode}
+                            />
+                        ) : (
+                            <TimetableWidget
+                                onSelectMapRoute={handleSelectMapRoute}
+                                dayMode={dayMode}
+                                onDayModeChange={setDayMode}
+                            />
+                        )}
                     </div>
                 </main>
             )}

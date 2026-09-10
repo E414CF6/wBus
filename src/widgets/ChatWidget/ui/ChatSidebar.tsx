@@ -3,7 +3,7 @@ import {Dices, Flame, Heart, MessageCircle, Sparkles, TrendingUp, User} from "lu
 
 import {RankedThread, TrendingTag} from "../types";
 
-import {getAvatarGradient} from "@widgets/ChatWidget";
+import {getAvatarGradient} from "../utils/avatarUtils";
 
 interface ChatSidebarProps {
     authorName: string;

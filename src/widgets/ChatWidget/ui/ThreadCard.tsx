@@ -5,7 +5,7 @@ import type {ReplyTarget} from "../types";
 import type {CommentItem} from "@entities/comment";
 
 import {formatRelativeTime} from "@shared/lib/timeUtils";
-import {getAvatarGradient} from "@widgets/ChatWidget";
+import {getAvatarGradient} from "../utils/avatarUtils";
 
 import {renderRichContent} from "../utils/textParser";
 

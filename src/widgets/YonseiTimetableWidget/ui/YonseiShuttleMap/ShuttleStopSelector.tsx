@@ -2,7 +2,7 @@
 
 import React from "react";
 
-import {YonseiShuttleStop} from "@data/yonseiShuttleStops";
+import type {YonseiShuttleStop} from "@entities/station";
 
 interface ShuttleStopSelectorProps {
     stops: YonseiShuttleStop[];

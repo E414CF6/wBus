@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-09-03T08:43:32.795Z",
+  "updatedAt": "2026-09-10T02:34:35.961Z",
   "sourceUrl": "http://its.wonju.go.kr/bus/bus04.do",
   "totalRoutes": 91,
   "routes": [
@@ -8425,13 +8425,13 @@
         {
           "seq": 3,
           "originDepTime": "9:00",
-          "destDepTime": "10:20",
+          "destDepTime": "10:25",
           "type": "공통",
           "notes": ""
         },
         {
           "seq": 4,
-          "originDepTime": "9:45",
+          "originDepTime": "9:40",
           "destDepTime": "11:05",
           "type": "공통",
           "notes": ""
@@ -8446,34 +8446,34 @@
         {
           "seq": 6,
           "originDepTime": "11:30",
-          "destDepTime": "12:50",
+          "destDepTime": "12:55",
           "type": "공통",
           "notes": ""
         },
         {
           "seq": 7,
           "originDepTime": "12:30",
-          "destDepTime": "13:50",
+          "destDepTime": "13:55",
           "type": "공통",
           "notes": ""
         },
         {
           "seq": 8,
-          "originDepTime": "13:20",
+          "originDepTime": "13:15",
           "destDepTime": "14:40",
           "type": "공통",
           "notes": ""
         },
         {
           "seq": 9,
-          "originDepTime": "14:35",
+          "originDepTime": "14:30",
           "destDepTime": "15:55",
           "type": "공통",
           "notes": ""
         },
         {
           "seq": 10,
-          "originDepTime": "15:25",
+          "originDepTime": "15:20",
           "destDepTime": "16:45",
           "type": "공통",
           "notes": ""
@@ -8481,34 +8481,34 @@
         {
           "seq": 11,
           "originDepTime": "16:00",
-          "destDepTime": "17:20",
+          "destDepTime": "17:30",
           "type": "공통",
           "notes": ""
         },
         {
           "seq": 12,
-          "originDepTime": "17:10",
-          "destDepTime": "18:35",
+          "originDepTime": "17:00",
+          "destDepTime": "18:25",
           "type": "공통",
           "notes": ""
         },
         {
           "seq": 13,
           "originDepTime": "18:00",
-          "destDepTime": "19:25",
+          "destDepTime": "19:30",
           "type": "공통",
           "notes": ""
         },
         {
           "seq": 14,
-          "originDepTime": "19:00",
+          "originDepTime": "18:55",
           "destDepTime": "20:20",
           "type": "공통",
           "notes": ""
         },
         {
           "seq": 15,
-          "originDepTime": "19:45",
+          "originDepTime": "19:40",
           "destDepTime": "21:05",
           "type": "공통",
           "notes": ""
@@ -8522,7 +8522,7 @@
         },
         {
           "seq": 17,
-          "originDepTime": "22:10",
+          "originDepTime": "22:05",
           "destDepTime": "23:20",
           "type": "공통",
           "notes": "롯데캐슬발)원주역미경유"

@@ -1,4 +1,4 @@
-import {ROUTE_CONFIG} from "@data/yonseiRoutes";
+import {ROUTE_CONFIG} from "./yonseiRoutes";
 
 export interface RouteMeta {
     routeNo: string;

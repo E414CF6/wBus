@@ -3,7 +3,7 @@
 import React from "react";
 import {ShieldAlert} from "lucide-react";
 
-import {YONSEI_SHUTTLE_SCHEDULE} from "@data/yonseiShuttleSchedule";
+import {YONSEI_SHUTTLE_SCHEDULE} from "@entities/schedule";
 
 import {UI_TEXT} from "@shared/config/locale";
 

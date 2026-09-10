@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import {revalidateTag, unstable_cache} from "next/cache";
 
-import type {CacheMetadata, RouteDataset} from "@shared/types/bus";
+import type {CacheMetadata, RouteDataset} from "./types";
 import {LOCALE} from "@shared/config/locale";
 import {scrapeWonjuBusDataset, scrapeWonjuItsYonsei} from "./itsScraper";
 

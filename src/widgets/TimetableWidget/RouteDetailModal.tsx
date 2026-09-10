@@ -2,8 +2,7 @@
 
 import React, {useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
-import {BusRoute} from "@shared/types/bus";
-import {getNextDeparture} from "@shared/lib/timeUtils";
+import {type BusRoute, getNextDeparture} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
 import {ArrowRight, MapPin, Search, Star, X} from "lucide-react";
 
