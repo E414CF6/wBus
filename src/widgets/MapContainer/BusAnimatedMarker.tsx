@@ -4,7 +4,7 @@ import {MAP_SETTINGS} from "@shared/config/env";
 
 import {type Coordinate, normalizeAngle} from "@shared/utils/geo";
 
-import {useAnimatedPosition} from "@shared/hooks/useAnimatedPosition";
+import {useAnimatedPosition} from "@shared/animation";
 
 import React, {memo, useRef} from "react";
 import {Marker} from "react-map-gl/maplibre";

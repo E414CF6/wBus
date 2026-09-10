@@ -31,8 +31,6 @@ export * from "./chat";
 export * from "./routeSelect";
 export * from "./notice";
 
-// Backward-compatible data re-export
-export {type YonseiDaySchedule, YONSEI_STATIC_TIMETABLES} from "@data/yonseiStaticTimetables";
 
 /**
  * User Interface Text (Korean)

@@ -1,3 +1,6 @@
+export type LiveConnectionStatus = "connecting" | "connected" | "fallback" | "suspended";
+export type SSEConnectionStatus = LiveConnectionStatus; // Backward-compatibility alias
+
 export interface TimetableEntry {
     seq: number;
     originDepTime: string;
@@ -50,6 +53,6 @@ export interface ApiResponse<T> {
     elapsedMs?: number;
 }
 
-export type DayMode = "AUTO" | "WEEKDAY" | "VACATION";
+export type {DayMode} from "./navigation";
 
 export type DepartureDirection = "DEST" | "ORIGIN";

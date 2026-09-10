@@ -10,8 +10,8 @@ import {YonseiShuttleModal} from "./YonseiShuttleModal";
 
 import type {ShuttleTab} from "./types";
 
-import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
-import {CacheInfoBanner} from "@widgets/TimetableWidget/CacheInfoBanner";
+import {NoticeBanner, NoticeModal} from "@entities/notice";
+import {CacheInfoBanner} from "@entities/schedule";
 
 import {TARGET_ROUTE_NUMBERS} from "@data/yonseiRoutes";
 

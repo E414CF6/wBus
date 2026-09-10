@@ -1,7 +1,7 @@
 import {type NextRequest, NextResponse} from "next/server";
 import {revalidatePath} from "next/cache";
 
-import {invalidateScheduleTag, refreshSchedule} from "@entities/schedule";
+import {invalidateScheduleTag, refreshSchedule} from "@entities/schedule/server";
 import {UI_TEXT} from "@shared/config/locale";
 
 export async function POST(request: NextRequest) {

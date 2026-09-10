@@ -6,8 +6,7 @@ import {Bus, ChevronDown, GraduationCap, RefreshCw} from "lucide-react";
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
 
-import type {BusItem} from "@entities/bus/types";
-import type {SSEConnectionStatus} from "@features/live-tracking/useBusLocation";
+import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 
 // ----------------------------------------------------------------------
 // Types
@@ -18,7 +17,7 @@ interface MapRouteHeaderProps {
     onSelectRoute: (route: string) => void;
     runningBuses?: BusItem[];
     allRoutes?: string[];
-    connectionStatus?: SSEConnectionStatus;
+    connectionStatus?: LiveConnectionStatus;
     hasFetched?: boolean;
     isDegraded?: boolean;
     onReconnect?: () => void;

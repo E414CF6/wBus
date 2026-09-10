@@ -4,10 +4,10 @@ import React, {useCallback, useEffect, useMemo, useState} from "react";
 import {BusRoute} from "@shared/types/bus";
 import {UI_TEXT} from "@shared/config/locale";
 import {STORAGE_KEYS} from "@shared/config/env";
-import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
+import {NoticeBanner, NoticeModal} from "@entities/notice";
 import {Footer} from "@shared/ui/Footer";
 import {YonseiTimetableWidget} from "@widgets/YonseiTimetableWidget";
-import {CacheInfoBanner} from "./CacheInfoBanner";
+import {CacheInfoBanner} from "@entities/schedule";
 import {BookmarkedDeparturesBanner} from "./BookmarkedDeparturesBanner";
 import {RouteFilter} from "./RouteFilter";
 import {RouteCard} from "./RouteCard";
@@ -15,8 +15,9 @@ import {RouteDetailModal} from "./RouteDetailModal";
 import {useSchedule} from "@entities/schedule/hooks";
 import {AlertTriangle, Bus, CheckCircle2, Info, X} from "lucide-react";
 
-export type TimetableSubTab = "yonsei" | "all";
-export type DayMode = "AUTO" | "WEEKDAY" | "VACATION";
+import type {DayMode, TimetableSubTab} from "@shared/types/navigation";
+
+export type {DayMode, TimetableSubTab};
 
 interface TimetableWidgetProps {
     subTab?: TimetableSubTab;

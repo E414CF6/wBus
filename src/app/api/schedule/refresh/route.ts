@@ -1,7 +1,7 @@
 import {revalidatePath} from "next/cache";
 import {type NextRequest, NextResponse} from "next/server";
 
-import {invalidateScheduleTag, refreshSchedule} from "@entities/schedule";
+import {invalidateScheduleTag, refreshSchedule} from "@entities/schedule/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;

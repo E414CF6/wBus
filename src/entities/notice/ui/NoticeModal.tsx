@@ -28,7 +28,7 @@ interface NoticeModalProps {
     initialNoticeId?: string | null;
 }
 
-export default function NoticeModal({isOpen, onClose, initialNoticeId = null}: NoticeModalProps) {
+export function NoticeModal({isOpen, onClose, initialNoticeId = null}: NoticeModalProps) {
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const [page, setPage] = useState(1);
     const [searchInput, setSearchInput] = useState("");
@@ -490,3 +490,5 @@ function ListSkeleton() {
         </div>
     );
 }
+
+export default NoticeModal;

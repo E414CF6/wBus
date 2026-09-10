@@ -1,4 +1,4 @@
-import {getOrFetchSchedule} from "@entities/schedule";
+import {getOrFetchSchedule} from "@entities/schedule/server";
 import {type NextRequest, NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";

@@ -22,9 +22,19 @@ export interface UseSquareCommentsReturn {
     deleteComment: (id: string, authorTag?: string) => Promise<void>;
 }
 
-export function useSquareComments(): UseSquareCommentsReturn {
+export interface UseSquareCommentsOptions {
+    enabled?: boolean;
+}
+
+export function useSquareComments(options: UseSquareCommentsOptions = {}): UseSquareCommentsReturn {
+    const {enabled = true} = options;
     const [comments, setComments] = useState<CommentItem[]>([]);
     const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+    const [hasActivated, setHasActivated] = useState<boolean>(enabled);
+
+    if (enabled && !hasActivated) {
+        setHasActivated(true);
+    }
 
     const fetchComments = useCallback(async (force = false) => {
         setIsRefreshing(true);
@@ -49,6 +59,7 @@ export function useSquareComments(): UseSquareCommentsReturn {
 
     // Initial fetch and Realtime subscription
     useEffect(() => {
+        if (!hasActivated) return;
         let isCancelled = false;
 
         const loadInitial = async () => {
@@ -125,7 +136,7 @@ export function useSquareComments(): UseSquareCommentsReturn {
                 }
             }
         };
-    }, []);
+    }, [hasActivated]);
 
     const addComment = useCallback(async (data: AddCommentInput) => {
         const res = await fetch("/api/comments", {

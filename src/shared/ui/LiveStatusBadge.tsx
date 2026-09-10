@@ -1,12 +1,12 @@
 "use client";
 
-import type {SSEConnectionStatus} from "@features/live-tracking/useBusLocation";
+import type {LiveConnectionStatus} from "@shared/types/bus";
 import {UI_TEXT} from "@shared/config/locale";
 import React, {memo, useEffect, useState} from "react";
 
 interface LiveStatusBadgeProps {
     countText?: string;
-    connectionStatus: SSEConnectionStatus;
+    connectionStatus: LiveConnectionStatus;
     hasFetched?: boolean;
     lastUpdated?: number | null;
     isDegraded?: boolean;

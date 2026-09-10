@@ -1,5 +1,5 @@
 import {NextResponse} from "next/server";
-import {getOrFetchSchedule} from "@entities/schedule";
+import {getOrFetchSchedule} from "@entities/schedule/server";
 import {buildCacheControl} from "@shared/cache/cachePolicy";
 
 export const dynamic = "force-dynamic";

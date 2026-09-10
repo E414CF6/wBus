@@ -7,7 +7,7 @@ import {MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 
-import BusStopPopup from "@widgets/BusListSheet/BusStopPopup";
+import {BusStopPopup} from "@entities/station";
 
 import {BusFront, Info, MapPin, MapPinned} from "lucide-react";
 import {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";

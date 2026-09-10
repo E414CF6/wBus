@@ -1,2 +1,3 @@
-export {default as NoticeModal} from "./NoticeModal";
-export {NoticeBanner} from "./NoticeBanner";
+export {NoticeModal} from "@entities/notice/ui/NoticeModal";
+export {default} from "@entities/notice/ui/NoticeModal";
+export {NoticeBanner} from "@entities/notice/ui/NoticeBanner";

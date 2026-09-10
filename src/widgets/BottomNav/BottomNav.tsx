@@ -21,20 +21,18 @@ import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 
-import {BusListItem} from "@widgets/BusListSheet/BusListItem";
+import {BusListItem} from "./ui/BusListItem";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
 import {YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 
-import type {BusItem} from "@entities/bus/types";
+import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
-import type {SSEConnectionStatus} from "@features/live-tracking/useBusLocation";
+import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
 
 const emptySubscribe = () => () => {
 };
 
-export type NavTab = "schedule" | "map" | "chat";
-export type TimetableSubTab = "yonsei" | "all";
-export type DayMode = "AUTO" | "WEEKDAY" | "VACATION";
+export type {DayMode, NavTab, TimetableSubTab};
 
 interface BottomNavProps {
     activeTab: NavTab;
@@ -54,7 +52,7 @@ interface BottomNavProps {
     runningBuses?: BusItem[];
     getDirection?: (nodeId: string | null | undefined, nodeOrd: number, routeId?: string | null) => DirectionCode;
     onBusClick?: (lat: number, lng: number) => void;
-    connectionStatus?: SSEConnectionStatus;
+    connectionStatus?: LiveConnectionStatus;
     hasFetched?: boolean;
 
     // Dynamic Square / Comments options

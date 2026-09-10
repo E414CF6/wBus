@@ -1,7 +1,6 @@
-import type {BusDataError, BusItem} from "@entities/bus/types";
+import type {BusDataError, BusItem, LiveConnectionStatus, SSEConnectionStatus} from "@entities/bus/types";
 
-export type LiveConnectionStatus = "connecting" | "connected" | "fallback" | "suspended";
-export type SSEConnectionStatus = LiveConnectionStatus; // Backward-compatibility alias for UI components
+export type {LiveConnectionStatus, SSEConnectionStatus};
 
 export interface BusLocationState {
     data: BusItem[];
