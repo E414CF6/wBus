@@ -3,7 +3,7 @@
 import {getDirectionIcon} from "@entities/bus/directionIcons";
 import {getBusMarkerColor} from "@entities/route/routeColor";
 
-import {getSnappedPosition} from "@entities/route/snapService";
+import {getSnappedPosition} from "@features/live-tracking";
 
 import type {BusItem} from "@entities/bus/types";
 

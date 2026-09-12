@@ -1,3 +1,5 @@
+import "server-only";
+
 import type {BusRoute, RouteDataset, TimetableEntry} from "./types";
 import {APP_LOCALE} from "@shared/config/locale";
 

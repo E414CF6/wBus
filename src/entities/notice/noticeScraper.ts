@@ -1,3 +1,5 @@
+import "server-only";
+
 import type {NoticeDetail, NoticeItem, NoticeListResponse} from "./types";
 import {APP_LOCALE, UI_TEXT} from "@shared/config/locale";
 import {CacheManager} from "@shared/cache/CacheManager";

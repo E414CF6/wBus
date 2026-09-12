@@ -1,3 +1,5 @@
+import "server-only";
+
 import fs from "fs";
 import path from "path";
 import {revalidateTag, unstable_cache} from "next/cache";

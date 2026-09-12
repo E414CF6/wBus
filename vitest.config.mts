@@ -15,6 +15,7 @@ export default defineConfig({
             "@app": path.resolve(import.meta.dirname, "./src/app"),
             "@lib": path.resolve(import.meta.dirname, "./src/lib"),
             "@types": path.resolve(import.meta.dirname, "./src/types"),
+            "server-only": path.resolve(import.meta.dirname, "./node_modules/server-only/empty.js"),
         },
     },
 });

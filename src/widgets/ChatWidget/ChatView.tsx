@@ -3,6 +3,7 @@
 import React, {useState} from "react";
 import {MessageCircle, Sparkles} from "lucide-react";
 
+import {useSquareComments} from "@entities/comment";
 import {useChatActions} from "./hooks/useChatActions";
 import {useChatFeed} from "./hooks/useChatFeed";
 import {useChatIdentity} from "./hooks/useChatIdentity";
@@ -14,13 +15,21 @@ import {ChatSidebar} from "./ui/ChatSidebar";
 import {ThreadCard} from "./ui/ThreadCard";
 
 export const ChatView: React.FC<ChatViewProps> = ({
-                                                      comments,
-                                                      onAddComment,
-                                                      onLikeComment,
-                                                      onDeleteComment,
-                                                      onRefresh,
-                                                      isRefreshing = false,
+                                                      comments: propComments,
+                                                      onAddComment: propAddComment,
+                                                      onLikeComment: propLikeComment,
+                                                      onDeleteComment: propDeleteComment,
+                                                      onRefresh: propRefresh,
+                                                      isRefreshing: propIsRefreshing,
                                                   }) => {
+    // Autonomous mode: If comments are not passed from parent, manage state locally
+    const internalSquare = useSquareComments({enabled: propComments === undefined});
+    const comments = propComments ?? internalSquare.comments;
+    const isRefreshing = propIsRefreshing ?? internalSquare.isRefreshing;
+    const onAddComment = propAddComment ?? internalSquare.addComment;
+    const onLikeComment = propLikeComment ?? internalSquare.likeComment;
+    const onDeleteComment = propDeleteComment ?? internalSquare.deleteComment;
+    const onRefresh = propRefresh ?? internalSquare.refreshComments;
     // 1. User Identity Management
     const {authorName, userTag, handleRerollNickname} = useChatIdentity();
 

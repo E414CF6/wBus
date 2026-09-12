@@ -151,8 +151,6 @@ export function AppShell() {
                         ) : (
                             <TimetableWidget
                                 onSelectMapRoute={handleSelectMapRoute}
-                                dayMode={dayMode}
-                                onDayModeChange={setDayMode}
                             />
                         )}
                     </div>

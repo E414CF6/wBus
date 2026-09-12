@@ -4,7 +4,7 @@ import React, {useCallback, useEffect, useMemo, useState} from "react";
 import type {BusRoute} from "@entities/schedule";
 import {CacheInfoBanner} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
-import {NoticeBanner, NoticeModal} from "@entities/notice";
+import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
 import {Footer} from "@shared/ui/Footer";
 import {BookmarkedDeparturesBanner} from "./BookmarkedDeparturesBanner";
 import {RouteFilter} from "./RouteFilter";
@@ -19,16 +19,12 @@ export type {DayMode};
 
 interface TimetableWidgetProps {
     onSelectMapRoute?: (routeName: string) => void;
-    dayMode?: DayMode;
-    onDayModeChange?: (mode: DayMode) => void;
 }
 
 const DEFAULT_BOOKMARK_ROUTES = ["30", "34", "34-1"];
 
 export default function TimetableWidget({
                                             onSelectMapRoute,
-                                            dayMode: _dayMode,
-                                            onDayModeChange: _onDayModeChange,
                                         }: TimetableWidgetProps) {
     // Single source of truth: useSchedule hook (SWR managed, zero infinite loop)
     const {

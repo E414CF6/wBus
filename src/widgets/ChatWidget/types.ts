@@ -8,8 +8,8 @@ export interface ReplyTarget {
 }
 
 export interface ChatViewProps {
-    comments: CommentItem[];
-    onAddComment: (data: {
+    comments?: CommentItem[];
+    onAddComment?: (data: {
         author?: string;
         content: string;
         parentId?: string;
@@ -19,7 +19,7 @@ export interface ChatViewProps {
     }) => Promise<void>;
     onLikeComment?: (id: string) => Promise<void>;
     onDeleteComment?: (id: string, authorTag?: string) => Promise<void>;
-    onRefresh: (force?: boolean) => Promise<void>;
+    onRefresh?: (force?: boolean) => Promise<void>;
     isRefreshing?: boolean;
 }
 

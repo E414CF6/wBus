@@ -1,7 +1,7 @@
 "use client";
 
 import {buildSegmentedRouteGeoJson} from "@entities/route/polylineService";
-import {useBusData} from "@features/live-tracking/useBusData";
+import {useRoutePolylineData} from "@features/live-tracking";
 import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useEffect, useMemo, useRef} from "react";
@@ -9,7 +9,7 @@ import {Layer, Source} from "react-map-gl/maplibre";
 
 export default function BusRoutePolyline({routeName}: { routeName: string }) {
     const {map} = useAppMapContext();
-    const {routeInfo, polylineMap, activeRouteId} = useBusData(routeName);
+    const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName);
     const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
     const lastBoundsKeyRef = useRef<string | null>(null);
 

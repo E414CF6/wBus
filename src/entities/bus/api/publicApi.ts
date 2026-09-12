@@ -1,5 +1,5 @@
 import {API_PRIORITY, TaskQueue} from "@shared/utils/concurrency";
-import {isRouteInServiceWindow, recordRouteBusActivity} from "@entities/route/routeWindow";
+import {isRouteInServiceWindow, recordRouteBusActivity} from "./routeWindow";
 
 /**
  * Advanced Client for Korea's Public Data Portal (apis.data.go.kr)

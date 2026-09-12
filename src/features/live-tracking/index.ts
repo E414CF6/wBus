@@ -5,3 +5,4 @@ export * from "./useBusData";
 export * from "./useBusDirection";
 export * from "./useBusSortedList";
 export * from "./usePolyline";
+export * from "./lib/snapService";

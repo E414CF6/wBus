@@ -14,6 +14,7 @@ import {
 } from "@entities/route/polylineService";
 
 import type {Coordinate} from "@entities/route/types";
+import {useRouteInfo} from "@entities/route/hooks";
 import {buildRouteIdsKey} from "@shared/utils/routeIds";
 import {useEffect, useMemo, useState} from "react";
 
@@ -119,4 +120,22 @@ export function getFallbackPolylines(polylineMap: Map<string, BusPolylineSet>, a
     }
 
     return {upPolyline: [], downPolyline: [], turnIndex: 0};
+}
+
+/**
+ * Hook to retrieve route polyline and geometry data without subscribing to live bus location telemetry.
+ * Prevents unnecessary re-renders when live buses move.
+ */
+export function useRoutePolylineData(routeName: string, enabled: boolean = true) {
+    const routeInfo = useRouteInfo(routeName, enabled);
+    const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
+    const polylineMap = useBusPolylineMap(routeIds);
+    const activeRouteId = routeIds[0] ?? null;
+
+    return {
+        routeInfo: routeInfo ?? null,
+        routeIds,
+        polylineMap,
+        activeRouteId,
+    };
 }

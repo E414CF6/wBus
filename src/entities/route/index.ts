@@ -4,6 +4,5 @@ export * from "./hooks";
 export * from "./routeColor";
 export * from "./routeMetadata";
 export * from "./directionService";
-export * from "./snapService";
 export * from "./polylineService";
 export * from "./yonseiRoutes";

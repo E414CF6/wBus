@@ -1,8 +1,8 @@
 import {describe, expect, it} from "vitest";
 import {getSegmentBounds, getSnappedPosition, getStopCoordIndex} from "./snapService";
-import type {StopIndexMap} from "./polylineService";
+import type {StopIndexMap} from "@entities/route/polylineService";
 import type {BusItem} from "@entities/bus/types";
-import type {Coordinate} from "./types";
+import type {Coordinate} from "@entities/route/types";
 
 describe("snapService", () => {
     describe("getStopCoordIndex", () => {
