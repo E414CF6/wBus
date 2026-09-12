@@ -9,7 +9,7 @@ import {LOCALE} from "@shared/config/locale";
 import {scrapeWonjuBusDataset, scrapeWonjuItsYonsei} from "./itsScraper";
 
 export const SCHEDULE_CACHE_TAG = "schedule";
-export const MIN_REFRESH_INTERVAL_DAYS = 1;
+export const MIN_REFRESH_INTERVAL_DAYS = 3;
 export const MIN_REFRESH_INTERVAL_MS = MIN_REFRESH_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
 export const FORCE_REFRESH_COOLDOWN_MS = 30 * 1000; // 30 seconds cooldown between non-admin force refreshes
 const IN_MEMORY_TTL_MS = 30 * 1000; // 30 seconds
@@ -140,7 +140,7 @@ async function fetchScheduleDataset(): Promise<{ data: RouteDataset; meta: Cache
         }
     }
 
-    // If local cache is missing or older than 1 day, attempt scrape
+    // If local cache is missing or older than 3 days, attempt scrape
     console.log("[ScheduleService] Fetching timetable dataset from Wonju ITS...");
     try {
         const freshData = await scrapeWonjuBusDataset();
@@ -170,8 +170,7 @@ const getNextDataCachedSchedule = unstable_cache(
     fetchScheduleDataset,
     ["wbus-schedule-dataset-v1"],
     {
-        tags: [SCHEDULE_CACHE_TAG],
-        revalidate: 86400, // 24 hours ISR in Data Cache
+        tags: [SCHEDULE_CACHE_TAG], revalidate: MIN_REFRESH_INTERVAL_DAYS * 86400, // 3 days (259,200s) ISR in Data Cache
     }
 );
 
