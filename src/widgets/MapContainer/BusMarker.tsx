@@ -151,14 +151,12 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
         polylineMap,
         fallbackPolylines,
         activeRouteId,
-        connectionStatus,
     } = useBusData(routeName, enabled);
 
     const [selectedBusKey, setSelectedBusKey] = useState<string | null>(null);
 
-    const isLiveConnected = connectionStatus === "connected";
-    const effectiveAnimationDuration = isLiveConnected ? 3000 : MAP_SETTINGS.ANIMATION.BUS_MOVE_MS;
-    const effectivePollingIntervalMs = isLiveConnected ? 3000 : API_CONFIG.LIVE.POLLING_INTERVAL_MS;
+    const effectiveAnimationDuration = MAP_SETTINGS.ANIMATION.BUS_MOVE_MS;
+    const effectivePollingIntervalMs = API_CONFIG.LIVE.POLLING_INTERVAL_MS;
     const effectiveDataDelayMs = API_CONFIG.LIVE.DATA_DELAY_MS;
 
     const routeIndicesMap = useMemo(() => {

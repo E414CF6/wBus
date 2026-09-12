@@ -215,10 +215,10 @@ export function getRouteBusCount(routeId: string): number | undefined {
 /**
  * Returns dynamic TTL based on route service window and active bus count.
  * - Outside operating window: Long backoff TTL (e.g. 300s ~ 1800s) to eliminate futile calls.
- * - Inside window with active buses: High-frequency activeTtl (e.g. 4s).
- * - Inside window with 0 buses: Backoff idleTtl (e.g. 20s).
+ * - Inside window with active buses: High-frequency activeTtl (e.g. 8s).
+ * - Inside window with 0 buses: Backoff idleTtl (e.g. 15s).
  */
-export function getAdaptiveTtlSeconds(routeId: string, activeTtl = 2, idleTtl = 15): number {
+export function getAdaptiveTtlSeconds(routeId: string, activeTtl = 8, idleTtl = 15): number {
     const status = isRouteInServiceWindow(routeId);
     if (!status.inService) {
         return status.retryAfterSeconds;

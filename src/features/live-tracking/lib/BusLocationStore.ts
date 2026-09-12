@@ -16,7 +16,7 @@ const fetchRouteData = async (url: string): Promise<CachedData<BusItem[]>> => {
 
 /**
  * BusLocationStore
- * High-performance real-time telemetry store backed by CDN micro-caching (s-maxage=2s).
+ * High-performance real-time telemetry store backed by CDN micro-caching (s-maxage=10s).
  * Replaces fragile Serverless SSE with deterministic, edge-coalesced polling.
  */
 export class BusLocationStore {
