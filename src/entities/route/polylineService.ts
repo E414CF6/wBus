@@ -292,8 +292,9 @@ export function isPointNearPolyline(point: Coordinate, polyline: Coordinate[], m
     if (!polyline || polyline.length < 2) return false;
     const [pLat, pLng] = point;
     const maxDegLat = maxDistMeters / 111000;
-    const maxDegLng = maxDistMeters / 88000;
-    const maxDistSq = maxDegLat * maxDegLat;
+    const cosLat = Math.cos((pLat * Math.PI) / 180);
+    const maxDegLng = maxDistMeters / (111000 * Math.max(0.1, cosLat));
+    const maxDistSq = maxDistMeters * maxDistMeters;
 
     for (let i = 0; i < polyline.length - 1; i++) {
         const [aLat, aLng] = polyline[i];
@@ -313,16 +314,18 @@ export function isPointNearPolyline(point: Coordinate, polyline: Coordinate[], m
         const dLng = bLng - aLng;
         const lenSq = dLat * dLat + dLng * dLng;
         if (lenSq === 0) {
-            const distSq = (pLat - aLat) ** 2 + (pLng - aLng) ** 2;
-            if (distSq <= maxDistSq) return true;
+            const dy = (pLat - aLat) * 111000;
+            const dx = (pLng - aLng) * 111000 * cosLat;
+            if (dx * dx + dy * dy <= maxDistSq) return true;
             continue;
         }
 
         const t = Math.max(0, Math.min(1, ((pLat - aLat) * dLat + (pLng - aLng) * dLng) / lenSq));
         const projLat = aLat + t * dLat;
         const projLng = aLng + t * dLng;
-        const distSq = (pLat - projLat) ** 2 + (pLng - projLng) ** 2;
-        if (distSq <= maxDistSq) return true;
+        const dy = (pLat - projLat) * 111000;
+        const dx = (pLng - projLng) * 111000 * cosLat;
+        if (dx * dx + dy * dy <= maxDistSq) return true;
     }
 
     return false;
@@ -332,6 +335,7 @@ export function isPointNearPolyline(point: Coordinate, polyline: Coordinate[], m
  * Builds a clean GeoJSON FeatureCollection where:
  * - Overlapping/shared route segments across sub-routes are styled in unified blue (#2563eb) without duplicates.
  * - Diverging/unique branch segments receive distinct palette colors (#059669, #d97706, etc.).
+ * - Every route segment is guaranteed to be emitted once (no missing branch segments).
  */
 export function buildSegmentedRouteGeoJson(
     validRouteIds: string[],
@@ -392,15 +396,28 @@ export function buildSegmentedRouteGeoJson(
             const poly = rData[polylineKey];
             if (poly.length < 2) continue;
 
+            const earlierPolylines = validRouteIds
+                .slice(0, rIdx)
+                .map((id) => polylineMap.get(id)?.[polylineKey])
+                .filter((p): p is Coordinate[] => Boolean(p && p.length >= 2));
+
             const otherPolylines = validRouteIds
                 .filter((_, idx) => idx !== rIdx)
-                .map(id => polylineMap.get(id)?.[polylineKey])
+                .map((id) => polylineMap.get(id)?.[polylineKey])
                 .filter((p): p is Coordinate[] => Boolean(p && p.length >= 2));
 
             // Classify each edge along this route variant
-            const edgeInfos: Array<{ isShared: boolean; color: string }> = [];
+            interface EdgeClassification {
+                shouldEmit: boolean;
+                color: string;
+                isShared: boolean;
+            }
+
+            const edgeInfos: EdgeClassification[] = [];
             for (let i = 0; i < poly.length - 1; i++) {
                 const mid: Coordinate = [(poly[i][0] + poly[i + 1][0]) / 2, (poly[i][1] + poly[i + 1][1]) / 2];
+
+                // Check if this edge is shared with ANY other sub-route
                 let isShared = false;
                 for (const otherPoly of otherPolylines) {
                     if (isPointNearPolyline(mid, otherPoly, 25)) {
@@ -409,52 +426,74 @@ export function buildSegmentedRouteGeoJson(
                     }
                 }
 
-                let color = SHARED_BLUE_COLOR;
-                if (!isShared) {
-                    // Unique to this route ID
-                    color = BRANCH_PALETTE[(rIdx > 0 ? rIdx - 1 : 0) % BRANCH_PALETTE.length];
+                // Deduplication: Only emit if an earlier sub-route has NOT already emitted this edge
+                let inEarlier = false;
+                for (const earlierPoly of earlierPolylines) {
+                    if (isPointNearPolyline(mid, earlierPoly, 25)) {
+                        inEarlier = true;
+                        break;
+                    }
                 }
-                edgeInfos.push({isShared, color});
+
+                const shouldEmit = !inEarlier;
+                const color = isShared
+                    ? SHARED_BLUE_COLOR
+                    : BRANCH_PALETTE[(rIdx > 0 ? rIdx - 1 : 0) % BRANCH_PALETTE.length];
+
+                edgeInfos.push({shouldEmit, color, isShared});
             }
 
-            // Group contiguous edges of same color into LineString features
-            let currentGroupCoords: [number, number][] = [[poly[0][1], poly[0][0]]];
-            let currentColor = edgeInfos[0]?.color ?? SHARED_BLUE_COLOR;
-            let currentShared = edgeInfos[0]?.isShared ?? false;
+            // Group contiguous edges to emit into clean LineString features
+            let activeCoords: [number, number][] | null = null;
+            let activeColor = SHARED_BLUE_COLOR;
+            let activeShared = false;
+
+            const flushActive = () => {
+                if (activeCoords && activeCoords.length >= 2) {
+                    features.push({
+                        type: "Feature",
+                        geometry: {
+                            type: "LineString",
+                            coordinates: activeCoords
+                        },
+                        properties: {
+                            route_id: rId,
+                            direction: dir,
+                            color: activeColor,
+                            is_shared: activeShared
+                        }
+                    });
+                }
+                activeCoords = null;
+            };
 
             for (let i = 0; i < edgeInfos.length; i++) {
-                currentGroupCoords.push([poly[i + 1][1], poly[i + 1][0]]);
+                const {shouldEmit, color, isShared} = edgeInfos[i];
 
-                const isLast = i === edgeInfos.length - 1;
-                const nextInfo = !isLast ? edgeInfos[i + 1] : null;
+                if (!shouldEmit) {
+                    flushActive();
+                    continue;
+                }
 
-                if (isLast || nextInfo?.color !== currentColor) {
-                    // Only emit shared segment for the primary route (rIdx === 0) to avoid drawing duplicate overlapping blue lines
-                    const shouldEmit = !currentShared || rIdx === 0;
+                const startPoint: [number, number] = [poly[i][1], poly[i][0]];
+                const endPoint: [number, number] = [poly[i + 1][1], poly[i + 1][0]];
 
-                    if (shouldEmit && currentGroupCoords.length >= 2) {
-                        features.push({
-                            type: "Feature",
-                            geometry: {
-                                type: "LineString",
-                                coordinates: currentGroupCoords
-                            },
-                            properties: {
-                                route_id: rId,
-                                direction: dir,
-                                color: currentColor,
-                                is_shared: currentShared
-                            }
-                        });
-                    }
-
-                    if (!isLast && nextInfo) {
-                        currentGroupCoords = [[poly[i + 1][1], poly[i + 1][0]]];
-                        currentColor = nextInfo.color;
-                        currentShared = nextInfo.isShared;
-                    }
+                if (!activeCoords) {
+                    activeCoords = [startPoint, endPoint];
+                    activeColor = color;
+                    activeShared = isShared;
+                } else if (activeColor === color) {
+                    activeCoords.push(endPoint);
+                } else {
+                    // Color changed between contiguous edges
+                    flushActive();
+                    activeCoords = [startPoint, endPoint];
+                    activeColor = color;
+                    activeShared = isShared;
                 }
             }
+
+            flushActive();
         }
     }
 

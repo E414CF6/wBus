@@ -71,6 +71,13 @@ export function AppShell() {
     // Live telemetry for active map route
     const liveBusData = useBusSortedList(activeRoute, hasVisitedMap && isMapActive);
 
+    // Direction filter for map polyline rendering (all, up, down)
+    const [selectedDirection, setSelectedDirection] = useState<"all" | "up" | "down">("all");
+
+    useEffect(() => {
+        setSelectedDirection("all");
+    }, [activeRoute]);
+
     useEffect(() => {
         if (!routeMap) return;
         if (!activeRoute || activeRoute === selectedRoute) return;
@@ -113,6 +120,8 @@ export function AppShell() {
                         hasFetched={liveBusData.hasFetched}
                         isDegraded={liveBusData.isDegraded}
                         onReconnect={liveBusData.reconnect}
+                        selectedDirection={selectedDirection}
+                        onSelectDirection={setSelectedDirection}
                     />
 
                     <MapWrapper>
@@ -120,6 +129,7 @@ export function AppShell() {
                             routeName={activeRoute}
                             onRouteChange={handleRouteChange}
                             enabled={isMapActive}
+                            selectedDirection={selectedDirection}
                         />
                     </MapWrapper>
                 </div>

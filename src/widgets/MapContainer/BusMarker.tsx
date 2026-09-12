@@ -29,17 +29,31 @@ const SNAP_INDEX_RANGE = 80;
 // Sub-Component: Bus Icon DOM
 // ----------------------------------------------------------------------
 
+interface BusIconDOMProps {
+    routeNumber: string;
+    color?: string;
+    isSelected?: boolean;
+}
+
 /**
- * Minimal 3D top-down bus marker
+ * Clean, minimalist top-down bus marker capsule.
  */
-const BusIconDOM = memo(({routeNumber, color}: { routeNumber: string; color?: string }) => {
+const BusIconDOM = memo(({routeNumber, color, isSelected}: BusIconDOMProps) => {
     const [w, h] = SETTINGS.ICON_SIZE;
     const themeColor = color || "#2563eb";
 
     return (
         <div
-            className="bus-marker-with-label relative"
-            style={{width: w, height: h, filter: "drop-shadow(0 3px 8px rgba(0,0,0,0.3))"}}
+            className={`bus-marker-with-label relative transition-transform duration-150 ${
+                isSelected ? "scale-110 z-50" : "z-10"
+            }`}
+            style={{
+                width: w,
+                height: h,
+                filter: isSelected
+                    ? `drop-shadow(0 0 8px ${themeColor}) drop-shadow(0 4px 10px rgba(0,0,0,0.35))`
+                    : "drop-shadow(0 3px 8px rgba(0,0,0,0.3))",
+            }}
         >
             <svg
                 width={w}
@@ -53,7 +67,7 @@ const BusIconDOM = memo(({routeNumber, color}: { routeNumber: string; color?: st
                 <rect x="4" y="2" width="32" height="50" rx="10" fill={themeColor}/>
             </svg>
             <div
-                className="bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 text-white text-[11px] font-extrabold px-1 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_6px_rgba(0,0,0,0.3)] tracking-[0.3px] min-w-7 max-w-7 flex items-center justify-center"
+                className="bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 text-white text-[11px] font-extrabold px-1 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_6px_rgba(0,0,0,0.3)] tracking-[0.3px] min-w-7 max-w-7 flex items-center justify-center select-none"
                 style={{backgroundColor: themeColor}}
             >
                 <PopupMarquee text={routeNumber} maxWidthClass="max-w-7"/>
@@ -74,59 +88,77 @@ const BusPopupContent = memo(
          stopName,
          DirectionIcon,
          themeColor,
+         direction,
      }: {
         bus: BusItem;
         stopName: string;
         DirectionIcon: React.ElementType;
         themeColor?: string;
-    }) => (
-        <div
-            className="min-w-60 sm:min-w-70 flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl rounded-[28px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)] border border-black/4 dark:border-white/6">
-            {/* Header */}
-            <div className="bg-transparent px-4 py-4 border-b border-black/5 dark:border-white/5">
-                <div className="flex items-center gap-2.5 text-black dark:text-white">
-                    <div
-                        className="p-1.5 rounded-[10px] flex items-center justify-center bg-blue-100/50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400"
-                        style={
-                            themeColor
-                                ? {
-                                    backgroundColor: `${themeColor}22`,
-                                    color: themeColor,
-                                }
-                                : undefined
-                        }
-                    >
-                        <DirectionIcon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true"/>
+        direction?: number | null;
+    }) => {
+        const directionLabel =
+            direction === 1
+                ? "상행"
+                : direction === 0
+                    ? "하행"
+                    : "운행 중";
+
+        return (
+            <div
+                className="min-w-60 sm:min-w-70 flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl rounded-[28px] overflow-hidden shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.5)] border border-black/4 dark:border-white/6">
+                {/* Header */}
+                <div className="bg-transparent px-4 py-4 border-b border-black/5 dark:border-white/5">
+                    <div className="flex items-center justify-between gap-2 text-black dark:text-white">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                            <div
+                                className="p-1.5 rounded-[10px] flex items-center justify-center text-white shrink-0 shadow-xs"
+                                style={{
+                                    backgroundColor: themeColor || "#2563eb",
+                                }}
+                            >
+                                <DirectionIcon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true"/>
+                            </div>
+                            <span className="font-extrabold text-lg tracking-tight leading-none truncate">
+                                {UI_TEXT.BUS_LIST.TITLE_ROUTE(bus.routenm)}
+                            </span>
+                        </div>
+                        <span
+                            className="px-2 py-0.5 rounded-full text-[10px] font-extrabold shrink-0"
+                            style={{
+                                backgroundColor: `${themeColor || "#2563eb"}18`,
+                                color: themeColor || "#2563eb",
+                                border: `1px solid ${themeColor || "#2563eb"}35`,
+                            }}
+                        >
+                            {directionLabel}
+                        </span>
                     </div>
-                    <span className="font-extrabold text-lg tracking-tight leading-none">
-                        {UI_TEXT.BUS_LIST.TITLE_ROUTE(bus.routenm)}
-                    </span>
+                </div>
+
+                {/* Body */}
+                <div className="px-4 py-4 space-y-4">
+                    <div className="flex items-center justify-between gap-4">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0">
+                            {UI_TEXT.BUS_ITEM.VEHICLE_NUM}
+                        </span>
+                        <div
+                            className="font-mono font-bold text-sm text-gray-800 dark:text-gray-200 bg-black/3 dark:white/5 px-2.5 py-1 rounded-lg">
+                            {bus.vehicleno}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0">
+                            {UI_TEXT.BUS_ITEM.CURRENT_LOC}
+                        </span>
+                        <div className="text-[13px] font-semibold text-gray-800 dark:text-gray-200 min-w-0">
+                            <PopupMarquee text={stopName} maxWidthClass="max-w-[150px]"/>
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            {/* Body */}
-            <div className="px-4 py-4 space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0">
-                        {UI_TEXT.BUS_ITEM.VEHICLE_NUM}
-                    </span>
-                    <div
-                        className="font-mono font-bold text-sm text-gray-800 dark:text-gray-200 bg-black/3 dark:white/5 px-2.5 py-1 rounded-lg">
-                        {bus.vehicleno}
-                    </div>
-                </div>
-
-                <div className="flex items-center justify-between gap-4">
-                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest shrink-0">
-                        {UI_TEXT.BUS_ITEM.CURRENT_LOC}
-                    </span>
-                    <div className="text-[13px] font-semibold text-gray-800 dark:text-gray-200 min-w-0">
-                        <PopupMarquee text={stopName} maxWidthClass="max-w-[150px]"/>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
+        );
+    }
 );
 
 BusPopupContent.displayName = "BusPopupContent";
@@ -270,12 +302,15 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
                      bus,
                      position,
                      angle,
+                     direction,
                      polyline,
                      snapIndexHint,
                      stopCoordIndices,
                      refreshKey,
                      markerColor,
                  }) => {
+                    const isSelected = selectedBusKey === key;
+
                     return (
                         <BusAnimatedMarker
                             key={key}
@@ -294,7 +329,11 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
                                 onPopupOpen?.(routeName);
                             }}
                         >
-                            <BusIconDOM routeNumber={bus.routenm} color={markerColor}/>
+                            <BusIconDOM
+                                routeNumber={bus.routenm}
+                                color={markerColor}
+                                isSelected={isSelected}
+                            />
                         </BusAnimatedMarker>
                     );
                 }
@@ -319,6 +358,7 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
                         stopName={selectedMarker.bus.nodenm || ""}
                         DirectionIcon={getDirectionIcon(selectedMarker.direction)}
                         themeColor={selectedMarker.markerColor}
+                        direction={selectedMarker.direction}
                     />
                 </Popup>
             )}

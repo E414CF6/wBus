@@ -13,6 +13,7 @@ interface RouteLayerProps {
     routeName: string;
     onRouteChange?: (routeName: string) => void;
     enabled?: boolean;
+    selectedDirection?: "all" | "up" | "down";
 }
 
 // ----------------------------------------------------------------------
@@ -23,17 +24,18 @@ interface RouteLayerProps {
  * Renders all map layers for a single route (markers, stops, polyline).
  * Memoized to prevent re-rendering ALL routes when only one route's data updates.
  */
-const RouteLayer = memo(({routeName, onRouteChange, enabled = true}: RouteLayerProps) => {
+const RouteLayer = memo(({routeName, onRouteChange, enabled = true, selectedDirection = "all"}: RouteLayerProps) => {
     return (<>
         <BusMarker routeName={routeName} enabled={enabled}/>
         <BusStopMarker routeName={routeName} onRouteChange={onRouteChange}/>
-        <BusRoutePolyline routeName={routeName}/>
+        <BusRoutePolyline routeName={routeName} selectedDirection={selectedDirection}/>
     </>);
 }, (prev, next) => {
     return (
         prev.routeName === next.routeName &&
         prev.onRouteChange === next.onRouteChange &&
-        prev.enabled === next.enabled
+        prev.enabled === next.enabled &&
+        prev.selectedDirection === next.selectedDirection
     );
 });
 

@@ -1,10 +1,5 @@
 import type {Coordinate} from "@entities/route/types";
-import {
-    BRANCH_PALETTE,
-    isPointNearPolyline,
-    type PolylineData,
-    SHARED_BLUE_COLOR
-} from "@entities/route/polylineService";
+import {BRANCH_PALETTE, isPointNearPolyline, type PolylineData} from "@entities/route/polylineService";
 
 export interface RouteColorConfig {
     main: string;
@@ -153,10 +148,18 @@ export function getRouteIdColor(routeId?: string | null, routeIds?: string[], ro
     return getRouteColor(routeName || "");
 }
 
+export const BUS_DIRECTION_COLORS = {
+    UP: "#2563eb",     // Electric Blue (상행 / 종점행)
+    DOWN: "#4f46e5",   // Indigo Purple (하행 / 기점행)
+    UNKNOWN: "#2563eb",
+} as const;
+
 /**
  * Returns a smart bus marker color:
- * - On shared/overlapping route sections: Unified Blue (#2563eb).
  * - On distinct/diverging branch sections: Branch color matching polyline (#059669, #d97706, etc.).
+ * - On shared/standard route sections:
+ *   - Up (상행 / 종점행): Electric Blue (#2563eb)
+ *   - Down (하행 / 기점행): Indigo Purple (#4f46e5)
  */
 export function getBusMarkerColor(
     routeName: string,
@@ -166,33 +169,40 @@ export function getBusMarkerColor(
     busPos?: Coordinate,
     polylineMap?: Map<string, PolylineData>
 ): string {
-    // Single route or no position: Default to unified blue
-    if (!routeIds || routeIds.length <= 1 || !routeId) {
-        return SHARED_BLUE_COLOR;
-    }
-
-    const rIdx = routeIds.indexOf(routeId);
-    if (rIdx === -1 || rIdx === 0) {
-        return SHARED_BLUE_COLOR;
-    }
-
-    // Branch route (rIdx > 0): Check if bus is currently on the shared section or on its branch
-    if (busPos && polylineMap) {
-        const primaryRouteId = routeIds[0];
-        const primaryData = polylineMap.get(primaryRouteId);
-        if (primaryData) {
+    // 1. Check if the bus is on a distinct branch of a multi-route variant
+    if (routeIds && routeIds.length > 1 && routeId && busPos && polylineMap) {
+        const rIdx = routeIds.indexOf(routeId);
+        if (rIdx !== -1) {
+            // Find all other route polylines in the same direction
             const dirKey = direction === 0 ? "downPolyline" : "upPolyline";
-            const primaryPoly = primaryData[dirKey]?.length >= 2 ? primaryData[dirKey] : primaryData.upPolyline;
+            const otherPolylines = routeIds
+                .filter((_, idx) => idx !== rIdx)
+                .map((id) => polylineMap.get(id)?.[dirKey])
+                .filter((p): p is Coordinate[] => Boolean(p && p.length >= 2));
 
-            if (primaryPoly && primaryPoly.length >= 2) {
-                const isShared = isPointNearPolyline(busPos, primaryPoly, 30);
-                if (isShared) {
-                    return SHARED_BLUE_COLOR;
+            // Check if bus position is near any other route variant
+            let isShared = false;
+            for (const otherPoly of otherPolylines) {
+                if (isPointNearPolyline(busPos, otherPoly, 30)) {
+                    isShared = true;
+                    break;
                 }
+            }
+
+            // If bus is on its unique branch section, return the exact branch palette color matching polyline!
+            if (!isShared) {
+                const branchIdx = rIdx > 0 ? rIdx - 1 : 0;
+                return BRANCH_PALETTE[branchIdx % BRANCH_PALETTE.length];
             }
         }
     }
 
-    // On distinct branch section: Use branch color
-    return BRANCH_PALETTE[(rIdx - 1) % BRANCH_PALETTE.length];
+    // 2. On shared section or standard route: Distinguish by direction
+    if (direction === 0) {
+        // Down / Inbound / 기점행 -> Distinct Indigo
+        return BUS_DIRECTION_COLORS.DOWN;
+    }
+
+    // Up / Outbound / 종점행 (or unknown) -> Vibrant Blue
+    return BUS_DIRECTION_COLORS.UP;
 }

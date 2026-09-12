@@ -21,6 +21,8 @@ interface MapRouteHeaderProps {
     hasFetched?: boolean;
     isDegraded?: boolean;
     onReconnect?: () => void;
+    selectedDirection?: "all" | "up" | "down";
+    onSelectDirection?: (dir: "all" | "up" | "down") => void;
 }
 
 const DEFAULT_QUICK_ROUTES = ["30", "34", "34-1"];
@@ -34,6 +36,8 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                                   hasFetched = true,
                                                                   isDegraded = false,
                                                                   onReconnect,
+                                                                  selectedDirection = "all",
+                                                                  onSelectDirection,
                                                               }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -73,6 +77,17 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
         },
         [onSelectRoute]
     );
+
+    const handleToggleDirection = useCallback(() => {
+        if (!onSelectDirection) return;
+        if (selectedDirection === "all") {
+            onSelectDirection("up");
+        } else if (selectedDirection === "up") {
+            onSelectDirection("down");
+        } else {
+            onSelectDirection("all");
+        }
+    }, [selectedDirection, onSelectDirection]);
 
     // Determine status badge appearance & copy
     const statusConfig = useMemo(() => {
@@ -166,18 +181,39 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                         <ChevronDown className="w-3.5 h-3.5 opacity-80 shrink-0"/>
                     </button>
 
-                    {/* Route Direction & Status Indicator */}
-                    <div
-                        onClick={() => setIsModalOpen(true)}
-                        className="flex items-center gap-2 px-1 cursor-pointer overflow-hidden max-w-[45vw] sm:max-w-[320px]"
-                        title={`${meta.origin} ↔ ${meta.destination} (클릭하여 노선 변경)`}
+                    {/* Route Direction & Focus Switcher */}
+                    <button
+                        type="button"
+                        onClick={onSelectDirection ? handleToggleDirection : () => setIsModalOpen(true)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-200 cursor-pointer overflow-hidden max-w-[45vw] sm:max-w-[320px] text-left select-none active:scale-95"
+                        title={`경로 표시 방향: ${
+                            selectedDirection === "all"
+                                ? "양방향 전체"
+                                : selectedDirection === "up"
+                                    ? `${meta.destination || "종점"} 방면 (상행)`
+                                    : `${meta.origin || "기점"} 방면 (하행)`
+                        } (클릭하여 상행/하행/전체 전환)`}
+                        aria-label="경로 표시 방향 전환"
                     >
                         <div className="flex flex-col min-w-0">
                             <div className="flex items-center gap-1.5 truncate">
                                 <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
-                                    {meta.origin} ↔ {meta.destination}
+                                    {selectedDirection === "all" && `${meta.origin} ↔ ${meta.destination}`}
+                                    {selectedDirection === "up" && `→ ${meta.destination}`}
+                                    {selectedDirection === "down" && `→ ${meta.origin}`}
                                 </span>
-                                {meta.isYonsei && (
+                                <span
+                                    className={`px-1.5 py-0.5 rounded-md text-[9px] font-black shrink-0 transition-colors ${
+                                        selectedDirection === "all"
+                                            ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                                            : selectedDirection === "up"
+                                                ? "bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300"
+                                                : "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300"
+                                    }`}
+                                >
+                                    {selectedDirection === "all" ? "전체" : selectedDirection === "up" ? "상행" : "하행"}
+                                </span>
+                                {meta.isYonsei && selectedDirection === "all" && (
                                     <span
                                         className="hidden xs:inline-flex px-1.5 py-0.2 rounded-full text-[9px] font-black bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 shrink-0">
                                         연세대
@@ -185,7 +221,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                 )}
                             </div>
                         </div>
-                    </div>
+                    </button>
 
                     {/* Detailed Real-Time Status Pill */}
                     <div
