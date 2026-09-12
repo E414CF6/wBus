@@ -16,12 +16,12 @@ export const TELEPORT_COORD_THRESHOLD = 0.0075; // ~830m
 // 1차 예측 지점 이후의 예측 거리를 넉넉하게 확장하여 다음 API 수신이 늦어져도 끊김 없이 길게 지속 주행
 export const MAX_DEAD_RECKONING_LEAD_COORD = 0.0160;
 
-// Maximum latency compensation projection allowed upon receiving fresh API data (~400m)
+// Maximum latency compensation projection allowed upon receiving fresh API data (~550m)
 // 1차 예측 지점: API 지연 보정 목표 거리
-export const MAX_LATENCY_PROJECTION_COORD = 0.0036;
+export const MAX_LATENCY_PROJECTION_COORD = 0.0050;
 
-// 1차 예측 지점 통과 후 2차 외삽 예측 속도 비율 (기본 주행 속도의 90%를 유지하여 10초 배치 주기 간격 동안 시원하게 지속 전진)
-export const POST_TARGET_VELOCITY_RATIO = 0.90;
+// 1차 예측 지점 통과 후 2차 외삽 예측 속도 비율 (기본 주행 속도의 98%를 유지하여 10초 배치 주기 간격 동안 시원하게 지속 전진)
+export const POST_TARGET_VELOCITY_RATIO = 0.98;
 
 // React state update throttle — 20 Hz (50ms) for UI popup consumers
 export const STATE_UPDATE_THROTTLE_MS = 50;
@@ -30,8 +30,8 @@ export const STATE_UPDATE_THROTTLE_MS = 50;
 export const MAX_DT_MS = 200;
 
 // City bus base cruising speed (coord-units / ms)
-// 1 degree ≈ 111 km → 34 km/h = 9.44 m/s ≈ 8.5e-8 deg/ms
-export const CITY_BUS_BASE_VELOCITY = 0.000000085;
+// 1 degree ≈ 111 km → ~39 km/h = 10.83 m/s ≈ 9.8e-8 deg/ms
+export const CITY_BUS_BASE_VELOCITY = 0.000000098;
 
 // Velocity limits (coord-units / ms)
 // Min crawling speed (~4 km/h for dense market crawls), Max cruising (~100 km/h for expressway segments), Rapid Catchup (~350 km/h scalar)
@@ -57,6 +57,13 @@ export const DEFAULT_DATA_DELAY_MS = 12000;
 // User-measured physical GPS terminal -> Wonju ITS -> TAGO pipeline latency (ms)
 export const PHYSICAL_BUS_DELAY_MS = 3500;
 
+// TAGO 10~13초 배치 주기 반영 추가 지연 보정 (ms)
+// 수신된 공공데이터의 평균 생성 경과 시간(배치 주기 중간값 약 4.5초)을 감안한 능동적 예측 보정
+export const TAGO_BATCH_ESTIMATED_AGE_MS = 4500;
+
+// 데이터 수신 시점 실제 차량 위치 추정용 총 예측 리드 타임 (ms) ≈ 8,000ms (8초)
+export const PREDICTIVE_LATENCY_LEAD_MS = PHYSICAL_BUS_DELAY_MS + TAGO_BATCH_ESTIMATED_AGE_MS;
+
 // Stationary threshold for GPS jitter vs real crawling movement (~3.5m ≈ 0.000032 deg)
 export const STATIONARY_COORD_THRESHOLD = 0.000032;
 
@@ -72,8 +79,8 @@ export const DEAD_RECKONING_CRUISE_MS = 60000;
 export const DEAD_RECKONING_FADEOUT_MS = 40000;
 
 // Rapid Catch-Up time constant:
-// Fast exponential convergence (~400ms) with non-linear boost to rapidly catch up when fresh API data arrives
-export const CATCHUP_TAU_MS = 400;
+// Fast exponential convergence (~340ms) with non-linear boost to rapidly catch up when fresh API data arrives
+export const CATCHUP_TAU_MS = 340;
 
 // Acceleration/deceleration transition easing (ms) - rapid throttle-up
 export const VELOCITY_TAU_MS = 80;
@@ -89,7 +96,7 @@ export const STOP_DECEL_ZONE = 0.0009;
 export const STOP_ACCEL_ZONE = 0.0006;
 // Proximity threshold to trigger station dwell (~20m ≈ 0.00018 degrees)
 export const STOP_DWELL_PROXIMITY = 0.00018;
-// Minimum speed multiplier during approach (자연스러운 주행 유지를 위해 40%로 완화)
-export const STOP_MIN_SPEED_MULT = 0.40;
+// Minimum speed multiplier during approach (자연스러운 주행 유지를 위해 55%로 완화)
+export const STOP_MIN_SPEED_MULT = 0.55;
 // Realistic passenger boarding dwell time at a stop during extrapolation (ms) (과도한 정차 지연 방지)
-export const STOP_DWELL_MS = 2000;
+export const STOP_DWELL_MS = 1500;

@@ -7,6 +7,7 @@ import {
     MIN_MOVING_VELOCITY,
     PHYSICAL_BUS_DELAY_MS,
     POST_TARGET_VELOCITY_RATIO,
+    PREDICTIVE_LATENCY_LEAD_MS,
     STATIONARY_CONFIRM_MS,
     STATIONARY_COORD_THRESHOLD,
     STOP_DWELL_PROXIMITY,
@@ -45,6 +46,8 @@ describe("animation / predictive dead-reckoning engine", () => {
 
         it("has latency compensation projection calibrated for real bus transit (~12s)", () => {
             expect(DEFAULT_DATA_DELAY_MS).toBe(12000);
+            expect(PREDICTIVE_LATENCY_LEAD_MS).toBeGreaterThanOrEqual(7000);
+            expect(PREDICTIVE_LATENCY_LEAD_MS).toBeLessThanOrEqual(9000);
             expect(POST_TARGET_VELOCITY_RATIO).toBeGreaterThanOrEqual(0.85);
         });
     });

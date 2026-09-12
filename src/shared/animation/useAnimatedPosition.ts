@@ -17,8 +17,8 @@ import {
     MAX_LATENCY_PROJECTION_COORD,
     MAX_VELOCITY,
     MIN_MOVING_VELOCITY,
-    PHYSICAL_BUS_DELAY_MS,
     POST_TARGET_VELOCITY_RATIO,
+    PREDICTIVE_LATENCY_LEAD_MS,
     SCALAR_LOOP_RESTART_THRESHOLD_METERS,
     STATE_UPDATE_THROTTLE_MS,
     STATIONARY_CONFIRM_MS,
@@ -442,9 +442,9 @@ export function useAnimatedPosition(
                 MAX_VELOCITY
             );
 
-            // Initial latency projection upon data arrival
+            // Initial latency projection upon data arrival (compensates physical + TAGO batch delay)
             const v = Math.max(velocityRef.current, MIN_MOVING_VELOCITY);
-            const effectivePhysicalDelay = Math.max(0, Math.min(PHYSICAL_BUS_DELAY_MS, 15000));
+            const effectivePhysicalDelay = Math.max(0, Math.min(PREDICTIVE_LATENCY_LEAD_MS, 15000));
             const newTargetDist = Math.min(rawDist + v * effectivePhysicalDelay, totalDist);
             targetDistRef.current = newTargetDist;
 
@@ -522,7 +522,7 @@ export function useAnimatedPosition(
             // ----------------------------------------------------------------
             const timeSinceRealMove =
                 lastRealMoveTimeRef.current > 0 ? now - lastRealMoveTimeRef.current : 0;
-            const effectiveElapsedMs = PHYSICAL_BUS_DELAY_MS + timeSinceRealMove;
+            const effectiveElapsedMs = PREDICTIVE_LATENCY_LEAD_MS + timeSinceRealMove;
             const dynamicLead = Math.min(
                 activeV * effectiveElapsedMs,
                 MAX_DEAD_RECKONING_LEAD_COORD
@@ -539,7 +539,7 @@ export function useAnimatedPosition(
             if (nextStopIdx !== -1) {
                 const nextStopDist = stopDists[nextStopIdx];
                 const distToStop = nextStopDist - lastRealMoveDistRef.current;
-                if (distToStop < STOP_DECEL_ZONE && activeV < CITY_BUS_BASE_VELOCITY * 1.1) {
+                if (distToStop < STOP_DECEL_ZONE && (activeV < CITY_BUS_BASE_VELOCITY * 0.75 || isOvershotOnDataRef.current)) {
                     dynamicTarget = Math.min(dynamicTarget, nextStopDist + STOP_DWELL_PROXIMITY * 0.5);
                 }
             }
@@ -615,10 +615,10 @@ export function useAnimatedPosition(
                         );
                     } else if (isOvershotOnDataRef.current) {
                         // --------------------------------------------------------
-                        // Overshoot phase: real bus stopped or slowed down, soft-brake marker
+                        // Overshoot phase: real bus stopped or slowed down, smooth coasting deceleration
                         // --------------------------------------------------------
-                        currentVelocityRef.current = Math.max(0, currentVelocityRef.current * 0.9);
-                        effectiveVelocity = 0;
+                        currentVelocityRef.current = Math.max(0, currentVelocityRef.current * 0.92);
+                        effectiveVelocity = activeV * 0.35 * stopMult;
                     } else {
                         // --------------------------------------------------------
                         // Cruising lock phase: marker is aligned with dynamic live target
@@ -630,7 +630,7 @@ export function useAnimatedPosition(
                             leadBeyondTarget / Math.max(0.001, maxExtraLead)
                         );
                         const taperFactor =
-                            POST_TARGET_VELOCITY_RATIO * (1 - extraProgress * 0.25);
+                            POST_TARGET_VELOCITY_RATIO * (1 - extraProgress * 0.15);
                         effectiveVelocity = activeV * deadReckoningFactor * stopMult * taperFactor;
                     }
 
