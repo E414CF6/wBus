@@ -87,7 +87,7 @@ export default function TermsPage() {
                         <span className="text-blue-600 dark:text-blue-400">제1조</span> (목적)
                     </h2>
                     <p className="text-slate-600 dark:text-slate-300 text-sm">
-                        본 약관은 wBus(이하 &quot;서비스&quot;)가 제공하는 원주시 버스 실시간 위치, 노선 시간표, 스퀘어(커뮤니티 광장) 등 제반 서비스의 이용 조건 및
+                        본 약관은 wBus(이하 &quot;서비스&quot;)가 제공하는 원주시 버스 실시간 위치, 노선 시간표 등 제반 서비스의 이용 조건 및
                         절차, 이용자와 서비스 간의 권리, 의무 및 책임 사항을 규정함을 목적으로 합니다.
                     </p>
                 </section>
@@ -103,9 +103,6 @@ export default function TermsPage() {
                             의미합니다.
                         </li>
                         <li><strong>&quot;이용자&quot;</strong>란 서비스에 접속하여 본 약관에 따라 서비스를 이용하는 모든 사용자를 의미합니다.</li>
-                        <li><strong>&quot;스퀘어&quot;</strong>이란 이용자가 버스 운행 상황 공유, 질문, 정보 교환 등을 위해 작성하는 실시간 스레드 및 메시지
-                            게시 공간을 말합니다.
-                        </li>
                     </ul>
                 </section>
 
@@ -140,28 +137,7 @@ export default function TermsPage() {
                 <section
                     className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <span className="text-blue-600 dark:text-blue-400">제5조</span> (스퀘어 및 게시물 관리 기준)
-                    </h2>
-                    <div className="space-y-2 text-slate-600 dark:text-slate-300 text-sm">
-                        <p>1. 스퀘어는 시민과 이용자 간의 건전한 정보 공유를 위한 익명 소통 공간입니다.</p>
-                        <p>2. 이용자는 다음 각 호에 해당하는 행위나 게시물을 등록해서는 안 됩니다:</p>
-                        <ul className="list-disc list-inside pl-2 space-y-1 text-slate-500 dark:text-slate-400">
-                            <li>타인의 명예를 훼손하거나 모욕, 비방, 허위사실을 유포하는 행위</li>
-                            <li>욕설, 비속어, 음란물 또는 혐오 발언을 게시하는 행위</li>
-                            <li>영리 목적의 광고성 스팸 글을 반복 등록하는 행위</li>
-                            <li>타인의 개인정보(이름, 연락처, 차량번호 등)를 무단 공개하는 행위</li>
-                            <li>서비스의 정상적인 운영을 방해하거나 시스템에 과도한 부하를 가하는 행위</li>
-                        </ul>
-                        <p>3. 위 조항을 위반한 게시물은 사전 통보 없이 즉시 삭제되거나 숨김 처리될 수 있으며, 해당 이용자의 서비스 이용이 일시적 또는 영구적으로 제한될 수
-                            있습니다.</p>
-                    </div>
-                </section>
-
-                {/* 제6조 */}
-                <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
-                    <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <span className="text-blue-600 dark:text-blue-400">제6조</span> (위치기반 서비스 및 데이터 이용)
+                        <span className="text-blue-600 dark:text-blue-400">제5조</span> (위치기반 서비스 및 데이터 이용)
                     </h2>
                     <p className="text-slate-600 dark:text-slate-300 text-sm">
                         1. 서비스는 이용자의 현재 위치 기준 주변 정류장 탐색 및 실시간 거리 계산을 위해 브라우저의 Geolocation API를 활용할 수 있습니다.<br/>
@@ -169,11 +145,11 @@ export default function TermsPage() {
                     </p>
                 </section>
 
-                {/* 제7조 */}
+                {/* 제6조 */}
                 <section
                     className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <span className="text-blue-600 dark:text-blue-400">제7조</span> (저작권 및 지식재산권)
+                        <span className="text-blue-600 dark:text-blue-400">제6조</span> (저작권 및 지식재산권)
                     </h2>
                     <p className="text-slate-600 dark:text-slate-300 text-sm">
                         1. 서비스가 자체 제작한 UI, 디자인, 소스코드, 콘텐츠의 저작권은 서비스 운영자에게 있습니다.<br/>
@@ -181,11 +157,11 @@ export default function TermsPage() {
                     </p>
                 </section>
 
-                {/* 제8조 */}
+                {/* 제7조 */}
                 <section
                     className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                        <span className="text-blue-600 dark:text-blue-400">제8조</span> (준거법 및 재판관할)
+                        <span className="text-blue-600 dark:text-blue-400">제7조</span> (준거법 및 재판관할)
                     </h2>
                     <p className="text-slate-600 dark:text-slate-300 text-sm">
                         본 약관과 관련된 분쟁에 대해서는 대한민국 법률을 준거법으로 하며, 분쟁 발생 시 관할 법원은 민사소송법에 따른 법원을 전속관할로 합니다.

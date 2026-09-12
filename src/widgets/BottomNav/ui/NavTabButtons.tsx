@@ -1,26 +1,23 @@
 "use client";
 
 import React, {memo} from "react";
-import {Calendar, MapPin, MessageSquare} from "lucide-react";
+import {Calendar, MapPin} from "lucide-react";
 import {UI_TEXT} from "@shared/config/locale";
 import type {NavTab} from "@shared/types/navigation";
 
 interface NavTabButtonsProps {
     activeTab: NavTab;
     onTabChange: (tab: NavTab) => void;
-    commentCount?: number;
 }
 
 const TABS: { id: NavTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
     {id: "schedule", label: UI_TEXT.BOTTOM_NAV.TAB_SCHEDULE, icon: Calendar},
     {id: "map", label: UI_TEXT.BOTTOM_NAV.TAB_MAP, icon: MapPin},
-    {id: "chat", label: UI_TEXT.BOTTOM_NAV.TAB_CHAT, icon: MessageSquare},
 ];
 
 export const NavTabButtons = memo(function NavTabButtons({
     activeTab,
     onTabChange,
-    commentCount = 0,
 }: NavTabButtonsProps) {
     return (
         <div className="flex items-center gap-1 shrink-0">
@@ -46,25 +43,12 @@ export const NavTabButtons = memo(function NavTabButtons({
                                     isActive ? "animate-pulse" : ""
                                 }`}
                             />
-                            {tab.id === "chat" && commentCount > 0 && !isActive && (
-                                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-blue-500 animate-pulse"/>
-                            )}
                         </div>
                         <span className="whitespace-nowrap">{tab.label}</span>
-                        {tab.id === "chat" && commentCount > 0 && (
-                            <span
-                                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                                    isActive
-                                        ? "bg-blue-500 text-white"
-                                        : "bg-blue-600/10 text-blue-600 dark:text-blue-400"
-                                }`}
-                            >
-                                {commentCount}
-                            </span>
-                        )}
                     </button>
                 );
             })}
         </div>
     );
 });
+

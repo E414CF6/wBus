@@ -19,7 +19,6 @@ import {
 } from "./common";
 import {TIMETABLE_STRINGS} from "./timetable";
 import {YONSEI_SHUTTLE_STRINGS, YONSEI_STRINGS} from "./yonsei";
-import {CHAT_STRINGS} from "./chat";
 import {ROUTE_SELECT_STRINGS} from "./routeSelect";
 import {NOTICE_STRINGS} from "./notice";
 
@@ -27,7 +26,6 @@ export * from "./appLocale";
 export * from "./common";
 export * from "./timetable";
 export * from "./yonsei";
-export * from "./chat";
 export * from "./routeSelect";
 export * from "./notice";
 
@@ -48,7 +46,6 @@ export const UI_TEXT = {
     YONSEI: YONSEI_STRINGS,
     YONSEI_TIMETABLE: YONSEI_STRINGS,
     YONSEI_SHUTTLE: YONSEI_SHUTTLE_STRINGS,
-    CHAT: CHAT_STRINGS,
     ROUTE_SELECT: ROUTE_SELECT_STRINGS,
     BUS_SERVICE: BUS_SERVICE_STRINGS,
     SCHEDULE: SCHEDULE_STRINGS,

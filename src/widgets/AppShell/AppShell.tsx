@@ -5,7 +5,6 @@ import React, {useEffect, useMemo, useState} from "react";
 
 import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 
-import {useSquareComments} from "@entities/comment";
 import {useBusRouteMap} from "@entities/route/hooks";
 
 import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
@@ -14,7 +13,6 @@ import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
 import {isWeekend} from "@shared/lib/timeUtils";
 import {BottomNav} from "@widgets/BottomNav";
 
-import {ChatView} from "@widgets/ChatWidget";
 import {TimetableWidget} from "@widgets/TimetableWidget";
 import {YonseiTimetableWidget} from "@widgets/YonseiTimetableWidget";
 import {useAppNavigation} from "./hooks/useAppNavigation";
@@ -44,16 +42,6 @@ export function AppShell() {
         handleRouteChange,
         handleSelectMapRoute,
     } = useAppNavigation();
-
-    // Square / Comments State & Realtime live sync (lazy activated on first visit to chat tab)
-    const {
-        comments,
-        isRefreshing: isRefreshingComments,
-        refreshComments,
-        addComment: handleAddComment,
-        likeComment: handleLikeComment,
-        deleteComment: handleDeleteComment,
-    } = useSquareComments({enabled: activeTab === "chat"});
 
     // Live weekend check for timetable badge (updates on minute change, re-renders only at midnight transition)
     const [isTodayWeekendOrHoliday, setIsTodayWeekendOrHoliday] = useState<boolean>(() => isWeekend());
@@ -157,21 +145,6 @@ export function AppShell() {
                 </main>
             )}
 
-            {/* 3. Real-time Square View */}
-            {activeTab === "chat" && (
-                <div
-                    className="flex-1 overflow-hidden w-full max-w-6xl mx-auto px-3 sm:px-6 pt-2 sm:pt-4 pb-[calc(env(safe-area-inset-bottom,0)+4.5rem)] sm:pb-[calc(env(safe-area-inset-bottom,0)+5rem)] flex flex-col">
-                    <ChatView
-                        comments={comments}
-                        onAddComment={handleAddComment}
-                        onLikeComment={handleLikeComment}
-                        onDeleteComment={handleDeleteComment}
-                        onRefresh={refreshComments}
-                        isRefreshing={isRefreshingComments}
-                    />
-                </div>
-            )}
-
             {/* Unified Bottom Floating Pill Navigation Bar */}
             <BottomNav
                 activeTab={activeTab}
@@ -188,7 +161,6 @@ export function AppShell() {
                 getDirection={liveBusData.getDirection}
                 connectionStatus={liveBusData.connectionStatus}
                 hasFetched={liveBusData.hasFetched}
-                commentCount={comments.length}
             />
         </div>
     );

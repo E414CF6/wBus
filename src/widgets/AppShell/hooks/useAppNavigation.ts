@@ -7,7 +7,6 @@ import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
 
 export function resolveTabFromPathname(path: string): NavTab {
     if (path.startsWith("/live") || path.startsWith("/map")) return "map";
-    if (path.startsWith("/chat") || path.startsWith("/square")) return "chat";
     return "schedule";
 }
 
@@ -77,7 +76,7 @@ export function useAppNavigation() {
         return () => window.removeEventListener("popstate", handlePopState);
     }, []);
 
-    // Scroll to top when changing tabs so map/chat start cleanly
+    // Scroll to top when changing tabs
     useEffect(() => {
         if (typeof window !== "undefined") {
             window.scrollTo({top: 0, left: 0, behavior: "instant"});
@@ -137,8 +136,6 @@ export function useAppNavigation() {
                     ? `?route=${encodeURIComponent(selectedRoute)}`
                     : "";
                 targetUrl = `/live${routeParam}`;
-            } else if (tab === "chat") {
-                targetUrl = "/square";
             } else {
                 const subTabParam = timetableSubTab === "all" ? "?subTab=all" : "";
                 targetUrl = `/${subTabParam}`;

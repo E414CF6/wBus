@@ -37,9 +37,6 @@ export interface BottomNavProps {
     connectionStatus?: LiveConnectionStatus;
     hasFetched?: boolean;
 
-    // Dynamic Square / Comments options
-    commentCount?: number;
-
     className?: string;
 }
 
@@ -63,7 +60,6 @@ function BottomNavComponent({
                                 onBusClick,
                                 connectionStatus = "connected",
                                 hasFetched = true,
-                                commentCount = 0,
                                 className = "",
                             }: BottomNavProps) {
     return (
@@ -94,7 +90,6 @@ function BottomNavComponent({
                 <NavTabButtons
                     activeTab={activeTab}
                     onTabChange={onTabChange}
-                    commentCount={commentCount}
                 />
 
                 {/* Dynamic Options for Timetable (Schedule Tab) */}

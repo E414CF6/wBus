@@ -10,7 +10,7 @@ import {Layer, Source} from "react-map-gl/maplibre";
 export default function BusRoutePolyline({routeName}: { routeName: string }) {
     const {map} = useAppMapContext();
     const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName);
-    const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
+    const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo?.vehicleRouteIds]);
     const lastBoundsKeyRef = useRef<string | null>(null);
 
     // Filter to render all available route IDs for this route number

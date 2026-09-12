@@ -15,6 +15,20 @@ const nextConfig: NextConfig = {
             },
         ];
     },
+    async redirects() {
+        return [
+            {
+                source: "/square",
+                destination: "/",
+                permanent: false,
+            },
+            {
+                source: "/chat",
+                destination: "/",
+                permanent: false,
+            },
+        ];
+    },
 };
 
 export default nextConfig;

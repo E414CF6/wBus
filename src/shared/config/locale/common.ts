@@ -66,13 +66,11 @@ export const NAV_STRINGS = {
 export const BOTTOM_NAV_STRINGS = {
     TAB_SCHEDULE: "시간표",
     TAB_MAP: "실시간 지도",
-    TAB_CHAT: "스퀘어",
     TAB_YONSEI: "연세대",
     TAB_ALL: "전체",
     RUNNING_LIST_BTN: (count: number) => `운행 목록 (${count})`,
     RUNNING_LIST_TITLE: (route: string, count: number) => `${route}번 노선 운행 목록 (${count}대)`,
     TOGGLE_THEME: "테마 변경",
-    CHAT_ALL_FILTER: "전체",
     PICK_ROUTE_TITLE: "노선 선택",
     SELECT_ROUTE_TITLE: "노선 선택 (검색/목록)",
     DEFAULT_ROUTE_NAME: "노선",

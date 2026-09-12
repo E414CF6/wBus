@@ -8,11 +8,6 @@ describe("resolveTabFromPathname", () => {
         expect(resolveTabFromPathname("/live/30")).toBe("map");
     });
 
-    it("maps /chat and /square to chat tab", () => {
-        expect(resolveTabFromPathname("/chat")).toBe("chat");
-        expect(resolveTabFromPathname("/square")).toBe("chat");
-    });
-
     it("maps root and /schedule to schedule tab", () => {
         expect(resolveTabFromPathname("/")).toBe("schedule");
         expect(resolveTabFromPathname("/schedule")).toBe("schedule");
@@ -21,5 +16,7 @@ describe("resolveTabFromPathname", () => {
     it("defaults unknown paths to schedule tab", () => {
         expect(resolveTabFromPathname("/unknown")).toBe("schedule");
         expect(resolveTabFromPathname("/bus")).toBe("schedule");
+        expect(resolveTabFromPathname("/chat")).toBe("schedule");
+        expect(resolveTabFromPathname("/square")).toBe("schedule");
     });
 });

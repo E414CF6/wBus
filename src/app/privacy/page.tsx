@@ -127,17 +127,13 @@ export default function PrivacyPage() {
                     </h2>
                     <div className="space-y-3 text-slate-600 dark:text-slate-300 text-sm">
                         <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white mb-1">가. 스퀘어(커뮤니티 광장) 이용 시</h3>
-                            <p>작성 시 입력한 닉네임(익명 가능), 게시글 내용, 작성 일시, 작성자가 설정한 식별 태그(본인 글 삭제 확인용)가 수집될 수 있습니다.</p>
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white mb-1">나. 서비스 이용 과정에서 자동 생성되는
+                            <h3 className="font-bold text-slate-900 dark:text-white mb-1">가. 서비스 이용 과정에서 자동 생성되는
                                 정보</h3>
                             <p>서비스 악용 및 비정상 접근(어뷰징/DDoS 방지) 대응을 위한 최소한의 접속 IP 주소, 브라우저 종류(User-Agent), 접속 일시가 웹 서버
                                 로그에 일시적으로 기록될 수 있습니다.</p>
                         </div>
                         <div>
-                            <h3 className="font-bold text-slate-900 dark:text-white mb-1">다. 위치 정보
+                            <h3 className="font-bold text-slate-900 dark:text-white mb-1">나. 위치 정보
                                 (Geolocation)</h3>
                             <p>주변 버스 정류장 검색 기능을 사용할 경우 사용자의 동의 하에 위치 좌표가 브라우저에서 읽혀지며, 이는 기기 내에서 거리 계산 용도로만 쓰이고 서버에
                                 기록되거나 축적되지 않습니다.</p>
@@ -152,7 +148,6 @@ export default function PrivacyPage() {
                         <span className="text-emerald-600 dark:text-emerald-400">3.</span> 개인정보의 이용 목적 및 보유 기간
                     </h2>
                     <ul className="list-disc list-inside space-y-1.5 text-slate-600 dark:text-slate-300 text-sm pl-1">
-                        <li><strong>스퀘어 메시지</strong>: 이용자가 직접 삭제하거나 서비스 운영 정책에 따라 정리될 때까지 보관됩니다.</li>
                         <li><strong>서버 접속 로그</strong>: 통신비밀보호법 등 관련 법령에 의거하여 비정상 트래픽 분석 후 일정 기간(통상 3개월 이내) 경과 시
                             파기됩니다.
                         </li>
@@ -184,7 +179,6 @@ export default function PrivacyPage() {
                             <li>즐겨찾기한 버스 노선 목록</li>
                             <li>최근 조회한 노선 및 정류장</li>
                             <li>다크 모드 / 라이트 모드 테마 환경설정</li>
-                            <li>스퀘어에서 본인이 작성한 게시글 식별 키 (게시글 삭제 관리용)</li>
                         </ul>
                         <p className="text-xs text-slate-400">※ 이용자는 웹 브라우저 캐시 및 쿠키/사이트 데이터 삭제 메뉴를 통해 언제든지 위 정보를
                             초기화할 수 있습니다.</p>
@@ -198,8 +192,8 @@ export default function PrivacyPage() {
                         <span className="text-emerald-600 dark:text-emerald-400">6.</span> 정보주체의 권리 및 행사 방법
                     </h2>
                     <p className="text-slate-600 dark:text-slate-300 text-sm">
-                        이용자는 스퀘어에 작성한 본인의 게시물을 직접 삭제할 수 있으며, 타인에 의한 명예훼손 또는 개인정보 노출 게시물이 있을 경우 서비스 운영자에게 삭제를 요청할 수
-                        있습니다.
+                        이용자는 언제든지 웹 브라우저의 저장 데이터 삭제를 통해 기기에 보관된 환경설정 및 최근 조회 기록을 초기화할 수 있으며, 관련 문의나 권리 행사가 필요한 경우 언제든지
+                        문의 창구를 통해 요청하실 수 있습니다.
                     </p>
                 </section>
 
@@ -213,7 +207,7 @@ export default function PrivacyPage() {
                         <p>wBus 서비스의 개인정보 보호 및 관련 문의사항은 아래로 연락해 주시기 바랍니다.</p>
                         <div className="p-3 mt-2 rounded-xl bg-slate-50 dark:bg-white/5 text-xs space-y-1">
                             <p><strong>서비스명</strong>: wBus (원주 버스 정보 서비스)</p>
-                            <p><strong>문의 창구</strong>: 스퀘어 문의 카테고리 또는 GitHub Issues</p>
+                            <p><strong>문의 창구</strong>: GitHub Issues</p>
                         </div>
                     </div>
                 </section>
