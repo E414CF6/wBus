@@ -50,3 +50,5 @@ export function getMapStyleUrl(theme?: string | boolean): string {
     // 2. Default to static asset route (served statically by Next.js from public/)
     return `/${stylePath}`;
 }
+
+export {getMaxCanvasSize} from "./mapCanvas";

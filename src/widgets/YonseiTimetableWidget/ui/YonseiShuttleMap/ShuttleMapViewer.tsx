@@ -10,7 +10,7 @@ import {Bus, MapPin} from "lucide-react";
 import React, {useCallback, useEffect, useMemo, useRef} from "react";
 import MapGL, {MapRef, Marker, NavigationControl} from "react-map-gl/maplibre";
 
-import {getMapStyleUrl} from "@features/map-view/getMapData";
+import {getMapStyleUrl, getMaxCanvasSize} from "@features/map-view/getMapData";
 import {getKakaoRoadviewUrl, type YonseiShuttleStop} from "@entities/station";
 
 // Set MapLibre GL JS v6 Web Worker via official CDN (^6.7.0 pinned major) as per migration guide
@@ -32,6 +32,7 @@ export const ShuttleMapViewer: React.FC<ShuttleMapViewerProps> = ({
     const mapRef = useRef<MapRef>(null);
     const {resolvedTheme} = useTheme();
     const mapStyleUrl = useMemo(() => getMapStyleUrl(resolvedTheme), [resolvedTheme]);
+    const maxCanvasSize = useMemo(() => getMaxCanvasSize(), []);
 
     // Fly to selected stop smoothly
     const flyToStop = useCallback((stop: YonseiShuttleStop) => {
@@ -66,6 +67,7 @@ export const ShuttleMapViewer: React.FC<ShuttleMapViewerProps> = ({
                 mapLib={maplibregl}
                 minZoom={10}
                 maxZoom={19}
+                maxCanvasSize={maxCanvasSize}
                 style={{width: "100%", height: "100%"}}
                 attributionControl={false}
             >

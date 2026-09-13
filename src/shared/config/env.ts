@@ -77,6 +77,8 @@ export const MAP_SETTINGS = {
         BUS: {
             ICON_SIZE: [29, 43] as [number, number],
         },
+    }, CANVAS: {
+        DEFAULT_MAX_SIZE: [getEnvNumber(process.env.NEXT_PUBLIC_MAP_MAX_CANVAS_WIDTH, getEnvNumber(process.env.NEXT_PUBLIC_MAP_MAX_CANVAS_SIZE, 8192)), getEnvNumber(process.env.NEXT_PUBLIC_MAP_MAX_CANVAS_HEIGHT, getEnvNumber(process.env.NEXT_PUBLIC_MAP_MAX_CANVAS_SIZE, 8192)),] as [number, number],
     },
     ALWAYS_UPWARD_NODE_IDS: getEnvArray(process.env.NEXT_PUBLIC_ALWAYS_UPWARD_NODE_IDS, ","),
     DEFAULT_ROUTE: getEnv(process.env.NEXT_PUBLIC_DEFAULT_ROUTE, "30"),

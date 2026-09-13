@@ -2,7 +2,7 @@
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import {getMapStyleUrl} from "@features/map-view/getMapData";
+import {getMapStyleUrl, getMaxCanvasSize} from "@features/map-view/getMapData";
 import {createMapViewFromMap, getInitialMapView, saveMapView} from "@features/map-view/MapViewStorage";
 
 import {MAP_SETTINGS} from "@shared/config/env";
@@ -53,6 +53,7 @@ export default function Map({onReady, children}: MapProps) {
     // Load saved view state (center/zoom) or default from config
     const initialView = useMemo(() => getInitialMapView(), []);
     const mapStyleUrl = useMemo(() => getMapStyleUrl(resolvedTheme), [resolvedTheme]);
+    const maxCanvasSize = useMemo(() => getMaxCanvasSize(), []);
 
     const showLocationToast = useCallback((message: string, type: "warning" | "error" | "info" = "info") => {
         if (toastTimerRef.current) {
@@ -173,6 +174,7 @@ export default function Map({onReady, children}: MapProps) {
                     MAP_SETTINGS.BOUNDS.MAX[1][0],
                     MAP_SETTINGS.BOUNDS.MAX[1][1],
                 ]}
+                maxCanvasSize={maxCanvasSize}
                 style={{width: "100%", height: "100%", position: "relative", zIndex: 0}}
                 touchPitch={false}
             >
