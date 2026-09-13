@@ -79,7 +79,11 @@ export default function Map({onReady, children}: MapProps) {
     const handleError = useCallback((e: unknown) => {
         const errDetail = (e as { error?: Error })?.error?.message || (e as { error?: Error })?.error || e;
         console.warn("[MapGL] Map error encountered, falling back to ready state:", errDetail);
-        handleLoad();
+        if (!readyOnceRef.current) {
+            setTimeout(() => {
+                handleLoad();
+            }, 0);
+        }
     }, [handleLoad]);
 
     const handleMoveEnd = useCallback(() => {

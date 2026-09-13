@@ -199,8 +199,8 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all"}:
                 id="polyline-active-arrows"
                 type="symbol"
                 filter={
-                    selectedDirection === "all"
-                        ? undefined
+                    selectedDirection === "all" || !selectedDirection
+                        ? ["has", "direction"]
                         : ["==", ["get", "direction"], selectedDirection]
                 }
                 layout={{
