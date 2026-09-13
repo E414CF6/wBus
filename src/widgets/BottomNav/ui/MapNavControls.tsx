@@ -7,9 +7,6 @@ import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
 import {YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
-import {useAppMapContext} from "@shared/context/AppMapContext";
-import {MAP_SETTINGS} from "@shared/config/env";
-import {BusListDrawer} from "./BusListDrawer";
 
 interface MapNavControlsProps {
     allRoutes?: string[];
@@ -20,6 +17,8 @@ interface MapNavControlsProps {
     onBusClick?: (lat: number, lng: number) => void;
     connectionStatus?: LiveConnectionStatus;
     hasFetched?: boolean;
+    isBusListOpen?: boolean;
+    onToggleBusList?: () => void;
 }
 
 export const MapNavControls = memo(function MapNavControls({
@@ -27,29 +26,19 @@ export const MapNavControls = memo(function MapNavControls({
     selectedRoute = "",
     onSelectRoute,
     runningBuses = [],
-    getDirection,
-    onBusClick,
     connectionStatus = "connected",
     hasFetched = true,
+                                                               isBusListOpen: controlledBusListOpen,
+                                                               onToggleBusList,
 }: MapNavControlsProps) {
-    const {map} = useAppMapContext();
-    const [isBusListOpen, setIsBusListOpen] = useState(false);
+    const [internalBusListOpen, setInternalBusListOpen] = useState(false);
     const [isRoutePickerOpen, setIsRoutePickerOpen] = useState(false);
+
+    const isBusListOpen = controlledBusListOpen !== undefined ? controlledBusListOpen : internalBusListOpen;
+    const handleToggleBusList = onToggleBusList ?? (() => setInternalBusListOpen((prev) => !prev));
 
     const isYonseiSelected = YONSEI_ROUTE_SET.has(selectedRoute);
     const isConnecting = !hasFetched || connectionStatus === "connecting";
-
-    const handleDefaultBusClick = (lat: number, lng: number) => {
-        if (onBusClick) {
-            onBusClick(lat, lng);
-        } else if (map) {
-            map.flyTo({
-                center: [lng, lat],
-                zoom: map.getZoom(),
-                duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
-            });
-        }
-    };
 
     return (
         <>
@@ -63,17 +52,6 @@ export const MapNavControls = memo(function MapNavControls({
                     onSelectRoute?.(route);
                     setIsRoutePickerOpen(false);
                 }}
-            />
-
-            {/* Expandable Floating Running Bus List Sheet */}
-            <BusListDrawer
-                isOpen={isBusListOpen}
-                onClose={() => setIsBusListOpen(false)}
-                selectedRoute={selectedRoute}
-                runningBuses={runningBuses}
-                isConnecting={isConnecting}
-                getDirection={getDirection}
-                onBusClick={handleDefaultBusClick}
             />
 
             {/* Divider */}
@@ -98,7 +76,7 @@ export const MapNavControls = memo(function MapNavControls({
             {/* Running Bus List Toggle Button */}
             <button
                 type="button"
-                onClick={() => setIsBusListOpen(!isBusListOpen)}
+                onClick={handleToggleBusList}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn ${
                     isBusListOpen
                         ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"

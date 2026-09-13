@@ -1,14 +1,16 @@
 "use client";
 
-import React, {memo} from "react";
+import React, {memo, useState} from "react";
 import {MapIcon} from "lucide-react";
-import {APP_CONFIG} from "@shared/config/env";
+import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
+import {useAppMapContext} from "@shared/context/AppMapContext";
 
 import {NavTabButtons} from "./ui/NavTabButtons";
 import {ScheduleNavControls} from "./ui/ScheduleNavControls";
 import {MapNavControls} from "./ui/MapNavControls";
 import {NavThemeToggle} from "./ui/NavThemeToggle";
+import {BusListDrawer} from "./ui/BusListDrawer";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
@@ -62,10 +64,48 @@ function BottomNavComponent({
                                 hasFetched = true,
                                 className = "",
                             }: BottomNavProps) {
+    const {map} = useAppMapContext();
+    const [isBusListOpen, setIsBusListOpen] = useState(false);
+
+    const [prevActiveTab, setPrevActiveTab] = useState(activeTab);
+    if (activeTab !== prevActiveTab) {
+        setPrevActiveTab(activeTab);
+        if (activeTab !== "map") {
+            setIsBusListOpen(false);
+        }
+    }
+
+    const handleDefaultBusClick = (lat: number, lng: number) => {
+        if (onBusClick) {
+            onBusClick(lat, lng);
+        } else if (map) {
+            map.flyTo({
+                center: [lng, lat],
+                zoom: map.getZoom(),
+                duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
+            });
+        }
+    };
+
+    const isConnecting = !hasFetched || connectionStatus === "connecting";
+
     return (
         <div
             className={`fixed bottom-[calc(env(safe-area-inset-bottom,0)+1rem)] left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-3 max-w-[95vw] ${className}`}
         >
+            {/* Expandable Floating Running Bus List Sheet (Map Tab) */}
+            {activeTab === "map" && (
+                <BusListDrawer
+                    isOpen={isBusListOpen}
+                    onClose={() => setIsBusListOpen(false)}
+                    selectedRoute={selectedRoute}
+                    runningBuses={runningBuses}
+                    isConnecting={isConnecting}
+                    getDirection={getDirection}
+                    onBusClick={handleDefaultBusClick}
+                />
+            )}
+
             {/* Unified Bottom Floating Pill Navigation Bar */}
             <nav
                 aria-label={UI_TEXT.ACCESSIBILITY.MAIN_NAV}
@@ -110,10 +150,10 @@ function BottomNavComponent({
                         selectedRoute={selectedRoute}
                         onSelectRoute={onSelectRoute}
                         runningBuses={runningBuses}
-                        getDirection={getDirection}
-                        onBusClick={onBusClick}
                         connectionStatus={connectionStatus}
                         hasFetched={hasFetched}
+                        isBusListOpen={isBusListOpen}
+                        onToggleBusList={() => setIsBusListOpen((prev) => !prev)}
                     />
                 )}
 
