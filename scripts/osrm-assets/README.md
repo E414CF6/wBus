@@ -1,20 +1,27 @@
 # Open Source Routing Machine (OSRM) Setup Guide
 
 This guide provides instructions for deploying and running a local **Open Source Routing Machine (OSRM)** backend
-instance for the wBus polyline generation pipeline. This pipeline processes South Korea OpenStreetMap (OSM) vector data
-utilizing the **MLD (Multi-Level Dijkstra)** algorithm to compute road-matched bus route segments.
+instance with a dedicated **Bus Routing Profile (`bus.lua`)** for the wBus polyline generation pipeline. This pipeline
+processes South Korea OpenStreetMap (OSM) vector data utilizing the **MLD (Multi-Level Dijkstra)** algorithm to compute
+road-matched bus route segments.
 
 ---
 
 ## Overview
 
 wBus uses OSRM during its offline data pipeline (`scripts/generate-polyline-segment.mjs`) to snap raw bus stop GPS
-coordinates onto realistic road networks. Rather than displaying crude straight lines between transit stops, the
-pipeline generates accurate, road-aligned GeoJSON vector polylines that follow actual street geography.
+coordinates onto realistic road networks. Rather than displaying crude straight lines or allowing vehicles to detour
+through narrow residential alleys, the pipeline utilizes a dedicated `bus.lua` profile that:
+
+1. **Favors Arterial Corridors (`대로`, `로`)**: Strongly prioritizes primary and secondary transit avenues.
+2. **Eliminates Back-Alley Rat Running**: Heavily penalizes or strictly forbids narrow residential lanes (`residential`,
+   `living_street`, `service`, `alley`, `parking`).
+3. **Respects Heavy Vehicle Limits**: Enforces 12m length, 2.6m width, 3.5m height, and 16t weight constraints.
+4. **Honors Bus-Only & PSV Lanes**: Grants transit rights to public transit ways (`bus=designated`, `psv=yes`).
 
 ```
-Raw Bus Stops (TAGO) ----> OSRM Match / Route ----> Snapped Segments (GeoJSON)
-(Longitude, Latitude)      (Local Port 4000)        (public/routes/*.json)
+Raw Bus Stops (TAGO) ----> OSRM Match / Route (bus.lua) ----> Snapped Segments (GeoJSON)
+(Longitude, Latitude)      (Local Port 4000)                  (public/routes/*.json)
 ```
 
 ---
@@ -69,7 +76,7 @@ docker build \
 
 ---
 
-## 2. Map Data Acquisition and Preprocessing
+## 2. Map Data Acquisition and Preprocessing with `bus.lua`
 
 OSRM requires preprocessed routing graphs derived from raw `.osm.pbf` dumps. The **MLD (Multi-Level Dijkstra)**
 algorithm is used because it supports fast partitioning, customizable metric updates, and lower memory overhead compared
@@ -90,22 +97,22 @@ cd ..
 
 ### Step 2: Extract and Prepare Routing Graphs
 
-Execute the three preprocessing stages sequentially:
+Execute the three preprocessing stages sequentially using `bus.lua`:
 
-| Stage            | Binary           | Function                                                                         |
-|:-----------------|:-----------------|:---------------------------------------------------------------------------------|
-| **1. Extract**   | `osrm-extract`   | Parses `.osm.pbf` and builds node networks using the driving profile (`car.lua`) |
-| **2. Partition** | `osrm-partition` | Recursively partitions the routing graph into hierarchical cells                 |
-| **3. Customize** | `osrm-customize` | Calculates cell weights and routing penalties across partitions                  |
+| Stage            | Binary           | Function                                                                     |
+|:-----------------|:-----------------|:-----------------------------------------------------------------------------|
+| **1. Extract**   | `osrm-extract`   | Parses `.osm.pbf` and builds node networks using the bus profile (`bus.lua`) |
+| **2. Partition** | `osrm-partition` | Recursively partitions the routing graph into hierarchical cells             |
+| **3. Customize** | `osrm-customize` | Calculates cell weights and routing penalties across partitions              |
 
 Run the preprocessing commands:
 
 #### Podman
 
 ```bash
-# 1. Extract network
+# 1. Extract network with bus profile
 podman run --rm -t -v "$(pwd)":/data osrm-backend:arm64 \
-  osrm-extract -p /opt/car.lua /data/storage/south-korea-latest.osm.pbf -t 8
+  osrm-extract -p /data/bus.lua /data/storage/south-korea-latest.osm.pbf -t 8
 
 # 2. Partition graph
 podman run --rm -t -v "$(pwd)":/data osrm-backend:arm64 \
@@ -119,9 +126,9 @@ podman run --rm -t -v "$(pwd)":/data osrm-backend:arm64 \
 #### Docker
 
 ```bash
-# 1. Extract network
+# 1. Extract network with bus profile
 docker run --rm -t -v "$(pwd)":/data osrm-backend:local \
-  osrm-extract -p /opt/car.lua /data/storage/south-korea-latest.osm.pbf -t 8
+  osrm-extract -p /data/bus.lua /data/storage/south-korea-latest.osm.pbf -t 8
 
 # 2. Partition graph
 docker run --rm -t -v "$(pwd)":/data osrm-backend:local \
@@ -170,7 +177,7 @@ docker run -d \
 
 ## 4. Verification and Health Check
 
-Verify that the local routing server is operational by querying a driving path between Wonju Station and Yonsei
+Verify that the local routing server is operational by querying a path between Wonju Station and Yonsei
 University Mirae Campus:
 
 ```bash
@@ -178,7 +185,7 @@ curl "http://127.0.0.1:4000/route/v1/driving/127.9452,37.3422;127.9083,37.2831?o
 ```
 
 A successful response returns an HTTP 200 payload with `"code": "Ok"` and a GeoJSON `coordinates` array containing the
-road-matched route geometry.
+road-matched route geometry along major boulevards without alley detours.
 
 ---
 
@@ -196,17 +203,6 @@ npm run polyline
 ```
 
 The script connects to `http://localhost:4000/route/v1/driving` by default (or the value set in `OSRM_API_URL`), snaps
-station sequences to the underlying street network, and outputs production assets into `public/routes/*.json` and
-`public/routeMap.json`.
-
----
-
-## Troubleshooting and Notes
-
-- **Disk Space**: The uncompressed and partitioned `.osrm.*` files occupy approximately 4 GB to 8 GB of storage for the
-  South Korea dataset.
-- **Port Conflicts**: If port `4000` is already occupied, map to another port (e.g., `-p 5001:5000`) and set
-  `OSRM_API_URL="http://localhost:5001/route/v1/driving"` in `.env.local`.
-- **Snapping Fallback**: The wBus script (`scripts/generate-polyline-segment.mjs`) includes automatic straight-line
-  fallback. If OSRM is unreachable or a waypoint cannot be snapped within the configured radius (25 meters), the
-  pipeline logs a warning and joins the coordinates directly to prevent build failures.
+station sequences to the underlying street network using the arterial hierarchy scoring algorithm, and outputs
+production
+assets into `public/routes/*.json` and `public/routeMap.json`.
