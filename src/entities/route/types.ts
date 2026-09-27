@@ -1,6 +1,8 @@
 // Re-export Coordinate from shared geo utils (the canonical definition)
 export type Coordinate = [number, number];
 
+import type {BusStop} from "@entities/station/types";
+
 // Route Info
 
 export type RouteInfo = {
@@ -15,6 +17,24 @@ export type RouteDetail = {
     routeno?: string; sequence: SequenceItem[];
 };
 
+export interface RouteVariationStop extends BusStop {
+    nodeid: string;
+    nodenm: string;
+    nodeord: number;
+    updowncd: number;
+    gpslati: number;
+    gpslong: number;
+    nodeno: string | number;
+}
+
+export interface RouteVariation {
+    routeId: string;
+    label: string;
+    stops: RouteVariationStop[];
+    stopCount: number;
+    turningStop: RouteVariationStop | null;
+}
+
 // GeoJSON
 
 export interface GeoPolyline {
@@ -25,6 +45,8 @@ export interface GeoPolyline {
         name: string;
         ord: number;
         ud: number;
+        lat?: number;
+        lon?: number;
     }[];
     up_segments: string[];
     down_segments: string[];

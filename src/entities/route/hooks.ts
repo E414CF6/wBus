@@ -1,7 +1,7 @@
 "use client";
 
-import type {RouteInfo} from "@entities/route/types";
-import {getRouteInfo, getRouteMap} from "@entities/route/api";
+import type {RouteInfo, RouteVariation} from "@entities/route/types";
+import {getRouteInfo, getRouteMap, getRouteVariations} from "@entities/route/api";
 
 import {APP_CONFIG} from "@shared/config/env";
 
@@ -53,3 +53,26 @@ export function useBusRouteMap(enabled: boolean = true): Record<string, string[]
 
     return data ?? null;
 }
+
+/**
+ * Hook to retrieve all variations of a route, with ordered stops,
+ * user-friendly variation labels, and turning point detection.
+ */
+export function useRouteVariations(routeName: string, enabled: boolean = true) {
+    const {data, error, isLoading} = useSWR<RouteVariation[]>(
+        enabled && routeName ? ["routeVariations", routeName] : null,
+        ([, name]: [string, string]) => getRouteVariations(name),
+        ROUTE_INFO_SWR_OPTIONS
+    );
+
+    if (error && APP_CONFIG.IS_DEV) {
+        console.error(`[useRouteVariations] Failed to fetch variations: ${routeName}`, error);
+    }
+
+    return {
+        variations: data ?? [],
+        isLoading: isLoading && !data,
+        error: error ? (error instanceof Error ? error.message : "Failed to load route variations") : null,
+    };
+}
+
