@@ -38,7 +38,8 @@ export interface BottomNavProps {
     onBusClick?: (lat: number, lng: number) => void;
     connectionStatus?: LiveConnectionStatus;
     hasFetched?: boolean;
-
+    lastUpdated?: number | null;
+    onReconnect?: () => void;
     className?: string;
 }
 
@@ -62,6 +63,8 @@ function BottomNavComponent({
                                 onBusClick,
                                 connectionStatus = "connected",
                                 hasFetched = true,
+                                lastUpdated,
+                                onReconnect,
                                 className = "",
                             }: BottomNavProps) {
     const {map} = useAppMapContext();
@@ -103,6 +106,8 @@ function BottomNavComponent({
                     isConnecting={isConnecting}
                     getDirection={getDirection}
                     onBusClick={handleDefaultBusClick}
+                    lastUpdated={lastUpdated}
+                    onReconnect={onReconnect}
                 />
             )}
 

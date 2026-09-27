@@ -171,6 +171,8 @@ export function AppShell() {
                 getDirection={liveBusData.getDirection}
                 connectionStatus={liveBusData.connectionStatus}
                 hasFetched={liveBusData.hasFetched}
+                lastUpdated={liveBusData.lastUpdated}
+                onReconnect={liveBusData.reconnect}
             />
         </div>
     );
