@@ -9,7 +9,7 @@ road-matched bus route segments.
 
 ## Overview
 
-wBus uses OSRM during its offline data pipeline (`scripts/generate-polyline-segment.mjs`) to snap raw bus stop GPS
+wBus uses OSRM during its offline data pipeline (`scripts/generate-polylines.mjs`) to snap raw bus stop GPS
 coordinates onto realistic road networks. Rather than displaying crude straight lines or allowing vehicles to detour
 through narrow residential alleys, the pipeline utilizes a dedicated `bus.lua` profile that:
 
@@ -199,7 +199,7 @@ generation script:
 cd ../..
 
 # Generate all route polylines and segment caches
-npm run polyline
+node scripts/generate-polylines.mjs
 ```
 
 The script connects to `http://localhost:4000/route/v1/driving` by default (or the value set in `OSRM_API_URL`), snaps

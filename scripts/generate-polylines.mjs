@@ -19,7 +19,7 @@
  *   - Complete telemetry and error reporting
  *
  * Usage:
- *   node scripts/generate-polyline-segment.mjs [--route <no>] [--city-code 32020] [--station-map-only] [--osrm-only] [--no-sync]
+ *   node scripts/generate-polylines.mjs [--route <no>] [--city-code 32020] [--station-map-only] [--osrm-only] [--no-sync]
  */
 
 import crypto from "crypto";
@@ -160,17 +160,18 @@ function cleanSpurLoops(coords) {
 
 // Candidate scoring function relying purely on geometric proximity and corridor continuity
 // (Road hierarchy and alley avoidance are handled inherently by OSRM bus.lua)
+// Candidate scoring function prioritizing official named transit corridors over unnamed alleys/parking lots
 function scoreCandidate(cand, stopName, prevRoad, nextRoad, corridorRoads, roadFreq) {
-    // Pure geometric distance is the primary truth: closest road gets priority
+    // Pure geometric distance is the baseline (closer is better)
     let score = -cand.distance;
     const name = (cand.name || "").trim();
 
-    // Subtle tie-breaker bonus only when distances are nearly identical (< 3m)
-    // NEVER allow a distant alley to overpower a close arterial road
+    // Significant bonus for officially named public roads over unnamed alleys, driveways, parking entries
     if (name) {
-        if (prevRoad && name === prevRoad) score += 2;
-        if (nextRoad && name === nextRoad) score += 2;
-        if (corridorRoads && corridorRoads.has(name)) score += 1;
+        score += 15; // 15m tolerance: named road beats unnamed alley/parking entry
+        if (prevRoad && name === prevRoad) score += 10;
+        if (nextRoad && name === nextRoad) score += 10;
+        if (corridorRoads && corridorRoads.has(name)) score += 5;
     }
 
     return score;
@@ -333,8 +334,9 @@ async function processDirectionLeg(dirStops, stationMap, osrmUrl = DEFAULT_OSRM_
 
     const osrmHost = osrmUrl.replace(/\/route\/v1\/driving\/?$/, "");
 
-    // Phase 1: Use authentic stop coordinates to avoid artificial snapping to side alleys
-    const validCoords = stopsWithCoords.map(s => [s.lon, s.lat]);
+    // Phase 1: Smart-snap stop coordinates to dominant arterial/corridor roads
+    const snapped = await smartSnapStops(stopsWithCoords, osrmHost);
+    const validCoords = snapped.map(s => s.coord);
 
     // Phase 2: Compute directional travel bearings along sequence
     const bearings = [];

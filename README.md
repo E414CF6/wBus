@@ -211,20 +211,20 @@ src/
 The application exposes a set of REST endpoints designed for low-latency responses, aggressive edge micro-caching, and
 automated error recovery:
 
-| Method   | Endpoint                       | Description                                                     | Cache Policy               |
-|:---------|:-------------------------------|:----------------------------------------------------------------|:---------------------------|
-| `GET`    | `/api/bus`                     | Returns full city timetable data and metadata                   | `s-maxage=60`, SWR: `300s` |
-| `GET`    | `/api/bus/[routeId]`           | Live bus GPS positions for the specified route ID               | `s-maxage=2`, SWR: `3s`    |
-| `GET`    | `/api/bus/health`              | Connectivity check against national TAGO API                    | `no-store`                 |
-| `POST`   | `/api/bus/refresh`             | Triggers a fresh scrape of official Wonju ITS schedules         | `no-store`                 |
-| `GET`    | `/api/bus-arrival/[busStopId]` | Predicted arrival times for buses arriving at a stop            | `s-maxage=5`, SWR: `10s`   |
-| `GET`    | `/api/bus-stops/[routeId]`     | Ordered sequence of bus stops for a specific route              | `s-maxage=86400`           |
-| `GET`    | `/api/route-stops/[routeName]` | Ordered directional stops mapped by route name                  | `s-maxage=86400`           |
-| `GET`    | `/api/schedule`                | Complete schedule JSON payload                                  | `s-maxage=60`, SWR: `300s` |
-| `POST`   | `/api/schedule/refresh`        | Force scrape and update local schedule cache                    | `no-store`                 |
-| `GET`    | `/api/notice`                  | List of municipal transit notices from Wonju ITS                | `s-maxage=300`             |
-| `GET`    | `/api/notice/[id]`             | Full detail of a specific ITS transit notice                    | `s-maxage=600`             |
-| `GET`    | `/api/data/[...path]`          | Serves static assets from local `public/` directory             | `public, max-age=3600`     |
+| Method | Endpoint                       | Description                                             | Cache Policy               |
+|:-------|:-------------------------------|:--------------------------------------------------------|:---------------------------|
+| `GET`  | `/api/bus`                     | Returns full city timetable data and metadata           | `s-maxage=60`, SWR: `300s` |
+| `GET`  | `/api/bus/[routeId]`           | Live bus GPS positions for the specified route ID       | `s-maxage=2`, SWR: `3s`    |
+| `GET`  | `/api/bus/health`              | Connectivity check against national TAGO API            | `no-store`                 |
+| `POST` | `/api/bus/refresh`             | Triggers a fresh scrape of official Wonju ITS schedules | `no-store`                 |
+| `GET`  | `/api/bus-arrival/[busStopId]` | Predicted arrival times for buses arriving at a stop    | `s-maxage=5`, SWR: `10s`   |
+| `GET`  | `/api/bus-stops/[routeId]`     | Ordered sequence of bus stops for a specific route      | `s-maxage=86400`           |
+| `GET`  | `/api/route-stops/[routeName]` | Ordered directional stops mapped by route name          | `s-maxage=86400`           |
+| `GET`  | `/api/schedule`                | Complete schedule JSON payload                          | `s-maxage=60`, SWR: `300s` |
+| `POST` | `/api/schedule/refresh`        | Force scrape and update local schedule cache            | `no-store`                 |
+| `GET`  | `/api/notice`                  | List of municipal transit notices from Wonju ITS        | `s-maxage=300`             |
+| `GET`  | `/api/notice/[id]`             | Full detail of a specific ITS transit notice            | `s-maxage=600`             |
+| `GET`  | `/api/data/[...path]`          | Serves static assets from local `public/` directory     | `public, max-age=3600`     |
 
 ---
 
@@ -277,7 +277,7 @@ Before running the application for the first time, generate the necessary route 
 Scrapes the latest bus departure times, interval details, and holiday adjustments:
 
 ```bash
-npm run schedule
+node scripts/fetch-schedule.mjs
 ```
 
 The output is verified and saved to `public/data/schedule.json`.
@@ -288,11 +288,7 @@ Connects to the public data portal and your OSRM routing container to construct 
 files:
 
 ```bash
-# Run full polyline generation pipeline
-npm run polyline
-
-# Or target specific routes
-node scripts/generate-polyline-segment.mjs --route 30
+node scripts/generate-polylines.mjs
 ```
 
 > [!NOTE]
@@ -322,8 +318,6 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to inspect t
 | `npm run lint:fix`  | Automatically resolves fixable ESLint warnings and errors   |
 | `npm run typecheck` | Executes TypeScript compiler checks without emitting output |
 | `npm run test`      | Runs unit test suites using Vitest                          |
-| `npm run polyline`  | Executes the OSRM polyline generation and snapping pipeline |
-| `npm run schedule`  | Scrapes official timetables from Wonju City ITS             |
 
 ---
 

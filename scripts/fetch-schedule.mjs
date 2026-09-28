@@ -198,7 +198,7 @@ async function runScraper(options = {onlyYonsei: false}) {
     return cacheData;
 }
 
-if (process.argv[1] && (process.argv[1].endsWith('scrape-wonju-its.mjs') || process.argv[1].endsWith('scrape-wonju-its.js') || process.argv[1].includes('scrape-wonju-its'))) {
+if (process.argv[1] && (process.argv[1].endsWith('fetch-schedule.mjs') || process.argv[1].endsWith('fetch-schedule.js') || process.argv[1].includes('fetch-schedule'))) {
     const onlyYonsei = process.argv.includes('--yonsei');
     runScraper({onlyYonsei}).catch(err => {
         console.error('Fatal error during scraping:', err);
