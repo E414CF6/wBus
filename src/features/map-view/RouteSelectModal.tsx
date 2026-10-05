@@ -2,7 +2,7 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
-import {Bus, Check, Clock, GraduationCap, MapPin, Search, Star, X} from "lucide-react";
+import {Bus, Clock, GraduationCap, MapPin, Search, Star, X} from "lucide-react";
 import {getRouteMeta, RouteCategory, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 import {UI_TEXT} from "@shared/config/locale";
 
@@ -209,11 +209,10 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         {id: "20_49", label: UI_TEXT.ROUTE_SELECT.CAT_20_49},
         {id: "50_99", label: UI_TEXT.ROUTE_SELECT.CAT_50_99},
         {id: "100_PLUS", label: UI_TEXT.ROUTE_SELECT.CAT_100_PLUS},
-        {id: "PUBLIC", label: UI_TEXT.ROUTE_SELECT.CATEGORY_PUBLIC},
     ];
 
     const modalContent = (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-3.5 sm:p-4">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-3.5 sm:p-4">
             {/* Backdrop Blur Overlay */}
             <div
                 className="fixed inset-0 bg-black/65 backdrop-blur-md transition-opacity duration-300 animate-fadeIn"
@@ -290,40 +289,10 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                     </div>
                 </div>
 
-                {/* Quick Access Section: Recent Routes & Yonsei Specials (Only when no search query) */}
-                {!searchQuery && selectedCategory === "ALL" && (
+                {/* Quick Access Section */}
+                {!searchQuery && (
                     <div
                         className="px-4 sm:px-6 py-1.5 flex flex-col gap-2 shrink-0 border-b border-black/5 dark:border-white/5 bg-black/[0.015] dark:bg-white/[0.015]">
-                        {/* Yonsei University Quick Banner */}
-                        <div
-                            className="flex items-center justify-between gap-2 overflow-x-auto custom-scrollbar-hidden py-0.5">
-                            <div
-                                className="flex items-center gap-1 text-[11px] font-black text-blue-700 dark:text-blue-400 whitespace-nowrap shrink-0">
-                                <GraduationCap className="w-3.5 h-3.5"/>
-                                <span>{UI_TEXT.ROUTE_SELECT.CAMPUS_ROUTES_LABEL}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0">
-                                {["30", "34", "34-1"].map((r) => {
-                                    const isCurrent = r === selectedRoute;
-                                    return (
-                                        <button
-                                            key={r}
-                                            type="button"
-                                            onClick={() => handleSelect(r)}
-                                            className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black transition-all cursor-pointer active:scale-95 ${
-                                                isCurrent
-                                                    ? "bg-[#003876] text-white shadow-sm ring-1 ring-[#003876]"
-                                                    : "bg-[#003876]/10 dark:bg-[#003876]/30 text-[#003876] dark:text-blue-300 hover:bg-[#003876]/20 border border-[#003876]/20"
-                                            }`}
-                                        >
-                                            <span className="font-extrabold">{UI_TEXT.COMMON.ROUTE_LABEL(r)}</span>
-                                            {isCurrent && <Check className="w-3 h-3 stroke-[3]"/>}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-
                         {/* Recent Routes Chips (if available) */}
                         {validRecentRoutes.length > 0 && (
                             <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar-hidden py-0.5">
