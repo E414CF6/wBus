@@ -16,10 +16,11 @@ export const DayModeToggleGroup: React.FC<DayModeToggleGroupProps> = ({
                                                                           isTodayWeekendOrHoliday,
                                                                       }) => {
     return (
-        <div className="flex items-center gap-1 shrink-0 animate-fadeIn">
+        <div className="flex items-center gap-1 shrink-0 animate-fadeIn" role="group" aria-label="시간표 평일/휴일 모드 선택">
             <button
                 type="button"
                 onClick={() => onDayModeChange("AUTO")}
+                aria-pressed={dayMode === "AUTO"}
                 className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
                     dayMode === "AUTO"
                         ? "bg-blue-600 text-white shadow-xs scale-[1.02]"
@@ -34,6 +35,7 @@ export const DayModeToggleGroup: React.FC<DayModeToggleGroupProps> = ({
             <button
                 type="button"
                 onClick={() => onDayModeChange("WEEKDAY")}
+                aria-pressed={dayMode === "WEEKDAY"}
                 className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
                     dayMode === "WEEKDAY"
                         ? "bg-amber-600 text-white shadow-xs scale-[1.02]"
@@ -48,6 +50,7 @@ export const DayModeToggleGroup: React.FC<DayModeToggleGroupProps> = ({
             <button
                 type="button"
                 onClick={() => onDayModeChange("VACATION")}
+                aria-pressed={dayMode === "VACATION"}
                 className={`flex items-center gap-1 px-2.5 py-1 sm:py-1.5 rounded-full text-[11px] font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 ${
                     dayMode === "VACATION"
                         ? "bg-indigo-600 text-white shadow-xs scale-[1.02]"

@@ -8,25 +8,30 @@ import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 
 import type {ShuttleTab} from "./types";
 
+import type {DayMode} from "@shared/types/navigation";
+
 interface YonseiShuttleCardProps {
     onOpenModal: (tab?: ShuttleTab) => void;
     currentTime?: Date;
+    dayMode?: DayMode;
 }
 
 export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                                                                              onOpenModal,
                                                                              currentTime,
+                                                                             dayMode = "AUTO",
                                                                          }) => {
     const now = currentTime || new Date();
     const currentMins = now.getHours() * 60 + now.getMinutes();
     const dayOfWeek = now.getDay();
-    const isSunday = dayOfWeek === 0;
-    const isSaturday = dayOfWeek === 6;
-    const dayTypeLabel = isSunday ? "일요일" : "평일";
+    const isSunday = dayMode === "WEEKDAY" ? false : dayMode === "VACATION" ? false : dayOfWeek === 0;
+    const isSaturday = dayMode === "WEEKDAY" ? false : dayMode === "VACATION" ? false : dayOfWeek === 6;
+    const isVacation = dayMode === "VACATION";
+    const dayTypeLabel = isSunday ? "일요일" : isVacation ? "방학·휴일" : "평일";
 
     // Filter by today's day type and sort chronologically by departure time
     const applicableInboundList = useMemo(() => {
-        if (isSaturday) return [];
+        if (isSaturday || isVacation) return [];
         const list = YONSEI_SHUTTLE_SCHEDULE.inbound_to_campus;
         return list
             .filter((item) => {
@@ -37,10 +42,10 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             })
             .slice()
             .sort((a, b) => (parseTimeToMinutes(a.departure_time) ?? 0) - (parseTimeToMinutes(b.departure_time) ?? 0));
-    }, [isSaturday, isSunday]);
+    }, [isSaturday, isSunday, isVacation]);
 
     const applicableOutboundList = useMemo(() => {
-        if (isSaturday) return [];
+        if (isSaturday || isVacation) return [];
         const list = YONSEI_SHUTTLE_SCHEDULE.outbound_from_campus;
         return list
             .filter((item) => {
@@ -51,7 +56,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
             })
             .slice()
             .sort((a, b) => (parseTimeToMinutes(a.departure_time) ?? 0) - (parseTimeToMinutes(b.departure_time) ?? 0));
-    }, [isSaturday, isSunday]);
+    }, [isSaturday, isSunday, isVacation]);
 
     // Find next upcoming inbound shuttle (earliest time >= currentMins)
     const nextInbound = useMemo(() => {
@@ -124,13 +129,15 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                             </span>
                             <span
                                 className="px-2 py-0.5 rounded-lg bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-400 text-[10px] sm:text-[11px] font-bold border border-black/5 dark:border-white/5">
-                                {isSaturday ? "토요일 미운행" : "운행 종료"}
+                                {isSaturday ? "토요일 미운행" : isVacation ? "방학·휴일 미운행" : "운행 종료"}
                             </span>
                         </div>
                         <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
                             {isSaturday
                                 ? "토요일은 셔틀버스를 운행하지 않습니다."
-                                : "오늘 셔틀버스 운행이 종료되었습니다."}
+                                : isVacation
+                                    ? "셔틀버스는 학기 중 평일·일요일에만 운행됩니다 (방학·휴일 미운행)."
+                                    : "오늘 셔틀버스 운행이 종료되었습니다."}
                         </p>
                     </div>
                 </div>
@@ -179,7 +186,7 @@ export const YonseiShuttleCard: React.FC<YonseiShuttleCardProps> = memo(({
                                 {YONSEI_SHUTTLE_SCHEDULE.title}
                             </span>
                             <span className="text-[11px] font-semibold text-slate-400 font-mono mt-0.5">
-                                등교 17회 / 하교 12회 운행
+                                {isSunday ? "일요일 귀교 특별편 운행" : isVacation ? "방학·휴일 미운행" : "등교 17회 / 하교 12회 운행"}
                             </span>
                         </div>
                     </div>
