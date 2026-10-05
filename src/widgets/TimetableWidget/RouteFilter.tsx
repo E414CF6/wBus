@@ -97,6 +97,7 @@ export const RouteFilter: React.FC<RouteFilterProps> = ({
                     />
                     <span>{UI_TEXT.TIMETABLE.STATS_BOOKMARKS}</span>
                     <span
+                        suppressHydrationWarning
                         className={`ml-1 text-[11px] px-2 py-0.5 rounded-full font-mono font-bold ${
                             showOnlyBookmarks
                                 ? "bg-amber-500/20 text-amber-800 dark:text-amber-200"

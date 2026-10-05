@@ -55,17 +55,23 @@ export default function TimetableWidget({
 
     // Modal & Bookmark States
     const [selectedRoute, setSelectedRoute] = useState<BusRoute | null>(null);
-    const [bookmarks, setBookmarks] = useState<string[]>(() => {
-        if (typeof window !== "undefined") {
+    const [bookmarks, setBookmarks] = useState<string[]>(DEFAULT_BOOKMARK_ROUTES);
+
+    useEffect(() => {
+        requestAnimationFrame(() => {
             try {
                 const saved = localStorage.getItem("wonju_bus_bookmarks");
-                if (saved) return JSON.parse(saved);
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed)) {
+                        setBookmarks(parsed);
+                    }
+                }
             } catch {
                 // Storage error
             }
-        }
-        return DEFAULT_BOOKMARK_ROUTES;
-    });
+        });
+    }, []);
     const [now, setNow] = useState<Date>(() => new Date());
 
     // Update live clock every 10 seconds
