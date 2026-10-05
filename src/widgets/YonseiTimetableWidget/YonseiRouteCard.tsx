@@ -43,27 +43,39 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
             : UI_TEXT.YONSEI.SCHEDULE_APPLIED_WEEKDAY;
     }, [route.routeNo, isVacationSchedule]);
 
-    // Valid departure times from 연세대 (30, 34) or 회촌 (34-1)
+    // Valid departure times from 연세대 (30, 34) or 회촌 (34-1) sorted chronologically
     const validDepartures = useMemo(() => {
-        return (route.timetable || []).filter(
-            (item) => item.destDepTime && item.destDepTime !== "-" && item.destDepTime !== ""
-        );
+        return (route.timetable || [])
+            .filter(
+                (item) => item.destDepTime && item.destDepTime !== "-" && item.destDepTime !== ""
+            )
+            .slice()
+            .sort((a, b) => {
+                const aMins = parseTimeToMinutes(a.destDepTime) ?? 9999;
+                const bMins = parseTimeToMinutes(b.destDepTime) ?? 9999;
+                if (aMins !== bMins) return aMins - bMins;
+                return a.seq - b.seq;
+            });
     }, [route.timetable]);
 
-    // Next departure info
+    // Next departure info (earliest upcoming departure)
     const nextInfo = useMemo(() => {
         if (!validDepartures.length) return null;
 
+        let earliest: { entry: (typeof validDepartures)[0]; waitMins: number; mins: number } | null = null;
         for (const item of validDepartures) {
             const mins = parseTimeToMinutes(item.destDepTime);
             if (mins !== null && mins >= currentMins) {
-                return {
-                    entry: item,
-                    waitMins: mins - currentMins,
-                };
+                if (!earliest || mins < earliest.mins) {
+                    earliest = {
+                        entry: item,
+                        waitMins: mins - currentMins,
+                        mins,
+                    };
+                }
             }
         }
-        return null;
+        return earliest ? {entry: earliest.entry, waitMins: earliest.waitMins} : null;
     }, [validDepartures, currentMins]);
 
     // Upcoming subsequent departure times (up to 2 upcoming times)
@@ -79,7 +91,10 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                     offsetMins: mins !== null && mins >= currentMins ? mins - currentMins : null,
                 };
             })
-            .filter((item) => item.minutes !== null && item.minutes >= currentMins);
+            .filter((item): item is typeof item & { minutes: number; offsetMins: number } =>
+                item.minutes !== null && item.minutes >= currentMins && item.offsetMins !== null
+            )
+            .sort((a, b) => a.minutes - b.minutes);
 
         return remaining.slice(1, 3);
     }, [validDepartures, currentMins]);
@@ -233,24 +248,13 @@ export const YonseiRouteCard: React.FC<YonseiRouteCardProps> = memo(({
                 )}
             </div>
 
-            {/* View Full Timetable Footer Button */}
+            {/* Bottom Row: View Timetable CTA Link */}
             <div
-                className="pt-3.5 mt-3.5 border-t border-slate-200/70 dark:border-slate-800/80 flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
-                    {UI_TEXT.YONSEI.FULL_TIMETABLE_DETAIL}
+                className="mt-4 pt-3.5 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between text-xs font-bold text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors">
+                <span className="flex items-center gap-1">
+                    <span>{UI_TEXT.YONSEI.VIEW_TIMETABLE_BTN}</span>
                 </span>
-                <button
-                    type="button"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onSelectRoute(route);
-                    }}
-                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/10 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-bold border border-blue-200/70 dark:border-blue-500/20 transition-all cursor-pointer shadow-2xs active:scale-95 group/btn"
-                >
-                    <span>{UI_TEXT.SCHEDULE.SHOW_DETAILS}</span>
-                    <ChevronRight
-                        className="w-3.5 h-3.5 transition-transform group-hover/btn:translate-x-0.5 group-hover:translate-x-0.5"/>
-                </button>
+                <ChevronRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform"/>
             </div>
         </div>
     );

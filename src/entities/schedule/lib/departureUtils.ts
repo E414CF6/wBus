@@ -23,11 +23,21 @@ export function getUpcomingDepartures(
 } {
     const currentMins = currentDate.getHours() * 60 + currentDate.getMinutes();
 
-    // Filter valid entries for this direction
-    const allValidDepartures = (timetable || []).filter((item) => {
-        const raw = direction === "DEST" ? item.destDepTime : item.originDepTime;
-        return raw && raw !== "-" && raw.trim() !== "";
-    });
+    // Filter valid entries for this direction and sort by departure time ascending
+    const allValidDepartures = (timetable || [])
+        .filter((item) => {
+            const raw = direction === "DEST" ? item.destDepTime : item.originDepTime;
+            return raw && raw !== "-" && raw.trim() !== "";
+        })
+        .slice()
+        .sort((a, b) => {
+            const aStr = direction === "DEST" ? a.destDepTime : a.originDepTime;
+            const bStr = direction === "DEST" ? b.destDepTime : b.originDepTime;
+            const aMins = parseTimeToMinutes(aStr) ?? 9999;
+            const bMins = parseTimeToMinutes(bStr) ?? 9999;
+            if (aMins !== bMins) return aMins - bMins;
+            return a.seq - b.seq;
+        });
 
     const parsedList: DepartureInfo[] = [];
 
@@ -91,7 +101,7 @@ export function selectRouteVariant(
 }
 
 /**
- * Finds the next departures for both origin and destination.
+ * Finds the next departures for both origin and destination (earliest departure >= currentMins).
  */
 export function getNextDeparture(
     timetable: TimetableEntry[],
@@ -111,32 +121,27 @@ export function getNextDeparture(
     const currentMins = currentDate.getHours() * 60 + currentDate.getMinutes();
 
     let nextOrigin: TimetableEntry | null = null;
-    let originWaitMins: number | null = null;
+    let minOriginMins = Infinity;
 
     let nextDest: TimetableEntry | null = null;
-    let destWaitMins: number | null = null;
+    let minDestMins = Infinity;
 
     for (const entry of timetable) {
         const oMins = parseTimeToMinutes(entry.originDepTime);
-        if (
-            oMins !== null &&
-            oMins >= currentMins &&
-            (!nextOrigin || oMins < (parseTimeToMinutes(nextOrigin.originDepTime) || 9999))
-        ) {
+        if (oMins !== null && oMins >= currentMins && oMins < minOriginMins) {
             nextOrigin = entry;
-            originWaitMins = oMins - currentMins;
+            minOriginMins = oMins;
         }
 
         const dMins = parseTimeToMinutes(entry.destDepTime);
-        if (
-            dMins !== null &&
-            dMins >= currentMins &&
-            (!nextDest || dMins < (parseTimeToMinutes(nextDest.destDepTime) || 9999))
-        ) {
+        if (dMins !== null && dMins >= currentMins && dMins < minDestMins) {
             nextDest = entry;
-            destWaitMins = dMins - currentMins;
+            minDestMins = dMins;
         }
     }
+
+    const originWaitMins = nextOrigin ? minOriginMins - currentMins : null;
+    const destWaitMins = nextDest ? minDestMins - currentMins : null;
 
     let soonest = null;
     if (originWaitMins !== null && (destWaitMins === null || originWaitMins <= destWaitMins)) {

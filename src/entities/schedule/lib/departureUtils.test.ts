@@ -91,5 +91,47 @@ describe("departureUtils", () => {
             expect(res.soonest?.time).toBe("08:00");
             expect(res.soonest?.waitMins).toBe(30);
         });
+
+        it("identifies the earliest upcoming departure even if timetable is not sorted in chronological order", () => {
+            const unsortedTimetable: TimetableEntry[] = [{
+                seq: 1,
+                originDepTime: "08:45",
+                destDepTime: "08:45",
+                type: "공통",
+                notes: ""
+            }, {seq: 2, originDepTime: "06:32", destDepTime: "06:32", type: "공통", notes: ""}, {
+                seq: 3,
+                originDepTime: "07:40",
+                destDepTime: "07:40",
+                type: "공통",
+                notes: ""
+            },];
+            const midnight = new Date("2026-10-06T00:09:00");
+            const res = getNextDeparture(unsortedTimetable, midnight);
+
+            expect(res.nextDest?.destDepTime).toBe("06:32");
+            expect(res.nextOrigin?.originDepTime).toBe("06:32");
+            expect(res.soonest?.time).toBe("06:32");
+
+            const upcoming = getUpcomingDepartures(unsortedTimetable, "DEST", midnight);
+            expect(upcoming.nextDeparture?.timeStr).toBe("06:32");
+            expect(upcoming.subsequentDepartures[0]?.timeStr).toBe("07:40");
+            expect(upcoming.subsequentDepartures[1]?.timeStr).toBe("08:45");
+        });
+
+        it("correctly handles midnight 00:00 departures", () => {
+            const midnightTimetable: TimetableEntry[] = [{
+                seq: 1,
+                originDepTime: "00:00",
+                destDepTime: "00:00",
+                type: "공통",
+                notes: ""
+            }, {seq: 2, originDepTime: "06:30", destDepTime: "06:30", type: "공통", notes: ""},];
+            const midnight = new Date("2026-10-06T00:00:00");
+            const res = getNextDeparture(midnightTimetable, midnight);
+
+            expect(res.nextDest?.destDepTime).toBe("00:00");
+            expect(res.nextOrigin?.originDepTime).toBe("00:00");
+        });
     });
 });
