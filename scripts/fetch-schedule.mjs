@@ -178,7 +178,23 @@ async function runScraper(options = {onlyYonsei: false}) {
 
     const jsonStr = JSON.stringify(cacheData, null, 2);
 
-    const targetPaths = [PRIMARY_CACHE_PATH, '/tmp/schedule.json'];
+    const summaryData = {
+        updatedAt: cacheData.updatedAt, sourceUrl: LIST_URL, totalRoutes: routes.length, routes: routes.map((r) => ({
+            id: r.id,
+            rawNo: r.rawNo,
+            routeNo: r.routeNo,
+            dayType: r.dayType,
+            origin: r.origin,
+            destination: r.destination,
+            firstBus: r.firstBus,
+            lastBus: r.lastBus,
+            runCount: r.runCount,
+            interval: r.interval,
+        })),
+    };
+    const summaryJsonStr = JSON.stringify(summaryData, null, 2);
+
+    const targetPaths = [PRIMARY_CACHE_PATH, '/tmp/schedule.json', join(process.cwd(), 'public', 'schedule.json')];
 
     for (const targetPath of targetPaths) {
         try {
@@ -188,6 +204,11 @@ async function runScraper(options = {onlyYonsei: false}) {
             }
             writeFileSync(targetPath, jsonStr, 'utf-8');
             console.log(`Saved file cache to: ${targetPath}`);
+
+            // Also write scheduleSummary.json in same directories
+            const summaryPath = targetPath.replace('schedule.json', 'scheduleSummary.json');
+            writeFileSync(summaryPath, summaryJsonStr, 'utf-8');
+            console.log(`Saved summary cache to: ${summaryPath}`);
         } catch (e) {
             // Ignore write errors for read-only environments
         }

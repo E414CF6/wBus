@@ -5,13 +5,7 @@
 
 "use client";
 
-import {
-    createMultiPolylineData,
-    fetchRoutePolylines,
-    type MultiPolylineData,
-    type PolylineData,
-    type PolylineSegment,
-} from "@entities/route/polylineService";
+import {fetchRoutePolylines, type PolylineData,} from "@entities/route/polylineService";
 
 import type {Coordinate} from "@entities/route/types";
 import {useRouteInfo} from "@entities/route/hooks";
@@ -22,7 +16,7 @@ import {useEffect, useMemo, useState} from "react";
 // Types (Re-exported for convenience)
 // ============================================================================
 
-export type {PolylineData, PolylineSegment};
+export type {PolylineData};
 
 export interface BusPolylineSet {
     upPolyline: Coordinate[];
@@ -80,30 +74,6 @@ export function useBusPolylineMap(routeIds: string[]): Map<string, BusPolylineSe
         }
         return result;
     }, [polylineMap]);
-}
-
-// ============================================================================
-// Hook: useMultiPolyline (Deduplicated Segments)
-// ============================================================================
-
-const EMPTY_MULTI: MultiPolylineData = {
-    activeUpSegments: [], activeDownSegments: [], inactiveUpSegments: [], inactiveDownSegments: [], bounds: null,
-};
-
-/**
- * Fetches and processes multiple route polylines into deduplicated segments.
- * Useful for rendering overlapping routes with different colors.
- * Replaces the old useMultiPolyline hook.
- */
-export function useMultiPolyline(routeIds: string[], activeRouteIds?: string[]): MultiPolylineData {
-    const polylineMap = usePolylineSnapshot(routeIds);
-
-    return useMemo(() => {
-        if (polylineMap.size === 0) {
-            return EMPTY_MULTI;
-        }
-        return createMultiPolylineData(polylineMap, activeRouteIds);
-    }, [polylineMap, activeRouteIds]);
 }
 
 // ============================================================================

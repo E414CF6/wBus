@@ -33,8 +33,8 @@ const stationMapFetcher = async (url: string): Promise<Record<string, StationLoc
 };
 
 // useAllStations (all bus stops from stationMap.json)
-export function useAllStations(): BusStop[] {
-    const {data} = useSWR<Record<string, StationLocation>>("/stationMap.json", stationMapFetcher, {
+export function useAllStations(enabled = true): BusStop[] {
+    const {data} = useSWR<Record<string, StationLocation>>(enabled ? "/stationMap.json" : null, stationMapFetcher, {
         revalidateOnFocus: false, revalidateIfStale: false, dedupingInterval: 300000,
     });
 

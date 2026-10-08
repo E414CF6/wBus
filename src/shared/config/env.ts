@@ -7,12 +7,11 @@ import {UI_TEXT} from "@shared/config/locale";
 export const STATIC_FILE_NAMES = {
     ROUTE_MAP: "routeMap.json",
     STATION_MAP: "stationMap.json",
-    SCHEDULE: "schedule.json",
+    SCHEDULE: "schedule.json", SCHEDULE_SUMMARY: "scheduleSummary.json",
     STYLE: "styles/liberty.json",
     STYLE_DARK: "styles/darker.json",
     STYLE_LIBERTY: "styles/liberty.json",
     STYLE_DARKER: "styles/darker.json",
-    SEGMENTS: "segment.json",
     ROUTE_DIR: "routes",
 } as const;
 
@@ -46,12 +45,11 @@ export const API_CONFIG = {
         REVALIDATE_SEC: 3600,
         PATHS: {
             ROUTE_DIR: STATIC_FILE_NAMES.ROUTE_DIR,
-            SEGMENTS: STATIC_FILE_NAMES.SEGMENTS,
             MAP_STYLE: STATIC_FILE_NAMES.STYLE_LIBERTY,
             MAP_STYLE_DARK: STATIC_FILE_NAMES.STYLE_DARKER,
             ROUTE_MAP: STATIC_FILE_NAMES.ROUTE_MAP,
             STATION_MAP: STATIC_FILE_NAMES.STATION_MAP,
-            SCHEDULE: STATIC_FILE_NAMES.SCHEDULE,
+            SCHEDULE: STATIC_FILE_NAMES.SCHEDULE, SCHEDULE_SUMMARY: STATIC_FILE_NAMES.SCHEDULE_SUMMARY,
         },
     },
     MAP_STYLE_FALLBACK: getEnv(process.env.NEXT_PUBLIC_MAP_FALLBACK_API_URL, "https://tiles.openfreemap.org/styles/bright"),

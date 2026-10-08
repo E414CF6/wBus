@@ -20,7 +20,7 @@ through narrow residential alleys, the pipeline utilizes a dedicated `bus.lua` p
 4. **Honors Bus-Only & PSV Lanes**: Grants transit rights to public transit ways (`bus=designated`, `psv=yes`).
 
 ```
-Raw Bus Stops (TAGO) ----> OSRM Match / Route (bus.lua) ----> Snapped Segments (GeoJSON)
+Raw Bus Stops (TAGO) ----> OSRM Match / Route (bus.lua) ----> Baked Polylines (GeoJSON)
 (Longitude, Latitude)      (Local Port 4000)                  (public/routes/*.json)
 ```
 
@@ -198,7 +198,7 @@ generation script:
 # Navigate back to project root
 cd ../..
 
-# Generate all route polylines and segment caches
+# Generate all route polylines and route map
 node scripts/generate-polylines.mjs
 ```
 

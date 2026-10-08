@@ -1,20 +1,20 @@
 #!/usr/bin/env node
 
 /**
- * Polyline & Segment Snapping Pipeline Script
+ * Polyline Generation Pipeline Script
  *
  * Consolidates TAGO API route collection, OSRM snapping with fallback,
- * and segment-based GeoJSON polyline generation.
+ * and pre-assembled GeoJSON polyline generation.
  *
  * Pipeline Flow:
  *   1. Generates & caches all outputs in `scripts/cache/`
- *   2. Synchronizes polyline artifacts (`routeMap.json`, `stationMap.json`, `segment.json`, `routes/*.json`)
+ *   2. Synchronizes polyline artifacts (`routeMap.json`, `stationMap.json`, `routes/*.json`)
  *      into `public/` while leaving other files (e.g. `schedule.json`, `styles/*`) intact.
  *
  * Features:
  *   - Independent UP (ud=1) and DOWN (ud=0) route snapping and polyline assembly
  *   - OSRM route snapping with automatic straight-line fallback if OSRM is unavailable
- *   - Segment hashing (MD5) matching wBus polylineService schema
+ *   - Pre-assembled GeoJSON [lng, lat] coordinate polylines directly baked into routes/*.json
  *   - Cache-first output strategy for safe atomic publishing to public/
  *   - Complete telemetry and error reporting
  *
@@ -22,7 +22,6 @@
  *   node scripts/generate-polylines.mjs [--route <no>] [--city-code 32020] [--station-map-only] [--osrm-only] [--no-sync]
  */
 
-import crypto from "crypto";
 import dotenv from "dotenv";
 import {copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from "fs";
 import {join} from "path";
@@ -68,15 +67,6 @@ async function fetchTago(endpoint, params) {
     const items = json?.response?.body?.items?.item;
     if (!items) return [];
     return Array.isArray(items) ? items : [items];
-}
-
-// Compute 16-character MD5 hash for segment coordinates
-function computeSegmentHash(coords) {
-    if (!coords || coords.length < 2) return "empty";
-    const p1 = coords[0];
-    const p2 = coords[coords.length - 1];
-    const str = `${p1[0].toFixed(6)},${p1[1].toFixed(6)};${p2[0].toFixed(6)},${p2[1].toFixed(6)}`;
-    return crypto.createHash("md5").update(str).digest("hex").slice(0, 16);
 }
 
 // Calculate Haversine distance in meters
@@ -329,7 +319,7 @@ async function processDirectionLeg(dirStops, stationMap, osrmUrl = DEFAULT_OSRM_
     }
 
     if (stopsWithCoords.length < 2) {
-        return {segmentHashes: [], segmentsMap: {}, totalDist: 0};
+        return {polyline: [], totalDist: 0};
     }
 
     const osrmHost = osrmUrl.replace(/\/route\/v1\/driving\/?$/, "");
@@ -352,9 +342,17 @@ async function processDirectionLeg(dirStops, stationMap, osrmUrl = DEFAULT_OSRM_
 
     // Route snapping along pre-snapped main road coordinates with forward bearings
     const osrmResult = await fetchOsrmRoute(validCoords, osrmUrl, 25, bearings);
-    const segmentHashes = [];
-    const segmentsMap = {};
+    const polyline = [];
     let totalDist = 0;
+
+    const appendCoords = (coords) => {
+        if (!coords || coords.length === 0) return;
+        if (polyline.length === 0) {
+            polyline.push(...coords);
+        } else {
+            polyline.push(...coords.slice(1));
+        }
+    };
 
     if (osrmResult && osrmResult.coordinates.length >= validCoords.length) {
         // Break down OSRM polyline into segments between consecutive stops
@@ -401,9 +399,7 @@ async function processDirectionLeg(dirStops, stationMap, osrmUrl = DEFAULT_OSRM_
             }
 
             segCoords = cleanSpurLoops(segCoords);
-            const hash = computeSegmentHash(segCoords);
-            segmentHashes.push(hash);
-            segmentsMap[hash] = segCoords;
+            appendCoords(segCoords);
             totalDist += getPolylineDistanceMeters(segCoords);
             currIdx = bestIdx;
         }
@@ -412,22 +408,19 @@ async function processDirectionLeg(dirStops, stationMap, osrmUrl = DEFAULT_OSRM_
         for (let i = 0; i < validCoords.length - 1; i++) {
             const pairRes = await fetchOsrmRoute([validCoords[i], validCoords[i + 1]], osrmUrl, 25);
             let segCoords = (pairRes && pairRes.coordinates?.length >= 2) ? pairRes.coordinates : [validCoords[i], validCoords[i + 1]];
-
-            const hash = computeSegmentHash(segCoords);
-            segmentHashes.push(hash);
-            segmentsMap[hash] = segCoords;
+            appendCoords(segCoords);
             totalDist += getPolylineDistanceMeters(segCoords);
         }
     }
 
-    return {segmentHashes, segmentsMap, totalDist};
+    return {polyline, totalDist};
 }
 
 // Synchronize cached polyline files from scripts/cache to public
 function syncCacheToPublic(cacheDir, publicDir) {
     if (!existsSync(publicDir)) mkdirSync(publicDir, {recursive: true});
 
-    const singleFiles = ["routeMap.json", "stationMap.json", "segment.json"];
+    const singleFiles = ["routeMap.json", "stationMap.json"];
     let copiedFiles = 0;
 
     for (const fileName of singleFiles) {
@@ -586,7 +579,6 @@ async function runRoutePipeline(options) {
     // Phase 2: Independent UP/DOWN Snapping & Segment Generation
     console.log("[Polly Phase 2] Processing UP and DOWN polylines from scripts/cache/routes.json...");
     const cachedRoutesList = Object.values(routesCache);
-    const masterSegmentsMap = {};
     let processedCount = 0;
 
     for (const raw of cachedRoutesList) {
@@ -602,84 +594,62 @@ async function runRoutePipeline(options) {
             const downRes = await processDirectionLeg(downStops, stationMap, options.osrmUrl);
 
             // Connect UP end -> DOWN start and DOWN end -> UP start at turning points via OSRM
-            if (upRes.segmentHashes.length > 0 && downRes.segmentHashes.length > 0) {
-                const upCoords = upRes.segmentHashes.flatMap(s => upRes.segmentsMap[s] || []);
-                const downCoords = downRes.segmentHashes.flatMap(s => downRes.segmentsMap[s] || []);
+            if (upRes.polyline.length > 0 && downRes.polyline.length > 0) {
+                const upLast = upRes.polyline[upRes.polyline.length - 1];
+                const downFirst = downRes.polyline[0];
+                const gap1 = getHaversineDistanceMeters(upLast, downFirst);
+                if (gap1 > 10 && gap1 < 10000) {
+                    const osrmResult1 = await fetchOsrmRoute([upLast, downFirst], options.osrmUrl);
+                    const connectSeg = (osrmResult1 && osrmResult1.coordinates?.length >= 2) ? osrmResult1.coordinates : [upLast, downFirst];
+                    upRes.polyline.push(...connectSeg.slice(1));
+                    upRes.totalDist += getPolylineDistanceMeters(connectSeg);
+                }
 
-                if (upCoords.length > 0 && downCoords.length > 0) {
-                    const upLast = upCoords[upCoords.length - 1];
-                    const downFirst = downCoords[0];
-                    const gap1 = getHaversineDistanceMeters(upLast, downFirst);
-                    if (gap1 > 10 && gap1 < 10000) {
-                        const osrmResult1 = await fetchOsrmRoute([upLast, downFirst], options.osrmUrl);
-                        const connectSeg = (osrmResult1 && osrmResult1.coordinates?.length >= 2) ? osrmResult1.coordinates : [upLast, downFirst];
-                        const hash = computeSegmentHash(connectSeg);
-                        upRes.segmentsMap[hash] = connectSeg;
-                        upRes.segmentHashes.push(hash);
-                    }
-
-                    const downLast = downCoords[downCoords.length - 1];
-                    const upFirst = upCoords[0];
-                    const gap2 = getHaversineDistanceMeters(downLast, upFirst);
-                    if (gap2 > 10 && gap2 < 10000) {
-                        const osrmResult2 = await fetchOsrmRoute([downLast, upFirst], options.osrmUrl);
-                        const connectSeg = (osrmResult2 && osrmResult2.coordinates?.length >= 2) ? osrmResult2.coordinates : [downLast, upFirst];
-                        const hash = computeSegmentHash(connectSeg);
-                        downRes.segmentsMap[hash] = connectSeg;
-                        downRes.segmentHashes.push(hash);
-                    }
+                const downLast = downRes.polyline[downRes.polyline.length - 1];
+                const upFirst = upRes.polyline[0];
+                const gap2 = getHaversineDistanceMeters(downLast, upFirst);
+                if (gap2 > 10 && gap2 < 10000) {
+                    const osrmResult2 = await fetchOsrmRoute([downLast, upFirst], options.osrmUrl);
+                    const connectSeg = (osrmResult2 && osrmResult2.coordinates?.length >= 2) ? osrmResult2.coordinates : [downLast, upFirst];
+                    downRes.polyline.push(...connectSeg.slice(1));
+                    downRes.totalDist += getPolylineDistanceMeters(connectSeg);
                 }
             }
 
-            // Merge segments into master lookup
-            Object.assign(masterSegmentsMap, upRes.segmentsMap, downRes.segmentsMap);
+            const upPolyline = upRes.polyline;
+            const downPolyline = downRes.polyline;
 
             const polylineData = {
                 route_id: raw.route_id,
                 route_no: raw.route_no,
                 stops_count: stops.length,
                 total_dist: Math.round(upRes.totalDist + downRes.totalDist),
-                up_segments: upRes.segmentHashes,
-                down_segments: downRes.segmentHashes,
-                stops: stops.map(s => ({
-                    id: String(s.nodeid ?? s.id ?? ""),
-                    name: String(s.nodenm ?? s.name ?? ""),
-                    ord: Number(s.nodeord ?? s.ord ?? 0),
-                    ud: Number(s.updowncd ?? s.ud ?? 0),
-                    lat: Number(s.gpslati ?? s.lat ?? 0),
-                    lon: Number(s.gpslong ?? s.lon ?? 0),
-                })),
+                up_polyline: upPolyline,
+                down_polyline: downPolyline,
+                stops: stops.map(s => {
+                    const stId = String(s.nodeid ?? s.id ?? "");
+                    return {
+                        id: stId,
+                        name: String(s.nodenm ?? s.name ?? ""),
+                        ord: Number(s.nodeord ?? s.ord ?? 0),
+                        ud: Number(s.updowncd ?? s.ud ?? 0),
+                        lat: Number(s.gpslati ?? s.lat ?? 0),
+                        lon: Number(s.gpslong ?? s.lon ?? 0),
+                        nodeno: String(s.nodeno || stationMap[stId]?.nodeno || ""),
+                    };
+                }),
             };
 
             // Write route file to cache
             writeFileSync(join(cacheDerivedDir, `${raw.route_id}.json`), JSON.stringify(polylineData, null, 2));
             processedCount++;
-            console.log(`[Polly Phase 2] (${processedCount}/${cachedRoutesList.length}) Processed ${raw.route_no} (${raw.route_id}): UP=${upRes.segmentHashes.length} segs, DOWN=${downRes.segmentHashes.length} segs`);
+            console.log(`[Polly Phase 2] (${processedCount}/${cachedRoutesList.length}) Processed ${raw.route_no} (${raw.route_id}): UP=${upPolyline.length} pts, DOWN=${downPolyline.length} pts`);
         } catch (err) {
             console.error(`[Polly Phase 2] Error processing route ${raw.route_no} (${raw.route_id}):`, err.message);
         }
     }
 
-    // If filtering by route, preserve existing segments; if full run, strictly keep active master segments
-    let finalSegmentsMap = masterSegmentsMap;
-    const cacheSegmentsPath = join(scriptsCacheDir, "segment.json");
-    const publicSegmentsPath = join(outputDir, "segment.json");
-
-    if (options.routeFilter) {
-        const existingSegmentsPath = existsSync(cacheSegmentsPath) ? cacheSegmentsPath : publicSegmentsPath;
-        if (existsSync(existingSegmentsPath)) {
-            try {
-                const existing = JSON.parse(readFileSync(existingSegmentsPath, "utf-8"));
-                finalSegmentsMap = {...existing, ...masterSegmentsMap};
-            } catch {
-                // Ignore error
-            }
-        }
-    }
-
-    // Save segment.json to cache
-    writeFileSync(cacheSegmentsPath, JSON.stringify(finalSegmentsMap, null, 2));
-    console.log(`[Polly Phase 2] Complete. Processed ${processedCount} routes. Saved cache/segment.json with ${Object.keys(finalSegmentsMap).length} segments.`);
+    console.log(`[Polly Phase 2] Complete. Processed ${processedCount} routes with pre-assembled polylines.`);
 
     // Phase 3: Synchronize cache output into public
     if (!options.noSync) {

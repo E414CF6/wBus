@@ -47,16 +47,15 @@ export interface GeoPolyline {
         ud: number;
         lat?: number;
         lon?: number;
+        nodeno?: string | number;
     }[];
-    up_segments: string[];
-    down_segments: string[];
+    up_polyline: [number, number][]; // Pre-assembled [lng, lat] coordinates
+    down_polyline: [number, number][]; // Pre-assembled [lng, lat] coordinates
     total_dist: number;
     total_time?: number;
     source_ver?: string;
     bbox?: [number, number, number, number];
 }
-
-export type SegmentsJSON = Record<string, [number, number][]>;
 
 // Schedule Items
 

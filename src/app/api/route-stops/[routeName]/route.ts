@@ -8,7 +8,7 @@ import {buildCacheControl} from "@shared/cache/cachePolicy";
 export const revalidate = 86400;
 
 async function getRouteStopsByRouteName(routeName: string): Promise<BusStop[]> {
-    let routeIds: string[] = [];
+    let routeIds: string[];
     if (routeName.startsWith("WJB")) {
         routeIds = [routeName];
     } else {

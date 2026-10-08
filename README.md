@@ -282,7 +282,7 @@ node scripts/fetch-schedule.mjs
 
 The output is verified and saved to `public/data/schedule.json`.
 
-#### Generate Route Polylines and Segments
+#### Generate Route Polylines
 
 Connects to the public data portal and your OSRM routing container to construct high-precision route vector GeoJSON
 files:

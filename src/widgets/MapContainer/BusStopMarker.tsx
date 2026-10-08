@@ -242,8 +242,11 @@ export default ({
     onRouteChange?: (routeName: string) => void;
 }) => {
     const routeStops = useBusStop(routeName);
-    const allStations = useAllStations();
     const {map} = useAppMapContext();
+    const [zoom, setZoom] = useState(map?.getZoom() ?? MAP_SETTINGS.ZOOM.DEFAULT);
+    const [bounds, setBounds] = useState(map?.getBounds() ?? null);
+    const allStations = useAllStations(zoom >= 15.0);
+    const rafRef = useRef<number | null>(null);
 
     // Retrieve polyline data to synchronize stop marker & label colors with route segments
     const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName);
@@ -283,10 +286,6 @@ export default ({
 
         return colorMap;
     }, [routeStops, activeGeoJson]);
-
-    const [zoom, setZoom] = useState(map?.getZoom() ?? MAP_SETTINGS.ZOOM.DEFAULT);
-    const [bounds, setBounds] = useState(map?.getBounds() ?? null);
-    const rafRef = useRef<number | null>(null);
 
     useEffect(() => {
         if (!map) return;

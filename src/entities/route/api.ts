@@ -5,7 +5,6 @@ import type {
     RouteMapData,
     RouteVariation,
     RouteVariationStop,
-    SegmentsJSON,
 } from "@entities/route/types";
 import {getStationMap} from "@entities/station/api";
 import type {StationLocation} from "@entities/station/types";
@@ -19,7 +18,6 @@ import {loadStaticData} from "@shared/utils/dataLoader";
 
 const routeMapCache = new CacheManager<RouteMapData>();
 const polylineCache = new CacheManager<GeoPolyline | null>();
-const segmentsCache = new CacheManager<SegmentsJSON>();
 const variationsCache = new CacheManager<RouteVariation[]>();
 
 // Internal Helpers
@@ -35,12 +33,6 @@ export async function getRouteMapData(): Promise<RouteMapData> {
 export async function getRouteMap(): Promise<Record<string, string[]>> {
     const data = await getRouteMapData();
     return Object.fromEntries(Object.entries(data.route_numbers).filter(([, ids]) => ids.length > 0));
-}
-
-export async function getSegmentsJSON(): Promise<SegmentsJSON> {
-    return segmentsCache.getOrFetch("segment.json", async () => {
-        return loadStaticData<SegmentsJSON>(API_CONFIG.STATIC.PATHS.SEGMENTS);
-    });
 }
 
 export async function getPolyline(routeKey: string): Promise<GeoPolyline | null> {
@@ -93,13 +85,6 @@ export async function getRouteVariations(routeName: string): Promise<RouteVariat
         const routeInfo = await getRouteInfo(routeName);
         if (!routeInfo || !routeInfo.vehicleRouteIds?.length) return [];
 
-        let stationMap: Record<string, StationLocation> = {};
-        try {
-            stationMap = await getStationMap();
-        } catch {
-            // Station map is optional for coordinates, used only for nodeno enrichment
-        }
-
         const polylines = await Promise.all(
             routeInfo.vehicleRouteIds.map(async (id) => {
                 const poly = await getPolyline(id);
@@ -111,6 +96,20 @@ export async function getRouteVariations(routeName: string): Promise<RouteVariat
             (p): p is { id: string; poly: GeoPolyline } => Boolean(p.poly && p.poly.stops?.length)
         );
         if (validPolylines.length === 0) return [];
+
+        // Lazy fetch stationMap only if any stop is missing nodeno or coordinates
+        const needsStationMap = validPolylines.some((p) =>
+            p.poly.stops.some((s) => !s.nodeno || s.lat === undefined || s.lon === undefined)
+        );
+
+        let stationMap: Record<string, StationLocation> = {};
+        if (needsStationMap) {
+            try {
+                stationMap = await getStationMap();
+            } catch {
+                // Station map is optional for coordinates, used only for nodeno enrichment
+            }
+        }
 
         const baseStops = validPolylines[0].poly.stops;
         const baseNames = new Set(baseStops.map((s) => s.name));
@@ -127,7 +126,7 @@ export async function getRouteVariations(routeName: string): Promise<RouteVariat
                 updowncd: s.ud,
                 gpslati: s.lat ?? stationMap[s.id]?.gpslati ?? 0,
                 gpslong: s.lon ?? stationMap[s.id]?.gpslong ?? 0,
-                nodeno: String(stationMap[s.id]?.nodeno ?? ""),
+                nodeno: String(s.nodeno || stationMap[s.id]?.nodeno || ""),
             }));
 
             // Find turning point station:

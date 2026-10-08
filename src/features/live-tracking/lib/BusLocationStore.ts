@@ -144,39 +144,65 @@ export class BusLocationStore {
         this.isFetching = true;
 
         try {
-            const settled = await mapWithConcurrencyLimit(
-                this.routeIds,
-                (routeId) => fetchRouteData(`/api/bus/${routeId}`),
-                {
-                    concurrency: 3,
-                    staggerMs: 30,
-                }
-            );
-
-            const fulfilledResults: BusItem[] = [];
-            const fulfilledRouteIds: string[] = [];
-            let hasFailures = false;
-
-            settled.forEach((result, idx) => {
-                const routeId = this.routeIds[idx];
-                if (result.status === "fulfilled") {
-                    fulfilledRouteIds.push(routeId);
-                    const items = result.value.data;
-                    if (Array.isArray(items)) {
-                        fulfilledResults.push(...items);
-                    }
-                } else {
-                    hasFailures = true;
-                }
-            });
-
-            if (fulfilledRouteIds.length > 0) {
-                this.applyData(fulfilledResults, {
-                    degraded: hasFailures,
-                    targetRouteIds: fulfilledRouteIds,
+            if (this.routeIds.length === 1) {
+                // Single route direct call
+                const routeId = this.routeIds[0];
+                const res = await fetchRouteData(`/api/bus/${routeId}`);
+                const items = Array.isArray(res.data) ? res.data : [];
+                this.applyData(items, {
+                    degraded: Boolean(res.meta?.degraded),
+                    timestamp: res.timestamp,
+                    targetRouteIds: [routeId],
                 });
-            } else if (this.routeIds.length > 0) {
-                throw new Error("All route location requests failed");
+            } else {
+                // Multi-route batched call (single HTTP roundtrip)
+                try {
+                    const batchUrl = `/api/bus?routeIds=${encodeURIComponent(this.routeIds.join(","))}`;
+                    const res = await fetchRouteData(batchUrl);
+                    const items = Array.isArray(res.data) ? res.data : [];
+                    this.applyData(items, {
+                        degraded: Boolean(res.meta?.degraded),
+                        timestamp: res.timestamp,
+                        targetRouteIds: this.routeIds,
+                    });
+                } catch (batchErr) {
+                    console.warn("[BusLocationStore] Batch fetch failed, falling back to concurrent individual requests:", batchErr);
+                    // Resilient fallback: Query each route individually
+                    const settled = await mapWithConcurrencyLimit(
+                        this.routeIds,
+                        (routeId) => fetchRouteData(`/api/bus/${routeId}`),
+                        {
+                            concurrency: 3,
+                            staggerMs: 30,
+                        }
+                    );
+
+                    const fulfilledResults: BusItem[] = [];
+                    const fulfilledRouteIds: string[] = [];
+                    let hasFailures = false;
+
+                    settled.forEach((result, idx) => {
+                        const routeId = this.routeIds[idx];
+                        if (result.status === "fulfilled") {
+                            fulfilledRouteIds.push(routeId);
+                            const items = result.value.data;
+                            if (Array.isArray(items)) {
+                                fulfilledResults.push(...items);
+                            }
+                        } else {
+                            hasFailures = true;
+                        }
+                    });
+
+                    if (fulfilledRouteIds.length > 0) {
+                        this.applyData(fulfilledResults, {
+                            degraded: hasFailures,
+                            targetRouteIds: fulfilledRouteIds,
+                        });
+                    } else if (this.routeIds.length > 0) {
+                        throw new Error("All route location requests failed", {cause: batchErr});
+                    }
+                }
             }
         } catch (err) {
             console.error("[useBusLocationData] Micro-cache fetch failed", err);
