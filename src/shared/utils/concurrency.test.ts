@@ -61,4 +61,28 @@ describe("concurrency & TaskQueue", () => {
         const values = results.map((r) => (r.status === "fulfilled" ? r.value : null));
         expect(values).toEqual([2, 4, 6, 8, 10]);
     });
+
+    it("prevents late-arriving tasks from bypassing queued tasks", async () => {
+        const queue = new TaskQueue({concurrency: 1, staggerMs: 0, maxRps: 100});
+        const executedOrder: string[] = [];
+
+        // 1. Task A holds the slot
+        const taskA = queue.enqueue(async () => {
+            await new Promise((r) => setTimeout(r, 20));
+            executedOrder.push("A");
+        });
+
+        // 2. Task B enqueued while A is running
+        const taskB = queue.enqueue(async () => {
+            executedOrder.push("B");
+        });
+
+        // 3. Task C enqueued while A is still running
+        const taskC = queue.enqueue(async () => {
+            executedOrder.push("C");
+        });
+
+        await Promise.all([taskA, taskB, taskC]);
+        expect(executedOrder).toEqual(["A", "B", "C"]);
+    });
 });

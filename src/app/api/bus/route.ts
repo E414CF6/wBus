@@ -37,11 +37,15 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+        let hasDegraded = false;
         const settled = await mapWithConcurrencyLimit(routeIds, async (routeId) => {
             const ttl = getAdaptiveTtlSeconds(routeId, 8, 15);
             const res = await getCachedOrFetch<RawBusLocation[]>(`bus:${routeId}`, () => fetchBusLocations(routeId), {
                 ttlSeconds: ttl, ...LIVE_CACHE_OPTIONS,
             });
+            if (res.meta?.degraded) {
+                hasDegraded = true;
+            }
             return res.data || [];
         }, {concurrency: 4, staggerMs: 15});
 
@@ -52,6 +56,8 @@ export async function GET(request: NextRequest) {
             if (res.status === "fulfilled" && Array.isArray(res.value)) {
                 allBuses.push(...res.value);
                 anySuccess = true;
+            } else if (res.status === "rejected") {
+                hasDegraded = true;
             }
         }
 
@@ -59,15 +65,23 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({error: "Failed to fetch bus telemetry for requested routes"}, {status: 502});
         }
 
+        const headers: Record<string, string> = {
+            "Cache-Control": CACHE_CONTROL_HEADER,
+            "X-Batch-Routes-Count": String(routeIds.length),
+        };
+        if (hasDegraded) {
+            headers["X-Cache-Degraded"] = "true";
+        }
+
         return NextResponse.json({
             data: allBuses, timestamp: Date.now(), meta: {
-                status: "hit", layer: "edge", count: allBuses.length, routes: routeIds,
+                status: hasDegraded ? "fallback" : "hit",
+                layer: "edge",
+                count: allBuses.length,
+                routes: routeIds,
+                degraded: hasDegraded,
             },
-        }, {
-            headers: {
-                "Cache-Control": CACHE_CONTROL_HEADER, "X-Batch-Routes-Count": String(routeIds.length),
-            },
-        });
+        }, {headers});
     } catch (err) {
         console.error("[API /bus batch]", err);
         return NextResponse.json({error: "Internal server error fetching batched bus telemetry"}, {status: 500});

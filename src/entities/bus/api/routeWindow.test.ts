@@ -58,6 +58,12 @@ describe("routeWindow utility functions", () => {
             expect(extractRouteNumber("GWB320200341")).toBe("341");
         });
 
+        it("resolves Wonju TAGO route IDs (WJB...) to route numbers via routeMap", () => {
+            // WJB251000068 is route 30, WJB251000331 is route 34-1
+            expect(extractRouteNumber("WJB251000068")).toBe("30");
+            expect(extractRouteNumber("WJB251000331")).toBe("34-1");
+        });
+
         it("returns plain numbers intact", () => {
             expect(extractRouteNumber("30")).toBe("30");
             expect(extractRouteNumber("34-1")).toBe("34-1");

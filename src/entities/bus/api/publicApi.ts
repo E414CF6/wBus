@@ -103,7 +103,15 @@ class ServiceKeyManager {
     private reloadKeys() {
         const rawKeys = process.env.DATA_GO_KR_SERVICE_KEYS || process.env.DATA_GO_KR_SERVICE_KEY || "";
         const parsed = rawKeys.split(",").map((k) => k.trim()).filter(Boolean);
-        this.keys = parsed.map((key) => ({key, cooldownUntil: 0}));
+        this.keys = parsed.map((key) => {
+            let normalizedKey = key;
+            try {
+                normalizedKey = decodeURIComponent(key);
+            } catch {
+                // Keep raw key if decoding fails
+            }
+            return {key: normalizedKey, cooldownUntil: 0};
+        });
     }
 }
 
@@ -247,6 +255,35 @@ async function fetchPublicApi<T>(path: string, params: Record<string, string>, o
     return promise;
 }
 
+function parseXmlErrors(xmlText: string): {
+    isError: boolean; isQuotaOrKeyError: boolean; message: string; code: string;
+} {
+    if (!xmlText || !xmlText.includes("<")) {
+        return {isError: false, isQuotaOrKeyError: false, message: "", code: ""};
+    }
+    const codeMatch = xmlText.match(/<(?:returnReasonCode|resultCode)>([^<]+)<\/(?:returnReasonCode|resultCode)>/i);
+    const msgMatch = xmlText.match(/<(?:errMsg|resultMsg)>([^<]+)<\/(?:errMsg|resultMsg)>/i);
+    const code = codeMatch ? codeMatch[1].trim() : "";
+    const msg = msgMatch ? msgMatch[1].trim() : "OpenAPI XML Error";
+
+    if (code || msgMatch) {
+        const upperMsg = msg.toUpperCase();
+        const isQuotaOrKeyError =
+            code === "22" ||
+            code === "30" ||
+            code === "31" ||
+            code === "20" ||
+            code === "429" ||
+            upperMsg.includes("LIMITED") ||
+            upperMsg.includes("TRAFFIC") ||
+            upperMsg.includes("EXCEED") ||
+            upperMsg.includes("KEY") ||
+            upperMsg.includes("REGISTERED");
+        return {isError: true, isQuotaOrKeyError, message: msg, code: code || "XML_ERROR"};
+    }
+    return {isError: false, isQuotaOrKeyError: false, message: "", code: ""};
+}
+
 function inspectResponseForErrors(data: unknown): {
     isError: boolean; isQuotaOrKeyError: boolean; message: string; code: string;
 } {
@@ -297,7 +334,35 @@ async function rawFetchPublicApi<T>(path: string, params: Record<string, string>
             });
 
             if (res.ok) {
-                const data = await res.json() as T;
+                const text = await res.text();
+                let data: T;
+
+                try {
+                    data = JSON.parse(text) as T;
+                } catch {
+                    // Check if response is an XML error payload from public portal
+                    const xmlErr = parseXmlErrors(text);
+                    if (xmlErr.isError) {
+                        if (xmlErr.isQuotaOrKeyError) {
+                            keyManager.markCooldown(keyIndex);
+                        }
+                        console.warn(
+                            `[PublicAPI] Key #${keyIndex + 1} returned XML upstream error: ${xmlErr.message} (Code: ${xmlErr.code}, Quota/Key: ${xmlErr.isQuotaOrKeyError}). Attempt ${attempt}/${MAX_RETRY_ATTEMPTS}`
+                        );
+                        if (attempt < MAX_RETRY_ATTEMPTS) {
+                            await delay(attempt);
+                            continue;
+                        }
+                        const safeUrl = url.replace(/serviceKey=[^&]+/, "serviceKey=***");
+                        throw new PublicApiError(
+                            `[PublicAPI] ${xmlErr.message} (Code: ${xmlErr.code})`,
+                            xmlErr.isQuotaOrKeyError ? 429 : 502,
+                            safeUrl
+                        );
+                    }
+                    throw new Error(`Invalid JSON response from upstream: ${text.slice(0, 120)}`);
+                }
+
                 const errCheck = inspectResponseForErrors(data);
 
                 if (errCheck.isError) {

@@ -61,6 +61,29 @@ export function loadFromLocalFile(): RouteDataset | null {
     });
 }
 
+export function mergeRouteDatasets(base: RouteDataset, partial: RouteDataset): RouteDataset {
+    if (!base.routes || base.routes.length === 0) return partial;
+    if (!partial.routes || partial.routes.length === 0) return base;
+
+    const routeMap = new Map<string, (typeof base.routes)[0]>();
+    for (const route of base.routes) {
+        const key = `${route.routeNo}_${route.dayType || "매일"}`;
+        routeMap.set(key, route);
+    }
+    for (const route of partial.routes) {
+        const key = `${route.routeNo}_${route.dayType || "매일"}`;
+        routeMap.set(key, route);
+    }
+
+    const mergedRoutes = Array.from(routeMap.values());
+    return {
+        updatedAt: partial.updatedAt || new Date().toISOString(),
+        sourceUrl: partial.sourceUrl || base.sourceUrl,
+        totalRoutes: mergedRoutes.length,
+        routes: mergedRoutes,
+    };
+}
+
 export function getCacheMetadata(data?: RouteDataset | null): CacheMetadata {
     const updatedAt = data?.updatedAt || new Date().toISOString();
     const totalRoutes = data?.routes ? data.routes.length : 0;
@@ -96,9 +119,29 @@ export async function saveCache(data: RouteDataset): Promise<void> {
         data, meta, timestamp: Date.now(),
     };
 
+    const summaryData = {
+        updatedAt: data.updatedAt,
+        sourceUrl: data.sourceUrl,
+        totalRoutes: data.routes.length,
+        routes: data.routes.map((r) => ({
+            id: r.id,
+            rawNo: r.rawNo,
+            routeNo: r.routeNo,
+            dayType: r.dayType,
+            origin: r.origin,
+            destination: r.destination,
+            firstBus: r.firstBus,
+            lastBus: r.lastBus,
+            runCount: r.runCount,
+            interval: r.interval,
+        })),
+    };
+    const summaryJsonStr = JSON.stringify(summaryData, null, 2);
+
     // 2. Save to /tmp for serverless container caching
     try {
         fs.writeFileSync(/*turbopackIgnore: true*/ "/tmp/schedule.json", jsonStr, "utf-8");
+        fs.writeFileSync(/*turbopackIgnore: true*/ "/tmp/scheduleSummary.json", summaryJsonStr, "utf-8");
     } catch {
         // Ignore
     }
@@ -111,6 +154,8 @@ export async function saveCache(data: RouteDataset): Promise<void> {
             fs.mkdirSync(/*turbopackIgnore: true*/ dir, {recursive: true});
         }
         fs.writeFileSync(/*turbopackIgnore: true*/ p, jsonStr, "utf-8");
+        const summaryPath = p.replace("schedule.json", "scheduleSummary.json");
+        fs.writeFileSync(/*turbopackIgnore: true*/ summaryPath, summaryJsonStr, "utf-8");
     } catch {
         // Silently ignore in read-only environment (Vercel Serverless)
     }
@@ -151,8 +196,10 @@ async function fetchScheduleDataset(): Promise<{ data: RouteDataset; meta: Cache
         console.warn("[ScheduleService] Full scrape failed, attempting fast scrape:", err);
         try {
             const yonseiData = await scrapeWonjuItsYonsei();
-            await saveCache(yonseiData);
-            return {data: yonseiData, meta: getCacheMetadata(yonseiData)};
+            // Protect full dataset: merge partial scrape with existing local cache instead of replacing
+            const dataToSave = local ? mergeRouteDatasets(local, yonseiData) : yonseiData;
+            await saveCache(dataToSave);
+            return {data: dataToSave, meta: getCacheMetadata(dataToSave)};
         } catch (fallbackErr) {
             console.warn("[ScheduleService] Scraping failed, falling back to local file:", fallbackErr);
             if (local) {

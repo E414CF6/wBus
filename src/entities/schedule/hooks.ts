@@ -38,6 +38,18 @@ async function fetchScheduleApi(): Promise<{ data: BusCacheData; meta: CacheMeta
     if (res.status === 304) {
         const local = getLocalScheduleFallback();
         if (local) return local;
+        // If 304 received without body and local cache is missing, refetch without conditional cache
+        const freshRes = await fetch("/api/schedule", {cache: "reload"});
+        const freshJson: ScheduleApiResponse = await freshRes.json();
+        if (freshJson.success && freshJson.data) {
+            const freshResult = {data: freshJson.data, meta: freshJson.meta || null};
+            try {
+                localStorage.setItem(STORAGE_KEYS.SCHEDULE_CACHE, JSON.stringify(freshResult));
+            } catch {
+                // Ignore storage error
+            }
+            return freshResult;
+        }
     }
     const json: ScheduleApiResponse = await res.json();
     if (!json.success || !json.data) {

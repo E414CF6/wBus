@@ -23,6 +23,9 @@ interface CacheEntry<T> {
 const listCache = new CacheManager<CacheEntry<NoticeListResponse>>(50);
 const detailCache = new CacheManager<CacheEntry<NoticeDetail>>(200);
 
+const pendingListRequests = new Map<string, Promise<NoticeListResponse>>();
+const pendingDetailRequests = new Map<string, Promise<NoticeDetail>>();
+
 const LIST_TTL_MS = 10 * 60 * 1000; // 10 mins in memory
 const DETAIL_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours in memory
 
@@ -36,15 +39,21 @@ export async function scrapeWonjuNoticeList(page = 1, searchText = "", searchGb 
         return cached.data;
     }
 
-    const params = new URLSearchParams();
-    if (page > 1) params.set("pageNo", String(page));
-    if (searchText) {
-        params.set("searchText", searchText);
-        params.set("searchGb", searchGb || "title");
+    if (pendingListRequests.has(cacheKey)) {
+        return pendingListRequests.get(cacheKey)!;
     }
 
-    const url = `${NOTICE_LIST_URL}${params.toString() ? `?${params.toString()}` : ""}`;
-    let lastError: unknown;
+    const requestPromise = (async (): Promise<NoticeListResponse> => {
+        try {
+            const params = new URLSearchParams();
+            if (page > 1) params.set("pageNo", String(page));
+            if (searchText) {
+                params.set("searchText", searchText);
+                params.set("searchGb", searchGb || "title");
+            }
+
+            const url = `${NOTICE_LIST_URL}${params.toString() ? `?${params.toString()}` : ""}`;
+            let lastError: unknown;
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
@@ -140,6 +149,13 @@ export async function scrapeWonjuNoticeList(page = 1, searchText = "", searchGb 
     }
 
     throw lastError instanceof Error ? lastError : new Error("Failed to fetch notice list from Wonju ITS");
+        } finally {
+            pendingListRequests.delete(cacheKey);
+        }
+    })();
+
+    pendingListRequests.set(cacheKey, requestPromise);
+    return requestPromise;
 }
 
 /**
@@ -151,107 +167,120 @@ export async function scrapeWonjuNoticeDetail(id: string, maxRetries = 3): Promi
         return cached.data;
     }
 
-    const url = `${NOTICE_VIEW_URL}?bdIdx=${encodeURIComponent(id)}`;
-    let lastError: unknown;
+    if (pendingDetailRequests.has(id)) {
+        return pendingDetailRequests.get(id)!;
+    }
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const requestPromise = (async (): Promise<NoticeDetail> => {
         try {
-            const res = await fetch(url, {
-                headers: HEADERS, signal: AbortSignal.timeout(12000),
-            });
+            const url = `${NOTICE_VIEW_URL}?bdIdx=${encodeURIComponent(id)}`;
+            let lastError: unknown;
 
-            if (!res.ok) {
-                throw new Error(`Failed to fetch notice detail for ID ${id} (Status: ${res.status})`);
-            }
-
-            const html = await res.text();
-
-            const titleMatch = html.match(/<p[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/p>/i) || html.match(/<th[^>]*class="[^"]*subject[^"]*"[^>]*>(.*?)<\/th>/i) || html.match(/<td[^>]*class="[^"]*subject[^"]*"[^>]*>(.*?)<\/td>/i);
-            const title = titleMatch ? (titleMatch[1] || titleMatch[2] || "").replace(/<[^>]+>/g, "").trim() : "";
-
-            const dateMatch = html.match(/<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/span>/i) || html.match(/(\d{4}-\d{2}-\d{2})/);
-            const date = dateMatch ? (dateMatch[1] || "").trim() : "";
-
-            const writerMatch = html.match(/<span[^>]*class="[^"]*writer[^"]*"[^>]*>([^<]+)<\/span>/i);
-            const writer = writerMatch ? writerMatch[1].trim() : UI_TEXT.NOTICE.DEFAULT_WRITER;
-
-            const viewsMatch = html.match(/<span[^>]*class="[^"]*hit[^"]*"[^>]*>([^<]+)<\/span>/i);
-            const views = viewsMatch ? viewsMatch[1].trim() : "0";
-
-            const contentMatch = html.match(/<div[^>]*class="[^"]*cont_area[^"]*"[^>]*>([\s\S]*?)<\/div>/i) || html.match(/<div[^>]*class="[^"]*(?:board_view_con|view_con|con_area)[^"]*"[^>]*>(.*?)<\/div>/i);
-            let content = contentMatch ? contentMatch[1].trim() : "";
-
-            if (!content) {
-                const bodyContentMatch = html.match(/<td[^>]*colspan="[^"]*"[^>]*class="[^"]*view[^"]*"[^>]*>(.*?)<\/td>/i);
-                if (bodyContentMatch) {
-                    content = bodyContentMatch[1].trim();
-                }
-            }
-
-            // Clean up relative images/links to absolute
-            content = content.replace(/src="\/([^"]+)"/g, `src="${BASE_URL}/$1"`);
-            content = content.replace(/href="\/([^"]+)"/g, `href="${BASE_URL}/$1"`);
-
-            const files: Array<{ name: string; url: string }> = [];
-            const fileRegex = /<a[^>]*href="([^"]*(?:noticeAttach\.do|fileDown|download)[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
-            let fileMatch: RegExpExecArray | null;
-
-            while ((fileMatch = fileRegex.exec(html)) !== null) {
-                let downloadUrl = fileMatch[1];
-                if (downloadUrl.startsWith("/")) {
-                    downloadUrl = `${BASE_URL}${downloadUrl}`;
-                }
-                const fileName = fileMatch[2].replace(/<[^>]+>/g, "").trim();
-                if (fileName && !fileName.includes("이전") && !fileName.includes("다음")) {
-                    files.push({
-                        name: fileName, url: downloadUrl,
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    const res = await fetch(url, {
+                        headers: HEADERS, signal: AbortSignal.timeout(12000),
                     });
+
+                    if (!res.ok) {
+                        throw new Error(`Failed to fetch notice detail for ID ${id} (Status: ${res.status})`);
+                    }
+
+                    const html = await res.text();
+
+                    const titleMatch = html.match(/<p[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/p>/i) || html.match(/<th[^>]*class="[^"]*subject[^"]*"[^>]*>(.*?)<\/th>/i) || html.match(/<td[^>]*class="[^"]*subject[^"]*"[^>]*>(.*?)<\/td>/i);
+                    const title = titleMatch ? (titleMatch[1] || titleMatch[2] || "").replace(/<[^>]+>/g, "").trim() : "";
+
+                    const dateMatch = html.match(/<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/span>/i) || html.match(/(\d{4}-\d{2}-\d{2})/);
+                    const date = dateMatch ? (dateMatch[1] || "").trim() : "";
+
+                    const writerMatch = html.match(/<span[^>]*class="[^"]*writer[^"]*"[^>]*>([^<]+)<\/span>/i);
+                    const writer = writerMatch ? writerMatch[1].trim() : UI_TEXT.NOTICE.DEFAULT_WRITER;
+
+                    const viewsMatch = html.match(/<span[^>]*class="[^"]*hit[^"]*"[^>]*>([^<]+)<\/span>/i);
+                    const views = viewsMatch ? viewsMatch[1].trim() : "0";
+
+                    const contentMatch = html.match(/<div[^>]*class="[^"]*cont_area[^"]*"[^>]*>([\s\S]*?)<\/div>/i) || html.match(/<div[^>]*class="[^"]*(?:board_view_con|view_con|con_area)[^"]*"[^>]*>(.*?)<\/div>/i);
+                    let content = contentMatch ? contentMatch[1].trim() : "";
+
+                    if (!content) {
+                        const bodyContentMatch = html.match(/<td[^>]*colspan="[^"]*"[^>]*class="[^"]*view[^"]*"[^>]*>(.*?)<\/td>/i);
+                        if (bodyContentMatch) {
+                            content = bodyContentMatch[1].trim();
+                        }
+                    }
+
+                    // Clean up relative images/links to absolute
+                    content = content.replace(/src="\/([^"]+)"/g, `src="${BASE_URL}/$1"`);
+                    content = content.replace(/href="\/([^"]+)"/g, `href="${BASE_URL}/$1"`);
+
+                    const files: Array<{ name: string; url: string }> = [];
+                    const fileRegex = /<a[^>]*href="([^"]*(?:noticeAttach\.do|fileDown|download)[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
+                    let fileMatch: RegExpExecArray | null;
+
+                    while ((fileMatch = fileRegex.exec(html)) !== null) {
+                        let downloadUrl = fileMatch[1];
+                        if (downloadUrl.startsWith("/")) {
+                            downloadUrl = `${BASE_URL}${downloadUrl}`;
+                        }
+                        const fileName = fileMatch[2].replace(/<[^>]+>/g, "").trim();
+                        if (fileName && !fileName.includes("이전") && !fileName.includes("다음")) {
+                            files.push({
+                                name: fileName, url: downloadUrl,
+                            });
+                        }
+                    }
+
+                    // Extract prev / next article links
+                    const prevMatch = html.match(/<dl[^>]*class=["']prev["'][^>]*>[\s\S]*?<a[^>]*href=["'][^"']*bdIdx=([^"'&]+)[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
+                    const prevId = prevMatch ? prevMatch[1].trim() : undefined;
+                    const prevTitle = prevMatch ? prevMatch[2].replace(/<[^>]+>/g, "").trim() : undefined;
+
+                    const nextMatch = html.match(/<dl[^>]*class=["']next["'][^>]*>[\s\S]*?<a[^>]*href=["'][^"']*bdIdx=([^"'&]+)[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
+                    const nextId = nextMatch ? nextMatch[1].trim() : undefined;
+                    const nextTitle = nextMatch ? nextMatch[2].replace(/<[^>]+>/g, "").trim() : undefined;
+
+                    const detail: NoticeDetail = {
+                        id,
+                        num: id,
+                        isNotice: false,
+                        title,
+                        date,
+                        content,
+                        writer,
+                        views,
+                        hasFile: files.length > 0,
+                        files,
+                        prevId,
+                        prevTitle,
+                        nextId,
+                        nextTitle,
+                    };
+
+                    detailCache.set(id, {
+                        data: detail, expiresAt: Date.now() + DETAIL_TTL_MS,
+                    });
+
+                    return detail;
+                } catch (err) {
+                    lastError = err;
+                    if (attempt < maxRetries) {
+                        await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
+                    }
                 }
             }
 
-            // Extract prev / next article links
-            const prevMatch = html.match(/<dl[^>]*class=["']prev["'][^>]*>[\s\S]*?<a[^>]*href=["'][^"']*bdIdx=([^"'&]+)[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
-            const prevId = prevMatch ? prevMatch[1].trim() : undefined;
-            const prevTitle = prevMatch ? prevMatch[2].replace(/<[^>]+>/g, "").trim() : undefined;
-
-            const nextMatch = html.match(/<dl[^>]*class=["']next["'][^>]*>[\s\S]*?<a[^>]*href=["'][^"']*bdIdx=([^"'&]+)[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
-            const nextId = nextMatch ? nextMatch[1].trim() : undefined;
-            const nextTitle = nextMatch ? nextMatch[2].replace(/<[^>]+>/g, "").trim() : undefined;
-
-            const detail: NoticeDetail = {
-                id,
-                num: id,
-                isNotice: false,
-                title,
-                date,
-                content,
-                writer,
-                views,
-                hasFile: files.length > 0,
-                files,
-                prevId,
-                prevTitle,
-                nextId,
-                nextTitle,
-            };
-
-            detailCache.set(id, {
-                data: detail, expiresAt: Date.now() + DETAIL_TTL_MS,
-            });
-
-            return detail;
-        } catch (err) {
-            lastError = err;
-            if (attempt < maxRetries) {
-                await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
+            if (cached) {
+                console.warn(`[NoticeScraper] Fetch failed after retries for ID ${id}, serving stale cached detail.`);
+                return cached.data;
             }
+
+            throw lastError instanceof Error ? lastError : new Error(`Failed to fetch notice detail for ID ${id}`);
+        } finally {
+            pendingDetailRequests.delete(id);
         }
-    }
+    })();
 
-    if (cached) {
-        console.warn(`[NoticeScraper] Fetch failed after retries for ID ${id}, serving stale cached detail.`);
-        return cached.data;
-    }
-
-    throw lastError instanceof Error ? lastError : new Error(`Failed to fetch notice detail for ID ${id}`);
+    pendingDetailRequests.set(id, requestPromise);
+    return requestPromise;
 }

@@ -67,7 +67,7 @@ export class TaskQueue {
     async enqueue<T>(task: () => Promise<T>, options?: TaskEnqueueOptions): Promise<T> {
         const priority = options?.priority ?? 0;
 
-        if (this.activeCount >= this.concurrency) {
+        if (this.activeCount >= this.concurrency || this.queue.length > 0) {
             await new Promise<void>((resolve) => {
                 const item: QueueItem = {run: resolve, priority, enqueuedAt: Date.now()};
                 if (this.queue.length === 0 || priority <= this.queue[this.queue.length - 1].priority) {
@@ -81,9 +81,10 @@ export class TaskQueue {
                     }
                 }
             });
+            // Slot is transferred directly from the finishing task
+        } else {
+            this.activeCount++;
         }
-
-        this.activeCount++;
 
         // 1. Enforce Token Bucket RPS limit
         await this.acquireToken();
@@ -101,10 +102,11 @@ export class TaskQueue {
         try {
             return await task();
         } finally {
-            this.activeCount--;
             if (this.queue.length > 0) {
                 const next = this.queue.shift();
                 next?.run();
+            } else {
+                this.activeCount--;
             }
         }
     }

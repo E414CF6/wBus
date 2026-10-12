@@ -4,6 +4,13 @@ import {BusLocationStore, getBusLocationStore} from "./BusLocationStore";
 describe("BusLocationStore", () => {
     beforeEach(() => {
         vi.useFakeTimers();
+        vi.spyOn(globalThis, "fetch").mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                data: [],
+                timestamp: Date.now(),
+            }),
+        } as Response);
     });
 
     afterEach(() => {

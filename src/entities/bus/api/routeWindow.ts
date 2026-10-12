@@ -79,11 +79,59 @@ export function formatMinutesToTime(minutes: number): string {
 }
 
 /**
- * Extract clean route number from route ID or variant (e.g. "30", "2(평일)", "GWB320200030" -> "30")
+ * Inverted index cache mapping TAGO routeId (e.g. "WJB258002007") to route number (e.g. "30")
+ */
+let cachedRouteIdToNoMap: Map<string, string> | null = null;
+
+function getRouteIdToNoMap(): Map<string, string> {
+    if (cachedRouteIdToNoMap) return cachedRouteIdToNoMap;
+    const map = new Map<string, string>();
+    const candidates = [
+        path.join(process.cwd(), "public", "routeMap.json"),
+        path.join(process.cwd(), "public", "data", "routeMap.json"),
+        path.join(process.cwd(), "scripts", "cache", "routeMap.json"),
+    ];
+    for (const localPath of candidates) {
+        try {
+            if (fs.existsSync(/*turbopackIgnore: true*/ localPath)) {
+                const raw = fs.readFileSync(/*turbopackIgnore: true*/ localPath, "utf-8");
+                const parsed = JSON.parse(raw);
+                if (parsed?.route_numbers) {
+                    for (const [routeNo, ids] of Object.entries(parsed.route_numbers)) {
+                        if (Array.isArray(ids)) {
+                            for (const id of ids) {
+                                if (typeof id === "string") {
+                                    map.set(id, routeNo);
+                                }
+                            }
+                        }
+                    }
+                    cachedRouteIdToNoMap = map;
+                    return map;
+                }
+            }
+        } catch {
+            // Fallback gracefully
+        }
+    }
+    cachedRouteIdToNoMap = map;
+    return map;
+}
+
+/**
+ * Extract clean route number from route ID or variant (e.g. "30", "2(평일)", "WJB258002007" -> "30", "GWB320200030" -> "30")
  */
 export function extractRouteNumber(routeIdOrNo: string): string {
     const raw = String(routeIdOrNo).trim();
     const withoutDayType = raw.replace(/\([^)]+\)/g, "").trim();
+
+    // Check Wonju WJB route ID mapping
+    if (withoutDayType.startsWith("WJB")) {
+        const idMap = getRouteIdToNoMap();
+        const mappedRouteNo = idMap.get(withoutDayType);
+        if (mappedRouteNo) return mappedRouteNo;
+    }
+
     if (withoutDayType.startsWith("GWB32020")) {
         const lastPart = withoutDayType.replace("GWB32020", "").replace(/^0+/, "");
         return lastPart || withoutDayType;

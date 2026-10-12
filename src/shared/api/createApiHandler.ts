@@ -64,8 +64,12 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
             // Propagate HTTP status if the error has a status property (e.g. PublicApiError or HttpError)
             if (err && typeof err === "object" && "status" in err && typeof err.status === "number") {
                 const status = err.status;
-                if (status >= 400 && status < 500) {
-                    return NextResponse.json({error: config.errorMessage}, {status});
+                if (status >= 400 && status < 600) {
+                    const headers: Record<string, string> = {};
+                    if (status === 503) {
+                        headers["Retry-After"] = "15";
+                    }
+                    return NextResponse.json({error: config.errorMessage}, {status, headers});
                 }
             }
 
