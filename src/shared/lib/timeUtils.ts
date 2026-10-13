@@ -1,26 +1,42 @@
 import {LOCALE, UI_TEXT} from "@shared/config/locale";
 
 /**
- * Parses "HH:mm" or "H:mm" to total minutes since 00:00.
- * Returns null if invalid or format is "-".
+ * Parses "HH:mm" or "H:mm" to total minutes since 00:00 (0~1439).
+ * Returns null if invalid, format is "-", or contains non-time annotations (e.g. "통학").
  */
-export function parseTimeToMinutes(timeStr: string | undefined | null): number | null {
-    if (!timeStr || timeStr === "-" || timeStr.trim() === "") return null;
-    const parts = timeStr.trim().split(":");
-    if (parts.length !== 2) return null;
+export function parseTimeToMinutes(timeStr?: string | null): number | null {
+    if (!timeStr || typeof timeStr !== "string") return null;
+    const clean = timeStr.trim();
+    if (!clean || clean === "-" || clean.includes("통학")) return null;
+
+    const parts = clean.split(":");
+    if (parts.length < 2) return null;
+
     const hours = parseInt(parts[0], 10);
     const minutes = parseInt(parts[1], 10);
-    if (isNaN(hours) || isNaN(minutes)) return null;
+
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || minutes < 0 || minutes >= 60) return null;
     return hours * 60 + minutes;
 }
 
 /**
- * Formats total minutes to "HH:mm".
+ * Formats total minutes to "HH:mm" with wraparound protection.
  */
 export function formatMinutesToTime(minutes: number): string {
-    const h = Math.floor(minutes / 60) % 24;
-    const m = minutes % 60;
+    const normalized = ((Math.floor(minutes) % 1440) + 1440) % 1440;
+    const h = Math.floor(normalized / 60);
+    const m = normalized % 60;
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+}
+
+/**
+ * Returns current Korea Standard Time (KST, UTC+9) in minutes since midnight (0~1439).
+ * Host timezone-agnostic (works identically on Vercel UTC and local environments).
+ */
+export function getCurrentKstMinutes(date: Date = new Date()): number {
+    const kstOffsetMs = 9 * 60 * 60 * 1000;
+    const kstDate = new Date(date.getTime() + kstOffsetMs);
+    return kstDate.getUTCHours() * 60 + kstDate.getUTCMinutes();
 }
 
 /**

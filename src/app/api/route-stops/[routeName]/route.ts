@@ -1,4 +1,4 @@
-import {createApiHandler} from "@shared/api";
+import {ApiValidators, createApiHandler} from "@shared/api";
 import {getRouteDetails, getRouteMapData} from "@entities/route/api";
 import {getStationMap} from "@entities/station/api";
 import type {BusStop} from "@entities/station/types";
@@ -59,7 +59,7 @@ export const GET = createApiHandler<BusStop[]>({
     errorMessage: "Failed to fetch route stops",
     cacheControl: CACHE_CONTROL,
     loggerPrefix: "route-stops",
-    validate: (id) => /^[a-zA-Z0-9_\uAC00-\uD7A3-]+$/.test(id) && id.length <= 30,
+    validate: ApiValidators.isValidRouteName,
     cacheOptions: {
         staleWhileRevalidateSeconds: 86400,
         staleIfErrorSeconds: 86400,

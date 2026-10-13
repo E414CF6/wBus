@@ -1,10 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {
-    extractRouteNumber,
-    formatMinutesToTime,
-    getCurrentKstMinutes,
-    parseTimeToMinutes,
-} from "./routeWindow";
+import {extractRouteNumber, formatMinutesToTime, getCurrentKstMinutes, parseTimeToMinutes,} from "./routeWindow";
 
 describe("routeWindow utility functions", () => {
     describe("parseTimeToMinutes", () => {

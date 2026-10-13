@@ -4,6 +4,8 @@ import fs from "fs";
 import path from "path";
 
 import {YONSEI_STATIC_TIMETABLES} from "@entities/schedule/yonseiStaticTimetables";
+// Re-export canonical time utilities
+import {formatMinutesToTime, getCurrentKstMinutes, parseTimeToMinutes,} from "@shared/lib/timeUtils";
 
 /**
  * Operating Service Window Engine for Wonju City Buses
@@ -41,42 +43,11 @@ const windowCache = new Map<string, RouteOperatingWindow>();
 // In-memory activity tracking for dynamic window extension
 const lastActiveBusTimestamp = new Map<string, number>();
 
-/**
- * Parse time string ("06:00", "6:30", "22:45") to minutes since midnight (0~1439).
- */
-export function parseTimeToMinutes(timeStr?: string | null): number | null {
-    if (!timeStr || typeof timeStr !== "string") return null;
-    const clean = timeStr.trim();
-    if (!clean || clean === "-" || clean.includes("통학")) return null;
-
-    const parts = clean.split(":");
-    if (parts.length < 2) return null;
-
-    const hours = parseInt(parts[0], 10);
-    const minutes = parseInt(parts[1], 10);
-
-    if (isNaN(hours) || isNaN(minutes)) return null;
-    return hours * 60 + minutes;
-}
-
-/**
- * Get current time in Korea Standard Time (UTC+9) in minutes since midnight.
- */
-export function getCurrentKstMinutes(date: Date = new Date()): number {
-    const utcMs = date.getTime() + date.getTimezoneOffset() * 60 * 1000;
-    const kstDate = new Date(utcMs + 9 * 60 * 60 * 1000);
-    return kstDate.getHours() * 60 + kstDate.getMinutes();
-}
-
-/**
- * Format minutes since midnight to "HH:MM"
- */
-export function formatMinutesToTime(minutes: number): string {
-    const normalized = (minutes % 1440 + 1440) % 1440;
-    const h = Math.floor(normalized / 60);
-    const m = normalized % 60;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
+export {
+    formatMinutesToTime,
+    getCurrentKstMinutes,
+    parseTimeToMinutes,
+};
 
 /**
  * Inverted index cache mapping TAGO routeId (e.g. "WJB258002007") to route number (e.g. "30")

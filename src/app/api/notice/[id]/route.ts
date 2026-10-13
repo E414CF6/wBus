@@ -1,3 +1,4 @@
+import {ApiValidators} from "@shared/api";
 import {scrapeWonjuNoticeDetail} from "@entities/notice/server";
 import {type NextRequest, NextResponse} from "next/server";
 
@@ -10,7 +11,7 @@ export async function GET(
 ) {
     try {
         const {id} = await params;
-        if (!id || !/^\d+$/.test(id)) {
+        if (!ApiValidators.isValidNumericId(id)) {
             return NextResponse.json(
                 {success: false, error: "유효하지 않은 공지사항 ID입니다."},
                 {status: 400}

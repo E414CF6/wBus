@@ -16,9 +16,9 @@ const TABS: { id: NavTab; label: string; icon: React.ComponentType<{ className?:
 ];
 
 export const NavTabButtons = memo(function NavTabButtons({
-    activeTab,
-    onTabChange,
-}: NavTabButtonsProps) {
+                                                             activeTab,
+                                                             onTabChange,
+                                                         }: NavTabButtonsProps) {
     return (
         <div className="flex items-center gap-1 shrink-0">
             {TABS.map((tab) => {

@@ -1,4 +1,4 @@
-import {createApiHandler} from "@shared/api/createApiHandler";
+import {ApiValidators, createApiHandler} from "@shared/api";
 import {fetchBusLocations, getAdaptiveTtlSeconds, type RawBusLocation} from "@entities/bus";
 
 // Always treat this route as dynamic to avoid prepended 404s on deploy
@@ -21,5 +21,5 @@ export const GET = createApiHandler<RawBusLocation[]>({
     errorMessage: "Failed to fetch bus data",
     cacheControl: "public, max-age=2, s-maxage=10, stale-while-revalidate=5, stale-if-error=60",
     loggerPrefix: "/bus",
-    validate: (id) => /^[a-zA-Z0-9_-]+$/.test(id) && id.length <= 50,
+    validate: ApiValidators.isValidRouteId,
 });

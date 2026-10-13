@@ -3,7 +3,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Bus, Loader2, RefreshCw, RotateCw, X} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {useRouteVariations, type RouteVariationStop} from "@entities/route";
+import {type RouteVariationStop, useRouteVariations} from "@entities/route";
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useSchedule} from "@entities/schedule/hooks";
 import type {BusItem} from "@entities/bus/types";
@@ -142,8 +142,8 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     // Determine if current variant has up/down separation
     const hasDirections = useMemo(() => {
         const uds = new Set(currentStops
-                .map((s) => s.updowncd)
-                .filter((u): u is number => u !== undefined && u !== null)
+            .map((s) => s.updowncd)
+            .filter((u): u is number => u !== undefined && u !== null)
         );
         return uds.size > 1;
     }, [currentStops]);
@@ -322,37 +322,37 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
             {/* 1.5 Variation Selector (if route has multiple variations) */}
             {variations.length > 1 && (<div
-                    className="flex items-center gap-1.5 px-4 py-2 border-b border-slate-200/80 dark:border-white/10 bg-slate-100/60 dark:bg-white/[0.02] text-xs shrink-0 overflow-x-auto custom-scrollbar-hidden"
-                    role="tablist"
-                    aria-label="노선 종류 선택"
-                >
+                className="flex items-center gap-1.5 px-4 py-2 border-b border-slate-200/80 dark:border-white/10 bg-slate-100/60 dark:bg-white/[0.02] text-xs shrink-0 overflow-x-auto custom-scrollbar-hidden"
+                role="tablist"
+                aria-label="노선 종류 선택"
+            >
                     <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0 mr-1">
                         노선:
                     </span>
-                    {variations.map((variant) => {
-                        const isSelectedVariant = variant.routeId === currentVariant?.routeId;
-                        const busCountOnVariant = busesPerVariation.get(variant.routeId) ?? 0;
+                {variations.map((variant) => {
+                    const isSelectedVariant = variant.routeId === currentVariant?.routeId;
+                    const busCountOnVariant = busesPerVariation.get(variant.routeId) ?? 0;
 
-                        return (<button
-                                key={variant.routeId}
-                                type="button"
-                                role="tab"
-                                aria-selected={isSelectedVariant}
-                                onClick={() => {
-                                    setSelectedVariantId(variant.routeId);
-                                    setDirectionFilter("all");
-                                }}
-                                className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${isSelectedVariant ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 border border-slate-200/60 dark:border-white/5"}`}
-                            >
-                                <span>{variant.label}</span>
-                                {busCountOnVariant > 0 && (<span
-                                        className={`px-1.5 py-0.2 rounded-full text-[10px] font-black leading-none ${isSelectedVariant ? "bg-blue-600 text-white dark:bg-blue-400 dark:text-black" : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"}`}
-                                    >
+                    return (<button
+                        key={variant.routeId}
+                        type="button"
+                        role="tab"
+                        aria-selected={isSelectedVariant}
+                        onClick={() => {
+                            setSelectedVariantId(variant.routeId);
+                            setDirectionFilter("all");
+                        }}
+                        className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${isSelectedVariant ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 border border-slate-200/60 dark:border-white/5"}`}
+                    >
+                        <span>{variant.label}</span>
+                        {busCountOnVariant > 0 && (<span
+                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-black leading-none ${isSelectedVariant ? "bg-blue-600 text-white dark:bg-blue-400 dark:text-black" : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"}`}
+                        >
                                         {busCountOnVariant}대
                                     </span>)}
-                            </button>);
-                    })}
-                </div>)}
+                    </button>);
+                })}
+            </div>)}
 
             {/* 2. Direction Filter Segment (if route has up & down stops) */}
             {hasDirections && (
@@ -423,9 +423,9 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                             >
                                 {/* Left Selection/Turning Indicator Bar (zero layout shift - fixes line alignment issue!) */}
                                 {isSelected ? (<div
-                                        className={`absolute left-0 top-0 bottom-0 w-1 rounded-r z-20 pointer-events-none ${isTurningStop ? "bg-amber-500" : "bg-blue-600 dark:bg-blue-500"}`}
-                                    />) : isTurningStop ? (<div
-                                        className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500/70 rounded-r z-20 pointer-events-none"/>) : null}
+                                    className={`absolute left-0 top-0 bottom-0 w-1 rounded-r z-20 pointer-events-none ${isTurningStop ? "bg-amber-500" : "bg-blue-600 dark:bg-blue-500"}`}
+                                />) : isTurningStop ? (<div
+                                    className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500/70 rounded-r z-20 pointer-events-none"/>) : null}
 
                                 {/* Vertical Timeline Connecting Track */}
                                 <div
@@ -440,14 +440,14 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
                                 {/* Station Timeline Node (Donut Circle) */}
                                 {isTurningStop ? (<div
-                                        className="absolute left-[65px] top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-[2.5px] border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-[#0c100f] z-10 shadow-[0_0_12px_rgba(245,158,11,0.35)] flex items-center justify-center pointer-events-none"
-                                        title="회차지 정류장"
-                                    >
-                                        <RotateCw
-                                            className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 stroke-[2.5]"/>
-                                    </div>) : (<div
-                                        className="absolute left-[68px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-[2.5px] border-blue-600 dark:border-blue-400 bg-white dark:bg-[#0c100f] z-10 shadow-xs pointer-events-none"
-                                    />)}
+                                    className="absolute left-[65px] top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-[2.5px] border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-[#0c100f] z-10 shadow-[0_0_12px_rgba(245,158,11,0.35)] flex items-center justify-center pointer-events-none"
+                                    title="회차지 정류장"
+                                >
+                                    <RotateCw
+                                        className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 stroke-[2.5]"/>
+                                </div>) : (<div
+                                    className="absolute left-[68px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-[2.5px] border-blue-600 dark:border-blue-400 bg-white dark:bg-[#0c100f] z-10 shadow-xs pointer-events-none"
+                                />)}
 
                                 {/* Live Bus Markers if arriving/located at this station */}
                                 {busesHere.length > 0 && (
@@ -495,7 +495,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                             {stop.nodenm}
                                         </span>
                                         {isTurningStop && (<span
-                                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-xs shrink-0 select-none">
+                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-xs shrink-0 select-none">
                                                 <RotateCw className="w-2.5 h-2.5 stroke-[2.5]"/>
                                                 회차지
                                             </span>)}

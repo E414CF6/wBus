@@ -146,18 +146,20 @@ export async function saveCache(data: RouteDataset): Promise<void> {
         // Ignore
     }
 
-    // 3. Save to public/schedule.json in writable environments (local dev / build)
-    try {
-        const p = getLocalCachePath();
-        const dir = path.dirname(p);
-        if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
-            fs.mkdirSync(/*turbopackIgnore: true*/ dir, {recursive: true});
+    // 3. Save to public/schedule.json only in writable local development/build environments
+    if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+        try {
+            const p = getLocalCachePath();
+            const dir = path.dirname(p);
+            if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
+                fs.mkdirSync(/*turbopackIgnore: true*/ dir, {recursive: true});
+            }
+            fs.writeFileSync(/*turbopackIgnore: true*/ p, jsonStr, "utf-8");
+            const summaryPath = p.replace("schedule.json", "scheduleSummary.json");
+            fs.writeFileSync(/*turbopackIgnore: true*/ summaryPath, summaryJsonStr, "utf-8");
+        } catch {
+            // Silently ignore if filesystem is unexpectedly read-only
         }
-        fs.writeFileSync(/*turbopackIgnore: true*/ p, jsonStr, "utf-8");
-        const summaryPath = p.replace("schedule.json", "scheduleSummary.json");
-        fs.writeFileSync(/*turbopackIgnore: true*/ summaryPath, summaryJsonStr, "utf-8");
-    } catch {
-        // Silently ignore in read-only environment (Vercel Serverless)
     }
 }
 
@@ -254,19 +256,25 @@ export async function refreshSchedule(force = true, isAuthorized = false): Promi
     const current = await getOrFetchSchedule(false);
     const meta = current.meta;
 
-    const now = Date.now();
-    // Guard against excessive scrape spam for unauthorized force requests
-    if (!isAuthorized && force && now - lastScrapeAttemptTime < FORCE_REFRESH_COOLDOWN_MS) {
-        const waitSec = Math.ceil((FORCE_REFRESH_COOLDOWN_MS - (now - lastScrapeAttemptTime)) / 1000);
-        return {
-            refreshed: false,
-            message: `방금 시간표를 갱신했습니다. ${waitSec}초 후 다시 시도해주세요.`,
-            data: current.data,
-            meta: current.meta,
-        };
-    }
+    // Security & Rate-limiting: Only authorized callers (Vercel Cron / Admin) can force a fresh scrape.
+    // Unauthorized callers are strictly constrained by the 3-day minimum interval to prevent DoS on Wonju ITS.
+    const shouldScrape = isAuthorized
+        ? (force || !meta.exists || meta.canRefresh)
+        : (!meta.exists || meta.canRefresh);
 
-    if (force || !meta.exists || meta.canRefresh) {
+    const now = Date.now();
+    if (shouldScrape) {
+        // Enforce cooldown between scrape attempts
+        if (!isAuthorized && now - lastScrapeAttemptTime < FORCE_REFRESH_COOLDOWN_MS) {
+            const waitSec = Math.ceil((FORCE_REFRESH_COOLDOWN_MS - (now - lastScrapeAttemptTime)) / 1000);
+            return {
+                refreshed: false,
+                message: `방금 시간표를 갱신했습니다. ${waitSec}초 후 다시 시도해주세요.`,
+                data: current.data,
+                meta: current.meta,
+            };
+        }
+
         lastScrapeAttemptTime = now;
         console.log("[ScheduleService] Triggering Wonju ITS scraper for timetable update...");
         try {

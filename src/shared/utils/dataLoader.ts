@@ -1,6 +1,30 @@
 import {fetchAPI} from "@shared/api/fetchAPI";
 import {API_CONFIG} from "@shared/config/env";
 
+let serverFsModulesPromise: Promise<{
+    readFile: typeof import("fs/promises").readFile;
+    existsSync: typeof import("fs").existsSync;
+    join: typeof import("path").join;
+}> | null = null;
+
+function getServerFsModules() {
+    if (typeof window !== "undefined") {
+        throw new Error("getServerFsModules must only be called on server");
+    }
+    if (!serverFsModulesPromise) {
+        serverFsModulesPromise = Promise.all([
+            import(/*turbopackIgnore: true*/ "fs/promises"),
+            import(/*turbopackIgnore: true*/ "fs"),
+            import(/*turbopackIgnore: true*/ "path"),
+        ]).then(([fsPromises, fs, path]) => ({
+            readFile: fsPromises.readFile,
+            existsSync: fs.existsSync,
+            join: path.join,
+        }));
+    }
+    return serverFsModulesPromise;
+}
+
 /**
  * Loads static JSON/GeoJSON data.
  * @param fileName The name or relative path inside the `public/` directory.
@@ -29,11 +53,10 @@ export async function loadStaticData<T>(fileName: string): Promise<T> {
         }
 
         try {
-            const {readFile} = await import("fs/promises");
-            const {existsSync} = await import("fs");
-            const {join} = await import("path");
+            const {readFile, existsSync, join} = await getServerFsModules();
 
-            const pathsToTry = [join(process.cwd(), "public", cleanFileName),
+            const pathsToTry = [
+                join(process.cwd(), "public", cleanFileName),
                 join(process.cwd(), "public", "data", cleanFileName),
                 join("/tmp", cleanFileName),
             ];

@@ -1,18 +1,38 @@
 import {getPublicApiHealth} from "@entities/bus";
+import {getCacheMetadata, loadFromLocalFile} from "@entities/schedule/server";
 import {NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
     try {
-        const health = getPublicApiHealth();
-        const status = health.circuit.state === "OPEN" ? 503 : 200;
+        const publicApiMetrics = getPublicApiHealth();
+
+        let scheduleMetrics = null;
+        try {
+            const localData = loadFromLocalFile();
+            const meta = getCacheMetadata(localData);
+            scheduleMetrics = {
+                totalRoutes: meta.totalRoutes,
+                updatedAt: meta.updatedAt,
+                exists: meta.exists,
+                canRefresh: meta.canRefresh,
+            };
+        } catch {
+            // Schedule metrics are non-blocking for healthcheck
+        }
+
+        const isPublicApiHealthy = publicApiMetrics.circuit.state !== "OPEN";
+        const status = isPublicApiHealthy ? 200 : 503;
 
         return NextResponse.json({
-            success: health.circuit.state !== "OPEN",
-            status: health.circuit.state,
+            success: isPublicApiHealthy,
+            status: publicApiMetrics.circuit.state,
             timestamp: new Date().toISOString(),
-            metrics: health,
+            metrics: {
+                ...publicApiMetrics,
+                schedule: scheduleMetrics,
+            },
         }, {status});
     } catch (error) {
         return NextResponse.json({

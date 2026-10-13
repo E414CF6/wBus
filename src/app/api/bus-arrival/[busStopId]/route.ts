@@ -1,4 +1,4 @@
-import {createApiHandler} from "@shared/api/createApiHandler";
+import {ApiValidators, createApiHandler} from "@shared/api";
 import {fetchBusArrivals, type RawBusArrival} from "@entities/bus";
 
 export const dynamic = "force-dynamic";
@@ -16,5 +16,5 @@ export const GET = createApiHandler<RawBusArrival[]>({
     errorMessage: "Failed to fetch arrival data",
     cacheControl: "public, max-age=1, s-maxage=3, stale-while-revalidate=5, stale-if-error=60",
     loggerPrefix: "/bus-arrival",
-    validate: (id) => /^[a-zA-Z0-9_-]+$/.test(id) && id.length <= 50,
+    validate: ApiValidators.isValidStopId,
 });

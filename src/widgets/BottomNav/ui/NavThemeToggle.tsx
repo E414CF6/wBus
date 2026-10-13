@@ -5,7 +5,8 @@ import {Moon, Sun} from "lucide-react";
 import {useTheme} from "next-themes";
 import {UI_TEXT} from "@shared/config/locale";
 
-const emptySubscribe = () => () => {};
+const emptySubscribe = () => () => {
+};
 
 export const NavThemeToggle = memo(function NavThemeToggle() {
     const {setTheme, resolvedTheme} = useTheme();

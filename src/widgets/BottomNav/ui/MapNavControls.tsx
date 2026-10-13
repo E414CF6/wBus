@@ -22,15 +22,15 @@ interface MapNavControlsProps {
 }
 
 export const MapNavControls = memo(function MapNavControls({
-    allRoutes = [],
-    selectedRoute = "",
-    onSelectRoute,
-    runningBuses = [],
-    connectionStatus = "connected",
-    hasFetched = true,
+                                                               allRoutes = [],
+                                                               selectedRoute = "",
+                                                               onSelectRoute,
+                                                               runningBuses = [],
+                                                               connectionStatus = "connected",
+                                                               hasFetched = true,
                                                                isBusListOpen: controlledBusListOpen,
                                                                onToggleBusList,
-}: MapNavControlsProps) {
+                                                           }: MapNavControlsProps) {
     const [internalBusListOpen, setInternalBusListOpen] = useState(false);
     const [isRoutePickerOpen, setIsRoutePickerOpen] = useState(false);
 

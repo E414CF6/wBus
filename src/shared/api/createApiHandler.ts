@@ -61,6 +61,8 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
         } catch (err) {
             console.error(`[API ${config.loggerPrefix}/${id}]`, err);
 
+            const details = err instanceof Error && process.env.NODE_ENV === "development" ? err.message : undefined;
+
             // Propagate HTTP status if the error has a status property (e.g. PublicApiError or HttpError)
             if (err && typeof err === "object" && "status" in err && typeof err.status === "number") {
                 const status = err.status;
@@ -69,11 +71,14 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
                     if (status === 503) {
                         headers["Retry-After"] = "15";
                     }
-                    return NextResponse.json({error: config.errorMessage}, {status, headers});
+                    return NextResponse.json({error: config.errorMessage, ...(details ? {details} : {})}, {
+                        status,
+                        headers
+                    });
                 }
             }
 
-            return NextResponse.json({error: config.errorMessage}, {status: 500});
+            return NextResponse.json({error: config.errorMessage, ...(details ? {details} : {})}, {status: 500});
         }
     };
 }

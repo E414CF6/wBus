@@ -4,6 +4,7 @@ import {
     formatMinutesToTime,
     formatRelativeTime,
     formatRemainingTime,
+    getCurrentKstMinutes,
     isWeekend,
     parseTimeToMinutes,
 } from "./timeUtils";
@@ -95,6 +96,24 @@ describe("timeUtils", () => {
 
             const futureDays = new Date(Date.now() + 2 * 86400 * 1000 + 3 * 3600 * 1000).toISOString();
             expect(formatRemainingTime(futureDays)).toContain("2일");
+        });
+    });
+
+    describe("getCurrentKstMinutes", () => {
+        it("returns a valid minute number within 0 ~ 1439", () => {
+            const minutes = getCurrentKstMinutes();
+            expect(minutes).toBeGreaterThanOrEqual(0);
+            expect(minutes).toBeLessThan(1440);
+        });
+
+        it("accurately converts UTC dates to KST (UTC+9)", () => {
+            // 2026-09-12T00:00:00Z -> 09:00 KST -> 540 minutes
+            const utcDate = new Date(Date.UTC(2026, 8, 12, 0, 0, 0));
+            expect(getCurrentKstMinutes(utcDate)).toBe(540);
+
+            // 2026-09-12T15:30:00Z -> 00:30 next day KST -> 30 minutes
+            const midnightRollover = new Date(Date.UTC(2026, 8, 12, 15, 30, 0));
+            expect(getCurrentKstMinutes(midnightRollover)).toBe(30);
         });
     });
 });

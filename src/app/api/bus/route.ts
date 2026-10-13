@@ -1,8 +1,9 @@
 import {type NextRequest, NextResponse} from "next/server";
-import {GET as getSchedule} from "../schedule/route";
 import {fetchBusLocations, getAdaptiveTtlSeconds, type RawBusLocation} from "@entities/bus";
 import {getCachedOrFetch} from "@shared/cache";
 import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
+
+import {ApiValidators} from "@shared/api";
 
 export const dynamic = "force-dynamic";
 
@@ -11,25 +12,26 @@ const LIVE_CACHE_OPTIONS = {
 };
 
 const CACHE_CONTROL_HEADER = "public, max-age=2, s-maxage=10, stale-while-revalidate=5, stale-if-error=60";
-const ROUTE_ID_REGEX = /^[a-zA-Z0-9_-]+$/;
 
 /**
  * GET /api/bus
- * - If `routeIds` search parameter is present: Returns batched real-time bus locations for specified route IDs.
- * - Otherwise: Falls back to legacy timetable schedule endpoint.
+ * Returns batched real-time bus locations for specified route IDs (`?routeIds=...`).
  */
 export async function GET(request: NextRequest) {
     const {searchParams} = request.nextUrl;
     const routeIdsParam = searchParams.get("routeIds");
 
     if (!routeIdsParam) {
-        return getSchedule(request);
+        return NextResponse.json(
+            {error: "Missing required query parameter: routeIds. To fetch bus timetables, please use /api/schedule."},
+            {status: 400}
+        );
     }
 
     const routeIds = routeIdsParam
         .split(",")
         .map((id) => id.trim())
-        .filter((id) => id.length > 0 && id.length <= 50 && ROUTE_ID_REGEX.test(id))
+        .filter((id) => ApiValidators.isValidRouteId(id))
         .slice(0, 15);
 
     if (routeIds.length === 0) {

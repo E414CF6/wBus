@@ -213,16 +213,16 @@ automated error recovery:
 
 | Method | Endpoint                       | Description                                             | Cache Policy               |
 |:-------|:-------------------------------|:--------------------------------------------------------|:---------------------------|
-| `GET`  | `/api/bus`                     | Returns full city timetable data and metadata           | `s-maxage=60`, SWR: `300s` |
-| `GET`  | `/api/bus/[routeId]`           | Live bus GPS positions for the specified route ID       | `s-maxage=2`, SWR: `3s`    |
-| `GET`  | `/api/bus/health`              | Connectivity check against national TAGO API            | `no-store`                 |
-| `POST` | `/api/bus/refresh`             | Triggers a fresh scrape of official Wonju ITS schedules | `no-store`                 |
-| `GET`  | `/api/bus-arrival/[busStopId]` | Predicted arrival times for buses arriving at a stop    | `s-maxage=5`, SWR: `10s`   |
+| `GET`  | `/api/bus?routeIds=...`        | Batched real-time bus locations for requested routes    | `s-maxage=10`, SWR: `5s`   |
+| `GET`  | `/api/bus/[routeId]`           | Live bus GPS positions for the specified route ID       | `s-maxage=10`, SWR: `5s`   |
+| `GET`  | `/api/bus/health`              | Health check for public API circuit breaker & telemetry | `no-store`                 |
+| `GET`  | `/api/bus-arrival/[busStopId]` | Predicted arrival times for buses arriving at a stop    | `s-maxage=3`, SWR: `5s`    |
 | `GET`  | `/api/bus-stops/[routeId]`     | Ordered sequence of bus stops for a specific route      | `s-maxage=86400`           |
 | `GET`  | `/api/route-stops/[routeName]` | Ordered directional stops mapped by route name          | `s-maxage=86400`           |
-| `GET`  | `/api/schedule`                | Complete schedule JSON payload                          | `s-maxage=60`, SWR: `300s` |
-| `POST` | `/api/schedule/refresh`        | Force scrape and update local schedule cache            | `no-store`                 |
-| `GET`  | `/api/notice`                  | List of municipal transit notices from Wonju ITS        | `s-maxage=300`             |
+| `GET`  | `/api/schedule`                | Complete schedule JSON payload and freshness metadata   | `s-maxage=60`, SWR: `300s` |
+| `POST` | `/api/schedule/refresh`        | Scrape & update Wonju ITS schedule cache                | `no-store`                 |
+| `POST` | `/api/bus/refresh`             | *(Deprecated)* Legacy proxy to `/api/schedule/refresh`  | `no-store`                 |
+| `GET`  | `/api/notice`                  | List of municipal transit notices from Wonju ITS        | `s-maxage=900`             |
 | `GET`  | `/api/notice/[id]`             | Full detail of a specific ITS transit notice            | `s-maxage=600`             |
 | `GET`  | `/api/data/[...path]`          | Serves static assets from local `public/` directory     | `public, max-age=3600`     |
 

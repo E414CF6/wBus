@@ -1,4 +1,4 @@
-import {createApiHandler} from "@shared/api";
+import {ApiValidators, createApiHandler} from "@shared/api";
 import {fetchRouteStops, type RawBusStop} from "@entities/bus";
 
 import {buildCacheControl} from "@shared/cache/cachePolicy";
@@ -22,7 +22,7 @@ export const GET = createApiHandler<RawBusStop[]>({
     errorMessage: "Failed to fetch stop data",
     cacheControl: CACHE_CONTROL,
     loggerPrefix: "bus-stops",
-    validate: (id) => /^[a-zA-Z0-9_-]+$/.test(id) && id.length <= 50,
+    validate: ApiValidators.isValidRouteId,
     cacheOptions: {
         staleWhileRevalidateSeconds: 86400,
         staleIfErrorSeconds: 86400,

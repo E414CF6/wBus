@@ -15,12 +15,12 @@ interface ScheduleNavControlsProps {
 }
 
 export const ScheduleNavControls = memo(function ScheduleNavControls({
-    scheduleSubTab = "yonsei",
-    onScheduleSubTabChange,
-    dayMode = "AUTO",
-    onDayModeChange,
-    isTodayWeekendOrHoliday = false,
-}: ScheduleNavControlsProps) {
+                                                                         scheduleSubTab = "yonsei",
+                                                                         onScheduleSubTabChange,
+                                                                         dayMode = "AUTO",
+                                                                         onDayModeChange,
+                                                                         isTodayWeekendOrHoliday = false,
+                                                                     }: ScheduleNavControlsProps) {
     return (
         <>
             {/* Divider */}

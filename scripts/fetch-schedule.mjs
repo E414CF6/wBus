@@ -34,27 +34,33 @@ async function fetchList(onlyYonsei = false, maxRetries = 3) {
             const rawCookies = res.headers.getSetCookie ? res.headers.getSetCookie() : [];
             const cookieStr = rawCookies.map(c => c.split(';')[0]).join('; ');
 
-            // Match table rows
-            const rowRegex = /<tr[^>]*>\s*<td[^>]*onclick=['"]goDetail\(['"]([^'"]+)['"]\);['"][^>]*>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/gs;
-
+            // Match table rows using robust two-pass extraction (row -> td cells)
+            const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
             const routes = [];
-            let match;
-            while ((match = rowRegex.exec(html)) !== null) {
-                const detailId = match[1].trim();
-                const rawNo = match[2].replace(/<[^>]+>/g, '').trim();
+            let trMatch;
 
+            while ((trMatch = trRegex.exec(html)) !== null) {
+                const row = trMatch[1];
+                const onclickMatch = row.match(/goDetail\(['"]([^'"]+)['"]\)/i);
+                if (!onclickMatch) continue;
+
+                const detailId = onclickMatch[1].trim();
+                const tds = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => m[1].replace(/<[^>]+>/g, '').trim());
+                if (tds.length < 7) continue;
+
+                const rawNo = tds[0];
                 if (onlyYonsei) {
                     const isTarget = TARGET_RAW_NOS.includes(rawNo) || rawNo.startsWith('30') || rawNo.startsWith('34');
                     if (!isTarget) continue;
                 }
 
                 const cleanStationName = (name) => name ? name.replace(/장양리시내버스공영(정류장)?/g, '장양리') : name;
-                const origin = cleanStationName(match[3].replace(/<[^>]+>/g, '').trim());
-                const destination = cleanStationName(match[4].replace(/<[^>]+>/g, '').trim());
-                const firstBus = match[5].replace(/<[^>]+>/g, '').trim();
-                const lastBus = match[6].replace(/<[^>]+>/g, '').trim();
-                const runCount = match[7].replace(/<[^>]+>/g, '').trim();
-                const interval = match[8].replace(/<[^>]+>/g, '').trim();
+                const origin = cleanStationName(tds[1]);
+                const destination = cleanStationName(tds[2]);
+                const firstBus = tds[3] || '';
+                const lastBus = tds[4] || '';
+                const runCount = tds[5] || '';
+                const interval = tds[6] || '';
 
                 // Standardize route number
                 let routeNo = rawNo;
@@ -118,18 +124,22 @@ async function fetchDetail(detailId, csrfToken, cookieStr, maxRetries = 3) {
 
             const html = await res.text();
 
-            const rowRegex = /<tr[^>]*>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>/gs;
-
+            const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
             const timetable = [];
-            let match;
-            while ((match = rowRegex.exec(html)) !== null) {
-                const seq = parseInt(match[1].replace(/<[^>]+>/g, '').trim(), 10);
+            let trMatch;
+
+            while ((trMatch = trRegex.exec(html)) !== null) {
+                const row = trMatch[1];
+                const tds = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => m[1].replace(/<[^>]+>/g, '').trim());
+                if (tds.length < 5) continue;
+
+                const seq = parseInt(tds[0], 10);
                 if (isNaN(seq)) continue;
 
-                const originDepTime = match[2].replace(/<[^>]+>/g, '').trim();
-                const destDepTime = match[3].replace(/<[^>]+>/g, '').trim();
-                const type = match[4].replace(/<[^>]+>/g, '').trim();
-                const notes = match[5].replace(/<[^>]+>/g, '').trim();
+                const originDepTime = tds[1];
+                const destDepTime = tds[2];
+                const type = tds[3];
+                const notes = tds[4];
 
                 timetable.push({seq, originDepTime, destDepTime, type, notes});
             }
