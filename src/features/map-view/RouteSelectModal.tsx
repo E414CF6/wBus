@@ -59,25 +59,8 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     const recentKey = isWonju ? "wbus_recent_map_routes" : `wbus_recent_routes_${currentCity.code}`;
     const defaultBookmarks = isWonju ? WONJU_DEFAULT_BOOKMARKS : EMPTY_DEFAULT_BOOKMARKS;
 
-    const [bookmarks, setBookmarks] = useState<string[]>(() => {
-        if (typeof window === "undefined") return defaultBookmarks;
-        try {
-            const saved = localStorage.getItem(bookmarkKey);
-            if (saved) return JSON.parse(saved);
-        } catch {
-        }
-        return defaultBookmarks;
-    });
-
-    const [recentRoutes, setRecentRoutes] = useState<string[]>(() => {
-        if (typeof window === "undefined") return [];
-        try {
-            const saved = localStorage.getItem(recentKey);
-            if (saved) return JSON.parse(saved);
-        } catch {
-        }
-        return [];
-    });
+    const [bookmarks, setBookmarks] = useState<string[]>(defaultBookmarks);
+    const [recentRoutes, setRecentRoutes] = useState<string[]>([]);
 
     // Re-sync bookmarks and recents when currentCity changes
     useEffect(() => {

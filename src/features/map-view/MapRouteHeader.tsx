@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useCallback, useMemo, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useState} from "react";
 import {Bus, ChevronDown, GraduationCap, RefreshCw} from "lucide-react";
 
 import {getRouteMeta} from "@entities/route/routeMetadata";
@@ -47,8 +47,13 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
     const meta = useMemo(() => getRouteMeta(selectedRoute, currentCity.code), [selectedRoute, currentCity.code]);
     const runningCount = runningBuses.length;
 
-    // Load recent & bookmarked routes for quick switch bar
-    const quickRoutes = useMemo(() => {
+    // Load recent & bookmarked routes for quick switch bar (loaded in useEffect to prevent SSR hydration mismatch)
+    const [quickRoutes, setQuickRoutes] = useState<string[]>(() => {
+        if (currentCity.code === "32020") return DEFAULT_QUICK_ROUTES;
+        return [];
+    });
+
+    useEffect(() => {
         const set = new Set<string>();
         const bookmarkKey = currentCity.code === "32020" ? "wonju_bus_bookmarks" : `wbus_bookmarks_${currentCity.code}`;
         const recentKey = `wbus_recent_routes_${currentCity.code}`;
@@ -76,7 +81,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
         if (list.length === 0 && allRoutes.length > 0) {
             list = allRoutes.slice(0, 4);
         }
-        return list;
+        setQuickRoutes(list);
     }, [allRoutes, currentCity.code]);
 
     const handleSelectFromModal = useCallback(
@@ -189,6 +194,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                     {/* Route Direction & Focus Switcher */}
                     <button
                         type="button"
+                        suppressHydrationWarning
                         onClick={onSelectDirection ? handleToggleDirection : () => setIsModalOpen(true)}
                         className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-200 cursor-pointer overflow-hidden max-w-[45vw] sm:max-w-[320px] text-left select-none active:scale-95"
                         title={`경로 표시 방향: ${
@@ -202,7 +208,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                     >
                         <div className="flex flex-col min-w-0">
                             <div className="flex items-center gap-1.5 truncate">
-                                <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
+                                <span suppressHydrationWarning className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
                                     {selectedDirection === "all" && `${meta.origin} ↔ ${meta.destination}`}
                                     {selectedDirection === "up" && `→ ${meta.destination}`}
                                     {selectedDirection === "down" && `→ ${meta.origin}`}

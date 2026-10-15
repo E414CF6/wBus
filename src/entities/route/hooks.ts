@@ -1,7 +1,7 @@
 "use client";
 
 import type {RouteInfo, RouteVariation} from "@entities/route/types";
-import {getRouteInfo, getRouteMap, getRouteVariations} from "@entities/route/api";
+import {getRouteVariations} from "@entities/route/api";
 import {registerDynamicRouteMeta} from "./routeMetadata";
 import type {RawCityRoute} from "@entities/bus";
 
@@ -34,10 +34,6 @@ export function useRouteInfo(routeName: string, enabled: boolean = true, cityCod
                 }
             } catch {
                 // Fall back below
-            }
-            if (cCode === "32020") {
-                const wonjuInfo = await getRouteInfo(name);
-                if (wonjuInfo) return wonjuInfo;
             }
             return { routeName: name, vehicleRouteIds: [name] };
         },
@@ -77,13 +73,7 @@ export function useBusRouteMap(enabled: boolean = true, cityCode: string = "3202
                 }
             }
         } catch (e) {
-            if (cityCode === "32020") {
-                return await getRouteMap();
-            }
             throw e;
-        }
-        if (cityCode === "32020") {
-            return await getRouteMap();
         }
         return {};
     };
@@ -136,10 +126,10 @@ export function useCityRoutes(cityCode: string = "32020", enabled: boolean = tru
  * Hook to retrieve all variations of a route, with ordered stops,
  * user-friendly variation labels, and turning point detection.
  */
-export function useRouteVariations(routeName: string, enabled: boolean = true) {
+export function useRouteVariations(routeName: string, enabled: boolean = true, cityCode: string = "32020") {
     const {data, error, isLoading} = useSWR<RouteVariation[]>(
-        enabled && routeName ? ["routeVariations", routeName] : null,
-        ([, name]: [string, string]) => getRouteVariations(name),
+        enabled && routeName ? ["routeVariations", cityCode, routeName] : null,
+        ([, cCode, name]: [string, string, string]) => getRouteVariations(name, cCode),
         ROUTE_INFO_SWR_OPTIONS
     );
 

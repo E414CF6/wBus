@@ -67,7 +67,7 @@ async function fetchScheduleApi(): Promise<{ data: BusCacheData; meta: CacheMeta
     return result;
 }
 
-export function useSchedule() {
+export function useSchedule(enabled: boolean = true) {
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [refreshToast, setRefreshToast] = useState<{
         type: "success" | "info" | "error";
@@ -75,7 +75,7 @@ export function useSchedule() {
     } | null>(null);
 
     const {data, error, isLoading, mutate} = useSWR(
-        "scheduleData",
+        enabled ? "scheduleData" : null,
         fetchScheduleApi,
         SCHEDULE_SWR_OPTIONS
     );

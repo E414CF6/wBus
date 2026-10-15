@@ -39,8 +39,8 @@ export async function GET(
         ];
 
         for (const localPath of localPaths) {
-            if (existsSync(localPath)) {
-                const content = await readFile(localPath, "utf-8");
+            if (existsSync(/*turbopackIgnore: true*/ localPath)) {
+                const content = await readFile(/*turbopackIgnore: true*/ localPath, "utf-8");
                 return new NextResponse(content, {
                     status: 200,
                     headers: {

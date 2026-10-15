@@ -1,6 +1,6 @@
 "use client";
 
-import {useAllStations, useBusStop} from "@entities/station/hooks";
+import {useBusStop} from "@entities/station/hooks";
 import type {BusStop} from "@entities/station/types";
 
 import {MAP_SETTINGS} from "@shared/config/env";
@@ -250,7 +250,6 @@ export default ({
     const {map} = useAppMapContext();
     const [zoom, setZoom] = useState(map?.getZoom() ?? MAP_SETTINGS.ZOOM.DEFAULT);
     const [bounds, setBounds] = useState(map?.getBounds() ?? null);
-    const allStations = useAllStations(effectiveCityCode === "32020" && zoom >= 15.0);
     const rafRef = useRef<number | null>(null);
 
     // Retrieve polyline data to synchronize stop marker & label colors with route segments
@@ -320,16 +319,14 @@ export default ({
         };
     }, [map]);
 
-    // Zoom threshold for displaying stops in viewport (zoom >= 13.5 for route stops, zoom >= 15.0 for surrounding)
+    // Zoom threshold for displaying stops in viewport (zoom >= 13.5 for route stops)
     const visibleStops = useMemo(() => {
         if (!bounds || zoom < 13.5) return [];
 
-        const seenNodeIds = new Set<string>();
         const stopsInView: Array<BusStop & { isRouteStop: boolean; showLabel: boolean; color: string }> = [];
         const isRouteLabelVisible = zoom >= 14.3;
-        const isSurroundingLabelVisible = zoom >= 15.8;
 
-        // 1. Include route stops that are inside current viewport bounds
+        // Include route stops that are inside current viewport bounds
         for (const rStop of routeStops) {
             if (bounds.contains([rStop.gpslong, rStop.gpslati])) {
                 const stopKey = `${rStop.nodeid}-${rStop.updowncd ?? "na"}`;
@@ -341,28 +338,11 @@ export default ({
                     showLabel: isRouteLabelVisible,
                     color,
                 });
-                if (rStop.nodeid) seenNodeIds.add(rStop.nodeid);
-            }
-        }
-
-        // 2. Include surrounding stations from stationMap.json inside viewport bounds (only at higher zoom >= 15.0)
-        if (zoom >= 15.0) {
-            for (const station of allStations) {
-                if (seenNodeIds.has(station.nodeid)) continue;
-                if (bounds.contains([station.gpslong, station.gpslati])) {
-                    stopsInView.push({
-                        ...station,
-                        isRouteStop: false,
-                        showLabel: isSurroundingLabelVisible,
-                        color: "#64748b",
-                    });
-                    seenNodeIds.add(station.nodeid);
-                }
             }
         }
 
         return stopsInView;
-    }, [routeStops, allStations, bounds, zoom, stopColorMap]);
+    }, [routeStops, bounds, zoom, stopColorMap]);
 
     return (
         <>

@@ -1,5 +1,4 @@
 import {fetchAPI} from "@shared/api/fetchAPI";
-import {API_CONFIG} from "@shared/config/env";
 
 let serverFsModulesPromise: Promise<{
     readFile: typeof import("fs/promises").readFile;
@@ -36,22 +35,6 @@ export async function loadStaticData<T>(fileName: string): Promise<T> {
 
     // Server-side: Read from public directory (bundled at build time) or /tmp
     if (isServer) {
-        if (
-            API_CONFIG.STATIC.USE_REMOTE &&
-            API_CONFIG.STATIC.BASE_URL &&
-            API_CONFIG.STATIC.BASE_URL.startsWith("http")
-        ) {
-            try {
-                const url = `${API_CONFIG.STATIC.BASE_URL}/${cleanFileName}`;
-                return await fetchAPI<T>(url);
-            } catch (err) {
-                console.warn(
-                    `[loadStaticData] Remote fetch failed for ${cleanFileName}, falling back to local filesystem:`,
-                    err
-                );
-            }
-        }
-
         try {
             const {readFile, existsSync, join} = await getServerFsModules();
 
@@ -73,9 +56,5 @@ export async function loadStaticData<T>(fileName: string): Promise<T> {
     }
 
     // Client-side (Browser): Fetch directly from public asset URL
-    const url =
-        API_CONFIG.STATIC.USE_REMOTE &&
-        API_CONFIG.STATIC.BASE_URL && API_CONFIG.STATIC.BASE_URL.startsWith("http") ? `${API_CONFIG.STATIC.BASE_URL}/${cleanFileName}` : `/${cleanFileName}`;
-
-    return fetchAPI<T>(url);
+    return fetchAPI<T>(`/${cleanFileName}`);
 }

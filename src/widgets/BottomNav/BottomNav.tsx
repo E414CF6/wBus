@@ -99,7 +99,7 @@ function BottomNavComponent({
             className={`fixed bottom-[calc(env(safe-area-inset-bottom,0)+1rem)] left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-3 max-w-[95vw] ${className}`}
         >
             {/* Expandable Floating Running Bus List Sheet (Map Tab) */}
-            {activeTab === "map" && (
+            {activeTab === "map" && isBusListOpen && (
                 <BusListDrawer
                     isOpen={isBusListOpen}
                     onClose={() => setIsBusListOpen(false)}

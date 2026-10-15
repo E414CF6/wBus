@@ -4,8 +4,11 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Bus, Loader2, RefreshCw, RotateCw, X} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {type RouteVariationStop, useRouteVariations} from "@entities/route";
+import type {RouteVariation} from "@entities/route/types";
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useSchedule} from "@entities/schedule/hooks";
+import {useCityContext} from "@entities/city";
+import {useBusStop} from "@entities/station/hooks";
 import type {BusItem} from "@entities/bus/types";
 import type {BusStop} from "@entities/station/types";
 import type {DirectionCode} from "@entities/route/types";
@@ -47,8 +50,13 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                                                 onReconnect,
                                                             }) => {
     const {map} = useAppMapContext();
-    const {variations} = useRouteVariations(selectedRoute);
-    const {routes: scheduleRoutes} = useSchedule();
+    const {currentCity} = useCityContext();
+    const isWonju = currentCity.code === "32020";
+
+    const {variations} = useRouteVariations(selectedRoute, isOpen && isWonju);
+    const nationwideStops = useBusStop(isOpen && !isWonju ? selectedRoute : "", currentCity.code);
+    const {routes: scheduleRoutes} = useSchedule(isOpen && isWonju);
+
     const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
     const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
     const [directionFilter, setDirectionFilter] = useState<"all" | "up" | "down">("all");
@@ -56,29 +64,48 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const [timeAgo, setTimeAgo] = useState("0초 전");
     const listRef = useRef<HTMLDivElement>(null);
 
+    // Route Metadata & Schedule info
+    const meta = useMemo(() => getRouteMeta(selectedRoute, currentCity.code), [selectedRoute, currentCity.code]);
+
+    // Construct synthetic single variation for nationwide cities when variations are not pre-indexed
+    const nationwideVariations = useMemo<RouteVariation[]>(() => {
+        if (isWonju || !nationwideStops || nationwideStops.length === 0) return [];
+        return [
+            {
+                routeId: selectedRoute,
+                label: `${selectedRoute}번`,
+                stops: nationwideStops as RouteVariationStop[],
+                stopCount: nationwideStops.length,
+                turningStop: null,
+            },
+        ];
+    }, [isWonju, nationwideStops, selectedRoute]);
+
+    const effectiveVariations = isWonju ? variations : nationwideVariations;
+
     // Auto-select variation: prefer variant with running buses, or fallback to first variant
     useEffect(() => {
-        if (!variations || variations.length === 0) {
+        if (!effectiveVariations || effectiveVariations.length === 0) {
             setSelectedVariantId(null);
             return;
         }
 
         // Keep current selected variant if still valid for this route
-        if (selectedVariantId && variations.some((v) => v.routeId === selectedVariantId)) {
+        if (selectedVariantId && effectiveVariations.some((v) => v.routeId === selectedVariantId)) {
             return;
         }
 
         // Prioritize variation that has running buses
-        const variantWithBuses = runningBuses.find((b) => b.routeid && variations.some((v) => v.routeId === b.routeid))?.routeid;
+        const variantWithBuses = runningBuses.find((b) => b.routeid && effectiveVariations.some((v) => v.routeId === b.routeid))?.routeid;
 
-        setSelectedVariantId(variantWithBuses ?? variations[0].routeId);
-    }, [variations, selectedRoute, runningBuses, selectedVariantId]);
+        setSelectedVariantId(variantWithBuses ?? effectiveVariations[0].routeId);
+    }, [effectiveVariations, selectedRoute, runningBuses, selectedVariantId]);
 
     // Active variant object
     const currentVariant = useMemo(() => {
-        if (!variations || variations.length === 0) return null;
-        return variations.find((v) => v.routeId === selectedVariantId) ?? variations[0];
-    }, [variations, selectedVariantId]);
+        if (!effectiveVariations || effectiveVariations.length === 0) return null;
+        return effectiveVariations.find((v) => v.routeId === selectedVariantId) ?? effectiveVariations[0];
+    }, [effectiveVariations, selectedVariantId]);
 
     const currentStops = useMemo(() => currentVariant?.stops ?? [], [currentVariant]);
     const turningStop = useMemo(() => currentVariant?.turningStop ?? null, [currentVariant]);
@@ -127,8 +154,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         return () => clearInterval(interval);
     }, [isOpen, lastUpdated]);
 
-    // Route Metadata & Schedule info
-    const meta = useMemo(() => getRouteMeta(selectedRoute), [selectedRoute]);
+    // Route Schedule info
     const matchedSchedule = useMemo(() => {
         return scheduleRoutes.find((r) => r.routeNo === selectedRoute);
     }, [scheduleRoutes, selectedRoute]);
@@ -166,7 +192,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
         for (const bus of runningBuses) {
             // When multiple variations exist, ignore buses that explicitly belong to a different variation
-            if (variations.length > 1 && bus.routeid && currentVariant && bus.routeid !== currentVariant.routeId) {
+            if (effectiveVariations.length > 1 && bus.routeid && currentVariant && bus.routeid !== currentVariant.routeId) {
                 continue;
             }
 
@@ -231,7 +257,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         }
 
         return map;
-    }, [runningBuses, currentStops, variations.length, currentVariant, getDirection]);
+    }, [runningBuses, currentStops, effectiveVariations.length, currentVariant, getDirection]);
 
     // Trigger manual telemetry refresh
     const handleRefresh = useCallback(() => {
@@ -321,7 +347,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             </div>
 
             {/* 1.5 Variation Selector (if route has multiple variations) */}
-            {variations.length > 1 && (<div
+            {effectiveVariations.length > 1 && (<div
                 className="flex items-center gap-1.5 px-4 py-2 border-b border-slate-200/80 dark:border-white/10 bg-slate-100/60 dark:bg-white/[0.02] text-xs shrink-0 overflow-x-auto custom-scrollbar-hidden"
                 role="tablist"
                 aria-label="노선 종류 선택"
@@ -329,7 +355,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                     <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0 mr-1">
                         노선:
                     </span>
-                {variations.map((variant) => {
+                {effectiveVariations.map((variant) => {
                     const isSelectedVariant = variant.routeId === currentVariant?.routeId;
                     const busCountOnVariant = busesPerVariation.get(variant.routeId) ?? 0;
 

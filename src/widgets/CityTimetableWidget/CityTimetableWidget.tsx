@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useCallback, useMemo, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useState} from "react";
 import {Bus, ChevronDown, Clock, MapPin, Search, Star} from "lucide-react";
 import {useCityContext} from "@entities/city";
 import {useCityRoutes} from "@entities/route/hooks";
@@ -25,16 +25,16 @@ export default function CityTimetableWidget({onSelectMapRoute}: CityTimetableWid
     const [selectedDetailRoute, setSelectedDetailRoute] = useState<RawCityRoute | null>(null);
 
     // Bookmarks state
-    const [bookmarks, setBookmarks] = useState<string[]>(() => {
-        if (typeof window === "undefined") return [];
+    const [bookmarks, setBookmarks] = useState<string[]>([]);
+
+    useEffect(() => {
         try {
             const saved = localStorage.getItem(BOOKMARKS_KEY);
-            if (saved) return JSON.parse(saved);
+            if (saved) setBookmarks(JSON.parse(saved));
         } catch {
             // Ignore
         }
-        return [];
-    });
+    }, [BOOKMARKS_KEY]);
 
     const toggleBookmark = useCallback((routeNo: string) => {
         setBookmarks((prev) => {

@@ -262,35 +262,11 @@ Populate the required environment variables in `.env.local`:
 # Public Data Portal (MOLIT Bus Location and Route Information API)
 DATA_GO_KR_SERVICE_KEY="YOUR_DECODED_OR_ENCODED_PUBLIC_DATA_KEY"
 
-# Static Data Remote Loading Switch (default: false, loads from public/)
-NEXT_PUBLIC_USE_REMOTE_STATIC_DATA="false"
-NEXT_PUBLIC_STATIC_API_URL=""
-
 # OSRM Routing Engine URL (defaults to official public server https://router.project-osrm.org)
 # OSRM_API_URL="https://router.project-osrm.org/route/v1/driving"
 ```
 
 ### 3. Data Pipeline Execution
-
-Before running the application for the first time, generate the necessary route geometries and schedule datasets.
-
-#### Fetch Timetables from Wonju ITS
-
-Scrapes the latest bus departure times, interval details, and holiday adjustments:
-
-```bash
-node scripts/fetch-schedule.mjs
-```
-
-The output is verified and saved to `public/data/schedule.json`.
-
-#### Generate Route Polylines
-
-Connects to the public data portal and OSRM (defaults to the official public OSRM server without needing a local container) to construct high-precision route vector GeoJSON files:
-
-```bash
-npm run data:polylines
-```
 
 > [!TIP]
 > The pipeline automatically connects to the official OSRM demo server (`https://router.project-osrm.org`) with waypoint chunking and rate-limiting. A local OSRM Docker container is **not required**.

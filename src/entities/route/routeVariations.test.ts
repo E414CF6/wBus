@@ -15,6 +15,20 @@ const {MockHttpError} = vi.hoisted(() => {
 vi.mock("@shared/api/fetchAPI", () => ({
     HttpError: MockHttpError,
     fetchAPI: vi.fn().mockImplementation(async (url: string) => {
+        // Mock /api/routes queries
+        if (url.includes("/api/routes")) {
+            if (url.includes("routeNo=4")) {
+                return {route_numbers: {"4": ["WJB251000042"]}};
+            }
+            if (url.includes("routeNo=30")) {
+                return {route_numbers: {"30": ["WJB251000068", "WJB251000376"]}};
+            }
+            if (url.includes("routeNo=2")) {
+                return {route_numbers: {"2": ["WJB251000036", "WJB251000215", "WJB251000256", "WJB251000257", "WJB251000391"]}};
+            }
+            return {route_numbers: {}};
+        }
+
         // Mock Route 4: WJB251000042
         if (url.includes("WJB251000042")) {
             return {

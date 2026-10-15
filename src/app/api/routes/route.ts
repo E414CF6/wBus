@@ -2,7 +2,6 @@ import {type NextRequest, NextResponse} from "next/server";
 import {fetchCityRoutes, type RawCityRoute} from "@entities/bus";
 import {getCachedOrFetch} from "@shared/cache";
 import {ApiValidators} from "@shared/api";
-import {getRouteMapData} from "@entities/route/api";
 import {STATIC_ROUTE_METADATA} from "@entities/route/routeMetadata";
 
 export const dynamic = "force-dynamic";
@@ -34,27 +33,6 @@ export async function GET(request: NextRequest) {
             async () => {
                 const fetched = await fetchCityRoutes(cityCode, routeNo);
                 if (fetched && fetched.length > 0) return fetched;
-
-                // Fallback for Wonju if TAGO API returns empty
-                if (cityCode === "32020" && !routeNo) {
-                    try {
-                        const data = await getRouteMapData();
-                        return Object.entries(data.route_numbers).map(([rNo, ids]) => {
-                            const meta = STATIC_ROUTE_METADATA[rNo] || {};
-                            return {
-                                routeid: ids[0] || rNo,
-                                routeno: rNo,
-                                routetp: "일반버스",
-                                startnodenm: meta.origin || "관설동/장양리",
-                                endnodenm: meta.destination || "원주시내",
-                                startvehicletime: "0600",
-                                endvehicletime: "2200",
-                            };
-                        });
-                    } catch {
-                        return [];
-                    }
-                }
                 return [];
             },
             {

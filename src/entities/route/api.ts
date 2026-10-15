@@ -2,7 +2,6 @@ import type {
     GeoPolyline,
     RouteDetail,
     RouteInfo,
-    RouteMapData,
     RouteVariation,
     RouteVariationStop,
 } from "@entities/route/types";
@@ -11,28 +10,23 @@ import type {StationLocation} from "@entities/station/types";
 
 import {fetchAPI, HttpError} from "@shared/api/fetchAPI";
 import {CacheManager} from "@shared/cache/CacheManager";
-import {API_CONFIG, APP_CONFIG, STORAGE_KEYS} from "@shared/config/env";
-import {loadStaticData} from "@shared/utils/dataLoader";
+import {APP_CONFIG, STORAGE_KEYS} from "@shared/config/env";
 
 // Caches
 
-const routeMapCache = new CacheManager<RouteMapData>();
 const polylineCache = new CacheManager<GeoPolyline | null>();
 const variationsCache = new CacheManager<RouteVariation[]>();
 
-// Internal Helpers
-
-export async function getRouteMapData(): Promise<RouteMapData> {
-    return routeMapCache.getOrFetch("routeMap", async () => {
-        return loadStaticData<RouteMapData>(API_CONFIG.STATIC.PATHS.ROUTE_MAP);
-    });
-}
-
 // Public API
 
-export async function getRouteMap(): Promise<Record<string, string[]>> {
-    const data = await getRouteMapData();
-    return Object.fromEntries(Object.entries(data.route_numbers).filter(([, ids]) => ids.length > 0));
+export async function getRouteMap(cityCode?: string): Promise<Record<string, string[]>> {
+    const cCode = cityCode || (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020" : "32020");
+    try {
+        const json = await fetchAPI<{route_numbers?: Record<string, string[]>}>(`/api/routes?cityCode=${cCode}`);
+        return json.route_numbers || {};
+    } catch {
+        return {};
+    }
 }
 
 export async function getPolyline(routeKey: string, cityCode?: string): Promise<GeoPolyline | null> {
@@ -53,20 +47,21 @@ export async function getPolyline(routeKey: string, cityCode?: string): Promise<
     });
 }
 
-export async function getRouteInfo(routeName: string): Promise<RouteInfo | null> {
+export async function getRouteInfo(routeName: string, cityCode?: string): Promise<RouteInfo | null> {
+    if (!routeName || routeName === "0") return null;
+    const cCode = cityCode || (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020" : "32020");
     try {
-        const map = await getRouteMap();
-        const routeIds = map[routeName];
-        if (!routeIds?.length) {
-            if (APP_CONFIG.IS_DEV) {
-                console.warn(`[getRouteInfo] Route missing: ${routeName}`);
-            }
-            return null;
+        const json = await fetchAPI<{route_numbers?: Record<string, string[]>; routes?: Array<{routeid: string}>}>(
+            `/api/routes?cityCode=${cCode}&routeNo=${encodeURIComponent(routeName)}`
+        );
+        const ids = json?.route_numbers?.[routeName] || (json?.routes?.[0]?.routeid ? [json.routes[0].routeid] : null);
+        if (ids && ids.length > 0) {
+            return { routeName, vehicleRouteIds: ids };
         }
-        return {routeName, vehicleRouteIds: routeIds};
+        return null;
     } catch (err) {
-        if (APP_CONFIG.IS_DEV) {
-            console.error(`[getRouteInfo] Route missing: ${routeName}`, err);
+        if (APP_CONFIG.IS_DEV && routeName !== "0") {
+            console.warn(`[getRouteInfo] Route info fetch failed: ${routeName}`, err);
         }
         return null;
     }
@@ -81,15 +76,17 @@ export async function getRouteDetails(routeId: string): Promise<RouteDetail | nu
     return {routeno: polyline.route_no, sequence};
 }
 
-export async function getRouteVariations(routeName: string): Promise<RouteVariation[]> {
-    if (!routeName) return [];
-    return variationsCache.getOrFetch(routeName, async () => {
-        const routeInfo = await getRouteInfo(routeName);
+export async function getRouteVariations(routeName: string, cityCode?: string): Promise<RouteVariation[]> {
+    if (!routeName || routeName === "0") return [];
+    const cCode = cityCode || (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020" : "32020");
+    const cacheKey = `${cCode}:${routeName}`;
+    return variationsCache.getOrFetch(cacheKey, async () => {
+        const routeInfo = await getRouteInfo(routeName, cCode);
         if (!routeInfo || !routeInfo.vehicleRouteIds?.length) return [];
 
         const polylines = await Promise.all(
             routeInfo.vehicleRouteIds.map(async (id) => {
-                const poly = await getPolyline(id);
+                const poly = await getPolyline(id, cCode);
                 return {id, poly};
             })
         );
@@ -191,7 +188,6 @@ export async function getRouteVariations(routeName: string): Promise<RouteVariat
  * Invalidate in-memory caches for route map, polylines, and route variations
  */
 export function invalidateRouteCaches(): void {
-    routeMapCache.clear();
     polylineCache.clear();
     variationsCache.clear();
 }

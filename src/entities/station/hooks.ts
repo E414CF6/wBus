@@ -1,7 +1,7 @@
 import {useMemo} from "react";
 import useSWR from "swr";
 
-import type {BusStop, BusStopArrival, StationLocation} from "@entities/station/types";
+import type {BusStop, BusStopArrival} from "@entities/station/types";
 import type {CachedData} from "@shared/cache";
 
 import {UI_TEXT} from "@shared/config/locale";
@@ -28,31 +28,6 @@ export function useBusStop(routeName: string, cityCode = "32020"): BusStop[] {
     });
 
     return stops ?? [];
-}
-
-const stationMapFetcher = async (url: string): Promise<Record<string, StationLocation>> => {
-    try {
-        const res = await fetch(url);
-        if (!res.ok) return {};
-        const json = await res.json();
-        return json.stations || json || {};
-    } catch {
-        return {};
-    }
-};
-
-// useAllStations (all bus stops from stationMap.json)
-export function useAllStations(enabled = true): BusStop[] {
-    const {data} = useSWR<Record<string, StationLocation>>(enabled ? "/stationMap.json" : null, stationMapFetcher, {
-        revalidateOnFocus: false, revalidateIfStale: false, dedupingInterval: 300000,
-    });
-
-    return useMemo(() => {
-        if (!data) return [];
-        return Object.entries(data).map(([nodeid, loc]) => ({
-            nodeid, nodenm: loc.nodenm, nodeno: String(loc.nodeno ?? ""), gpslati: loc.gpslati, gpslong: loc.gpslong,
-        }));
-    }, [data]);
 }
 
 // useBusArrivalInfo

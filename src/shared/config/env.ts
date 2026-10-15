@@ -5,9 +5,8 @@ import {UI_TEXT} from "@shared/config/locale";
  * Common Static Data File & Folder Names
  */
 export const STATIC_FILE_NAMES = {
-    ROUTE_MAP: "routeMap.json",
-    STATION_MAP: "stationMap.json",
-    SCHEDULE: "schedule.json", SCHEDULE_SUMMARY: "scheduleSummary.json",
+    SCHEDULE: "schedule.json",
+    SCHEDULE_SUMMARY: "scheduleSummary.json",
     STYLE: "styles/liberty.json",
     STYLE_DARK: "styles/darker.json",
     STYLE_LIBERTY: "styles/liberty.json",
@@ -40,16 +39,13 @@ export const API_CONFIG = {
         DATA_DELAY_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_DATA_DELAY, 12000),
     },
     STATIC: {
-        BASE_URL: getEnv(process.env.NEXT_PUBLIC_STATIC_API_URL, ""),
-        USE_REMOTE: getEnvBoolean(process.env.NEXT_PUBLIC_USE_REMOTE_STATIC_DATA, false),
         REVALIDATE_SEC: 3600,
         PATHS: {
             ROUTE_DIR: STATIC_FILE_NAMES.ROUTE_DIR,
             MAP_STYLE: STATIC_FILE_NAMES.STYLE_LIBERTY,
             MAP_STYLE_DARK: STATIC_FILE_NAMES.STYLE_DARKER,
-            ROUTE_MAP: STATIC_FILE_NAMES.ROUTE_MAP,
-            STATION_MAP: STATIC_FILE_NAMES.STATION_MAP,
-            SCHEDULE: STATIC_FILE_NAMES.SCHEDULE, SCHEDULE_SUMMARY: STATIC_FILE_NAMES.SCHEDULE_SUMMARY,
+            SCHEDULE: STATIC_FILE_NAMES.SCHEDULE,
+            SCHEDULE_SUMMARY: STATIC_FILE_NAMES.SCHEDULE_SUMMARY,
         },
     },
     MAP_STYLE_FALLBACK: getEnv(process.env.NEXT_PUBLIC_MAP_FALLBACK_API_URL, "https://tiles.openfreemap.org/styles/bright"),

@@ -48,41 +48,12 @@ export function useCityContext(): CityContextType {
 // ----------------------------------------------------------------------
 
 export function CityContextProvider({children}: CityContextProviderProps) {
-    const [currentCity, setCurrentCityState] = useState<CityInfo>(() => {
-        if (typeof window === "undefined") return DEFAULT_CITY;
-        try {
-            const params = new URLSearchParams(window.location.search);
-            const queryCity = params.get("cityCode") || params.get("city");
-            if (queryCity) {
-                const found = getCityByCode(queryCity);
-                if (found) return found;
-            }
-
-            const savedCode = localStorage.getItem(STORAGE_KEYS.CITY_CODE);
-            if (savedCode) {
-                return getCityByCode(savedCode);
-            }
-        } catch {
-            // Ignore localStorage errors
-        }
-        return DEFAULT_CITY;
-    });
+    const [currentCity, setCurrentCityState] = useState<CityInfo>(DEFAULT_CITY);
 
     const currentCityRef = useRef<CityInfo>(currentCity);
     currentCityRef.current = currentCity;
 
-    const [isAutoDetectEnabled, setIsAutoDetectEnabledState] = useState<boolean>(() => {
-        if (typeof window === "undefined") return true;
-        try {
-            const saved = localStorage.getItem(STORAGE_KEYS.CITY_AUTO_DETECT);
-            if (saved !== null) {
-                return saved !== "false";
-            }
-        } catch {
-            // Ignore
-        }
-        return true;
-    });
+    const [isAutoDetectEnabled, setIsAutoDetectEnabledState] = useState<boolean>(true);
 
     const setIsAutoDetectEnabled = useCallback((enabled: boolean) => {
         setIsAutoDetectEnabledState(enabled);
@@ -90,6 +61,38 @@ export function CityContextProvider({children}: CityContextProviderProps) {
             localStorage.setItem(STORAGE_KEYS.CITY_AUTO_DETECT, String(enabled));
         } catch {
             // Ignore
+        }
+    }, []);
+
+    // Restore saved city and preferences on initial mount without triggering SSR hydration mismatch
+    useEffect(() => {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const queryCity = params.get("cityCode") || params.get("city");
+            if (queryCity) {
+                const found = getCityByCode(queryCity);
+                if (found && found.code !== currentCityRef.current.code) {
+                    currentCityRef.current = found;
+                    setCurrentCityState(found);
+                    return;
+                }
+            }
+
+            const savedCode = localStorage.getItem(STORAGE_KEYS.CITY_CODE);
+            if (savedCode) {
+                const found = getCityByCode(savedCode);
+                if (found && found.code !== currentCityRef.current.code) {
+                    currentCityRef.current = found;
+                    setCurrentCityState(found);
+                }
+            }
+
+            const savedAuto = localStorage.getItem(STORAGE_KEYS.CITY_AUTO_DETECT);
+            if (savedAuto !== null) {
+                setIsAutoDetectEnabledState(savedAuto !== "false");
+            }
+        } catch {
+            // Ignore localStorage errors
         }
     }, []);
 

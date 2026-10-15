@@ -383,16 +383,7 @@ export async function refreshRouteData(
         console.warn("[RouteSyncService] Failed writing to /tmp:", e);
     }
 
-    // Also update public/ in writable environments
-    if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
-        try {
-            const pubDir = path.join(process.cwd(), "public");
-            fs.writeFileSync(path.join(pubDir, "routeMap.json"), JSON.stringify(routeMapData, null, 2), "utf-8");
-            fs.writeFileSync(path.join(pubDir, "stationMap.json"), JSON.stringify(stationMapData, null, 2), "utf-8");
-        } catch {
-            // Ignore write errors in read-only setups
-        }
-    }
+
 
     // Invalidate caches
     invalidateRouteCaches();

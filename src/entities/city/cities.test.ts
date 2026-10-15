@@ -26,6 +26,12 @@ describe("cities entity & nearest city resolution", () => {
             expect(city.code).toBe("21");
         });
 
+        it("returns Seongju for code 37380", () => {
+            const city = getCityByCode("37380");
+            expect(city.name).toBe("성주군");
+            expect(city.code).toBe("37380");
+        });
+
         it("falls back to DEFAULT_CITY for unknown code", () => {
             const city = getCityByCode("99999");
             expect(city.code).toBe(DEFAULT_CITY.code);
