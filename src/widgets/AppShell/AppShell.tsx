@@ -94,8 +94,8 @@ export function AppShell() {
     useEffect(() => {
         if (!routeMap || Object.keys(routeMap).length === 0) return;
         if (!activeRoute || activeRoute === selectedRoute) return;
-        handleRouteChange(activeRoute);
-    }, [routeMap, activeRoute, selectedRoute, handleRouteChange]);
+        handleRouteChange(activeRoute, currentCity.code);
+    }, [routeMap, activeRoute, selectedRoute, currentCity.code, handleRouteChange]);
 
     return (
         <div className="fixed inset-0 flex flex-col w-full h-[100dvh] overflow-hidden bg-slate-50 dark:bg-[#0b0f19]">

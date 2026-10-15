@@ -40,5 +40,6 @@ next-env.d.ts
 
 # local cache & data
 scripts/cache/*
+public/routes/
 public/data/comments.json
 *.zip

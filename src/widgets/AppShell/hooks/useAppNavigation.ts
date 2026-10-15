@@ -3,6 +3,7 @@
 import {useCallback, useEffect, useState} from "react";
 import {usePathname, useSearchParams} from "next/navigation";
 import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
+import {useCityContext} from "@entities/city";
 import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
 
 export function resolveTabFromPathname(path: string): NavTab {
@@ -10,9 +11,22 @@ export function resolveTabFromPathname(path: string): NavTab {
     return "map";
 }
 
+export function buildMapUrl(route: string | null | undefined, cityCode?: string): string {
+    const params = new URLSearchParams();
+    if (cityCode) {
+        params.set("cityCode", cityCode);
+    }
+    if (route !== null && route !== undefined && route !== "") {
+        params.set("route", route);
+    }
+    const qs = params.toString();
+    return qs ? `/?${qs}` : "/";
+}
+
 export function useAppNavigation() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const {currentCity} = useCityContext();
 
     // Derive active tab with client-side state preservation across tab switches (Map-first default)
     const [activeTab, setActiveTab] = useState<NavTab>(() => resolveTabFromPathname(pathname));
@@ -33,7 +47,7 @@ export function useAppNavigation() {
     // Route & Map Activation State
     const [selectedRoute, setSelectedRoute] = useState<string>(() => {
         const queryRoute = searchParams.get("route");
-        if (queryRoute) return queryRoute;
+        if (queryRoute !== null && queryRoute !== "") return queryRoute;
         return MAP_SETTINGS.DEFAULT_ROUTE;
     });
 
@@ -46,7 +60,7 @@ export function useAppNavigation() {
     if (searchParams !== prevSearchParams) {
         setPrevSearchParams(searchParams);
         const queryRoute = searchParams.get("route");
-        if (queryRoute && queryRoute !== selectedRoute) {
+        if (queryRoute !== null && queryRoute !== "" && queryRoute !== selectedRoute) {
             setSelectedRoute(queryRoute);
         }
         const querySubTab = searchParams.get("subTab");
@@ -63,7 +77,7 @@ export function useAppNavigation() {
             setActiveTab(nextTab);
             const search = new URLSearchParams(window.location.search);
             const queryRoute = search.get("route");
-            if (queryRoute) setSelectedRoute(queryRoute);
+            if (queryRoute !== null && queryRoute !== "") setSelectedRoute(queryRoute);
             const querySubTab = search.get("subTab");
             if (querySubTab === "yonsei" || querySubTab === "all") {
                 setTimetableSubTab(querySubTab);
@@ -129,13 +143,17 @@ export function useAppNavigation() {
             setActiveTab(tab);
             let targetUrl: string;
             if (tab === "map") {
-                const routeParam = selectedRoute
-                    ? `?route=${encodeURIComponent(selectedRoute)}`
-                    : "";
-                targetUrl = `/${routeParam}`;
+                targetUrl = buildMapUrl(selectedRoute, currentCity?.code);
             } else {
-                const subTabParam = timetableSubTab === "all" ? "?subTab=all" : "";
-                targetUrl = `/schedule${subTabParam}`;
+                const params = new URLSearchParams();
+                if (currentCity?.code && currentCity.code !== "32020") {
+                    params.set("cityCode", currentCity.code);
+                }
+                if (timetableSubTab === "all") {
+                    params.set("subTab", "all");
+                }
+                const qs = params.toString();
+                targetUrl = qs ? `/schedule?${qs}` : "/schedule";
             }
 
             if (typeof window !== "undefined") {
@@ -148,48 +166,45 @@ export function useAppNavigation() {
                 // Ignore
             }
         },
-        [selectedRoute, timetableSubTab]
+        [selectedRoute, timetableSubTab, currentCity?.code]
     );
 
     const handleRouteChange = useCallback(
-        (route: string) => {
+        (route: string, cityCode?: string) => {
             setSelectedRoute(route);
+            const targetCityCode = cityCode || currentCity?.code;
             try {
-                const savedRecent = localStorage.getItem("wbus_recent_map_routes");
+                const recentKey = targetCityCode === "32020" ? "wbus_recent_map_routes" : `wbus_recent_routes_${targetCityCode}`;
+                const savedRecent = localStorage.getItem(recentKey);
                 const recents: string[] = savedRecent ? JSON.parse(savedRecent) : [];
                 const filtered = recents.filter((r) => r !== route);
                 filtered.unshift(route);
                 localStorage.setItem(
-                    "wbus_recent_map_routes",
+                    recentKey,
                     JSON.stringify(filtered.slice(0, 10))
                 );
             } catch {
                 // Ignore
             }
             if (typeof window !== "undefined" && activeTab === "map") {
-                window.history.replaceState(
-                    null,
-                    "",
-                    `/?route=${encodeURIComponent(route)}`
-                );
+                const targetUrl = buildMapUrl(route, targetCityCode);
+                window.history.replaceState(null, "", targetUrl);
             }
         },
-        [activeTab]
+        [activeTab, currentCity?.code]
     );
 
     const handleSelectMapRoute = useCallback(
-        (routeName: string) => {
-            handleRouteChange(routeName);
+        (routeName: string, cityCode?: string) => {
+            const targetCityCode = cityCode || currentCity?.code;
+            handleRouteChange(routeName, targetCityCode);
             setActiveTab("map");
             if (typeof window !== "undefined") {
-                window.history.pushState(
-                    null,
-                    "",
-                    `/?route=${encodeURIComponent(routeName)}`
-                );
+                const targetUrl = buildMapUrl(routeName, targetCityCode);
+                window.history.pushState(null, "", targetUrl);
             }
         },
-        [handleRouteChange]
+        [handleRouteChange, currentCity?.code]
     );
 
     return {

@@ -2,7 +2,9 @@ import {describe, expect, it} from "vitest";
 import {
     calculatePolylineMeters,
     chunkCoordinates,
+    connectTurningPoint,
     type Coordinate,
+    findTurningDirection,
     haversineMeters,
     interpolateCatmullRom,
     isExcessiveDetour,
@@ -132,4 +134,86 @@ describe("polylineChunker", () => {
             expect(isExcessiveDetour(50, 150)).toBe(false);
         });
     });
+
+    describe("findTurningDirection", () => {
+        it("detects transition from DOWN (0) to UP (1)", () => {
+            const stops = [
+                {nodeord: 1, updowncd: 0},
+                {nodeord: 2, updowncd: 0},
+                {nodeord: 3, updowncd: 1},
+                {nodeord: 4, updowncd: 1},
+            ];
+            expect(findTurningDirection(stops)).toBe("down_to_up");
+        });
+
+        it("detects transition from UP (1) to DOWN (0)", () => {
+            const stops = [
+                {ord: 1, ud: 1},
+                {ord: 2, ud: 1},
+                {ord: 3, ud: 0},
+            ];
+            expect(findTurningDirection(stops)).toBe("up_to_down");
+        });
+
+        it("returns null for circular or single direction routes", () => {
+            const stops = [
+                {nodeord: 1, updowncd: 0},
+                {nodeord: 2, updowncd: 0},
+            ];
+            expect(findTurningDirection(stops)).toBeNull();
+        });
+    });
+
+    describe("connectTurningPoint", () => {
+        it("bridges the gap and includes the turning segment in UP polyline for down_to_up", async () => {
+            // Down leg: (0, 0) -> (10, 0)
+            const downPoly: Coordinate[] = [
+                [127.9000, 37.3000],
+                [127.9100, 37.3100],
+            ];
+            // Up leg: starts at (127.9105, 37.3105) (gap of ~60m from downLast)
+            const upPoly: Coordinate[] = [
+                [127.9105, 37.3105],
+                [127.9200, 37.3200],
+            ];
+
+            // Simulated OSRM connector returns a U-turn arc
+            const mockConnector = async (pair: [Coordinate, Coordinate]): Promise<Coordinate[]> => {
+                const mid: Coordinate = [(pair[0][0] + pair[1][0]) / 2 + 0.0001, (pair[0][1] + pair[1][1]) / 2];
+                return [pair[0], mid, pair[1]];
+            };
+
+            const result = await connectTurningPoint(upPoly, downPoly, "down_to_up", mockConnector);
+
+            // DOWN polyline must remain intact up to turning point
+            expect(result.downPolyline).toEqual(downPoly);
+
+            // UP polyline must now start at downLast, contain connector path, and then original up points
+            expect(result.upPolyline[0]).toEqual(downPoly[downPoly.length - 1]);
+            // Check that intermediate point from connector is included
+            expect(result.upPolyline.length).toBe(4);
+            // End of UP polyline should be original end
+            expect(result.upPolyline[result.upPolyline.length - 1]).toEqual([127.9200, 37.3200]);
+        });
+
+        it("bridges the gap and includes the turning segment in DOWN polyline for up_to_down", async () => {
+            const upPoly: Coordinate[] = [
+                [127.9000, 37.3000],
+                [127.9100, 37.3100],
+            ];
+            const downPoly: Coordinate[] = [
+                [127.9105, 37.3105],
+                [127.9200, 37.3200],
+            ];
+
+            const mockConnector = async (pair: [Coordinate, Coordinate]): Promise<Coordinate[]> => [pair[0], pair[1]];
+
+            const result = await connectTurningPoint(upPoly, downPoly, "up_to_down", mockConnector);
+
+            expect(result.upPolyline).toEqual(upPoly);
+            expect(result.downPolyline[0]).toEqual(upPoly[upPoly.length - 1]);
+            expect(result.downPolyline[result.downPolyline.length - 1]).toEqual([127.9200, 37.3200]);
+        });
+    });
 });
+

@@ -10,6 +10,8 @@ import type {StationLocation} from "@entities/station/types";
 import {
     calculatePolylineMeters,
     chunkCoordinates,
+    connectTurningPoint,
+    findTurningDirection,
     isExcessiveDetour,
     smoothPolylineSpline,
     stitchPolylineSegments,
@@ -294,8 +296,20 @@ export async function refreshRouteData(
                         fetchOsrmPolyline(downCoords),
                     ]);
 
-                    const finalUp = snappedUp && snappedUp.length >= 2 ? snappedUp : upCoords;
-                    const finalDown = snappedDown && snappedDown.length >= 2 ? snappedDown : downCoords;
+                    let finalUp = snappedUp && snappedUp.length >= 2 ? snappedUp : upCoords;
+                    let finalDown = snappedDown && snappedDown.length >= 2 ? snappedDown : downCoords;
+
+                    if (finalUp.length >= 2 && finalDown.length >= 2) {
+                        const turningDir = findTurningDirection(stops);
+                        const connected = await connectTurningPoint(
+                            finalUp,
+                            finalDown,
+                            turningDir,
+                            fetchOsrmPolyline
+                        );
+                        finalUp = connected.upPolyline;
+                        finalDown = connected.downPolyline;
+                    }
 
                     const totalDist =
                         calculatePolylineDistanceMeters(finalUp) +
@@ -498,10 +512,22 @@ export async function generateSingleRoutePolyline(
             hasBothDirections && downCoords.length >= 2 ? fetchOsrmPolyline(downCoords) : Promise.resolve(null),
         ]);
 
-        const finalUp = snappedUp && snappedUp.length >= 2 ? snappedUp : smoothPolylineSpline(upCoords);
-        const finalDown = hasBothDirections
+        let finalUp = snappedUp && snappedUp.length >= 2 ? snappedUp : smoothPolylineSpline(upCoords);
+        let finalDown = hasBothDirections
             ? (snappedDown && snappedDown.length >= 2 ? snappedDown : smoothPolylineSpline(downCoords))
             : finalUp;
+
+        if (hasBothDirections && finalUp.length >= 2 && finalDown.length >= 2) {
+            const turningDir = findTurningDirection(stops);
+            const connected = await connectTurningPoint(
+                finalUp,
+                finalDown,
+                turningDir,
+                fetchOsrmPolyline
+            );
+            finalUp = connected.upPolyline;
+            finalDown = connected.downPolyline;
+        }
 
         const totalDist =
             calculatePolylineDistanceMeters(finalUp) +

@@ -51,6 +51,13 @@ export function CityContextProvider({children}: CityContextProviderProps) {
     const [currentCity, setCurrentCityState] = useState<CityInfo>(() => {
         if (typeof window === "undefined") return DEFAULT_CITY;
         try {
+            const params = new URLSearchParams(window.location.search);
+            const queryCity = params.get("cityCode") || params.get("city");
+            if (queryCity) {
+                const found = getCityByCode(queryCity);
+                if (found) return found;
+            }
+
             const savedCode = localStorage.getItem(STORAGE_KEYS.CITY_CODE);
             if (savedCode) {
                 return getCityByCode(savedCode);
@@ -60,6 +67,9 @@ export function CityContextProvider({children}: CityContextProviderProps) {
         }
         return DEFAULT_CITY;
     });
+
+    const currentCityRef = useRef<CityInfo>(currentCity);
+    currentCityRef.current = currentCity;
 
     const [isAutoDetectEnabled, setIsAutoDetectEnabledState] = useState<boolean>(() => {
         if (typeof window === "undefined") return true;
@@ -90,7 +100,12 @@ export function CityContextProvider({children}: CityContextProviderProps) {
     const setCity = useCallback(
         (cityOrCode: CityInfo | string, options?: SetCityOptions) => {
             const nextCity = typeof cityOrCode === "string" ? getCityByCode(cityOrCode) : cityOrCode;
-            setCurrentCityState((prev) => (prev.code === nextCity.code ? prev : nextCity));
+            if (nextCity.code === currentCityRef.current.code) {
+                return; // Early return: already active city
+            }
+            currentCityRef.current = nextCity;
+            setCurrentCityState(nextCity);
+
             try {
                 localStorage.setItem(STORAGE_KEYS.CITY_CODE, nextCity.code);
             } catch {
@@ -124,14 +139,28 @@ export function CityContextProvider({children}: CityContextProviderProps) {
             // If the viewport center is too far from any city center (e.g. open ocean), skip
             if (distanceKm > 75) return null;
 
-            if (city.code !== currentCity.code) {
+            if (city.code !== currentCityRef.current.code) {
                 setCity(city, {skipFlyTo: true});
                 return city;
             }
             return null;
         },
-        [isAutoDetectEnabled, currentCity.code, setCity]
+        [isAutoDetectEnabled, setCity]
     );
+
+    // Sync with browser back/forward buttons when city changes in URL
+    useEffect(() => {
+        const handlePopState = () => {
+            if (typeof window === "undefined") return;
+            const params = new URLSearchParams(window.location.search);
+            const queryCity = params.get("cityCode") || params.get("city");
+            if (queryCity && queryCity !== currentCityRef.current.code) {
+                setCity(queryCity, {skipFlyTo: true});
+            }
+        };
+        window.addEventListener("popstate", handlePopState);
+        return () => window.removeEventListener("popstate", handlePopState);
+    }, [setCity]);
 
     const detectCurrentLocation = useCallback(async (): Promise<CityInfo | null> => {
         if (typeof window === "undefined" || !("geolocation" in navigator)) {

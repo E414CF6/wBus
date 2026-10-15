@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {resolveTabFromPathname} from "./useAppNavigation";
+import {buildMapUrl, resolveTabFromPathname} from "./useAppNavigation";
 
 describe("resolveTabFromPathname", () => {
     it("maps root, /live, and /map to map tab", () => {
@@ -21,3 +21,27 @@ describe("resolveTabFromPathname", () => {
         expect(resolveTabFromPathname("/square")).toBe("map");
     });
 });
+
+describe("buildMapUrl", () => {
+    it("preserves route=0 with cityCode parameter correctly", () => {
+        expect(buildMapUrl("0", "32010")).toBe("/?cityCode=32010&route=0");
+    });
+
+    it("builds map URL with standard route and cityCode", () => {
+        expect(buildMapUrl("30", "32020")).toBe("/?cityCode=32020&route=30");
+    });
+
+    it("builds map URL with only route when cityCode is not supplied", () => {
+        expect(buildMapUrl("0")).toBe("/?route=0");
+    });
+
+    it("builds map URL with only cityCode when route is empty or null", () => {
+        expect(buildMapUrl(null, "32020")).toBe("/?cityCode=32020");
+        expect(buildMapUrl("", "32020")).toBe("/?cityCode=32020");
+    });
+
+    it("returns root / when both route and cityCode are absent", () => {
+        expect(buildMapUrl(undefined, undefined)).toBe("/");
+    });
+});
+

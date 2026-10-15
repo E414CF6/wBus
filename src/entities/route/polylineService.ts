@@ -8,7 +8,7 @@ import {STORAGE_KEYS} from "@shared/config/env";
 import {getStationMap} from "@entities/station/api";
 import type {StationLocation} from "@entities/station/types";
 import {isFiniteNumber, snapPointToPolyline} from "@shared/utils/geo";
-import {smoothPolylineSpline} from "./polylineChunker";
+import {findTurningDirection, smoothPolylineSpline} from "./polylineChunker";
 
 import type {Feature, FeatureCollection} from "geojson";
 
@@ -147,16 +147,25 @@ async function fetchRoutePolyline(routeId: string, cityCode?: string): Promise<P
                     const upStops = sortedStops.filter((s) => Number(s.updowncd) === 1);
                     const downStops = sortedStops.filter((s) => Number(s.updowncd) === 0);
 
-                    const upCoords: [number, number][] = (
+                    let upCoords: [number, number][] = (
                         upStops.length >= 2 ? upStops : sortedStops
                     )
                         .filter((s) => s.gpslong > 0 && s.gpslati > 0)
                         .map((s) => [Number(s.gpslong), Number(s.gpslati)]);
-                    const downCoords: [number, number][] = (
+                    let downCoords: [number, number][] = (
                         downStops.length >= 2 ? downStops : upCoords
                     )
                         .filter((s) => s.gpslong > 0 && s.gpslati > 0)
                         .map((s) => [Number(s.gpslong), Number(s.gpslati)]);
+
+                    if (upStops.length >= 2 && downStops.length >= 2 && upCoords.length >= 2 && downCoords.length >= 2) {
+                        const turningDir = findTurningDirection(sortedStops);
+                        if (turningDir === "down_to_up") {
+                            upCoords = [downCoords[downCoords.length - 1], ...upCoords];
+                        } else if (turningDir === "up_to_down") {
+                            downCoords = [upCoords[upCoords.length - 1], ...downCoords];
+                        }
+                    }
 
                     const smoothUp = smoothPolylineSpline(upCoords);
                     const smoothDown =

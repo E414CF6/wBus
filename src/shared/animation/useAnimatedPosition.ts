@@ -655,13 +655,21 @@ export function useAnimatedPosition(
             currentAngleRef.current = angle;
 
             // Direct high-performance MapLibre update
-            const directOk = updateMarkerDirect(pos, angle);
+            updateMarkerDirect(pos, angle);
 
-            // Throttle React state updates for React components/popups
+            // Throttle React state updates for React components/popups (strictly enforced >= 50ms)
             const elapsed = now - lastStateUpdateRef.current;
-            if (!directOk || elapsed >= STATE_UPDATE_THROTTLE_MS) {
+            if (elapsed >= STATE_UPDATE_THROTTLE_MS) {
                 lastStateUpdateRef.current = now;
-                setState({position: pos, angle});
+                setState((prev) => {
+                    const dLat = Math.abs(prev.position[0] - pos[0]);
+                    const dLng = Math.abs(prev.position[1] - pos[1]);
+                    const dAngle = Math.abs(prev.angle - angle);
+                    if (dLat < 1e-7 && dLng < 1e-7 && dAngle < 0.2) {
+                        return prev;
+                    }
+                    return {position: pos, angle};
+                });
             }
 
             animFrameRef.current = requestAnimationFrame(tick);

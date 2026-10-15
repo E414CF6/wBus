@@ -138,3 +138,100 @@ export function stitchPolylineSegments(segments: Coordinate[][]): Coordinate[] {
 
     return result;
 }
+
+export type TurningDirection = "down_to_up" | "up_to_down";
+
+export interface StopDirectionItem {
+    ud?: number;
+    updowncd?: number;
+    ord?: number;
+    nodeord?: number;
+}
+
+/**
+ * Identifies whether and where a route transitions directions at a turning point.
+ * In South Korean transit routes, routes typically start at the depot/origin (down / ud=0)
+ * and transition to the return leg (up / ud=1) after the turning point.
+ */
+export function findTurningDirection(stops: StopDirectionItem[]): TurningDirection | null {
+    if (!stops || stops.length < 2) return null;
+    const sorted = [...stops].sort(
+        (a, b) => Number(a.nodeord ?? a.ord ?? 0) - Number(b.nodeord ?? b.ord ?? 0)
+    );
+
+    for (let i = 0; i < sorted.length - 1; i++) {
+        const currUd = Number(sorted[i].updowncd ?? sorted[i].ud ?? 0);
+        const nextUd = Number(sorted[i + 1].updowncd ?? sorted[i + 1].ud ?? 0);
+        if (currUd === 0 && nextUd === 1) {
+            return "down_to_up";
+        }
+        if (currUd === 1 && nextUd === 0) {
+            return "up_to_down";
+        }
+    }
+    return null;
+}
+
+/**
+ * Bridges the gap at the turning point between UP and DOWN polylines.
+ * Since the vehicle has passed the turning point, if transitioning from DOWN to UP,
+ * the connecting segment is prepended to the UP polyline.
+ * If transitioning from UP to DOWN, it is prepended to the DOWN polyline.
+ */
+export async function connectTurningPoint(
+    upPolyline: Coordinate[],
+    downPolyline: Coordinate[],
+    turningDir: TurningDirection | null,
+    fetchConnector: (pair: [Coordinate, Coordinate]) => Promise<Coordinate[] | null>
+): Promise<{ upPolyline: Coordinate[]; downPolyline: Coordinate[] }> {
+    if (!turningDir || upPolyline.length < 2 || downPolyline.length < 2) {
+        return { upPolyline, downPolyline };
+    }
+
+    if (turningDir === "down_to_up") {
+        const downLast = downPolyline[downPolyline.length - 1];
+        const upFirst = upPolyline[0];
+        const gap = haversineMeters(downLast, upFirst);
+
+        // Connect if distance between downLast and upFirst is greater than 5m and less than 15km
+        if (gap > 5 && gap < 15000) {
+            const routed = await fetchConnector([downLast, upFirst]);
+            const connectSeg: Coordinate[] =
+                routed && routed.length >= 2 ? [...routed] : [downLast, upFirst];
+
+            // Normalize endpoints to guarantee exact continuity
+            connectSeg[0] = downLast;
+            connectSeg[connectSeg.length - 1] = upFirst;
+
+            // Prepend the connecting segment to UP polyline (since turning point is passed)
+            const newUp = stitchPolylineSegments([connectSeg, upPolyline]);
+            return {
+                upPolyline: newUp,
+                downPolyline,
+            };
+        }
+    } else if (turningDir === "up_to_down") {
+        const upLast = upPolyline[upPolyline.length - 1];
+        const downFirst = downPolyline[0];
+        const gap = haversineMeters(upLast, downFirst);
+
+        if (gap > 5 && gap < 15000) {
+            const routed = await fetchConnector([upLast, downFirst]);
+            const connectSeg: Coordinate[] =
+                routed && routed.length >= 2 ? [...routed] : [upLast, downFirst];
+
+            connectSeg[0] = upLast;
+            connectSeg[connectSeg.length - 1] = downFirst;
+
+            // Prepend the connecting segment to DOWN polyline (since turning point is passed)
+            const newDown = stitchPolylineSegments([connectSeg, downPolyline]);
+            return {
+                upPolyline,
+                downPolyline: newDown,
+            };
+        }
+    }
+
+    return { upPolyline, downPolyline };
+}
+

@@ -20,7 +20,7 @@
  * Usage:
  *   node scripts/generate-polylines.mjs [--route <no>] [--city-code 32020] [--force] [--station-map-only] [--osrm-only] [--no-sync]
  *
- * Defaults to official OSRM public server (https://router.project-osrm.org).
+ * Defaults to the official OSRM public server (https://router.project-osrm.org).
  * Set OSRM_API_URL to use a custom or self-hosted endpoint.
  */
 
@@ -188,11 +188,7 @@ async function smartSnapStops(stops, osrmHost) {
     // avoiding thousands of rate-limited HTTP roundtrips on public infrastructure.
     if (isRemoteOsrm(osrmHost)) {
         return stops.map((s) => ({
-            rawCoord: [s.lon, s.lat],
-            coord: [s.lon, s.lat],
-            name: s.name || "",
-            distance: 0,
-            stopName: s.name,
+            rawCoord: [s.lon, s.lat], coord: [s.lon, s.lat], name: s.name || "", distance: 0, stopName: s.name,
         }));
     }
 
@@ -235,9 +231,7 @@ async function smartSnapStops(stops, osrmHost) {
     }
 
     // Dominant corridors are roads appearing at least twice or the most frequent roads on the route
-    const corridorRoads = new Set(
-        Object.entries(roadFreq).filter(([_, count]) => count >= 2).map(([name]) => name)
-    );
+    const corridorRoads = new Set(Object.entries(roadFreq).filter(([_, count]) => count >= 2).map(([name]) => name));
 
     // Phase 2: Multi-pass corridor scoring & optimal candidate selection
     const snappedStops = [];
@@ -378,9 +372,7 @@ async function fetchOsrmRoute(coords, osrmRouteUrl = DEFAULT_OSRM_URL, snapRadiu
         }
 
         return {
-            coordinates: fullCoords,
-            distance: totalDist,
-            duration: totalDuration,
+            coordinates: fullCoords, distance: totalDist, duration: totalDuration,
         };
     }
 
@@ -477,12 +469,7 @@ async function processDirectionLeg(dirStops, stationMap, osrmUrl = DEFAULT_OSRM_
             if (segCoords.length < 2 || (straightDist > 60 && (segDist / straightDist) > 2.0)) {
                 // Attempt direct pairwise OSRM query with forward directional bearings
                 const b = calculateBearing(validCoords[i], validCoords[i + 1]);
-                const pairRes = await fetchOsrmRoute(
-                    [validCoords[i], validCoords[i + 1]],
-                    osrmUrl,
-                    15,
-                    [`${b},60`, `${b},60`]
-                );
+                const pairRes = await fetchOsrmRoute([validCoords[i], validCoords[i + 1]], osrmUrl, 15, [`${b},60`, `${b},60`]);
                 if (pairRes && pairRes.coordinates?.length >= 2) {
                     const pairDist = getPolylineDistanceMeters(pairRes.coordinates);
                     if (segCoords.length < 2 || pairDist < segDist) {
@@ -700,12 +687,7 @@ async function runRoutePipeline(options) {
         if (!options.force && existingFile) {
             try {
                 const existingData = JSON.parse(readFileSync(existingFile, "utf-8"));
-                if (
-                    existingData.stops_count === raw.stops.length &&
-                    Array.isArray(existingData.up_polyline) &&
-                    Array.isArray(existingData.down_polyline) &&
-                    (existingData.up_polyline.length > 0 || existingData.down_polyline.length > 0)
-                ) {
+                if (existingData.stops_count === raw.stops.length && Array.isArray(existingData.up_polyline) && Array.isArray(existingData.down_polyline) && (existingData.up_polyline.length > 0 || existingData.down_polyline.length > 0)) {
                     if (existingFile !== targetCacheFile) {
                         copyFileSync(existingFile, targetCacheFile);
                     }
@@ -725,26 +707,53 @@ async function runRoutePipeline(options) {
             const upRes = await processDirectionLeg(upStops, stationMap, options.osrmUrl);
             const downRes = await processDirectionLeg(downStops, stationMap, options.osrmUrl);
 
-            // Connect UP end -> DOWN start and DOWN end -> UP start at turning points via OSRM
+            // Connect turning point via OSRM. The connecting segment has passed the turning point,
+            // so if transitioning from DOWN to UP, it must be included in the UP polyline (at the beginning).
+            // If transitioning from UP to DOWN, it must be included in the DOWN polyline (at the beginning).
             if (upRes.polyline.length > 0 && downRes.polyline.length > 0) {
-                const upLast = upRes.polyline[upRes.polyline.length - 1];
-                const downFirst = downRes.polyline[0];
-                const gap1 = getHaversineDistanceMeters(upLast, downFirst);
-                if (gap1 > 10 && gap1 < 10000) {
-                    const osrmResult1 = await fetchOsrmRoute([upLast, downFirst], options.osrmUrl);
-                    const connectSeg = (osrmResult1 && osrmResult1.coordinates?.length >= 2) ? osrmResult1.coordinates : [upLast, downFirst];
-                    upRes.polyline.push(...connectSeg.slice(1));
-                    upRes.totalDist += getPolylineDistanceMeters(connectSeg);
+                // Determine direction transition from sorted stops
+                const sortedStops = [...stops].sort((a, b) => Number(a.nodeord ?? a.ord ?? 0) - Number(b.nodeord ?? b.ord ?? 0));
+                let turningDir = null;
+                for (let i = 0; i < sortedStops.length - 1; i++) {
+                    const cUd = Number(sortedStops[i].updowncd ?? sortedStops[i].ud ?? 0);
+                    const nUd = Number(sortedStops[i + 1].updowncd ?? sortedStops[i + 1].ud ?? 0);
+                    if (cUd === 0 && nUd === 1) {
+                        turningDir = "down_to_up";
+                        break;
+                    } else if (cUd === 1 && nUd === 0) {
+                        turningDir = "up_to_down";
+                        break;
+                    }
                 }
 
-                const downLast = downRes.polyline[downRes.polyline.length - 1];
-                const upFirst = upRes.polyline[0];
-                const gap2 = getHaversineDistanceMeters(downLast, upFirst);
-                if (gap2 > 10 && gap2 < 10000) {
-                    const osrmResult2 = await fetchOsrmRoute([downLast, upFirst], options.osrmUrl);
-                    const connectSeg = (osrmResult2 && osrmResult2.coordinates?.length >= 2) ? osrmResult2.coordinates : [downLast, upFirst];
-                    downRes.polyline.push(...connectSeg.slice(1));
-                    downRes.totalDist += getPolylineDistanceMeters(connectSeg);
+                if (turningDir === "down_to_up") {
+                    const downLast = downRes.polyline[downRes.polyline.length - 1];
+                    const upFirst = upRes.polyline[0];
+                    const gap = getHaversineDistanceMeters(downLast, upFirst);
+                    if (gap > 5 && gap < 15000) {
+                        const osrmResult = await fetchOsrmRoute([downLast, upFirst], options.osrmUrl);
+                        let connectSeg = (osrmResult && osrmResult.coordinates?.length >= 2) ? [...osrmResult.coordinates] : [downLast, upFirst];
+                        connectSeg = cleanSpurLoops(connectSeg);
+                        connectSeg[0] = downLast;
+                        connectSeg[connectSeg.length - 1] = upFirst;
+                        // Prepend connectSeg to UP polyline (excluding duplicate junction coordinate at end)
+                        upRes.polyline = [...connectSeg.slice(0, -1), ...upRes.polyline];
+                        upRes.totalDist += getPolylineDistanceMeters(connectSeg);
+                    }
+                } else if (turningDir === "up_to_down") {
+                    const upLast = upRes.polyline[upRes.polyline.length - 1];
+                    const downFirst = downRes.polyline[0];
+                    const gap = getHaversineDistanceMeters(upLast, downFirst);
+                    if (gap > 5 && gap < 15000) {
+                        const osrmResult = await fetchOsrmRoute([upLast, downFirst], options.osrmUrl);
+                        let connectSeg = (osrmResult && osrmResult.coordinates?.length >= 2) ? [...osrmResult.coordinates] : [upLast, downFirst];
+                        connectSeg = cleanSpurLoops(connectSeg);
+                        connectSeg[0] = upLast;
+                        connectSeg[connectSeg.length - 1] = downFirst;
+                        // Prepend connectSeg to DOWN polyline (excluding duplicate junction coordinate at end)
+                        downRes.polyline = [...connectSeg.slice(0, -1), ...downRes.polyline];
+                        downRes.totalDist += getPolylineDistanceMeters(connectSeg);
+                    }
                 }
             }
 

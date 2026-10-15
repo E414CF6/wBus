@@ -34,6 +34,9 @@ function sortRoutes(routes: string[]): string[] {
 // Main Component
 // ----------------------------------------------------------------------
 
+const WONJU_DEFAULT_BOOKMARKS = ["30", "34", "34-1"];
+const EMPTY_DEFAULT_BOOKMARKS: string[] = [];
+
 export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                                       isOpen,
                                                                       onClose,
@@ -54,7 +57,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     // City-scoped bookmarks & recent history keys
     const bookmarkKey = isWonju ? "wonju_bus_bookmarks" : `wbus_bookmarks_${currentCity.code}`;
     const recentKey = isWonju ? "wbus_recent_map_routes" : `wbus_recent_routes_${currentCity.code}`;
-    const defaultBookmarks = isWonju ? ["30", "34", "34-1"] : [];
+    const defaultBookmarks = isWonju ? WONJU_DEFAULT_BOOKMARKS : EMPTY_DEFAULT_BOOKMARKS;
 
     const [bookmarks, setBookmarks] = useState<string[]>(() => {
         if (typeof window === "undefined") return defaultBookmarks;
@@ -80,9 +83,12 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     useEffect(() => {
         try {
             const savedBookmarks = localStorage.getItem(bookmarkKey);
-            setBookmarks(savedBookmarks ? JSON.parse(savedBookmarks) : defaultBookmarks);
+            const nextBookmarks: string[] = savedBookmarks ? JSON.parse(savedBookmarks) : defaultBookmarks;
+            setBookmarks((prev) => (JSON.stringify(prev) === JSON.stringify(nextBookmarks) ? prev : nextBookmarks));
+
             const savedRecent = localStorage.getItem(recentKey);
-            setRecentRoutes(savedRecent ? JSON.parse(savedRecent) : []);
+            const nextRecent: string[] = savedRecent ? JSON.parse(savedRecent) : [];
+            setRecentRoutes((prev) => (JSON.stringify(prev) === JSON.stringify(nextRecent) ? prev : nextRecent));
         } catch {
             setBookmarks(defaultBookmarks);
             setRecentRoutes([]);
