@@ -23,20 +23,48 @@ export async function GET(_request: Request, {params}: { params: Promise<{ path:
         "Cache-Control": "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000, stale-if-error=2592000",
     };
 
-    // 1. Try local filesystem (from public directory)
+    // 1. Try local filesystem (from public directory and /tmp/routes)
     try {
         const {readFile} = await import("fs/promises");
         const {existsSync} = await import("fs");
         const {join} = await import("path");
 
-        const localPaths = [join(process.cwd(), "public", relativePath), join(process.cwd(), "public", "data", relativePath), // Map style alias fallbacks
-            ...(relativePath.endsWith("style.json") || relativePath.endsWith("liberty.json") ? [join(process.cwd(), "public", "styles", "liberty.json")] : []), ...(relativePath.endsWith("style-dark.json") || relativePath.endsWith("darker.json") ? [join(process.cwd(), "public", "styles", "darker.json")] : []), // Route dir alias fallbacks (data/route/* -> public/routes/*)
-            ...(relativePath.startsWith("route/") ? [join(process.cwd(), "public", "routes", relativePath.slice(6))] : []),];
+        const routeFileName = relativePath.startsWith("routes/")
+            ? relativePath.slice(7)
+            : relativePath.startsWith("route/")
+            ? relativePath.slice(6)
+            : null;
+
+        const localPaths = [
+            join(process.cwd(), "public", relativePath),
+            join(process.cwd(), "public", "data", relativePath),
+            // Map style alias fallbacks
+            ...(relativePath.endsWith("style.json") || relativePath.endsWith("liberty.json") ? [join(process.cwd(), "public", "styles", "liberty.json")] : []),
+            ...(relativePath.endsWith("style-dark.json") || relativePath.endsWith("darker.json") ? [join(process.cwd(), "public", "styles", "darker.json")] : []),
+            // Route dir alias fallbacks (data/route/* -> public/routes/* or /tmp/routes/*)
+            ...(routeFileName ? [
+                join(process.cwd(), "public", "routes", routeFileName),
+                join("/tmp", "routes", routeFileName),
+            ] : []),
+        ];
 
         for (const localPath of localPaths) {
             if (existsSync(/*turbopackIgnore: true*/ localPath)) {
                 const content = await readFile(/*turbopackIgnore: true*/ localPath, "utf-8");
                 return new NextResponse(content, {status: 200, headers});
+            }
+        }
+
+        // On-demand route polyline generation for non-Wonju cities
+        if (routeFileName && routeFileName.endsWith(".json")) {
+            const routeId = routeFileName.replace(/\.json$/, "");
+            const url = new URL(_request.url);
+            const cityCode = url.searchParams.get("cityCode") || "32020";
+
+            const {generateSingleRoutePolyline} = await import("@entities/route/routeSyncService");
+            const polyline = await generateSingleRoutePolyline(routeId, cityCode);
+            if (polyline) {
+                return new NextResponse(JSON.stringify(polyline), {status: 200, headers});
             }
         }
     } catch {

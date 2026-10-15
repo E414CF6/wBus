@@ -4,8 +4,8 @@ import {NextResponse} from "next/server";
 
 export interface ApiHandlerConfig<T> {
     paramKey: string;
-    cacheKey: (id: string) => string;
-    fetcher: (id: string) => Promise<T>;
+    cacheKey: (id: string, req?: Request) => string;
+    fetcher: (id: string, req?: Request) => Promise<T>;
     ttl: number | ((id: string) => number);
     errorMessage: string;
     cacheControl?: string;
@@ -19,7 +19,7 @@ export interface ApiHandlerConfig<T> {
  * Use for APIs that benefit from a shared cache across instances.
  */
 export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
-    return async function GET(_request: Request, {params}: { params: Promise<Record<string, string>> }) {
+    return async function GET(request: Request, {params}: { params: Promise<Record<string, string>> }) {
         const resolvedParams = await params;
         const id = resolvedParams[config.paramKey];
 
@@ -37,7 +37,7 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
             const cacheOptions: CacheOptions = {
                 ttlSeconds: resolvedTtl, ...config.cacheOptions,
             };
-            const result = await getCachedOrFetch<T>(config.cacheKey(id), () => config.fetcher(id), cacheOptions);
+            const result = await getCachedOrFetch<T>(config.cacheKey(id, request), () => config.fetcher(id, request), cacheOptions);
 
             const headers: Record<string, string> = {};
             headers["Cache-Control"] = config.cacheControl ?? buildCacheControl({

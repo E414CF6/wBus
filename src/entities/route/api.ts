@@ -11,7 +11,7 @@ import type {StationLocation} from "@entities/station/types";
 
 import {HttpError} from "@shared/api/fetchAPI";
 import {CacheManager} from "@shared/cache/CacheManager";
-import {API_CONFIG, APP_CONFIG} from "@shared/config/env";
+import {API_CONFIG, APP_CONFIG, STORAGE_KEYS} from "@shared/config/env";
 import {loadStaticData} from "@shared/utils/dataLoader";
 
 // Caches
@@ -35,10 +35,13 @@ export async function getRouteMap(): Promise<Record<string, string[]>> {
     return Object.fromEntries(Object.entries(data.route_numbers).filter(([, ids]) => ids.length > 0));
 }
 
-export async function getPolyline(routeKey: string): Promise<GeoPolyline | null> {
-    return polylineCache.getOrFetch(routeKey, async () => {
+export async function getPolyline(routeKey: string, cityCode?: string): Promise<GeoPolyline | null> {
+    const cCode = cityCode || (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020" : "32020");
+    const cacheKey = `${cCode}:${routeKey}`;
+    return polylineCache.getOrFetch(cacheKey, async () => {
         try {
-            return await loadStaticData<GeoPolyline>(`${API_CONFIG.STATIC.PATHS.ROUTE_DIR}/${routeKey}.json`);
+            const query = cCode && cCode !== "32020" ? `?cityCode=${cCode}` : "";
+            return await loadStaticData<GeoPolyline>(`${API_CONFIG.STATIC.PATHS.ROUTE_DIR}/${routeKey}.json${query}`);
         } catch (error) {
             if (error instanceof HttpError && error.status === 404) {
                 if (APP_CONFIG.IS_DEV) {

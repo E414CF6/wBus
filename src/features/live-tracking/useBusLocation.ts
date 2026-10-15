@@ -10,9 +10,12 @@ export {getBusLocationStore, BusLocationStore} from "./lib/BusLocationStore";
  * Fetch bus locations for multiple routeIds.
  * Backed by high-performance CDN micro-cached REST polling (/api/bus/[routeId]).
  */
-export function useBusLocationData(routeIds: string[]): BusLocationState {
+export function useBusLocationData(routeIds: string[], cityCode = "32020"): BusLocationState {
     const routeIdsKey = useMemo(() => buildRouteIdsKey(routeIds), [routeIds]);
-    const store = useMemo(() => (routeIdsKey ? getBusLocationStore(routeIdsKey) : null), [routeIdsKey]);
+    const store = useMemo(
+        () => (routeIdsKey ? getBusLocationStore(routeIdsKey, cityCode) : null),
+        [routeIdsKey, cityCode]
+    );
     const subscribe = useMemo(() => {
         if (!store) return () => () => undefined;
         return store.subscribe;

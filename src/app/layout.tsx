@@ -5,6 +5,7 @@ import type {Metadata, Viewport} from "next";
 
 import {ThemeProvider} from "@shared/ui/ThemeProvider";
 import {AppMapContextProvider} from "@shared/context/AppMapContext";
+import {CityContextProvider} from "@entities/city";
 import {Analytics} from "@vercel/analytics/react";
 import {SpeedInsights} from "@vercel/speed-insights/next";
 
@@ -104,7 +105,9 @@ export default function RootLayout({
     <body className="min-h-screen bg-slate-50 text-slate-900 transition-colors duration-200">
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
         <AppMapContextProvider>
-            {children}
+            <CityContextProvider>
+                {children}
+            </CityContextProvider>
         </AppMapContextProvider>
     </ThemeProvider>
     <SpeedInsights/>

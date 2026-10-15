@@ -56,7 +56,10 @@ describe("BusLocationStore", () => {
         store.manualReconnect();
         await vi.advanceTimersByTimeAsync(50);
 
-        expect(fetchSpy).toHaveBeenCalledWith("/api/bus?routeIds=1001%2C1002", expect.objectContaining({headers: {Accept: "application/json"}}));
+        expect(fetchSpy).toHaveBeenCalledWith(
+            "/api/bus?routeIds=1001%2C1002&cityCode=32020",
+            expect.objectContaining({headers: {Accept: "application/json"}})
+        );
 
         const snapshot = store.getSnapshot();
         expect(snapshot.data.length).toBe(2);

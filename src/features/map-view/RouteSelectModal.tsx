@@ -5,6 +5,7 @@ import {createPortal} from "react-dom";
 import {Bus, Clock, GraduationCap, MapPin, Search, Star, X} from "lucide-react";
 import {getRouteMeta, RouteCategory, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 import {UI_TEXT} from "@shared/config/locale";
+import {useCityContext} from "@entities/city";
 
 // ----------------------------------------------------------------------
 // Types & Constants
@@ -44,6 +45,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                                       onSelectRoute,
                                                                   }) => {
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
+    const {currentCity} = useCityContext();
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<RouteCategory>("ALL");
     const [bookmarks, setBookmarks] = useState<string[]>(() => {
@@ -201,10 +203,12 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     const bookmarkedList = sortedAllRoutes.filter((r) => bookmarks.includes(r));
     const validRecentRoutes = recentRoutes.filter((r) => allRoutes.includes(r));
 
+    const isWonju = currentCity.code === "32020";
+
     const categories: { id: RouteCategory; label: string; icon?: React.ComponentType<{ className?: string }> }[] = [
         {id: "ALL", label: UI_TEXT.ROUTE_SELECT.CATEGORY_ALL(sortedAllRoutes.length)},
         {id: "BOOKMARKS", label: UI_TEXT.ROUTE_SELECT.CATEGORY_BOOKMARKS(bookmarkedList.length), icon: Star},
-        {id: "YONSEI", label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI, icon: GraduationCap},
+        ...(isWonju ? [{id: "YONSEI" as RouteCategory, label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI, icon: GraduationCap}] : []),
         {id: "1_19", label: UI_TEXT.ROUTE_SELECT.CAT_1_19},
         {id: "20_49", label: UI_TEXT.ROUTE_SELECT.CAT_20_49},
         {id: "50_99", label: UI_TEXT.ROUTE_SELECT.CAT_50_99},
@@ -240,6 +244,9 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                 <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
                                     {UI_TEXT.ROUTE_SELECT.MODAL_TITLE}
                                 </h2>
+                                <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/5">
+                                    {currentCity.name}
+                                </span>
                                 <span
                                     className="px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-500/10 dark:bg-blue-400/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                                     {UI_TEXT.ROUTE_SELECT.CURRENT_ROUTE_PREFIX(selectedRoute)}

@@ -15,10 +15,27 @@ const ROUTE_INFO_SWR_OPTIONS = {
     errorRetryCount: 2,
 } as const;
 
-export function useRouteInfo(routeName: string, enabled: boolean = true): RouteInfo | null {
+export function useRouteInfo(routeName: string, enabled: boolean = true, cityCode: string = "32020"): RouteInfo | null {
     const {
         data, error
-    } = useSWR<RouteInfo | null>(enabled && routeName ? ["routeInfo", routeName] : null, ([, name]: [string, string]) => getRouteInfo(name), ROUTE_INFO_SWR_OPTIONS);
+    } = useSWR<RouteInfo | null>(
+        enabled && routeName ? ["routeInfo", cityCode, routeName] : null,
+        async ([, cCode, name]: [string, string, string]) => {
+            if (cCode === "32020") {
+                return getRouteInfo(name);
+            }
+            try {
+                const res = await fetch(`/api/routes?cityCode=${cCode}&routeNo=${encodeURIComponent(name)}`);
+                if (!res.ok) return { routeName: name, vehicleRouteIds: [name] };
+                const json = await res.json();
+                const ids = json.route_numbers?.[name] || (json.routes?.[0]?.routeid ? [json.routes[0].routeid] : [name]);
+                return { routeName: name, vehicleRouteIds: ids };
+            } catch {
+                return { routeName: name, vehicleRouteIds: [name] };
+            }
+        },
+        ROUTE_INFO_SWR_OPTIONS
+    );
 
     if (error && APP_CONFIG.IS_DEV) {
         console.error(`[useRouteInfo] Failed to fetch route info: ${routeName}`, error);
@@ -27,9 +44,9 @@ export function useRouteInfo(routeName: string, enabled: boolean = true): RouteI
     return data ?? null;
 }
 
-export function useRouteIds(routeName: string, enabled: boolean = true): string[] {
-    const routeInfo = useRouteInfo(routeName, enabled);
-    return useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
+export function useRouteIds(routeName: string, enabled: boolean = true, cityCode: string = "32020"): string[] {
+    const routeInfo = useRouteInfo(routeName, enabled, cityCode);
+    return useMemo(() => routeInfo?.vehicleRouteIds ?? (routeName ? [routeName] : []), [routeInfo, routeName]);
 }
 
 /**
@@ -38,14 +55,24 @@ export function useRouteIds(routeName: string, enabled: boolean = true): string[
  *
  * Uses SWR for caching and revalidation.
  */
-export function useBusRouteMap(enabled: boolean = true): Record<string, string[]> | null {
-    const {data, error} = useSWR(enabled ? "busRouteMap" : null,
-        getRouteMap, {
-            revalidateOnFocus: false,
-            revalidateOnReconnect: false,
-            dedupingInterval: 60000,
-            errorRetryCount: 3,
-        });
+export function useBusRouteMap(enabled: boolean = true, cityCode: string = "32020"): Record<string, string[]> | null {
+    const key = enabled ? (cityCode === "32020" ? "busRouteMap" : `busRouteMap:${cityCode}`) : null;
+    const fetcher = async () => {
+        if (cityCode === "32020") {
+            return getRouteMap();
+        }
+        const res = await fetch(`/api/routes?cityCode=${cityCode}`);
+        if (!res.ok) throw new Error("Failed to fetch city routes");
+        const json = await res.json();
+        return (json.route_numbers || {}) as Record<string, string[]>;
+    };
+
+    const {data, error} = useSWR(key, fetcher, {
+        revalidateOnFocus: false,
+        revalidateOnReconnect: false,
+        dedupingInterval: 60000,
+        errorRetryCount: 3,
+    });
 
     if (error && APP_CONFIG.IS_DEV) {
         console.error("[useBusRouteMap] Error fetching route map", error);

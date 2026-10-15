@@ -23,6 +23,7 @@ export class BusLocationStore {
     public dataLength = 0;
     private readonly routeIds: string[];
     private readonly routeIdsKey: string;
+    private readonly cityCode: string;
     private state: BusLocationState;
     private listeners = new Set<Listener>();
     private pollInterval: ReturnType<typeof setInterval> | null = null;
@@ -30,9 +31,10 @@ export class BusLocationStore {
     private isSuspended = false;
     private routeDataMap = new Map<string, BusItem[]>();
 
-    constructor(routeIds: string[], routeIdsKey: string) {
+    constructor(routeIds: string[], routeIdsKey: string, cityCode: string = "32020") {
         this.routeIds = routeIds;
         this.routeIdsKey = routeIdsKey;
+        this.cityCode = cityCode;
         this.state = {
             ...EMPTY_STATE,
             reconnect: () => this.manualReconnect(),
@@ -144,10 +146,11 @@ export class BusLocationStore {
         this.isFetching = true;
 
         try {
+            const cityParam = `cityCode=${encodeURIComponent(this.cityCode)}`;
             if (this.routeIds.length === 1) {
                 // Single route direct call
                 const routeId = this.routeIds[0];
-                const res = await fetchRouteData(`/api/bus/${routeId}`);
+                const res = await fetchRouteData(`/api/bus/${routeId}?${cityParam}`);
                 const items = Array.isArray(res.data) ? res.data : [];
                 this.applyData(items, {
                     degraded: Boolean(res.meta?.degraded),
@@ -157,7 +160,7 @@ export class BusLocationStore {
             } else {
                 // Multi-route batched call (single HTTP roundtrip)
                 try {
-                    const batchUrl = `/api/bus?routeIds=${encodeURIComponent(this.routeIds.join(","))}`;
+                    const batchUrl = `/api/bus?routeIds=${encodeURIComponent(this.routeIds.join(","))}&${cityParam}`;
                     const res = await fetchRouteData(batchUrl);
                     const items = Array.isArray(res.data) ? res.data : [];
                     this.applyData(items, {
@@ -170,7 +173,7 @@ export class BusLocationStore {
                     // Resilient fallback: Query each route individually
                     const settled = await mapWithConcurrencyLimit(
                         this.routeIds,
-                        (routeId) => fetchRouteData(`/api/bus/${routeId}`),
+                        (routeId) => fetchRouteData(`/api/bus/${routeId}?${cityParam}`),
                         {
                             concurrency: 3,
                             staggerMs: 30,
@@ -314,11 +317,12 @@ export class BusLocationStore {
 
 const busLocationStores = new Map<string, BusLocationStore>();
 
-export function getBusLocationStore(routeIdsKey: string): BusLocationStore {
-    const existing = busLocationStores.get(routeIdsKey);
+export function getBusLocationStore(routeIdsKey: string, cityCode: string = "32020"): BusLocationStore {
+    const fullKey = `${cityCode}:${routeIdsKey}`;
+    const existing = busLocationStores.get(fullKey);
     if (existing) return existing;
     const routeIds = routeIdsKey.split(",").filter(Boolean);
-    const store = new BusLocationStore(routeIds, routeIdsKey);
-    busLocationStores.set(routeIdsKey, store);
+    const store = new BusLocationStore(routeIds, fullKey, cityCode);
+    busLocationStores.set(fullKey, store);
     return store;
 }

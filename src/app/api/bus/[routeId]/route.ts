@@ -14,8 +14,14 @@ const LIVE_CACHE_OPTIONS = {
 
 export const GET = createApiHandler<RawBusLocation[]>({
     paramKey: "routeId",
-    cacheKey: (id) => `bus:${id}`,
-    fetcher: fetchBusLocations,
+    cacheKey: (id, req) => {
+        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        return `bus:${cityCode}:${id}`;
+    },
+    fetcher: (id, req) => {
+        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        return fetchBusLocations(id, {cityCode});
+    },
     ttl: (id) => getAdaptiveTtlSeconds(id, 8, 15),
     cacheOptions: LIVE_CACHE_OPTIONS,
     errorMessage: "Failed to fetch bus data",

@@ -1,10 +1,12 @@
 "use client";
 
 import React, {useCallback, useMemo, useState} from "react";
-import {Bus, ChevronDown, GraduationCap, RefreshCw} from "lucide-react";
+import {Bus, ChevronDown, GraduationCap, MapPin, RefreshCw} from "lucide-react";
 
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
+import {useCityContext} from "@entities/city";
+import {CitySelectModal} from "@features/city-select";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 
@@ -40,6 +42,8 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                                   onSelectDirection,
                                                               }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isCityModalOpen, setIsCityModalOpen] = useState(false);
+    const {currentCity} = useCityContext();
 
     // Current route metadata
     const meta = useMemo(() => getRouteMeta(selectedRoute), [selectedRoute]);
@@ -159,16 +163,38 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                 onSelectRoute={handleSelectFromModal}
             />
 
+            {/* Embedded City Selection Modal */}
+            <CitySelectModal
+                isOpen={isCityModalOpen}
+                onClose={() => setIsCityModalOpen(false)}
+            />
+
             <header
                 className="absolute top-3 left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-col items-center gap-1.5 max-w-[95vw] w-full sm:w-auto animate-fadeIn select-none">
                 {/* 1. Main Route Overview Glass Card */}
                 <div
-                    className="flex items-center gap-2 p-1.5 pr-2.5 sm:p-2 sm:pr-3 bg-white/92 dark:bg-[#111218]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full">
+                    className="flex items-center gap-1.5 sm:gap-2 p-1.5 pr-2.5 sm:p-2 sm:pr-3 bg-white/92 dark:bg-[#111218]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full">
+                    {/* City Selector Button (Triggers City Modal) */}
+                    <button
+                        type="button"
+                        onClick={() => setIsCityModalOpen(true)}
+                        className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-full font-black text-xs sm:text-sm tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-850 dark:text-slate-100 border border-black/5 dark:border-white/10 shrink-0"
+                        title={`서비스 지역: ${currentCity.name} (${currentCity.province}) - 클릭하여 도시 변경`}
+                        aria-label="서비스 지역 선택"
+                    >
+                        <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0"/>
+                        <span className="whitespace-nowrap font-bold">
+                            <span className="sm:hidden">{currentCity.name.replace(/특별시|광역시|특별자치시|특별자치도/g, "")}</span>
+                            <span className="hidden sm:inline">{currentCity.name}</span>
+                        </span>
+                        <ChevronDown className="w-3 h-3 opacity-60 shrink-0"/>
+                    </button>
+
                     {/* Route Selector Button (Triggers Modal) */}
                     <button
                         type="button"
                         onClick={() => setIsModalOpen(true)}
-                        className={`flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full font-black text-xs sm:text-sm tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shadow-sm ${
+                        className={`flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full font-black text-xs sm:text-sm tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shadow-sm shrink-0 ${
                             meta.isYonsei
                                 ? "bg-[#003876] text-white shadow-[#003876]/30"
                                 : "bg-blue-600 text-white shadow-blue-600/30"

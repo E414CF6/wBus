@@ -34,4 +34,11 @@ export const ApiValidators = {
         const trimmed = id.trim();
         return trimmed.length > 0 && trimmed.length <= 20 && NUMERIC_ID_REGEX.test(trimmed);
     },
+
+    /** Validates MOLIT TAGO city code (e.g. "32020", "21", "25", "39") */
+    isValidCityCode(code?: string | null): boolean {
+        if (!code || typeof code !== "string") return false;
+        const trimmed = code.trim();
+        return trimmed.length >= 2 && trimmed.length <= 10 && NUMERIC_ID_REGEX.test(trimmed);
+    },
 };

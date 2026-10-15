@@ -58,12 +58,12 @@ export const API_CONFIG = {
 
 export const MAP_SETTINGS = {
     BOUNDS: {
-        MAX: getEnvBounds(process.env.NEXT_PUBLIC_MAP_MAX_BOUNDS, "37.10,127.60,37.60,128.30"),
+        MAX: getEnvBounds(process.env.NEXT_PUBLIC_MAP_MAX_BOUNDS, "32.80,124.00,38.90,132.50"),
         DEFAULT_CENTER: [defaultLat, defaultLng] as [number, number],
     },
     ZOOM: {
         DEFAULT: getEnvNumber(process.env.NEXT_PUBLIC_MAP_DEFAULT_ZOOM, 13),
-        MIN: getEnvNumber(process.env.NEXT_PUBLIC_MAP_MIN_ZOOM, 10),
+        MIN: getEnvNumber(process.env.NEXT_PUBLIC_MAP_MIN_ZOOM, 6),
         MAX: getEnvNumber(process.env.NEXT_PUBLIC_MAP_MAX_ZOOM, 20),
         BUS_STOP_VISIBLE: getEnvNumber(process.env.NEXT_PUBLIC_BUS_STOP_MARKER_MIN_ZOOM, 15),
     },
@@ -93,6 +93,7 @@ export const UI_CONFIG = {
 
 export const STORAGE_KEYS = {
     ROUTE_ID: "wbus_selected_route",
+    CITY_CODE: "wbus_selected_city",
     MAP_VIEW: "wbus_map_view",
     ACTIVE_TAB: "wbus_active_tab",
     TIMETABLE_SUBTAB: "wbus_timetable_subtab",

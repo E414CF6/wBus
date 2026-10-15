@@ -55,6 +55,7 @@ export interface GeoPolyline {
     total_time?: number;
     source_ver?: string;
     bbox?: [number, number, number, number];
+    stops_count?: number;
 }
 
 // Schedule Items

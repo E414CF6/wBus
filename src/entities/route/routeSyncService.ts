@@ -374,3 +374,106 @@ export async function refreshRouteData(
         elapsedMs,
     };
 }
+
+/**
+ * On-demand polyline generator for non-Wonju routes across South Korea.
+ * Fetches route through-stations from TAGO, snaps with OSRM, saves to /tmp/routes/, and returns GeoPolyline.
+ */
+export async function generateSingleRoutePolyline(
+    routeId: string,
+    cityCode = DEFAULT_CITY_CODE,
+    routeNo?: string
+): Promise<GeoPolyline | null> {
+    try {
+        const stopItems = await fetchTago<TagoStopItem>("getRouteAcctoThrghSttnList", {
+            cityCode,
+            routeId,
+            numOfRows: 2048,
+        });
+
+        if (!stopItems || stopItems.length === 0) return null;
+
+        const stops = stopItems
+            .map((item) => ({
+                nodeid: String(item.nodeid || ""),
+                nodenm: String(item.nodenm || ""),
+                nodeord: Number(item.nodeord || 0),
+                nodeno: String(item.nodeno || ""),
+                gpslati: Number(item.gpslati || 0),
+                gpslong: Number(item.gpslong || 0),
+                updowncd: Number(item.updowncd ?? 0),
+            }))
+            .sort((a, b) => a.nodeord - b.nodeord);
+
+        const hasBothDirections =
+            stops.some((s) => s.updowncd === 1) && stops.some((s) => s.updowncd === 0);
+
+        let upCoords: [number, number][];
+        let downCoords: [number, number][];
+
+        if (hasBothDirections) {
+            upCoords = stops
+                .filter((s) => s.updowncd === 1 && s.gpslong > 0 && s.gpslati > 0)
+                .map((s) => [s.gpslong, s.gpslati]);
+            downCoords = stops
+                .filter((s) => s.updowncd === 0 && s.gpslong > 0 && s.gpslati > 0)
+                .map((s) => [s.gpslong, s.gpslati]);
+        } else {
+            const allCoords: [number, number][] = stops
+                .filter((s) => s.gpslong > 0 && s.gpslati > 0)
+                .map((s) => [s.gpslong, s.gpslati]);
+            upCoords = allCoords;
+            downCoords = allCoords;
+        }
+
+        const [snappedUp, snappedDown] = await Promise.all([
+            fetchOsrmPolyline(upCoords),
+            hasBothDirections ? fetchOsrmPolyline(downCoords) : Promise.resolve(null),
+        ]);
+
+        const finalUp = snappedUp && snappedUp.length >= 2 ? snappedUp : upCoords;
+        const finalDown = hasBothDirections
+            ? snappedDown && snappedDown.length >= 2
+                ? snappedDown
+                : downCoords
+            : finalUp;
+
+        const totalDist =
+            calculatePolylineDistanceMeters(finalUp) +
+            (hasBothDirections ? calculatePolylineDistanceMeters(finalDown) : 0);
+
+        const polylineData: GeoPolyline = {
+            route_id: routeId,
+            route_no: routeNo || routeId,
+            stops_count: stops.length,
+            total_dist: Math.round(totalDist),
+            up_polyline: finalUp,
+            down_polyline: finalDown,
+            stops: stops.map((s) => ({
+                id: s.nodeid,
+                name: s.nodenm,
+                ord: s.nodeord,
+                ud: s.updowncd,
+                lat: s.gpslati,
+                lon: s.gpslong,
+                nodeno: s.nodeno,
+            })),
+        };
+
+        // Cache in /tmp/routes/{routeId}.json
+        try {
+            const tmpDir = "/tmp/routes";
+            if (!fs.existsSync(tmpDir)) {
+                fs.mkdirSync(tmpDir, {recursive: true});
+            }
+            fs.writeFileSync(path.join(tmpDir, `${routeId}.json`), JSON.stringify(polylineData), "utf-8");
+        } catch {
+            // Read-only filesystem fallback
+        }
+
+        return polylineData;
+    } catch (err) {
+        console.error(`[RouteSyncService] Failed to generate polyline for ${routeId}:`, err);
+        return null;
+    }
+}

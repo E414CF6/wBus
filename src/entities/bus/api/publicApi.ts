@@ -490,8 +490,10 @@ export interface RawBusLocation {
 }
 
 export async function fetchBusLocations(routeId: string, options?: {
-    force?: boolean; priority?: number
+    force?: boolean; priority?: number; cityCode?: string;
 }): Promise<RawBusLocation[]> {
+    const cityCode = options?.cityCode ?? CITY_CODE;
+
     // 1. Check Operating Service Window (Short-circuit during midnight / non-operating hours)
     const serviceStatus = isRouteInServiceWindow(routeId);
     if (!serviceStatus.inService && !options?.force) {
@@ -506,9 +508,13 @@ export async function fetchBusLocations(routeId: string, options?: {
     // Priority: Priority argument or calculated level
     const priority = options?.priority ?? (serviceStatus.reason === "activity_override" || (currentMetrics && currentMetrics.busCount > 0) ? API_PRIORITY.USER_INTERACTIVE : API_PRIORITY.STREAM_ACTIVE);
 
-    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusLocation>>("/BusLcInfoInqireService/getRouteAcctoBusLcList", {routeId}, {priority});
+    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusLocation>>(
+        "/BusLcInfoInqireService/getRouteAcctoBusLcList",
+        {routeId, cityCode},
+        {priority}
+    );
 
-    const items = extractItems(data, `getRouteAcctoBusLcList:${routeId}`);
+    const items = extractItems(data, `getRouteAcctoBusLcList:${cityCode}:${routeId}`);
 
     // Update bus count metrics & activity timestamp for dynamic window extension
     routeBusMetricsMap.set(routeId, {
@@ -517,7 +523,11 @@ export async function fetchBusLocations(routeId: string, options?: {
     recordRouteBusActivity(routeId, items.length);
 
     return items.map((bus) => ({
-        ...bus, routeid: routeId,
+        ...bus,
+        routeid: routeId,
+        gpslati: Number(bus.gpslati),
+        gpslong: Number(bus.gpslong),
+        routenm: String(bus.routenm ?? ""),
     }));
 }
 
@@ -527,12 +537,24 @@ export interface RawBusArrival {
     routeid: string;
     routeno: string;
     vehicletp: string;
+    nodenm?: string;
+    nodeid?: string;
 }
 
-export async function fetchBusArrivals(nodeId: string): Promise<RawBusArrival[]> {
-    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusArrival>>("/ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList", {nodeId}, {priority: API_PRIORITY.USER_INTERACTIVE});
+export async function fetchBusArrivals(nodeId: string, cityCode = CITY_CODE): Promise<RawBusArrival[]> {
+    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusArrival>>(
+        "/ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList",
+        {nodeId, cityCode},
+        {priority: API_PRIORITY.USER_INTERACTIVE}
+    );
 
-    return extractItems(data, `getSttnAcctoArvlPrearngeInfoList:${nodeId}`);
+    const items = extractItems(data, `getSttnAcctoArvlPrearngeInfoList:${cityCode}:${nodeId}`);
+    return items.map((item) => ({
+        ...item,
+        routeno: String(item.routeno ?? ""),
+        arrprevstationcnt: Number(item.arrprevstationcnt ?? 0),
+        arrtime: Number(item.arrtime ?? 0),
+    }));
 }
 
 export interface RawBusStop {
@@ -545,8 +567,104 @@ export interface RawBusStop {
     updowncd?: number;
 }
 
-export async function fetchRouteStops(routeId: string): Promise<RawBusStop[]> {
-    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusStop>>("/BusRouteInfoInqireService/getRouteAcctoThrghSttnList", {routeId}, {priority: API_PRIORITY.USER_INTERACTIVE});
+export async function fetchRouteStops(routeId: string, cityCode = CITY_CODE): Promise<RawBusStop[]> {
+    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusStop>>(
+        "/BusRouteInfoInqireService/getRouteAcctoThrghSttnList",
+        {routeId, cityCode},
+        {priority: API_PRIORITY.USER_INTERACTIVE}
+    );
 
-    return extractItems(data, `getRouteAcctoThrghSttnList:${routeId}`);
+    const items = extractItems(data, `getRouteAcctoThrghSttnList:${cityCode}:${routeId}`);
+    return items.map((stop) => ({
+        ...stop,
+        gpslati: Number(stop.gpslati),
+        gpslong: Number(stop.gpslong),
+        nodeord: Number(stop.nodeord ?? 0),
+        updowncd: Number(stop.updowncd ?? 0),
+    }));
+}
+
+export interface RawNearbyStop {
+    nodeid: string;
+    nodenm: string;
+    gpslati: number;
+    gpslong: number;
+    citycode?: string | number;
+    nodeno?: string | number;
+}
+
+export async function fetchNearbyStops(params: {
+    gpsLati: number;
+    gpsLong: number;
+}): Promise<RawNearbyStop[]> {
+    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawNearbyStop>>(
+        "/BusSttnInfoInqireService/getCrdntPrxmtSttnList",
+        {
+            gpsLati: String(params.gpsLati),
+            gpsLong: String(params.gpsLong),
+            numOfRows: "50",
+        },
+        {priority: API_PRIORITY.USER_INTERACTIVE}
+    );
+
+    const items = extractItems(data, `getCrdntPrxmtSttnList:${params.gpsLati},${params.gpsLong}`);
+    return items.map((s) => ({
+        ...s,
+        gpslati: Number(s.gpslati),
+        gpslong: Number(s.gpslong),
+    }));
+}
+
+export interface RawStationRoute {
+    routeid: string;
+    routeno: string | number;
+    routetp?: string;
+    startnodenm?: string;
+    endnodenm?: string;
+}
+
+export async function fetchRoutesByStation(nodeId: string, cityCode = CITY_CODE): Promise<RawStationRoute[]> {
+    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawStationRoute>>(
+        "/BusSttnInfoInqireService/getSttnThrghRouteList",
+        {nodeId, cityCode, numOfRows: "200"},
+        {priority: API_PRIORITY.USER_INTERACTIVE}
+    );
+
+    const items = extractItems(data, `getSttnThrghRouteList:${cityCode}:${nodeId}`);
+    return items.map((r) => ({
+        ...r,
+        routeno: String(r.routeno ?? ""),
+    }));
+}
+
+export interface RawCityRoute {
+    routeid: string;
+    routeno: string | number;
+    routetp?: string;
+    startnodenm?: string;
+    endnodenm?: string;
+    startvehicletime?: string | number;
+    endvehicletime?: string | number;
+}
+
+export async function fetchCityRoutes(cityCode: string, routeNo?: string): Promise<RawCityRoute[]> {
+    const params: Record<string, string> = {
+        cityCode,
+        numOfRows: "500",
+    };
+    if (routeNo) {
+        params.routeNo = routeNo;
+    }
+
+    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawCityRoute>>(
+        "/BusRouteInfoInqireService/getRouteNoList",
+        params,
+        {priority: API_PRIORITY.USER_INTERACTIVE}
+    );
+
+    const items = extractItems(data, `getRouteNoList:${cityCode}:${routeNo ?? "all"}`);
+    return items.map((r) => ({
+        ...r,
+        routeno: String(r.routeno ?? ""),
+    }));
 }

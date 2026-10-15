@@ -16,8 +16,14 @@ const CACHE_CONTROL = buildCacheControl({
 
 export const GET = createApiHandler<RawBusStop[]>({
     paramKey: "routeId",
-    cacheKey: (id) => `bus-stops:${id}`,
-    fetcher: fetchRouteStops,
+    cacheKey: (id, req) => {
+        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        return `bus-stops:${cityCode}:${id}`;
+    },
+    fetcher: (id, req) => {
+        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        return fetchRouteStops(id, cityCode);
+    },
     ttl: 3600,
     errorMessage: "Failed to fetch stop data",
     cacheControl: CACHE_CONTROL,

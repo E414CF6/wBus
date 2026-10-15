@@ -11,8 +11,8 @@ const EMPTY_BUS_LIST: BusItem[] = [];
  * @param routeName - Target route name (e.g. "30")
  * @param enabled - Pass false to suspend live SSE/polling fetches when not on real-time map view
  */
-export const useBusSortedList = (routeName: string, enabled: boolean = true) => {
-    const routeIds = useRouteIds(routeName, enabled);
+export const useBusSortedList = (routeName: string, enabled: boolean = true, cityCode: string = "32020") => {
+    const routeIds = useRouteIds(routeName, enabled, cityCode);
     const activeRouteIds = useMemo(() => (enabled ? routeIds : []), [enabled, routeIds]);
 
     const {
@@ -23,7 +23,7 @@ export const useBusSortedList = (routeName: string, enabled: boolean = true) => 
         lastUpdated,
         isDegraded,
         reconnect,
-    } = useBusLocationData(activeRouteIds);
+    } = useBusLocationData(activeRouteIds, cityCode);
 
     const getDirection = useBusDirection(routeName);
     const error = mapError;

@@ -41,3 +41,4 @@ next-env.d.ts
 # local cache & data
 scripts/cache/*
 public/data/comments.json
+*.zip

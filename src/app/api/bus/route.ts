@@ -38,11 +38,13 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({error: "Invalid or empty routeIds parameter"}, {status: 400});
     }
 
+    const cityCode = searchParams.get("cityCode") || "32020";
+
     try {
         let hasDegraded = false;
         const settled = await mapWithConcurrencyLimit(routeIds, async (routeId) => {
             const ttl = getAdaptiveTtlSeconds(routeId, 8, 15);
-            const res = await getCachedOrFetch<RawBusLocation[]>(`bus:${routeId}`, () => fetchBusLocations(routeId), {
+            const res = await getCachedOrFetch<RawBusLocation[]>(`bus:${cityCode}:${routeId}`, () => fetchBusLocations(routeId, { cityCode }), {
                 ttlSeconds: ttl, ...LIVE_CACHE_OPTIONS,
             });
             if (res.meta?.degraded) {

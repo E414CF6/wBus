@@ -3,6 +3,8 @@
   "route_no": "공차",
   "stops_count": 2,
   "total_dist": 0,
+  "up_polyline": [],
+  "down_polyline": [],
   "stops": [
     {
       "id": "WJB251054029",
@@ -22,7 +24,5 @@
       "lon": 127.947292,
       "nodeno": "63041"
     }
-  ],
-  "up_polyline": [],
-  "down_polyline": []
+  ]
 }

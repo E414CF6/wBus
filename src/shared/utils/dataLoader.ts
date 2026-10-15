@@ -13,9 +13,9 @@ function getServerFsModules() {
     }
     if (!serverFsModulesPromise) {
         serverFsModulesPromise = Promise.all([
-            import(/*turbopackIgnore: true*/ "fs/promises"),
-            import(/*turbopackIgnore: true*/ "fs"),
-            import(/*turbopackIgnore: true*/ "path"),
+            import(/* webpackIgnore: true */ /* turbopackIgnore: true */ "fs/promises"),
+            import(/* webpackIgnore: true */ /* turbopackIgnore: true */ "fs"),
+            import(/* webpackIgnore: true */ /* turbopackIgnore: true */ "path"),
         ]).then(([fsPromises, fs, path]) => ({
             readFile: fsPromises.readFile,
             existsSync: fs.existsSync,

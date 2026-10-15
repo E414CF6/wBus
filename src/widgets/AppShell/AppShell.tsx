@@ -6,6 +6,7 @@ import React, {useEffect, useMemo, useState} from "react";
 import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 
 import {useBusRouteMap} from "@entities/route/hooks";
+import {useCityContext} from "@entities/city";
 
 import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
@@ -53,8 +54,10 @@ export function AppShell() {
         return () => clearInterval(timer);
     }, []);
 
+    const {currentCity} = useCityContext();
+
     // Only fetch route map & telemetry when real-time map is active or visited
-    const routeMap = useBusRouteMap(hasVisitedMap && isMapActive);
+    const routeMap = useBusRouteMap(hasVisitedMap && isMapActive, currentCity.code);
     const allRoutes = useMemo(
         () => (routeMap ? Object.keys(routeMap) : ["30", "34", "34-1"]),
         [routeMap]
@@ -63,13 +66,14 @@ export function AppShell() {
         if (!routeMap) return selectedRoute;
         if (routeMap[selectedRoute]) return selectedRoute;
 
-        return routeMap[MAP_SETTINGS.DEFAULT_ROUTE]
-            ? MAP_SETTINGS.DEFAULT_ROUTE
-            : Object.keys(routeMap)[0] ?? selectedRoute;
-    }, [routeMap, selectedRoute]);
+        if (currentCity.code === "32020" && routeMap[MAP_SETTINGS.DEFAULT_ROUTE]) {
+            return MAP_SETTINGS.DEFAULT_ROUTE;
+        }
+        return Object.keys(routeMap)[0] ?? selectedRoute;
+    }, [routeMap, selectedRoute, currentCity.code]);
 
     // Live telemetry for active map route
-    const liveBusData = useBusSortedList(activeRoute, hasVisitedMap && isMapActive);
+    const liveBusData = useBusSortedList(activeRoute, hasVisitedMap && isMapActive, currentCity.code);
 
     // Direction filter for map polyline rendering (all, up, down)
     const [selectedDirection, setSelectedDirection] = useState<"all" | "up" | "down">("all");
