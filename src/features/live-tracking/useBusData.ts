@@ -44,7 +44,7 @@ export function useBusData(routeName: string, enabled: boolean = true, cityCode:
         return liveRouteId ?? routeIds[0] ?? null;
     }, [busList, routeIds]);
 
-    const polylineMap = useBusPolylineMap(routeIds);
+    const polylineMap = useBusPolylineMap(routeIds, cityCode);
 
     const fallbackPolylines = useMemo(() => getFallbackPolylines(polylineMap, activeRouteId), [polylineMap, activeRouteId]);
 

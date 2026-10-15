@@ -413,25 +413,62 @@ export async function generateSingleRoutePolyline(
     routeNo?: string
 ): Promise<GeoPolyline | null> {
     try {
-        const stopItems = await fetchTago<TagoStopItem>("getRouteAcctoThrghSttnList", {
-            cityCode,
-            routeId,
-            numOfRows: 2048,
-        });
+        let stops: Array<{
+            nodeid: string;
+            nodenm: string;
+            nodeord: number;
+            nodeno: string;
+            gpslati: number;
+            gpslong: number;
+            updowncd: number;
+        }> = [];
 
-        if (!stopItems || stopItems.length === 0) return null;
+        // 1. Try standard transit bus stop service with key rotation
+        try {
+            const {fetchRouteStops} = await import("@entities/bus");
+            const rawStops = await fetchRouteStops(routeId, cityCode);
+            if (rawStops && rawStops.length > 0) {
+                stops = rawStops.map((s) => ({
+                    nodeid: String(s.nodeid || ""),
+                    nodenm: String(s.nodenm || ""),
+                    nodeord: Number(s.nodeord || 0),
+                    nodeno: String(s.nodeno || ""),
+                    gpslati: Number(s.gpslati || 0),
+                    gpslong: Number(s.gpslong || 0),
+                    updowncd: Number(s.updowncd ?? 0),
+                }));
+            }
+        } catch {
+            // Fall through to raw fetchTago
+        }
 
-        const stops = stopItems
-            .map((item) => ({
-                nodeid: String(item.nodeid || ""),
-                nodenm: String(item.nodenm || ""),
-                nodeord: Number(item.nodeord || 0),
-                nodeno: String(item.nodeno || ""),
-                gpslati: Number(item.gpslati || 0),
-                gpslong: Number(item.gpslong || 0),
-                updowncd: Number(item.updowncd ?? 0),
-            }))
-            .sort((a, b) => a.nodeord - b.nodeord);
+        // 2. Direct TAGO fallback if needed
+        if (stops.length === 0) {
+            try {
+                const stopItems = await fetchTago<TagoStopItem>("getRouteAcctoThrghSttnList", {
+                    cityCode,
+                    routeId,
+                    numOfRows: 2048,
+                });
+                if (stopItems && stopItems.length > 0) {
+                    stops = stopItems.map((item) => ({
+                        nodeid: String(item.nodeid || ""),
+                        nodenm: String(item.nodenm || ""),
+                        nodeord: Number(item.nodeord || 0),
+                        nodeno: String(item.nodeno || ""),
+                        gpslati: Number(item.gpslati || 0),
+                        gpslong: Number(item.gpslong || 0),
+                        updowncd: Number(item.updowncd ?? 0),
+                    }));
+                }
+            } catch {
+                // Ignore
+            }
+        }
+
+        if (stops.length === 0) return null;
+
+        stops.sort((a, b) => a.nodeord - b.nodeord);
 
         const hasBothDirections =
             stops.some((s) => s.updowncd === 1) && stops.some((s) => s.updowncd === 0);
@@ -454,16 +491,16 @@ export async function generateSingleRoutePolyline(
             downCoords = allCoords;
         }
 
+        if (upCoords.length < 2) return null;
+
         const [snappedUp, snappedDown] = await Promise.all([
             fetchOsrmPolyline(upCoords),
-            hasBothDirections ? fetchOsrmPolyline(downCoords) : Promise.resolve(null),
+            hasBothDirections && downCoords.length >= 2 ? fetchOsrmPolyline(downCoords) : Promise.resolve(null),
         ]);
 
-        const finalUp = snappedUp && snappedUp.length >= 2 ? snappedUp : upCoords;
+        const finalUp = snappedUp && snappedUp.length >= 2 ? snappedUp : smoothPolylineSpline(upCoords);
         const finalDown = hasBothDirections
-            ? snappedDown && snappedDown.length >= 2
-                ? snappedDown
-                : downCoords
+            ? (snappedDown && snappedDown.length >= 2 ? snappedDown : smoothPolylineSpline(downCoords))
             : finalUp;
 
         const totalDist =

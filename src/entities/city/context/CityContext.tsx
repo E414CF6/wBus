@@ -118,11 +118,11 @@ export function CityContextProvider({children}: CityContextProviderProps) {
         (lat: number, lng: number, zoom: number): CityInfo | null => {
             if (!isAutoDetectEnabled || isFlyingRef.current) return null;
             // When zoomed out too far (e.g. country view), avoid rapid switching
-            if (zoom < 8.5) return null;
+            if (zoom < 7.2) return null;
 
             const {city, distanceKm} = findNearestCityWithDistance(lat, lng);
             // If the viewport center is too far from any city center (e.g. open ocean), skip
-            if (distanceKm > 65) return null;
+            if (distanceKm > 75) return null;
 
             if (city.code !== currentCity.code) {
                 setCity(city, {skipFlyTo: true});

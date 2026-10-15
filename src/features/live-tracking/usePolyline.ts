@@ -28,26 +28,26 @@ export interface BusPolylineSet {
 
 const EMPTY_POLYLINE_MAP = new Map<string, PolylineData>();
 
-function usePolylineSnapshot(routeIds: string[]): Map<string, PolylineData> {
+function usePolylineSnapshot(routeIds: string[], cityCode: string = "32020"): Map<string, PolylineData> {
     const [snapshot, setSnapshot] = useState<{
         key: string; map: Map<string, PolylineData>;
     }>({key: "", map: EMPTY_POLYLINE_MAP});
-    const routeKey = useMemo(() => buildRouteIdsKey(routeIds, "|"), [routeIds]);
+    const routeKey = useMemo(() => `${cityCode}:${buildRouteIdsKey(routeIds, "|")}`, [cityCode, routeIds]);
 
     useEffect(() => {
         if (!routeKey) return;
 
         let mounted = true;
-        const ids = routeKey.split("|").filter(Boolean);
+        const ids = buildRouteIdsKey(routeIds, "|").split("|").filter(Boolean);
 
-        fetchRoutePolylines(ids).then((map) => {
+        fetchRoutePolylines(ids, cityCode).then((map) => {
             if (mounted) setSnapshot({key: routeKey, map});
         });
 
         return () => {
             mounted = false;
         };
-    }, [routeKey]);
+    }, [routeKey, cityCode, routeIds]);
 
     return useMemo(() => (snapshot.key === routeKey ? snapshot.map : EMPTY_POLYLINE_MAP), [snapshot, routeKey]);
 }
@@ -57,8 +57,8 @@ function usePolylineSnapshot(routeIds: string[]): Map<string, PolylineData> {
  * Returns a Map<routeId, PolylineData> for O(1) lookups.
  * Replaces the old useBusPolylineMap hook.
  */
-export function useBusPolylineMap(routeIds: string[]): Map<string, BusPolylineSet> {
-    const polylineMap = usePolylineSnapshot(routeIds);
+export function useBusPolylineMap(routeIds: string[], cityCode: string = "32020"): Map<string, BusPolylineSet> {
+    const polylineMap = usePolylineSnapshot(routeIds, cityCode);
 
     // Return typed map compatible with existing code
     return useMemo(() => {
@@ -99,7 +99,7 @@ export function getFallbackPolylines(polylineMap: Map<string, BusPolylineSet>, a
 export function useRoutePolylineData(routeName: string, enabled: boolean = true, cityCode: string = "32020") {
     const routeInfo = useRouteInfo(routeName, enabled, cityCode);
     const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
-    const polylineMap = useBusPolylineMap(routeIds);
+    const polylineMap = useBusPolylineMap(routeIds, cityCode);
     const activeRouteId = routeIds[0] ?? null;
 
     return {

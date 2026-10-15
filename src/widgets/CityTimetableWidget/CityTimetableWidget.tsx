@@ -7,7 +7,6 @@ import {useCityRoutes} from "@entities/route/hooks";
 import {getRouteColor} from "@entities/route/routeColor";
 import type {RawCityRoute} from "@entities/bus";
 import {CityRouteDetailModal} from "./CityRouteDetailModal";
-import {CitySelectModal} from "@features/city-select";
 import {Footer} from "@shared/ui/Footer";
 
 interface CityTimetableWidgetProps {
@@ -24,7 +23,6 @@ export default function CityTimetableWidget({onSelectMapRoute}: CityTimetableWid
     const [selectedType, setSelectedType] = useState("ALL");
     const [showOnlyBookmarks, setShowOnlyBookmarks] = useState(false);
     const [selectedDetailRoute, setSelectedDetailRoute] = useState<RawCityRoute | null>(null);
-    const [isCityModalOpen, setIsCityModalOpen] = useState(false);
 
     // Bookmarks state
     const [bookmarks, setBookmarks] = useState<string[]>(() => {
@@ -106,25 +104,17 @@ export default function CityTimetableWidget({onSelectMapRoute}: CityTimetableWid
                 onSelectMapRoute={onSelectMapRoute}
             />
 
-            <CitySelectModal
-                isOpen={isCityModalOpen}
-                onClose={() => setIsCityModalOpen(false)}
-            />
-
             {/* Header Glass Card */}
             <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 sm:p-6 bg-white/90 dark:bg-[#111218]/90 backdrop-blur-xl border border-black/8 dark:border-white/10 rounded-3xl shadow-sm mb-6">
                 <div>
                     <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <button
-                            type="button"
-                            onClick={() => setIsCityModalOpen(true)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-300 border border-blue-500/25 font-black text-xs hover:bg-blue-500/20 transition-all cursor-pointer select-none active:scale-95"
-                            title="도시 변경하기"
+                        <div
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 dark:bg-blue-400/15 text-blue-700 dark:text-blue-300 border border-blue-500/25 font-black text-xs select-none"
+                            title={`현재 지도 뷰포인트: ${currentCity.name}`}
                         >
                             <MapPin className="w-3.5 h-3.5 text-blue-500" />
                             <span>{currentCity.name}</span>
-                            <ChevronDown className="w-3 h-3 opacity-60" />
-                        </button>
+                        </div>
                         <span className="text-xs text-slate-400 font-bold">
                             {currentCity.province}
                         </span>
@@ -141,10 +131,12 @@ export default function CityTimetableWidget({onSelectMapRoute}: CityTimetableWid
                 <div className="flex items-center gap-2">
                     <button
                         type="button"
-                        onClick={() => setIsCityModalOpen(true)}
-                        className="px-4 py-2 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-extrabold text-xs sm:text-sm shadow-md transition-all duration-200 cursor-pointer active:scale-95"
+                        onClick={() => onSelectMapRoute?.(routes[0] ? String(routes[0].routeno) : "30")}
+                        className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-blue-500/20 transition-all duration-200 cursor-pointer active:scale-95"
+                        title="지도로 이동하여 다른 지역을 뷰포인트로 탐색합니다"
                     >
-                        다른 지역 선택
+                        <MapPin className="w-3.5 h-3.5" />
+                        <span>지도에서 지역 탐색</span>
                     </button>
                 </div>
             </header>

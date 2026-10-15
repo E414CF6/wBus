@@ -4,6 +4,7 @@ import {getPolyline} from "@entities/route/api";
 import type {Coordinate, GeoPolyline} from "@entities/route/types";
 
 import {CacheManager} from "@shared/cache/CacheManager";
+import {STORAGE_KEYS} from "@shared/config/env";
 import {getStationMap} from "@entities/station/api";
 import type {StationLocation} from "@entities/station/types";
 import {isFiniteNumber, snapPointToPolyline} from "@shared/utils/geo";
@@ -119,13 +120,75 @@ function extractBBox(data: GeoPolyline, coords: [number, number][]): [[number, n
     return [[minLat, minLng], [maxLat, maxLng]];
 }
 
-async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
-    const cached = processedCache.get(routeId);
+async function fetchRoutePolyline(routeId: string, cityCode?: string): Promise<PolylineData> {
+    const cCode =
+        cityCode ||
+        (typeof window !== "undefined"
+            ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020"
+            : "32020");
+    const cacheKey = `${cCode}:${routeId}`;
+    const cached = processedCache.get(cacheKey);
     if (cached) return cached;
-    const rawData = await getPolyline(routeId);
+
+    let rawData = await getPolyline(routeId, cCode);
+
+    // Resilient Fallback: if rawData is missing or has no stops, query /api/bus-stops/[routeId] and construct spline
+    if (!rawData || !rawData.stops || rawData.stops.length === 0) {
+        try {
+            const stopsRes = await fetch(
+                `/api/bus-stops/${encodeURIComponent(routeId)}?cityCode=${cCode}`
+            );
+            if (stopsRes.ok) {
+                const stopList = await stopsRes.json();
+                if (Array.isArray(stopList) && stopList.length >= 2) {
+                    const sortedStops = [...stopList].sort(
+                        (a, b) => Number(a.nodeord || 0) - Number(b.nodeord || 0)
+                    );
+                    const upStops = sortedStops.filter((s) => Number(s.updowncd) === 1);
+                    const downStops = sortedStops.filter((s) => Number(s.updowncd) === 0);
+
+                    const upCoords: [number, number][] = (
+                        upStops.length >= 2 ? upStops : sortedStops
+                    )
+                        .filter((s) => s.gpslong > 0 && s.gpslati > 0)
+                        .map((s) => [Number(s.gpslong), Number(s.gpslati)]);
+                    const downCoords: [number, number][] = (
+                        downStops.length >= 2 ? downStops : upCoords
+                    )
+                        .filter((s) => s.gpslong > 0 && s.gpslati > 0)
+                        .map((s) => [Number(s.gpslong), Number(s.gpslati)]);
+
+                    const smoothUp = smoothPolylineSpline(upCoords);
+                    const smoothDown =
+                        downStops.length >= 2 ? smoothPolylineSpline(downCoords) : smoothUp;
+
+                    rawData = {
+                        route_id: routeId,
+                        route_no: routeId,
+                        stops_count: sortedStops.length,
+                        total_dist: 0,
+                        up_polyline: smoothUp,
+                        down_polyline: smoothDown,
+                        stops: sortedStops.map((s) => ({
+                            id: String(s.nodeid),
+                            name: String(s.nodenm),
+                            ord: Number(s.nodeord || 0),
+                            ud: Number(s.updowncd ?? 0),
+                            lat: Number(s.gpslati),
+                            lon: Number(s.gpslong),
+                            nodeno: String(s.nodeno || ""),
+                        })),
+                    };
+                }
+            }
+        } catch (e) {
+            console.warn(`[fetchRoutePolyline] Client bus stops fallback failed for ${routeId}:`, e);
+        }
+    }
+
     if (!rawData || !rawData.stops) {
         const empty: PolylineData = {upPolyline: [], downPolyline: [], turnIndex: 0};
-        processedCache.set(routeId, empty);
+        processedCache.set(cacheKey, empty);
         return empty;
     }
 
@@ -210,12 +273,17 @@ async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
         turnIndex: upPolyline.length > 0 ? upPolyline.length - 1 : 0,
         bbox: extractBBox(rawData, [...upCoords, ...downCoords]),
     };
-    processedCache.set(routeId, result);
+    processedCache.set(cacheKey, result);
     return result;
 }
 
-export async function fetchRoutePolylines(routeIds: string[]): Promise<Map<string, PolylineData>> {
-    const results = await Promise.all(routeIds.map(async (id) => ({id, data: await fetchRoutePolyline(id)})));
+export async function fetchRoutePolylines(
+    routeIds: string[],
+    cityCode?: string
+): Promise<Map<string, PolylineData>> {
+    const results = await Promise.all(
+        routeIds.map(async (id) => ({id, data: await fetchRoutePolyline(id, cityCode)}))
+    );
     const map = new Map<string, PolylineData>();
     for (const {id, data} of results) map.set(id, data);
     return map;

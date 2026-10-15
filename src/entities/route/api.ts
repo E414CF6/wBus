@@ -9,7 +9,7 @@ import type {
 import {getStationMap} from "@entities/station/api";
 import type {StationLocation} from "@entities/station/types";
 
-import {HttpError} from "@shared/api/fetchAPI";
+import {fetchAPI, HttpError} from "@shared/api/fetchAPI";
 import {CacheManager} from "@shared/cache/CacheManager";
 import {API_CONFIG, APP_CONFIG, STORAGE_KEYS} from "@shared/config/env";
 import {loadStaticData} from "@shared/utils/dataLoader";
@@ -39,13 +39,22 @@ export async function getPolyline(routeKey: string, cityCode?: string): Promise<
     const cCode = cityCode || (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020" : "32020");
     const cacheKey = `${cCode}:${routeKey}`;
     return polylineCache.getOrFetch(cacheKey, async () => {
+        // 1. For Wonju, attempt instant zero-latency static file load first
+        if (cCode === "32020") {
+            try {
+                return await loadStaticData<GeoPolyline>(`${API_CONFIG.STATIC.PATHS.ROUTE_DIR}/${routeKey}.json`);
+            } catch {
+                // Fall through to API route
+            }
+        }
+
+        // 2. Fetch from dedicated nationwide polyline API (with OSRM road snapping & disk cache)
         try {
-            const query = cCode && cCode !== "32020" ? `?cityCode=${cCode}` : "";
-            return await loadStaticData<GeoPolyline>(`${API_CONFIG.STATIC.PATHS.ROUTE_DIR}/${routeKey}.json${query}`);
+            return await fetchAPI<GeoPolyline>(`/api/polyline/${encodeURIComponent(routeKey)}?cityCode=${cCode}`);
         } catch (error) {
             if (error instanceof HttpError && error.status === 404) {
                 if (APP_CONFIG.IS_DEV) {
-                    console.warn(`[getPolyline] Polyline file not found: ${routeKey}`);
+                    console.warn(`[getPolyline] Polyline file not found: ${routeKey} (${cCode})`);
                 }
                 return null;
             }

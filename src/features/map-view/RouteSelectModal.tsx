@@ -7,7 +7,6 @@ import {getRouteMeta, RouteCategory, RouteMeta, YONSEI_ROUTE_SET} from "@entitie
 import {UI_TEXT} from "@shared/config/locale";
 import {useCityContext} from "@entities/city";
 import {useCityRoutes} from "@entities/route/hooks";
-import {CitySelectModal} from "@features/city-select";
 
 // ----------------------------------------------------------------------
 // Types & Constants
@@ -48,7 +47,6 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
 
     // Direct nationwide route list fetch for current city
     const {routes: cityRoutes = []} = useCityRoutes(currentCity.code);
-    const [isCityModalOpen, setIsCityModalOpen] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
@@ -306,16 +304,13 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                 <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
                                     {UI_TEXT.ROUTE_SELECT.MODAL_TITLE}
                                 </h2>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsCityModalOpen(true)}
-                                    className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
-                                    title="도시 변경"
+                                <div
+                                    className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 select-none"
+                                    title={`현재 지도 뷰포인트: ${currentCity.name}`}
                                 >
                                     <MapPin className="w-3 h-3"/>
                                     <span>{currentCity.name}</span>
-                                    <ChevronDown className="w-3 h-3 opacity-60"/>
-                                </button>
+                                </div>
                                 <span
                                     className="px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-500/10 dark:bg-blue-400/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                                     {UI_TEXT.ROUTE_SELECT.CURRENT_ROUTE_PREFIX(selectedRoute)}
@@ -571,10 +566,5 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         </div>
     );
 
-    return (
-        <>
-            {createPortal(modalContent, document.body)}
-            <CitySelectModal isOpen={isCityModalOpen} onClose={() => setIsCityModalOpen(false)} />
-        </>
-    );
+    return createPortal(modalContent, document.body);
 };
