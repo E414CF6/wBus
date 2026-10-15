@@ -2,6 +2,7 @@
 
 import {getDirectionIcon} from "@entities/bus/directionIcons";
 import {getBusMarkerColor} from "@entities/route/routeColor";
+import {getRouteMeta} from "@entities/route/routeMetadata";
 
 import {getSnappedPosition} from "@features/live-tracking";
 
@@ -262,13 +263,15 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
                     snapped.direction === 1 ? routeIndices.upIndices : routeIndices.downIndices;
             }
 
+            const meta = getRouteMeta(routeName, effectiveCityCode);
             const markerColor = getBusMarkerColor(
                 bus.routenm || routeName,
                 snapped.direction,
                 targetRouteId,
                 routeInfo.vehicleRouteIds,
                 snapped.position,
-                polylineMap
+                polylineMap,
+                meta.routeType
             );
 
             return {

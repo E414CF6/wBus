@@ -23,18 +23,23 @@ export function useRouteInfo(routeName: string, enabled: boolean = true, cityCod
     } = useSWR<RouteInfo | null>(
         enabled && routeName ? ["routeInfo", cityCode, routeName] : null,
         async ([, cCode, name]: [string, string, string]) => {
-            if (cCode === "32020") {
-                return getRouteInfo(name);
-            }
             try {
                 const res = await fetch(`/api/routes?cityCode=${cCode}&routeNo=${encodeURIComponent(name)}`);
-                if (!res.ok) return { routeName: name, vehicleRouteIds: [name] };
-                const json = await res.json();
-                const ids = json.route_numbers?.[name] || (json.routes?.[0]?.routeid ? [json.routes[0].routeid] : [name]);
-                return { routeName: name, vehicleRouteIds: ids };
+                if (res.ok) {
+                    const json = await res.json();
+                    const ids = json.route_numbers?.[name] || (json.routes?.[0]?.routeid ? [json.routes[0].routeid] : null);
+                    if (ids && ids.length > 0) {
+                        return { routeName: name, vehicleRouteIds: ids };
+                    }
+                }
             } catch {
-                return { routeName: name, vehicleRouteIds: [name] };
+                // Fall back below
             }
+            if (cCode === "32020") {
+                const wonjuInfo = await getRouteInfo(name);
+                if (wonjuInfo) return wonjuInfo;
+            }
+            return { routeName: name, vehicleRouteIds: [name] };
         },
         ROUTE_INFO_SWR_OPTIONS
     );
@@ -58,19 +63,29 @@ export function useRouteIds(routeName: string, enabled: boolean = true, cityCode
  * Uses SWR for caching and revalidation.
  */
 export function useBusRouteMap(enabled: boolean = true, cityCode: string = "32020"): Record<string, string[]> | null {
-    const key = enabled ? (cityCode === "32020" ? "busRouteMap" : `busRouteMap:${cityCode}`) : null;
+    const key = enabled ? `busRouteMap:${cityCode}` : null;
     const fetcher = async () => {
+        try {
+            const res = await fetch(`/api/routes?cityCode=${cityCode}`);
+            if (res.ok) {
+                const json = await res.json();
+                if (json.routes && Array.isArray(json.routes)) {
+                    registerDynamicRouteMeta(cityCode, json.routes);
+                }
+                if (json.route_numbers && Object.keys(json.route_numbers).length > 0) {
+                    return json.route_numbers as Record<string, string[]>;
+                }
+            }
+        } catch (e) {
+            if (cityCode === "32020") {
+                return await getRouteMap();
+            }
+            throw e;
+        }
         if (cityCode === "32020") {
-            const staticMap = await getRouteMap();
-            return staticMap;
+            return await getRouteMap();
         }
-        const res = await fetch(`/api/routes?cityCode=${cityCode}`);
-        if (!res.ok) throw new Error("Failed to fetch city routes");
-        const json = await res.json();
-        if (json.routes && Array.isArray(json.routes)) {
-            registerDynamicRouteMeta(cityCode, json.routes);
-        }
-        return (json.route_numbers || {}) as Record<string, string[]>;
+        return {};
     };
 
     const {data, error} = useSWR(key, fetcher, {

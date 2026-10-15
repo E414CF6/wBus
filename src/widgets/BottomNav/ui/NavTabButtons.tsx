@@ -8,6 +8,7 @@ import type {NavTab} from "@shared/types/navigation";
 interface NavTabButtonsProps {
     activeTab: NavTab;
     onTabChange: (tab: NavTab) => void;
+    showScheduleTab?: boolean;
 }
 
 const TABS: { id: NavTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
@@ -18,10 +19,13 @@ const TABS: { id: NavTab; label: string; icon: React.ComponentType<{ className?:
 export const NavTabButtons = memo(function NavTabButtons({
                                                              activeTab,
                                                              onTabChange,
+                                                             showScheduleTab = true,
                                                          }: NavTabButtonsProps) {
+    const visibleTabs = showScheduleTab ? TABS : TABS.filter((t) => t.id !== "schedule");
+
     return (
         <div className="flex items-center gap-1 shrink-0">
-            {TABS.map((tab) => {
+            {visibleTabs.map((tab) => {
                 const Icon = tab.icon;
                 const isActive = activeTab === tab.id;
 

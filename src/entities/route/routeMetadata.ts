@@ -1,4 +1,5 @@
 import {ROUTE_CONFIG} from "./yonseiRoutes";
+import {classifyRouteType, type GenericRouteType, type RouteColorConfig, ROUTE_TYPE_COLORS} from "./routeColor";
 
 export interface RouteMeta {
     routeNo: string;
@@ -11,6 +12,8 @@ export interface RouteMeta {
     firstTime?: string;
     lastTime?: string;
     routeType?: string;
+    genericType: GenericRouteType;
+    colorTheme: RouteColorConfig;
 }
 
 export type RouteCategory = | "ALL" | "BOOKMARKS" | "YONSEI" | "1_19" | "20_49" | "50_99" | "100_PLUS" | "PUBLIC";
@@ -113,6 +116,7 @@ export function registerDynamicRouteMeta(
         const routeType = r.routetp;
 
         const key = `${cityCode}:${routeNo}`;
+        const genericType = classifyRouteType(routeNo, routeType);
         DYNAMIC_ROUTE_METADATA.set(key, {
             routeNo,
             origin,
@@ -123,6 +127,8 @@ export function registerDynamicRouteMeta(
             firstTime,
             lastTime,
             routeType,
+            genericType,
+            colorTheme: ROUTE_TYPE_COLORS[genericType],
         });
     }
 }
@@ -145,6 +151,7 @@ export function getRouteMeta(routeName: string, cityCode = "32020"): RouteMeta {
         const destination = yonseiConfig?.destLabel?.replace(" 출발", "") || staticInfo?.destination || "원주시내";
         const description = yonseiConfig?.description || staticInfo?.description || `${origin} ↔ ${destination}`;
         const viaStops = yonseiConfig?.viaStops;
+        const genericType = classifyRouteType(routeName);
 
         return {
             routeNo: routeName,
@@ -154,8 +161,12 @@ export function getRouteMeta(routeName: string, cityCode = "32020"): RouteMeta {
             viaStops,
             isYonsei,
             category: getRouteCategory(routeName),
+            genericType,
+            colorTheme: ROUTE_TYPE_COLORS[genericType],
         };
     }
+
+    const genericType = classifyRouteType(routeName);
 
     return {
         routeNo: routeName,
@@ -164,5 +175,7 @@ export function getRouteMeta(routeName: string, cityCode = "32020"): RouteMeta {
         description: `${routeName}번 시내버스`,
         isYonsei: false,
         category: getRouteCategory(routeName),
+        genericType,
+        colorTheme: ROUTE_TYPE_COLORS[genericType],
     };
 }

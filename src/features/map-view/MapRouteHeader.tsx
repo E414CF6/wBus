@@ -1,7 +1,7 @@
 "use client";
 
 import React, {useCallback, useMemo, useState} from "react";
-import {Bus, ChevronDown, GraduationCap, MapPin, RefreshCw} from "lucide-react";
+import {Bus, ChevronDown, GraduationCap, RefreshCw} from "lucide-react";
 
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
@@ -173,32 +173,11 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                 {/* 1. Main Route Overview Glass Card */}
                 <div
                     className="flex items-center gap-1.5 sm:gap-2 p-1.5 pr-2.5 sm:p-2 sm:pr-3 bg-white/92 dark:bg-[#111218]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full">
-                    {/* Viewport Current City Indicator */}
-                    <div
-                        className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-full font-black text-xs sm:text-sm tracking-tight bg-slate-100 dark:bg-slate-800/80 text-slate-850 dark:text-slate-100 border border-black/5 dark:border-white/10 shrink-0 select-none shadow-xs"
-                        title={`현재 지도 뷰포인트: ${currentCity.name} (${currentCity.province}) - 지도를 이동하면 지역이 자동 인식됩니다`}
-                    >
-                        <span className="relative flex items-center justify-center">
-                            <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0"/>
-                            {isAutoDetectEnabled && (
-                                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900 animate-pulse" />
-                            )}
-                        </span>
-                        <span className="whitespace-nowrap font-extrabold">
-                            <span className="sm:hidden">{currentCity.name.replace(/특별시|광역시|특별자치시|특별자치도/g, "")}</span>
-                            <span className="hidden sm:inline">{currentCity.name}</span>
-                        </span>
-                    </div>
-
                     {/* Route Selector Button (Triggers Modal) */}
                     <button
                         type="button"
                         onClick={() => setIsModalOpen(true)}
-                        className={`flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full font-black text-xs sm:text-sm tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shadow-sm shrink-0 ${
-                            meta.isYonsei
-                                ? "bg-[#003876] text-white shadow-[#003876]/30"
-                                : "bg-blue-600 text-white shadow-blue-600/30"
-                        }`}
+                        className={`flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full font-black text-xs sm:text-sm tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shadow-sm shrink-0 ${meta.colorTheme.bg} text-white ${meta.colorTheme.shadow || ""}`}
                         title="다른 노선 선택하기 (검색/목록)"
                         aria-label="노선 선택 모달 열기"
                     >
@@ -232,12 +211,15 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                     className={`px-1.5 py-0.5 rounded-md text-[9px] font-black shrink-0 transition-colors ${
                                         selectedDirection === "all"
                                             ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                                            : selectedDirection === "up"
-                                                ? "bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-300"
-                                                : "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-300"
+                                            : meta.colorTheme.badgeBg + " " + meta.colorTheme.text
                                     }`}
                                 >
                                     {selectedDirection === "all" ? "전체" : selectedDirection === "up" ? "상행" : "하행"}
+                                </span>
+                                <span
+                                    className={`px-1.5 py-0.5 rounded-md text-[9px] font-black shrink-0 ${meta.colorTheme.badgeBg} ${meta.colorTheme.text}`}
+                                >
+                                    {meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : "간선"}
                                 </span>
                                 {meta.isYonsei && selectedDirection === "all" && (
                                     <span

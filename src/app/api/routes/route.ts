@@ -28,41 +28,35 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        if (cityCode === "32020" && !routeNo) {
-            // Wonju default: return static routeMap with route details
-            const data = await getRouteMapData();
-            const wonjuRoutes: RawCityRoute[] = Object.entries(data.route_numbers).map(([rNo, ids]) => {
-                const meta = STATIC_ROUTE_METADATA[rNo] || {};
-                return {
-                    routeid: ids[0] || rNo,
-                    routeno: rNo,
-                    routetp: "일반버스",
-                    startnodenm: meta.origin || "관설동/장양리",
-                    endnodenm: meta.destination || "원주시내",
-                    startvehicletime: "0600",
-                    endvehicletime: "2200",
-                };
-            });
-            return NextResponse.json(
-                {
-                    cityCode: "32020",
-                    route_numbers: data.route_numbers,
-                    routes: wonjuRoutes,
-                    count: wonjuRoutes.length,
-                    lastUpdated: data.lastUpdated,
-                },
-                {
-                    headers: {
-                        "Cache-Control": CACHE_CONTROL_HEADER,
-                    },
-                }
-            );
-        }
-
         const cacheKey = `routes:${cityCode}:${routeNo || "all"}`;
         const result = await getCachedOrFetch<RawCityRoute[]>(
             cacheKey,
-            () => fetchCityRoutes(cityCode, routeNo),
+            async () => {
+                const fetched = await fetchCityRoutes(cityCode, routeNo);
+                if (fetched && fetched.length > 0) return fetched;
+
+                // Fallback for Wonju if TAGO API returns empty
+                if (cityCode === "32020" && !routeNo) {
+                    try {
+                        const data = await getRouteMapData();
+                        return Object.entries(data.route_numbers).map(([rNo, ids]) => {
+                            const meta = STATIC_ROUTE_METADATA[rNo] || {};
+                            return {
+                                routeid: ids[0] || rNo,
+                                routeno: rNo,
+                                routetp: "일반버스",
+                                startnodenm: meta.origin || "관설동/장양리",
+                                endnodenm: meta.destination || "원주시내",
+                                startvehicletime: "0600",
+                                endvehicletime: "2200",
+                            };
+                        });
+                    } catch {
+                        return [];
+                    }
+                }
+                return [];
+            },
             {
                 ttlSeconds: 86400,
                 staleWhileRevalidateSeconds: 604800,

@@ -177,39 +177,38 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         return map;
     }, [sortedAllRoutes, currentCity.code]);
 
-    // Dynamic Route Types for nationwide cities
-    const nationwideTypes = useMemo(() => {
-        if (isWonju) return [];
-        const set = new Set<string>();
-        cityRoutes.forEach((r) => {
-            if (r.routetp) set.add(r.routetp);
-        });
-        return Array.from(set).sort();
-    }, [isWonju, cityRoutes]);
-
     const categories = useMemo(() => {
         const bookmarkedCount = sortedAllRoutes.filter((r) => bookmarks.includes(r)).length;
-        const list: { id: string; label: string; icon?: React.ComponentType<{ className?: string }> }[] = [
+        const expressCount = sortedAllRoutes.filter((r) => routeMetaMap.get(r)?.genericType === "EXPRESS").length;
+        const mainCount = sortedAllRoutes.filter((r) => routeMetaMap.get(r)?.genericType === "MAIN").length;
+        const branchCount = sortedAllRoutes.filter((r) => routeMetaMap.get(r)?.genericType === "BRANCH").length;
+
+        const list: {
+            id: string;
+            label: string;
+            icon?: React.ComponentType<{ className?: string }>;
+            dotClass?: string;
+        }[] = [
             {id: "ALL", label: UI_TEXT.ROUTE_SELECT.CATEGORY_ALL(sortedAllRoutes.length)},
             {id: "BOOKMARKS", label: UI_TEXT.ROUTE_SELECT.CATEGORY_BOOKMARKS(bookmarkedCount), icon: Star},
         ];
 
         if (isWonju) {
-            list.push(
-                {id: "YONSEI", label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI, icon: GraduationCap},
-                {id: "1_19", label: UI_TEXT.ROUTE_SELECT.CAT_1_19},
-                {id: "20_49", label: UI_TEXT.ROUTE_SELECT.CAT_20_49},
-                {id: "50_99", label: UI_TEXT.ROUTE_SELECT.CAT_50_99},
-                {id: "100_PLUS", label: UI_TEXT.ROUTE_SELECT.CAT_100_PLUS}
-            );
-        } else {
-            for (const tp of nationwideTypes) {
-                const count = cityRoutes.filter((r) => r.routetp === tp).length;
-                list.push({id: tp, label: `${tp} (${count})`});
-            }
+            list.push({id: "YONSEI", label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI, icon: GraduationCap});
         }
+
+        if (expressCount > 0) {
+            list.push({id: "EXPRESS", label: `급행 (${expressCount})`, dotClass: "bg-red-500"});
+        }
+        if (mainCount > 0) {
+            list.push({id: "MAIN", label: `간선 (${mainCount})`, dotClass: "bg-blue-500"});
+        }
+        if (branchCount > 0) {
+            list.push({id: "BRANCH", label: `지선 (${branchCount})`, dotClass: "bg-emerald-500"});
+        }
+
         return list;
-    }, [isWonju, sortedAllRoutes, bookmarks, nationwideTypes, cityRoutes]);
+    }, [isWonju, sortedAllRoutes, bookmarks, routeMetaMap]);
 
     // Filter routes based on Category and Search Query
     const filteredRoutes = useMemo(() => {
@@ -220,37 +219,12 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             list = list.filter((r) => bookmarks.includes(r));
         } else if (selectedCategory === "YONSEI") {
             list = list.filter((r) => YONSEI_ROUTE_SET.has(r));
-        } else if (selectedCategory === "PUBLIC") {
-            list = list.filter((r) => {
-                const meta = routeMetaMap.get(r);
-                return meta?.category === "PUBLIC" || r.startsWith("공영") || r.includes("순환") || r.includes("조조");
-            });
-        } else if (selectedCategory === "1_19") {
-            list = list.filter((r) => {
-                const num = parseInt(r, 10);
-                return !isNaN(num) && num >= 1 && num < 20 && !r.startsWith("공영");
-            });
-        } else if (selectedCategory === "20_49") {
-            list = list.filter((r) => {
-                const num = parseInt(r, 10);
-                return !isNaN(num) && num >= 20 && num < 50 && !r.startsWith("공영");
-            });
-        } else if (selectedCategory === "50_99") {
-            list = list.filter((r) => {
-                const num = parseInt(r, 10);
-                return !isNaN(num) && num >= 50 && num < 100 && !r.startsWith("공영");
-            });
-        } else if (selectedCategory === "100_PLUS") {
-            list = list.filter((r) => {
-                const num = parseInt(r, 10);
-                return !isNaN(num) && num >= 100 && !r.startsWith("공영");
-            });
-        } else if (selectedCategory !== "ALL") {
-            // Matches dynamic nationwide route type (e.g. '간선버스', '지선버스')
-            const matchingRouteNos = new Set(
-                cityRoutes.filter((r) => r.routetp === selectedCategory).map((r) => String(r.routeno))
-            );
-            list = list.filter((r) => matchingRouteNos.has(r));
+        } else if (selectedCategory === "EXPRESS") {
+            list = list.filter((r) => routeMetaMap.get(r)?.genericType === "EXPRESS");
+        } else if (selectedCategory === "MAIN") {
+            list = list.filter((r) => routeMetaMap.get(r)?.genericType === "MAIN");
+        } else if (selectedCategory === "BRANCH") {
+            list = list.filter((r) => routeMetaMap.get(r)?.genericType === "BRANCH");
         }
 
         // Apply Search Query (Matches routeNo, origin, destination, description, routeType)
@@ -408,18 +382,25 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                     key={cat.id}
                                     type="button"
                                     onClick={() => setSelectedCategory(cat.id)}
-                                    className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95 ${
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95 ${
                                         isActive
-                                            ? cat.id === "YONSEI"
-                                                ? "bg-[#003876] text-white shadow-md shadow-[#003876]/30 scale-[1.02]"
-                                                : cat.id === "BOOKMARKS"
-                                                    ? "bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-[1.02]"
-                                                    : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]"
+                                            ? cat.id === "EXPRESS"
+                                                ? "bg-red-600 text-white shadow-md shadow-red-500/30 scale-[1.02]"
+                                                : cat.id === "MAIN"
+                                                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/30 scale-[1.02]"
+                                                    : cat.id === "BRANCH"
+                                                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/30 scale-[1.02]"
+                                                        : cat.id === "YONSEI"
+                                                            ? "bg-[#003876] text-white shadow-md shadow-[#003876]/30 scale-[1.02]"
+                                                            : cat.id === "BOOKMARKS"
+                                                                ? "bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-[1.02]"
+                                                                : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]"
                                             : "bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.07] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300 border border-black/5 dark:border-white/5"
                                     }`}
                                 >
                                     {Icon && <Icon
-                                        className={`w-3 h-3 ${cat.id === "BOOKMARKS" && isActive ? "fill-white" : ""}`}/>}
+                                        className={`w-3.5 h-3.5 ${cat.id === "BOOKMARKS" && isActive ? "fill-white" : ""}`}/>}
+                                    {!isActive && cat.dotClass && <span className={`w-2 h-2 rounded-full ${cat.dotClass}`} />}
                                     <span>{cat.label}</span>
                                 </button>
                             );
@@ -467,26 +448,14 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                         onClick={() => handleSelect(route)}
                                         className={`group relative flex items-start justify-between p-3.5 sm:p-4 rounded-2xl transition-all duration-200 cursor-pointer select-none active:scale-[0.98] border ${
                                             isSelected
-                                                ? isYonsei
-                                                    ? "bg-blue-50/90 dark:bg-[#003876]/25 border-[#003876]/60 dark:border-blue-400/50 shadow-md shadow-blue-500/10 ring-2 ring-[#003876]/40 dark:ring-blue-400/40"
-                                                    : "bg-blue-50/90 dark:bg-blue-950/40 border-blue-500 dark:border-blue-400 shadow-md shadow-blue-500/15 ring-2 ring-blue-500/30"
-                                                : isYonsei
-                                                    ? "bg-blue-500/[0.04] dark:bg-blue-400/[0.04] hover:bg-blue-500/[0.08] dark:hover:bg-blue-400/[0.08] border-blue-500/25 dark:border-blue-400/20 hover:border-blue-500/40"
-                                                    : "bg-black/[0.02] dark:bg-white/[0.03] hover:bg-black/[0.05] dark:hover:bg-white/[0.06] border-black/5 dark:border-white/5 hover:border-black/15 dark:hover:border-white/15"
+                                                ? `bg-slate-50/90 dark:bg-white/[0.06] ${meta.colorTheme.border} shadow-md ring-2 ${meta.colorTheme.ring || "ring-blue-500/30"}`
+                                                : "bg-black/[0.02] dark:bg-white/[0.03] hover:bg-black/[0.05] dark:hover:bg-white/[0.06] border-black/5 dark:border-white/5 hover:border-black/15 dark:hover:border-white/15"
                                         }`}
                                     >
                                         <div className="flex items-start gap-3 min-w-0 flex-1">
                                             {/* Route Number Badge */}
                                             <div
-                                                className={`flex items-center justify-center min-w-[50px] sm:min-w-[56px] px-2.5 py-1.5 rounded-xl font-black text-sm sm:text-base tracking-tight shrink-0 shadow-xs ${
-                                                    isSelected
-                                                        ? isYonsei
-                                                            ? "bg-[#003876] text-white"
-                                                            : "bg-blue-600 text-white"
-                                                        : isYonsei
-                                                            ? "bg-[#003876] text-white"
-                                                            : "bg-slate-900 dark:bg-slate-800 text-white"
-                                                }`}
+                                                className={`flex items-center justify-center min-w-[50px] sm:min-w-[56px] px-2.5 py-1.5 rounded-xl font-black text-sm sm:text-base tracking-tight shrink-0 shadow-xs ${meta.colorTheme.bg} text-white`}
                                             >
                                                 <span>{UI_TEXT.COMMON.ROUTE_LABEL(route)}</span>
                                             </div>
@@ -498,15 +467,13 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                         className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
                                                         {meta.origin} ↔ {meta.destination}
                                                     </span>
+                                                    <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${meta.colorTheme.badgeBg} ${meta.colorTheme.text}`}>
+                                                        {meta.routeType || (meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : "간선")}
+                                                    </span>
                                                     {isYonsei && (
                                                         <span
                                                             className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
                                                             {UI_TEXT.ROUTE_SELECT.YONSEI_BADGE}
-                                                        </span>
-                                                    )}
-                                                    {meta.routeType && (
-                                                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-black/5 dark:border-white/10">
-                                                            {meta.routeType}
                                                         </span>
                                                     )}
                                                 </div>

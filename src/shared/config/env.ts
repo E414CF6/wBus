@@ -81,7 +81,7 @@ export const MAP_SETTINGS = {
     ALWAYS_UPWARD_NODE_IDS: getEnvArray(process.env.NEXT_PUBLIC_ALWAYS_UPWARD_NODE_IDS, ","),
     DEFAULT_ROUTE: getEnv(process.env.NEXT_PUBLIC_DEFAULT_ROUTE, "30"),
     BUS_COLOR_BY_TYPE: {
-        EXPRESS: "#f97316", GENERAL: "#3b82f6", VILLAGE: "#10b981", CIRCUIT: "#8b5cf6", DEFAULT: "#6b7280",
+        EXPRESS: "#dc2626", GENERAL: "#2563eb", VILLAGE: "#16a34a", CIRCUIT: "#16a34a", DEFAULT: "#2563eb",
     },
 } as const;
 

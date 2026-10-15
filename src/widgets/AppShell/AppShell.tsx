@@ -17,7 +17,6 @@ import {BottomNav} from "@widgets/BottomNav";
 
 import {TimetableWidget} from "@widgets/TimetableWidget";
 import {YonseiTimetableWidget} from "@widgets/YonseiTimetableWidget";
-import {CityTimetableWidget} from "@widgets/CityTimetableWidget";
 import {useAppNavigation} from "./hooks/useAppNavigation";
 
 /**
@@ -57,22 +56,30 @@ export function AppShell() {
     }, []);
 
     const {currentCity} = useCityContext();
+    const isWonju = currentCity.code === "32020";
+
+    // Auto-switch back to map if user moves to non-Wonju city while on schedule tab
+    useEffect(() => {
+        if (!isWonju && activeTab === "schedule") {
+            handleTabChange("map");
+        }
+    }, [isWonju, activeTab, handleTabChange]);
 
     // Fetch route map for current city
     const routeMap = useBusRouteMap(true, currentCity.code);
     const allRoutes = useMemo(
-        () => (routeMap ? Object.keys(routeMap) : currentCity.code === "32020" ? ["30", "34", "34-1"] : []),
-        [routeMap, currentCity.code]
+        () => (routeMap ? Object.keys(routeMap) : isWonju ? ["30", "34", "34-1"] : []),
+        [routeMap, isWonju]
     );
     const activeRoute = useMemo(() => {
         if (!routeMap || Object.keys(routeMap).length === 0) return selectedRoute;
         if (routeMap[selectedRoute]) return selectedRoute;
 
-        if (currentCity.code === "32020" && routeMap[MAP_SETTINGS.DEFAULT_ROUTE]) {
+        if (isWonju && routeMap[MAP_SETTINGS.DEFAULT_ROUTE]) {
             return MAP_SETTINGS.DEFAULT_ROUTE;
         }
         return Object.keys(routeMap)[0] ?? selectedRoute;
-    }, [routeMap, selectedRoute, currentCity.code]);
+    }, [routeMap, selectedRoute, isWonju]);
 
     // Live telemetry for active map route
     const liveBusData = useBusSortedList(activeRoute, hasVisitedMap && isMapActive, currentCity.code);
@@ -119,8 +126,8 @@ export function AppShell() {
                 </MapWrapper>
             </div>
 
-            {/* 2. Schedule Timetable Slide-Over Sheet (Interactive layer over live map) */}
-            {activeTab === "schedule" && (
+            {/* 2. Schedule Timetable Slide-Over Sheet (Interactive layer over live map, Wonju only) */}
+            {activeTab === "schedule" && isWonju && (
                 <div
                     className="fixed inset-0 z-40 flex flex-col justify-end sm:justify-center items-center bg-black/40 backdrop-blur-md transition-opacity duration-300 animate-fadeIn"
                     onClick={(e) => {
@@ -167,20 +174,14 @@ export function AppShell() {
 
                         {/* Scrollable Content */}
                         <div className="flex-1 overflow-y-auto px-3 sm:px-8 py-5 pb-28 sm:pb-16 custom-scrollbar">
-                            {currentCity.code === "32020" ? (
-                                timetableSubTab === "yonsei" ? (
-                                    <YonseiTimetableWidget
-                                        onSelectMapRoute={handleSelectMapRoute}
-                                        dayMode={dayMode}
-                                        onDayModeChange={setDayMode}
-                                    />
-                                ) : (
-                                    <TimetableWidget
-                                        onSelectMapRoute={handleSelectMapRoute}
-                                    />
-                                )
+                            {timetableSubTab === "yonsei" ? (
+                                <YonseiTimetableWidget
+                                    onSelectMapRoute={handleSelectMapRoute}
+                                    dayMode={dayMode}
+                                    onDayModeChange={setDayMode}
+                                />
                             ) : (
-                                <CityTimetableWidget
+                                <TimetableWidget
                                     onSelectMapRoute={handleSelectMapRoute}
                                 />
                             )}
@@ -193,6 +194,7 @@ export function AppShell() {
             <BottomNav
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
+                showScheduleTab={isWonju}
                 scheduleSubTab={timetableSubTab}
                 onScheduleSubTabChange={handleScheduleSubTabChange}
                 dayMode={dayMode}

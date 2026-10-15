@@ -1,6 +1,7 @@
 "use client";
 
 import {buildSegmentedRouteGeoJson} from "@entities/route/polylineService";
+import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useRoutePolylineData} from "@features/live-tracking";
 import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
@@ -65,10 +66,11 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
             : null;
     }, [validRouteIds, polylineMap]);
 
-    // Build smart segmented GeoJSON: Overlapping parts in unified blue, unique branch parts in distinct colors
+    // Build smart segmented GeoJSON: Overlapping parts in route theme color (Red/Blue/Green), unique branch parts in distinct colors
     const activeGeoJson = useMemo(() => {
-        return buildSegmentedRouteGeoJson(validRouteIds, polylineMap);
-    }, [validRouteIds, polylineMap]);
+        const meta = getRouteMeta(routeName, effectiveCityCode);
+        return buildSegmentedRouteGeoJson(validRouteIds, polylineMap, meta.colorTheme.main);
+    }, [validRouteIds, polylineMap, routeName, effectiveCityCode]);
 
     // Fit map to bounds of routes with safe asymmetric padding for floating UI elements
     useEffect(() => {

@@ -21,6 +21,7 @@ export type {DayMode, NavTab, TimetableSubTab};
 export interface BottomNavProps {
     activeTab: NavTab;
     onTabChange: (tab: NavTab) => void;
+    showScheduleTab?: boolean;
 
     // Dynamic Timetable options (Active when activeTab === "schedule")
     scheduleSubTab?: TimetableSubTab;
@@ -50,6 +51,7 @@ export interface BottomNavProps {
 function BottomNavComponent({
                                 activeTab,
                                 onTabChange,
+                                showScheduleTab = true,
                                 scheduleSubTab = "yonsei",
                                 onScheduleSubTabChange,
                                 dayMode = "AUTO",
@@ -135,10 +137,11 @@ function BottomNavComponent({
                 <NavTabButtons
                     activeTab={activeTab}
                     onTabChange={onTabChange}
+                    showScheduleTab={showScheduleTab}
                 />
 
                 {/* Dynamic Options for Timetable (Schedule Tab) */}
-                {activeTab === "schedule" && (
+                {showScheduleTab && activeTab === "schedule" && (
                     <ScheduleNavControls
                         scheduleSubTab={scheduleSubTab}
                         onScheduleSubTabChange={onScheduleSubTabChange}

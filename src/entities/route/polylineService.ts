@@ -359,12 +359,13 @@ export function isPointNearPolyline(point: Coordinate, polyline: Coordinate[], m
  */
 export function buildSegmentedRouteGeoJson(
     validRouteIds: string[],
-    polylineMap: Map<string, PolylineData>
+    polylineMap: Map<string, PolylineData>,
+    baseColor: string = SHARED_BLUE_COLOR
 ): FeatureCollection | null {
     if (validRouteIds.length === 0) return null;
     const features: Feature[] = [];
 
-    // Single route ID case: Entire route in unified blue
+    // Single route ID case: Entire route in unified base color (red/blue/green)
     if (validRouteIds.length === 1) {
         const id = validRouteIds[0];
         const data = polylineMap.get(id);
@@ -380,7 +381,7 @@ export function buildSegmentedRouteGeoJson(
                 properties: {
                     route_id: id,
                     direction: "up",
-                    color: SHARED_BLUE_COLOR,
+                    color: baseColor,
                     is_shared: true
                 }
             });
@@ -395,7 +396,7 @@ export function buildSegmentedRouteGeoJson(
                 properties: {
                     route_id: id,
                     direction: "down",
-                    color: SHARED_BLUE_COLOR,
+                    color: baseColor,
                     is_shared: true
                 }
             });
@@ -403,7 +404,7 @@ export function buildSegmentedRouteGeoJson(
         return {type: "FeatureCollection", features};
     }
 
-    // Multiple route IDs: Segment into shared (blue) vs distinct branch colors
+    // Multiple route IDs: Segment into shared (baseColor) vs distinct branch colors
     const directions: Array<"up" | "down"> = ["up", "down"];
 
     for (const dir of directions) {
@@ -457,7 +458,7 @@ export function buildSegmentedRouteGeoJson(
 
                 const shouldEmit = !inEarlier;
                 const color = isShared
-                    ? SHARED_BLUE_COLOR
+                    ? baseColor
                     : BRANCH_PALETTE[(rIdx > 0 ? rIdx - 1 : 0) % BRANCH_PALETTE.length];
 
                 edgeInfos.push({shouldEmit, color, isShared});
@@ -465,7 +466,7 @@ export function buildSegmentedRouteGeoJson(
 
             // Group contiguous edges to emit into clean LineString features
             let activeCoords: [number, number][] | null = null;
-            let activeColor = SHARED_BLUE_COLOR;
+            let activeColor = baseColor;
             let activeShared = false;
 
             const flushActive = () => {

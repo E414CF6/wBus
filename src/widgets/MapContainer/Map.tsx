@@ -102,13 +102,10 @@ export default function Map({onReady, children}: MapProps) {
                 if (!mapRef.current) return;
                 const center = mapRef.current.getCenter();
                 const zoom = mapRef.current.getZoom();
-                const detectedCity = handleViewportChange(center.lat, center.lng, zoom);
-                if (detectedCity) {
-                    showLocationToast(`📍 ${detectedCity.name} (${detectedCity.province}) 지역 인식됨`, "info");
-                }
+                handleViewportChange(center.lat, center.lng, zoom);
             }, 350);
         }
-    }, [handleViewportChange, isAutoDetectEnabled, showLocationToast]);
+    }, [handleViewportChange, isAutoDetectEnabled]);
 
     const handleGeolocateError = useCallback(
         (e: { code?: number; message?: string }) => {
