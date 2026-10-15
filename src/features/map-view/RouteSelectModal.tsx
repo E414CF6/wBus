@@ -2,10 +2,12 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
-import {Bus, Clock, GraduationCap, MapPin, Search, Star, X} from "lucide-react";
+import {Bus, ChevronDown, Clock, GraduationCap, MapPin, Search, Star, X} from "lucide-react";
 import {getRouteMeta, RouteCategory, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 import {UI_TEXT} from "@shared/config/locale";
 import {useCityContext} from "@entities/city";
+import {useCityRoutes} from "@entities/route/hooks";
+import {CitySelectModal} from "@features/city-select";
 
 // ----------------------------------------------------------------------
 // Types & Constants
@@ -19,10 +21,6 @@ interface RouteSelectModalProps {
     onSelectRoute: (routeName: string) => void;
     recentRoutes?: string[];
 }
-
-const RECENT_ROUTES_STORAGE_KEY = "wbus_recent_map_routes";
-const BOOKMARKS_STORAGE_KEY = "wonju_bus_bookmarks";
-const DEFAULT_BOOKMARK_ROUTES = ["30", "34", "34-1"];
 
 const emptySubscribe = () => () => {
 };
@@ -46,26 +44,53 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                                   }) => {
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const {currentCity} = useCityContext();
+    const isWonju = currentCity.code === "32020";
+
+    // Direct nationwide route list fetch for current city
+    const {routes: cityRoutes = []} = useCityRoutes(currentCity.code);
+    const [isCityModalOpen, setIsCityModalOpen] = useState(false);
+
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedCategory, setSelectedCategory] = useState<RouteCategory>("ALL");
+    const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+
+    // City-scoped bookmarks & recent history keys
+    const bookmarkKey = isWonju ? "wonju_bus_bookmarks" : `wbus_bookmarks_${currentCity.code}`;
+    const recentKey = isWonju ? "wbus_recent_map_routes" : `wbus_recent_routes_${currentCity.code}`;
+    const defaultBookmarks = isWonju ? ["30", "34", "34-1"] : [];
+
     const [bookmarks, setBookmarks] = useState<string[]>(() => {
-        if (typeof window === "undefined") return DEFAULT_BOOKMARK_ROUTES;
+        if (typeof window === "undefined") return defaultBookmarks;
         try {
-            const saved = localStorage.getItem(BOOKMARKS_STORAGE_KEY);
+            const saved = localStorage.getItem(bookmarkKey);
             if (saved) return JSON.parse(saved);
         } catch {
         }
-        return DEFAULT_BOOKMARK_ROUTES;
+        return defaultBookmarks;
     });
+
     const [recentRoutes, setRecentRoutes] = useState<string[]>(() => {
         if (typeof window === "undefined") return [];
         try {
-            const saved = localStorage.getItem(RECENT_ROUTES_STORAGE_KEY);
+            const saved = localStorage.getItem(recentKey);
             if (saved) return JSON.parse(saved);
         } catch {
         }
         return [];
     });
+
+    // Re-sync bookmarks and recents when currentCity changes
+    useEffect(() => {
+        try {
+            const savedBookmarks = localStorage.getItem(bookmarkKey);
+            setBookmarks(savedBookmarks ? JSON.parse(savedBookmarks) : defaultBookmarks);
+            const savedRecent = localStorage.getItem(recentKey);
+            setRecentRoutes(savedRecent ? JSON.parse(savedRecent) : []);
+        } catch {
+            setBookmarks(defaultBookmarks);
+            setRecentRoutes([]);
+        }
+    }, [bookmarkKey, recentKey, defaultBookmarks]);
+
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Reset search when modal is opened
@@ -85,13 +110,13 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             const exists = prev.includes(route);
             const next = exists ? prev.filter((r) => r !== route) : [...prev, route];
             try {
-                localStorage.setItem(BOOKMARKS_STORAGE_KEY, JSON.stringify(next));
+                localStorage.setItem(bookmarkKey, JSON.stringify(next));
             } catch {
                 // Ignore
             }
             return next;
         });
-    }, []);
+    }, [bookmarkKey]);
 
     // Select route & update recent routes history
     const handleSelect = useCallback(
@@ -101,7 +126,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                 const filtered = prev.filter((r) => r !== route);
                 const next = [route, ...filtered].slice(0, 6);
                 try {
-                    localStorage.setItem(RECENT_ROUTES_STORAGE_KEY, JSON.stringify(next));
+                    localStorage.setItem(recentKey, JSON.stringify(next));
                 } catch {
                     // Ignore
                 }
@@ -109,7 +134,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             });
             onClose();
         },
-        [onSelectRoute, onClose]
+        [onSelectRoute, onClose, recentKey]
     );
 
     // Auto-focus on open
@@ -134,8 +159,16 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [isOpen, onClose]);
 
+    // Compute effective route list for the modal
+    const effectiveAllRoutes = useMemo(() => {
+        if (cityRoutes && cityRoutes.length > 0) {
+            return Array.from(new Set(cityRoutes.map((r) => String(r.routeno))));
+        }
+        return allRoutes.filter(Boolean);
+    }, [cityRoutes, allRoutes]);
+
     // Sorted base list of all routes
-    const sortedAllRoutes = useMemo(() => sortRoutes(allRoutes.filter(Boolean)), [allRoutes]);
+    const sortedAllRoutes = useMemo(() => sortRoutes(effectiveAllRoutes), [effectiveAllRoutes]);
 
     // Precomputed metadata mapping
     const routeMetaMap = useMemo(() => {
@@ -145,6 +178,40 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         }
         return map;
     }, [sortedAllRoutes, currentCity.code]);
+
+    // Dynamic Route Types for nationwide cities
+    const nationwideTypes = useMemo(() => {
+        if (isWonju) return [];
+        const set = new Set<string>();
+        cityRoutes.forEach((r) => {
+            if (r.routetp) set.add(r.routetp);
+        });
+        return Array.from(set).sort();
+    }, [isWonju, cityRoutes]);
+
+    const categories = useMemo(() => {
+        const bookmarkedCount = sortedAllRoutes.filter((r) => bookmarks.includes(r)).length;
+        const list: { id: string; label: string; icon?: React.ComponentType<{ className?: string }> }[] = [
+            {id: "ALL", label: UI_TEXT.ROUTE_SELECT.CATEGORY_ALL(sortedAllRoutes.length)},
+            {id: "BOOKMARKS", label: UI_TEXT.ROUTE_SELECT.CATEGORY_BOOKMARKS(bookmarkedCount), icon: Star},
+        ];
+
+        if (isWonju) {
+            list.push(
+                {id: "YONSEI", label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI, icon: GraduationCap},
+                {id: "1_19", label: UI_TEXT.ROUTE_SELECT.CAT_1_19},
+                {id: "20_49", label: UI_TEXT.ROUTE_SELECT.CAT_20_49},
+                {id: "50_99", label: UI_TEXT.ROUTE_SELECT.CAT_50_99},
+                {id: "100_PLUS", label: UI_TEXT.ROUTE_SELECT.CAT_100_PLUS}
+            );
+        } else {
+            for (const tp of nationwideTypes) {
+                const count = cityRoutes.filter((r) => r.routetp === tp).length;
+                list.push({id: tp, label: `${tp} (${count})`});
+            }
+        }
+        return list;
+    }, [isWonju, sortedAllRoutes, bookmarks, nationwideTypes, cityRoutes]);
 
     // Filter routes based on Category and Search Query
     const filteredRoutes = useMemo(() => {
@@ -180,9 +247,15 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                 const num = parseInt(r, 10);
                 return !isNaN(num) && num >= 100 && !r.startsWith("공영");
             });
+        } else if (selectedCategory !== "ALL") {
+            // Matches dynamic nationwide route type (e.g. '간선버스', '지선버스')
+            const matchingRouteNos = new Set(
+                cityRoutes.filter((r) => r.routetp === selectedCategory).map((r) => String(r.routeno))
+            );
+            list = list.filter((r) => matchingRouteNos.has(r));
         }
 
-        // Apply Search Query (Matches routeNo, origin, destination, description)
+        // Apply Search Query (Matches routeNo, origin, destination, description, routeType)
         const q = searchQuery.trim().toLowerCase();
         if (q) {
             list = list.filter((r) => {
@@ -191,29 +264,18 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                 const matchOrigin = meta?.origin.toLowerCase().includes(q);
                 const matchDest = meta?.destination.toLowerCase().includes(q);
                 const matchDesc = meta?.description?.toLowerCase().includes(q);
-                return matchNo || matchOrigin || matchDest || matchDesc;
+                const matchType = meta?.routeType?.toLowerCase().includes(q);
+                return matchNo || matchOrigin || matchDest || matchDesc || matchType;
             });
         }
 
         return list;
-    }, [sortedAllRoutes, selectedCategory, searchQuery, bookmarks, routeMetaMap]);
+    }, [sortedAllRoutes, selectedCategory, searchQuery, bookmarks, routeMetaMap, cityRoutes]);
 
     if (!isOpen || !isClient) return null;
 
     const bookmarkedList = sortedAllRoutes.filter((r) => bookmarks.includes(r));
-    const validRecentRoutes = recentRoutes.filter((r) => allRoutes.includes(r));
-
-    const isWonju = currentCity.code === "32020";
-
-    const categories: { id: RouteCategory; label: string; icon?: React.ComponentType<{ className?: string }> }[] = [
-        {id: "ALL", label: UI_TEXT.ROUTE_SELECT.CATEGORY_ALL(sortedAllRoutes.length)},
-        {id: "BOOKMARKS", label: UI_TEXT.ROUTE_SELECT.CATEGORY_BOOKMARKS(bookmarkedList.length), icon: Star},
-        ...(isWonju ? [{id: "YONSEI" as RouteCategory, label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI, icon: GraduationCap}] : []),
-        {id: "1_19", label: UI_TEXT.ROUTE_SELECT.CAT_1_19},
-        {id: "20_49", label: UI_TEXT.ROUTE_SELECT.CAT_20_49},
-        {id: "50_99", label: UI_TEXT.ROUTE_SELECT.CAT_50_99},
-        {id: "100_PLUS", label: UI_TEXT.ROUTE_SELECT.CAT_100_PLUS},
-    ];
+    const validRecentRoutes = recentRoutes.filter((r) => sortedAllRoutes.includes(r));
 
     const modalContent = (
         <div className="fixed inset-0 z-100 flex items-center justify-center p-3.5 sm:p-4">
@@ -244,16 +306,23 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                 <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
                                     {UI_TEXT.ROUTE_SELECT.MODAL_TITLE}
                                 </h2>
-                                <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/5">
-                                    {currentCity.name}
-                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsCityModalOpen(true)}
+                                    className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors cursor-pointer"
+                                    title="도시 변경"
+                                >
+                                    <MapPin className="w-3 h-3"/>
+                                    <span>{currentCity.name}</span>
+                                    <ChevronDown className="w-3 h-3 opacity-60"/>
+                                </button>
                                 <span
                                     className="px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-500/10 dark:bg-blue-400/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
                                     {UI_TEXT.ROUTE_SELECT.CURRENT_ROUTE_PREFIX(selectedRoute)}
                                 </span>
                             </div>
                             <p className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                                {UI_TEXT.ROUTE_SELECT.TOTAL_ROUTES_COUNT(sortedAllRoutes.length)}
+                                {UI_TEXT.ROUTE_SELECT.TOTAL_ROUTES_COUNT(sortedAllRoutes.length, currentCity.name)}
                             </p>
                         </div>
                     </div>
@@ -502,5 +571,10 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         </div>
     );
 
-    return createPortal(modalContent, document.body);
+    return (
+        <>
+            {createPortal(modalContent, document.body)}
+            <CitySelectModal isOpen={isCityModalOpen} onClose={() => setIsCityModalOpen(false)} />
+        </>
+    );
 };

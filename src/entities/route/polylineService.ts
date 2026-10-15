@@ -7,6 +7,7 @@ import {CacheManager} from "@shared/cache/CacheManager";
 import {getStationMap} from "@entities/station/api";
 import type {StationLocation} from "@entities/station/types";
 import {isFiniteNumber, snapPointToPolyline} from "@shared/utils/geo";
+import {smoothPolylineSpline} from "./polylineChunker";
 
 import type {Feature, FeatureCollection} from "geojson";
 
@@ -189,7 +190,7 @@ async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
         const upStopsPoly = await buildPolylineFromStops(upStops);
         const upStopSpan = getPolylineSpanMeters(upStopsPoly);
         if (upStopSpan > 1500) {
-            upPolyline = upStopsPoly;
+            upPolyline = smoothPolylineSpline(upStopsPoly);
         }
     }
 
@@ -198,7 +199,7 @@ async function fetchRoutePolyline(routeId: string): Promise<PolylineData> {
         const downStopsPoly = await buildPolylineFromStops(downStops);
         const downStopSpan = getPolylineSpanMeters(downStopsPoly);
         if (downStopSpan > 1500) {
-            downPolyline = downStopsPoly;
+            downPolyline = smoothPolylineSpline(downStopsPoly);
         }
     }
 

@@ -52,16 +52,19 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
     // Load recent & bookmarked routes for quick switch bar
     const quickRoutes = useMemo(() => {
         const set = new Set<string>();
+        const bookmarkKey = currentCity.code === "32020" ? "wonju_bus_bookmarks" : `wbus_bookmarks_${currentCity.code}`;
+        const recentKey = `wbus_recent_routes_${currentCity.code}`;
+
         if (currentCity.code === "32020") {
             DEFAULT_QUICK_ROUTES.forEach((r) => set.add(r));
         }
         try {
-            const savedBookmarks = localStorage.getItem("wonju_bus_bookmarks");
+            const savedBookmarks = localStorage.getItem(bookmarkKey);
             if (savedBookmarks) {
                 const bms: string[] = JSON.parse(savedBookmarks);
                 bms.slice(0, 4).forEach((r) => set.add(r));
             }
-            const savedRecent = localStorage.getItem("wbus_recent_map_routes");
+            const savedRecent = localStorage.getItem(recentKey);
             if (savedRecent) {
                 const recents: string[] = JSON.parse(savedRecent);
                 recents.slice(0, 3).forEach((r) => set.add(r));

@@ -57,14 +57,14 @@ export function AppShell() {
 
     const {currentCity} = useCityContext();
 
-    // Only fetch route map & telemetry when real-time map is active or visited
-    const routeMap = useBusRouteMap(hasVisitedMap && isMapActive, currentCity.code);
+    // Fetch route map for current city
+    const routeMap = useBusRouteMap(true, currentCity.code);
     const allRoutes = useMemo(
-        () => (routeMap ? Object.keys(routeMap) : ["30", "34", "34-1"]),
-        [routeMap]
+        () => (routeMap ? Object.keys(routeMap) : currentCity.code === "32020" ? ["30", "34", "34-1"] : []),
+        [routeMap, currentCity.code]
     );
     const activeRoute = useMemo(() => {
-        if (!routeMap) return selectedRoute;
+        if (!routeMap || Object.keys(routeMap).length === 0) return selectedRoute;
         if (routeMap[selectedRoute]) return selectedRoute;
 
         if (currentCity.code === "32020" && routeMap[MAP_SETTINGS.DEFAULT_ROUTE]) {

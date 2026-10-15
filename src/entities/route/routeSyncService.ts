@@ -7,36 +7,79 @@ import {revalidatePath} from "next/cache";
 import {invalidateRouteCaches} from "./api";
 import type {GeoPolyline, RouteMapData} from "./types";
 import type {StationLocation} from "@entities/station/types";
+import {
+    calculatePolylineMeters,
+    chunkCoordinates,
+    isExcessiveDetour,
+    smoothPolylineSpline,
+    stitchPolylineSegments,
+} from "./polylineChunker";
 
 const DEFAULT_CITY_CODE = "32020"; // Wonju
 const DEFAULT_TAGO_URL = "https://apis.data.go.kr/1613000/BusRouteInfoInqireService";
 const DEFAULT_OSRM_URL = process.env.OSRM_API_URL || "https://router.project-osrm.org/route/v1/driving";
+const OSRM_CHUNK_SIZE = 18;
 
 function getServiceKey(): string | null {
     return process.env.DATA_GO_KR_SERVICE_KEY || process.env.DATA_GO_KR_SERVICE_KEYS?.split(",")[0] || null;
 }
 
-async function fetchOsrmPolyline(coords: [number, number][]): Promise<[number, number][] | null> {
-    if (coords.length < 2) return null;
+async function fetchOsrmSingleChunk(chunk: [number, number][]): Promise<[number, number][] | null> {
+    if (chunk.length < 2) return null;
     try {
-        const coordsStr = coords.map((c) => `${c[0].toFixed(6)},${c[1].toFixed(6)}`).join(";");
-        const radiuses = coords.map(() => 25).join(";");
-        const url = `${DEFAULT_OSRM_URL}/${coordsStr}?overview=full&geometries=geojson&steps=false&continue_straight=true&radiuses=${radiuses}`;
+        const coordsStr = chunk.map((c) => `${c[0].toFixed(6)},${c[1].toFixed(6)}`).join(";");
+        const radiuses = chunk.map(() => 45).join(";");
+        const url = `${DEFAULT_OSRM_URL}/${coordsStr}?overview=full&geometries=geojson&steps=false&continue_straight=false&radiuses=${radiuses}`;
         const res = await fetch(url, {
             headers: {"User-Agent": "wBus-Transit-Pipeline/2.0"},
-            signal: AbortSignal.timeout(6000),
+            signal: AbortSignal.timeout(5000),
         });
         if (res.ok) {
             const json = await res.json();
             const routeCoords = json?.routes?.[0]?.geometry?.coordinates as [number, number][] | undefined;
-            if (Array.isArray(routeCoords) && routeCoords.length >= coords.length) {
+            if (Array.isArray(routeCoords) && routeCoords.length >= 2) {
+                const straightDist = calculatePolylineMeters(chunk);
+                const routedDist = calculatePolylineMeters(routeCoords);
+                if (isExcessiveDetour(straightDist, routedDist)) {
+                    console.warn(
+                        `[RouteSyncService] OSRM detour detected (${routedDist.toFixed(0)}m vs straight ${straightDist.toFixed(0)}m). Falling back to smoothed spline.`
+                    );
+                    return null;
+                }
                 return routeCoords;
             }
         }
     } catch {
-        // Fallback to raw coords
+        // Fallback to null for this chunk
     }
     return null;
+}
+
+async function fetchOsrmPolyline(coords: [number, number][]): Promise<[number, number][] | null> {
+    if (coords.length < 2) return null;
+
+    if (coords.length <= OSRM_CHUNK_SIZE) {
+        const single = await fetchOsrmSingleChunk(coords);
+        return single && single.length >= 2 ? single : smoothPolylineSpline(coords);
+    }
+
+    const chunks = chunkCoordinates(coords, OSRM_CHUNK_SIZE);
+    const segments: [number, number][][] = [];
+
+    for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        const snapped = await fetchOsrmSingleChunk(chunk);
+        const segment = snapped && snapped.length >= 2 ? snapped : smoothPolylineSpline(chunk);
+        segments.push(segment);
+
+        // Small yield between chunks to prevent burst rate limits on public OSRM server
+        if (i < chunks.length - 1) {
+            await new Promise((resolve) => setTimeout(resolve, 30));
+        }
+    }
+
+    const stitched = stitchPolylineSegments(segments);
+    return stitched.length >= 2 ? stitched : coords;
 }
 
 
@@ -86,23 +129,8 @@ async function fetchTago<T>(endpoint: string, params: Record<string, string | nu
     return Array.isArray(items) ? items : [items];
 }
 
-function calculateHaversineMeters(p1: [number, number], p2: [number, number]): number {
-    const R = 6371000;
-    const toRad = (deg: number) => (deg * Math.PI) / 180;
-    const dLat = toRad(p2[1] - p1[1]);
-    const dLon = toRad(p2[0] - p1[0]);
-    const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos(toRad(p1[1])) * Math.cos(toRad(p2[1])) * Math.sin(dLon / 2) ** 2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 function calculatePolylineDistanceMeters(coords: [number, number][]): number {
-    let total = 0;
-    for (let i = 0; i < coords.length - 1; i++) {
-        total += calculateHaversineMeters(coords[i], coords[i + 1]);
-    }
-    return total;
+    return calculatePolylineMeters(coords);
 }
 
 export interface RouteRefreshOptions {
@@ -460,13 +488,21 @@ export async function generateSingleRoutePolyline(
             })),
         };
 
-        // Cache in /tmp/routes/{routeId}.json
+        // Cache in /tmp/routes/{routeId}.json and public/routes/{routeId}.json
         try {
             const tmpDir = "/tmp/routes";
             if (!fs.existsSync(tmpDir)) {
                 fs.mkdirSync(tmpDir, {recursive: true});
             }
             fs.writeFileSync(path.join(tmpDir, `${routeId}.json`), JSON.stringify(polylineData), "utf-8");
+
+            if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+                const localDir = path.join(process.cwd(), "public", "routes");
+                if (!fs.existsSync(localDir)) {
+                    fs.mkdirSync(localDir, {recursive: true});
+                }
+                fs.writeFileSync(path.join(localDir, `${routeId}.json`), JSON.stringify(polylineData, null, 2), "utf-8");
+            }
         } catch {
             // Read-only filesystem fallback
         }

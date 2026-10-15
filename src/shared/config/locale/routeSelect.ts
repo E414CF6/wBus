@@ -1,7 +1,7 @@
 export const ROUTE_SELECT_STRINGS = {
     MODAL_TITLE: "노선 선택",
     MODAL_ARIA: "실시간 노선 선택기",
-    SEARCH_PLACEHOLDER: "노선 번호 또는 행선지 검색 (예: 30, 연세대, 횡성, 문막...)",
+    SEARCH_PLACEHOLDER: "노선 번호 또는 행선지 검색 (예: 1, 100, 시청, 터미널...)",
     CLEAR_SEARCH_ARIA: "검색어 지우기",
     CATEGORY_ALL: (count: number) => `전체 (${count})`,
     CATEGORY_BOOKMARKS: (count: number) => `즐겨찾기 (${count})`, CATEGORY_YONSEI: "연세대",
@@ -11,7 +11,7 @@ export const ROUTE_SELECT_STRINGS = {
     CAT_100_PLUS: "100번대",
     CATEGORY_PUBLIC: "공영 / 순환",
     CURRENT_ROUTE_PREFIX: (route: string) => `현재: ${route}번`,
-    TOTAL_ROUTES_COUNT: (count: number) => `원주시 실시간 버스 ${count}개 노선`,
+    TOTAL_ROUTES_COUNT: (count: number, cityName = "원주시") => `${cityName} 실시간 버스 ${count}개 노선`,
     CAMPUS_ROUTES_LABEL: "연세대 캠퍼스 노선",
     RECENT_SEARCH_LABEL: "최근 조회:",
     NO_RESULTS_TITLE: "일치하는 노선이 없습니다",
