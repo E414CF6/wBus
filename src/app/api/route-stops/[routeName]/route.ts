@@ -96,12 +96,14 @@ export const GET = createApiHandler<BusStop[]>({
         const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
         return `route-stops:${cityCode}:${id}`;
     },
-    fetcher: (routeName, req) => {
+    fetcher: async (routeName, req) => {
         const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        const stops = await getNationwideRouteStops(routeName, cityCode);
+        if (stops.length > 0) return stops;
         if (cityCode === "32020") {
             return getWonjuRouteStops(routeName);
         }
-        return getNationwideRouteStops(routeName, cityCode);
+        return [];
     },
     ttl: 3600,
     errorMessage: "Failed to fetch route stops",

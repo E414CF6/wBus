@@ -11,8 +11,8 @@ interface NavTabButtonsProps {
 }
 
 const TABS: { id: NavTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-    {id: "schedule", label: UI_TEXT.BOTTOM_NAV.TAB_SCHEDULE, icon: Calendar},
     {id: "map", label: UI_TEXT.BOTTOM_NAV.TAB_MAP, icon: MapPin},
+    {id: "schedule", label: UI_TEXT.BOTTOM_NAV.TAB_SCHEDULE, icon: Calendar},
 ];
 
 export const NavTabButtons = memo(function NavTabButtons({

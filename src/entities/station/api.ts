@@ -11,7 +11,11 @@ const stationMapCache = new CacheManager<StationMapData>();
 
 async function getStationMapData(): Promise<StationMapData> {
     return stationMapCache.getOrFetch("stationMap", async () => {
-        return loadStaticData<StationMapData>(API_CONFIG.STATIC.PATHS.STATION_MAP);
+        try {
+            return await loadStaticData<StationMapData>(API_CONFIG.STATIC.PATHS.STATION_MAP);
+        } catch {
+            return {lastUpdated: new Date().toISOString(), stations: {}};
+        }
     });
 }
 

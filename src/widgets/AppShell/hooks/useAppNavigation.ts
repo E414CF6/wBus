@@ -6,15 +6,15 @@ import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
 
 export function resolveTabFromPathname(path: string): NavTab {
-    if (path.startsWith("/live") || path.startsWith("/map")) return "map";
-    return "schedule";
+    if (path.startsWith("/schedule")) return "schedule";
+    return "map";
 }
 
 export function useAppNavigation() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
-    // Derive active tab with client-side state preservation across tab switches
+    // Derive active tab with client-side state preservation across tab switches (Map-first default)
     const [activeTab, setActiveTab] = useState<NavTab>(() => resolveTabFromPathname(pathname));
     const [prevPathname, setPrevPathname] = useState(pathname);
     if (pathname !== prevPathname) {
@@ -38,10 +38,8 @@ export function useAppNavigation() {
     });
 
     const isMapActive = activeTab === "map";
-    const [hasVisitedMap, setHasVisitedMap] = useState<boolean>(() => isMapActive);
-    if (isMapActive && !hasVisitedMap) {
-        setHasVisitedMap(true);
-    }
+    // In map-centric architecture, map is always mounted and ready
+    const hasVisitedMap = true;
 
     // Synchronize route & timetable subtab when searchParams change
     const [prevSearchParams, setPrevSearchParams] = useState(searchParams);
@@ -131,14 +129,13 @@ export function useAppNavigation() {
             setActiveTab(tab);
             let targetUrl: string;
             if (tab === "map") {
-                setHasVisitedMap(true);
                 const routeParam = selectedRoute
                     ? `?route=${encodeURIComponent(selectedRoute)}`
                     : "";
-                targetUrl = `/live${routeParam}`;
+                targetUrl = `/${routeParam}`;
             } else {
                 const subTabParam = timetableSubTab === "all" ? "?subTab=all" : "";
-                targetUrl = `/${subTabParam}`;
+                targetUrl = `/schedule${subTabParam}`;
             }
 
             if (typeof window !== "undefined") {
@@ -173,7 +170,7 @@ export function useAppNavigation() {
                 window.history.replaceState(
                     null,
                     "",
-                    `/live?route=${encodeURIComponent(route)}`
+                    `/?route=${encodeURIComponent(route)}`
                 );
             }
         },
@@ -183,13 +180,12 @@ export function useAppNavigation() {
     const handleSelectMapRoute = useCallback(
         (routeName: string) => {
             handleRouteChange(routeName);
-            setHasVisitedMap(true);
             setActiveTab("map");
             if (typeof window !== "undefined") {
                 window.history.pushState(
                     null,
                     "",
-                    `/live?route=${encodeURIComponent(routeName)}`
+                    `/?route=${encodeURIComponent(routeName)}`
                 );
             }
         },
@@ -205,7 +201,6 @@ export function useAppNavigation() {
         setSelectedRoute,
         isMapActive,
         hasVisitedMap,
-        setHasVisitedMap,
         handleTabChange,
         handleScheduleSubTabChange,
         handleRouteChange,

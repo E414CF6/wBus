@@ -39,16 +39,6 @@ export async function getPolyline(routeKey: string, cityCode?: string): Promise<
     const cCode = cityCode || (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020" : "32020");
     const cacheKey = `${cCode}:${routeKey}`;
     return polylineCache.getOrFetch(cacheKey, async () => {
-        // 1. For Wonju, attempt instant zero-latency static file load first
-        if (cCode === "32020") {
-            try {
-                return await loadStaticData<GeoPolyline>(`${API_CONFIG.STATIC.PATHS.ROUTE_DIR}/${routeKey}.json`);
-            } catch {
-                // Fall through to API route
-            }
-        }
-
-        // 2. Fetch from dedicated nationwide polyline API (with OSRM road snapping & disk cache)
         try {
             return await fetchAPI<GeoPolyline>(`/api/polyline/${encodeURIComponent(routeKey)}?cityCode=${cCode}`);
         } catch (error) {

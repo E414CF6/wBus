@@ -30,12 +30,15 @@ export function useBusStop(routeName: string, cityCode = "32020"): BusStop[] {
     return stops ?? [];
 }
 
-// Fetcher for all station map
 const stationMapFetcher = async (url: string): Promise<Record<string, StationLocation>> => {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch station map");
-    const json = await res.json();
-    return json.stations || json;
+    try {
+        const res = await fetch(url);
+        if (!res.ok) return {};
+        const json = await res.json();
+        return json.stations || json || {};
+    } catch {
+        return {};
+    }
 };
 
 // useAllStations (all bus stops from stationMap.json)

@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import React, {useEffect, useMemo, useState} from "react";
+import {MapPin, X} from "lucide-react";
 
 import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 
@@ -89,73 +90,103 @@ export function AppShell() {
         handleRouteChange(activeRoute);
     }, [routeMap, activeRoute, selectedRoute, handleRouteChange]);
 
-    const isFixedLayout = activeTab !== "schedule";
-
     return (
-        <div
-            className={
-                isFixedLayout
-                    ? "fixed inset-0 flex flex-col w-full h-[100dvh] overflow-hidden bg-slate-50 dark:bg-[#0b0f19]"
-                    : "relative min-h-[100dvh] w-full flex flex-col bg-slate-50 dark:bg-[#0b0f19]"
-            }
-        >
-            {/* 1. Real-time Map View Container (Lazy mounted ONLY when map is activated by user) */}
-            {hasVisitedMap && (
-                <div
-                    className={`relative flex-1 overflow-hidden ${
-                        activeTab === "map" ? "block" : "hidden"
-                    }`}
-                >
-                    {/* Map Top Floating Header & Fast Route Switcher with Detailed Live Status */}
-                    <MapRouteHeader
-                        selectedRoute={activeRoute}
-                        onSelectRoute={handleRouteChange}
-                        runningBuses={liveBusData.sortedList}
-                        allRoutes={allRoutes}
-                        connectionStatus={liveBusData.connectionStatus}
-                        hasFetched={liveBusData.hasFetched}
-                        isDegraded={liveBusData.isDegraded}
-                        onReconnect={liveBusData.reconnect}
+        <div className="fixed inset-0 flex flex-col w-full h-[100dvh] overflow-hidden bg-slate-50 dark:bg-[#0b0f19]">
+            {/* 1. Real-time Map View Container (Always persistent & active, zero reload lag) */}
+            <div className="relative flex-1 w-full h-full overflow-hidden">
+                {/* Map Top Floating Header & Fast Route Switcher with Detailed Live Status */}
+                <MapRouteHeader
+                    selectedRoute={activeRoute}
+                    onSelectRoute={handleRouteChange}
+                    runningBuses={liveBusData.sortedList}
+                    allRoutes={allRoutes}
+                    connectionStatus={liveBusData.connectionStatus}
+                    hasFetched={liveBusData.hasFetched}
+                    isDegraded={liveBusData.isDegraded}
+                    onReconnect={liveBusData.reconnect}
+                    selectedDirection={selectedDirection}
+                    onSelectDirection={setSelectedDirection}
+                />
+
+                <MapWrapper>
+                    <RouteLayer
+                        routeName={activeRoute}
+                        onRouteChange={handleRouteChange}
+                        enabled={true}
                         selectedDirection={selectedDirection}
-                        onSelectDirection={setSelectedDirection}
+                        cityCode={currentCity.code}
                     />
+                </MapWrapper>
+            </div>
 
-                    <MapWrapper>
-                        <RouteLayer
-                            routeName={activeRoute}
-                            onRouteChange={handleRouteChange}
-                            enabled={isMapActive}
-                            selectedDirection={selectedDirection}
-                            cityCode={currentCity.code}
-                        />
-                    </MapWrapper>
-                </div>
-            )}
-
-            {/* 2. Schedule Timetable View (Wonju Timetable / Yonsei Timetable OR Nationwide City Route Directory) */}
+            {/* 2. Schedule Timetable Slide-Over Sheet (Interactive layer over live map) */}
             {activeTab === "schedule" && (
-                <main
-                    className="w-full min-h-dvh px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-32 sm:pb-36 flex flex-col items-center">
-                    <div className="w-full max-w-6xl flex-1 flex flex-col">
-                        {currentCity.code === "32020" ? (
-                            timetableSubTab === "yonsei" ? (
-                                <YonseiTimetableWidget
-                                    onSelectMapRoute={handleSelectMapRoute}
-                                    dayMode={dayMode}
-                                    onDayModeChange={setDayMode}
-                                />
+                <div
+                    className="fixed inset-0 z-40 flex flex-col justify-end sm:justify-center items-center bg-black/40 backdrop-blur-md transition-opacity duration-300 animate-fadeIn"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            handleTabChange("map");
+                        }
+                    }}
+                >
+                    <div
+                        className="relative w-full sm:max-w-5xl max-h-[90dvh] sm:max-h-[86dvh] bg-white dark:bg-[#111218] rounded-t-[32px] sm:rounded-[32px] shadow-2xl border border-black/10 dark:border-white/10 flex flex-col overflow-hidden animate-slideUp"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header Bar */}
+                        <div className="flex items-center justify-between px-5 sm:px-8 py-4 border-b border-black/5 dark:border-white/5 shrink-0 bg-white/80 dark:bg-[#111218]/80 backdrop-blur-xl">
+                            <div className="flex items-center gap-2.5">
+                                <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
+                                <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                                    {currentCity.name} 버스 시간표 및 노선 안내
+                                </h2>
+                                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                                    {currentCity.province}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleTabChange("map")}
+                                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold shadow-sm transition-all cursor-pointer active:scale-95"
+                                    title="지도로 돌아가기"
+                                >
+                                    <MapPin className="w-3.5 h-3.5" />
+                                    <span>지도 보기</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleTabChange("map")}
+                                    className="p-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer active:scale-95"
+                                    aria-label="닫기"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Scrollable Content */}
+                        <div className="flex-1 overflow-y-auto px-3 sm:px-8 py-5 pb-28 sm:pb-16 custom-scrollbar">
+                            {currentCity.code === "32020" ? (
+                                timetableSubTab === "yonsei" ? (
+                                    <YonseiTimetableWidget
+                                        onSelectMapRoute={handleSelectMapRoute}
+                                        dayMode={dayMode}
+                                        onDayModeChange={setDayMode}
+                                    />
+                                ) : (
+                                    <TimetableWidget
+                                        onSelectMapRoute={handleSelectMapRoute}
+                                    />
+                                )
                             ) : (
-                                <TimetableWidget
+                                <CityTimetableWidget
                                     onSelectMapRoute={handleSelectMapRoute}
                                 />
-                            )
-                        ) : (
-                            <CityTimetableWidget
-                                onSelectMapRoute={handleSelectMapRoute}
-                            />
-                        )}
+                            )}
+                        </div>
                     </div>
-                </main>
+                </div>
             )}
 
             {/* Unified Bottom Floating Pill Navigation Bar */}
