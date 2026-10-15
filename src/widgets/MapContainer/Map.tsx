@@ -8,6 +8,7 @@ import {createMapViewFromMap, getInitialMapView, saveMapView} from "@features/ma
 import {MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useCityContext} from "@entities/city";
 
 import * as maplibregl from "maplibre-gl";
 import {setWorkerUrl} from "maplibre-gl";
@@ -86,11 +87,28 @@ export default function Map({onReady, children}: MapProps) {
         }
     }, [handleLoad]);
 
+    const {handleViewportChange, isAutoDetectEnabled} = useCityContext();
+    const viewportDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
     const handleMoveEnd = useCallback(() => {
-        if (mapRef.current) {
-            saveMapView(createMapViewFromMap(mapRef.current));
+        if (!mapRef.current) return;
+        saveMapView(createMapViewFromMap(mapRef.current));
+
+        if (isAutoDetectEnabled) {
+            if (viewportDebounceTimerRef.current) {
+                clearTimeout(viewportDebounceTimerRef.current);
+            }
+            viewportDebounceTimerRef.current = setTimeout(() => {
+                if (!mapRef.current) return;
+                const center = mapRef.current.getCenter();
+                const zoom = mapRef.current.getZoom();
+                const detectedCity = handleViewportChange(center.lat, center.lng, zoom);
+                if (detectedCity) {
+                    showLocationToast(`📍 ${detectedCity.name} (${detectedCity.province}) 지역 인식됨`, "info");
+                }
+            }, 350);
         }
-    }, []);
+    }, [handleViewportChange, isAutoDetectEnabled, showLocationToast]);
 
     const handleGeolocateError = useCallback(
         (e: { code?: number; message?: string }) => {
@@ -116,12 +134,15 @@ export default function Map({onReady, children}: MapProps) {
         return () => clearTimeout(timer);
     }, [handleLoad]);
 
-    // Cleanup map context and toast timer on unmounting
+    // Cleanup map context, toast timer, and viewport debounce timer on unmounting
     useEffect(() => {
         return () => {
             setMap(null);
             if (toastTimerRef.current) {
                 clearTimeout(toastTimerRef.current);
+            }
+            if (viewportDebounceTimerRef.current) {
+                clearTimeout(viewportDebounceTimerRef.current);
             }
         };
     }, [setMap]);

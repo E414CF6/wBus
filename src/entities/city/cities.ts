@@ -180,20 +180,36 @@ export function searchCities(query: string): CityInfo[] {
 }
 
 /**
- * Finds the nearest city from a given GPS coordinate (lat, lng) using Haversine distance
+ * Finds the nearest city from a given coordinate (lat, lng) along with the approximate distance in km.
+ * Uses flat-surface projection with latitude scaling (accurate to within 0.5% across South Korea).
  */
-export function findNearestCity(lat: number, lng: number): CityInfo {
+export function findNearestCityWithDistance(lat: number, lng: number): { city: CityInfo; distanceKm: number } {
     let nearest = DEFAULT_CITY;
     let minDistanceSq = Infinity;
 
+    const latRad = (lat * Math.PI) / 180;
+    const cosLat = Math.cos(latRad);
+
     for (const city of NATIONWIDE_CITIES) {
-        const dLat = city.lat - lat;
-        const dLng = city.lng - lng;
+        const dLat = (city.lat - lat) * 111.0;
+        const dLng = (city.lng - lng) * 111.0 * cosLat;
         const distSq = dLat * dLat + dLng * dLng;
         if (distSq < minDistanceSq) {
             minDistanceSq = distSq;
             nearest = city;
         }
     }
-    return nearest;
+
+    return {
+        city: nearest,
+        distanceKm: Math.sqrt(minDistanceSq),
+    };
 }
+
+/**
+ * Finds the nearest city from a given GPS coordinate (lat, lng)
+ */
+export function findNearestCity(lat: number, lng: number): CityInfo {
+    return findNearestCityWithDistance(lat, lng).city;
+}
+

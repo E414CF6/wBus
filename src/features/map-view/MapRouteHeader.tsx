@@ -43,7 +43,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                               }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isCityModalOpen, setIsCityModalOpen] = useState(false);
-    const {currentCity} = useCityContext();
+    const {currentCity, isAutoDetectEnabled} = useCityContext();
 
     // Current route metadata
     const meta = useMemo(() => getRouteMeta(selectedRoute), [selectedRoute]);
@@ -179,10 +179,15 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                         type="button"
                         onClick={() => setIsCityModalOpen(true)}
                         className="flex items-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-full font-black text-xs sm:text-sm tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-850 dark:text-slate-100 border border-black/5 dark:border-white/10 shrink-0"
-                        title={`서비스 지역: ${currentCity.name} (${currentCity.province}) - 클릭하여 도시 변경`}
+                        title={`서비스 지역: ${currentCity.name} (${currentCity.province}) ${isAutoDetectEnabled ? "- 지도 이동 시 지역 자동 인식 켜짐" : "- 클릭하여 도시 변경"}`}
                         aria-label="서비스 지역 선택"
                     >
-                        <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0"/>
+                        <span className="relative flex items-center justify-center">
+                            <MapPin className="w-3.5 h-3.5 text-blue-500 shrink-0"/>
+                            {isAutoDetectEnabled && (
+                                <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900 animate-pulse" />
+                            )}
+                        </span>
                         <span className="whitespace-nowrap font-bold">
                             <span className="sm:hidden">{currentCity.name.replace(/특별시|광역시|특별자치시|특별자치도/g, "")}</span>
                             <span className="hidden sm:inline">{currentCity.name}</span>

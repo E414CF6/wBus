@@ -96,8 +96,8 @@ export function getFallbackPolylines(polylineMap: Map<string, BusPolylineSet>, a
  * Hook to retrieve route polyline and geometry data without subscribing to live bus location telemetry.
  * Prevents unnecessary re-renders when live buses move.
  */
-export function useRoutePolylineData(routeName: string, enabled: boolean = true) {
-    const routeInfo = useRouteInfo(routeName, enabled);
+export function useRoutePolylineData(routeName: string, enabled: boolean = true, cityCode: string = "32020") {
+    const routeInfo = useRouteInfo(routeName, enabled, cityCode);
     const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
     const polylineMap = useBusPolylineMap(routeIds);
     const activeRouteId = routeIds[0] ?? null;

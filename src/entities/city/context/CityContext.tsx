@@ -1,8 +1,8 @@
 "use client";
 
-import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from "react";
+import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from "react";
 import type {CityInfo} from "../types";
-import {DEFAULT_CITY, findNearestCity, getCityByCode, NATIONWIDE_CITIES} from "../cities";
+import {DEFAULT_CITY, findNearestCity, findNearestCityWithDistance, getCityByCode, NATIONWIDE_CITIES} from "../cities";
 import {STORAGE_KEYS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 
@@ -10,12 +10,19 @@ import {useAppMapContext} from "@shared/context/AppMapContext";
 // Types
 // ----------------------------------------------------------------------
 
+interface SetCityOptions {
+    skipFlyTo?: boolean;
+}
+
 interface CityContextType {
     currentCity: CityInfo;
-    setCity: (cityOrCode: CityInfo | string) => void;
+    setCity: (cityOrCode: CityInfo | string, options?: SetCityOptions) => void;
     detectCurrentLocation: () => Promise<CityInfo | null>;
     isDetecting: boolean;
     availableCities: CityInfo[];
+    isAutoDetectEnabled: boolean;
+    setIsAutoDetectEnabled: (enabled: boolean) => void;
+    handleViewportChange: (lat: number, lng: number, zoom: number) => CityInfo | null;
 }
 
 interface CityContextProviderProps {
@@ -54,30 +61,76 @@ export function CityContextProvider({children}: CityContextProviderProps) {
         return DEFAULT_CITY;
     });
 
+    const [isAutoDetectEnabled, setIsAutoDetectEnabledState] = useState<boolean>(() => {
+        if (typeof window === "undefined") return true;
+        try {
+            const saved = localStorage.getItem(STORAGE_KEYS.CITY_AUTO_DETECT);
+            if (saved !== null) {
+                return saved !== "false";
+            }
+        } catch {
+            // Ignore
+        }
+        return true;
+    });
+
+    const setIsAutoDetectEnabled = useCallback((enabled: boolean) => {
+        setIsAutoDetectEnabledState(enabled);
+        try {
+            localStorage.setItem(STORAGE_KEYS.CITY_AUTO_DETECT, String(enabled));
+        } catch {
+            // Ignore
+        }
+    }, []);
+
     const [isDetecting, setIsDetecting] = useState(false);
+    const isFlyingRef = useRef(false);
     const {map} = useAppMapContext();
 
     const setCity = useCallback(
-        (cityOrCode: CityInfo | string) => {
+        (cityOrCode: CityInfo | string, options?: SetCityOptions) => {
             const nextCity = typeof cityOrCode === "string" ? getCityByCode(cityOrCode) : cityOrCode;
-            setCurrentCityState(nextCity);
+            setCurrentCityState((prev) => (prev.code === nextCity.code ? prev : nextCity));
             try {
                 localStorage.setItem(STORAGE_KEYS.CITY_CODE, nextCity.code);
             } catch {
                 // Ignore storage failure
             }
 
-            // Animate map to the city center
-            if (map) {
+            // Animate map to the city center unless skipFlyTo is set
+            if (map && !options?.skipFlyTo) {
+                isFlyingRef.current = true;
                 map.flyTo({
                     center: [nextCity.lng, nextCity.lat],
                     zoom: nextCity.zoom,
                     duration: 1200,
                     essential: true,
                 });
+                setTimeout(() => {
+                    isFlyingRef.current = false;
+                }, 1300);
             }
         },
         [map]
+    );
+
+    const handleViewportChange = useCallback(
+        (lat: number, lng: number, zoom: number): CityInfo | null => {
+            if (!isAutoDetectEnabled || isFlyingRef.current) return null;
+            // When zoomed out too far (e.g. country view), avoid rapid switching
+            if (zoom < 8.5) return null;
+
+            const {city, distanceKm} = findNearestCityWithDistance(lat, lng);
+            // If the viewport center is too far from any city center (e.g. open ocean), skip
+            if (distanceKm > 65) return null;
+
+            if (city.code !== currentCity.code) {
+                setCity(city, {skipFlyTo: true});
+                return city;
+            }
+            return null;
+        },
+        [isAutoDetectEnabled, currentCity.code, setCity]
     );
 
     const detectCurrentLocation = useCallback(async (): Promise<CityInfo | null> => {
@@ -112,9 +165,21 @@ export function CityContextProvider({children}: CityContextProviderProps) {
             detectCurrentLocation,
             isDetecting,
             availableCities: NATIONWIDE_CITIES,
+            isAutoDetectEnabled,
+            setIsAutoDetectEnabled,
+            handleViewportChange,
         }),
-        [currentCity, setCity, detectCurrentLocation, isDetecting]
+        [
+            currentCity,
+            setCity,
+            detectCurrentLocation,
+            isDetecting,
+            isAutoDetectEnabled,
+            setIsAutoDetectEnabled,
+            handleViewportChange,
+        ]
     );
 
     return <CityContext.Provider value={value}>{children}</CityContext.Provider>;
 }
+

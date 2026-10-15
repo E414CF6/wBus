@@ -3,11 +3,12 @@ import {getRouteDetails, getRouteMapData} from "@entities/route/api";
 import {getStationMap} from "@entities/station/api";
 import type {BusStop} from "@entities/station/types";
 import {buildCacheControl} from "@shared/cache/cachePolicy";
+import {fetchCityRoutes, fetchRouteStops} from "@entities/bus";
 
 // Edge CDN ISR Cache: Revalidate every 24 hours (86400 seconds)
 export const revalidate = 86400;
 
-async function getRouteStopsByRouteName(routeName: string): Promise<BusStop[]> {
+async function getWonjuRouteStops(routeName: string): Promise<BusStop[]> {
     let routeIds: string[];
     if (routeName.startsWith("WJB")) {
         routeIds = [routeName];
@@ -43,6 +44,44 @@ async function getRouteStopsByRouteName(routeName: string): Promise<BusStop[]> {
     return Array.from(stopMap.values());
 }
 
+async function getNationwideRouteStops(routeName: string, cityCode: string): Promise<BusStop[]> {
+    try {
+        const rawRoutes = await fetchCityRoutes(cityCode, routeName);
+        const matched = rawRoutes.filter((r) => String(r.routeno) === routeName);
+        const routeIds = (matched.length > 0 ? matched : rawRoutes).map((r) => r.routeid);
+        if (routeIds.length === 0) return [];
+
+        const stopMap = new Map<string, BusStop>();
+
+        for (const rId of routeIds) {
+            try {
+                const stops = await fetchRouteStops(rId, cityCode);
+                for (const s of stops) {
+                    const key = `${s.nodeid}-${s.updowncd ?? ""}`;
+                    if (!stopMap.has(key)) {
+                        stopMap.set(key, {
+                            nodeid: s.nodeid,
+                            nodenm: s.nodenm,
+                            nodeno: String(s.nodeno ?? ""),
+                            gpslati: Number(s.gpslati),
+                            gpslong: Number(s.gpslong),
+                            nodeord: Number(s.nodeord ?? 0),
+                            updowncd: Number(s.updowncd ?? 0),
+                        });
+                    }
+                }
+            } catch (err) {
+                console.warn(`[getNationwideRouteStops] Failed for routeId ${rId}:`, err);
+            }
+        }
+
+        return Array.from(stopMap.values());
+    } catch (e) {
+        console.error(`[getNationwideRouteStops] Failed to fetch stops for city ${cityCode}:`, e);
+        return [];
+    }
+}
+
 const CACHE_CONTROL = buildCacheControl({
     ttlSeconds: 3600,
     maxAgeSeconds: 300,
@@ -53,8 +92,17 @@ const CACHE_CONTROL = buildCacheControl({
 
 export const GET = createApiHandler<BusStop[]>({
     paramKey: "routeName",
-    cacheKey: (id) => `route-stops:${id}`,
-    fetcher: getRouteStopsByRouteName,
+    cacheKey: (id, req) => {
+        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        return `route-stops:${cityCode}:${id}`;
+    },
+    fetcher: (routeName, req) => {
+        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        if (cityCode === "32020") {
+            return getWonjuRouteStops(routeName);
+        }
+        return getNationwideRouteStops(routeName, cityCode);
+    },
     ttl: 3600,
     errorMessage: "Failed to fetch route stops",
     cacheControl: CACHE_CONTROL,

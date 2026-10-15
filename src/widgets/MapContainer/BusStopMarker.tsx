@@ -6,6 +6,7 @@ import type {BusStop} from "@entities/station/types";
 import {MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useCityContext} from "@entities/city";
 
 import {BusStopPopup} from "@entities/station";
 import {useRoutePolylineData} from "@features/live-tracking";
@@ -237,19 +238,23 @@ BusStopMarkerItem.displayName = "BusStopMarkerItem";
 export default ({
                     routeName,
                     onRouteChange,
+                    cityCode,
                 }: {
     routeName: string;
     onRouteChange?: (routeName: string) => void;
+    cityCode?: string;
 }) => {
-    const routeStops = useBusStop(routeName);
+    const {currentCity} = useCityContext();
+    const effectiveCityCode = cityCode || currentCity?.code || "32020";
+    const routeStops = useBusStop(routeName, effectiveCityCode);
     const {map} = useAppMapContext();
     const [zoom, setZoom] = useState(map?.getZoom() ?? MAP_SETTINGS.ZOOM.DEFAULT);
     const [bounds, setBounds] = useState(map?.getBounds() ?? null);
-    const allStations = useAllStations(zoom >= 15.0);
+    const allStations = useAllStations(effectiveCityCode === "32020" && zoom >= 15.0);
     const rafRef = useRef<number | null>(null);
 
     // Retrieve polyline data to synchronize stop marker & label colors with route segments
-    const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName);
+    const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName, true, effectiveCityCode);
     const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo?.vehicleRouteIds]);
 
     const validRouteIds = useMemo(() => {

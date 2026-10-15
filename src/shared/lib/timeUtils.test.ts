@@ -88,7 +88,7 @@ describe("timeUtils", () => {
         });
 
         it("formats remaining days, hours, or minutes for future dates", () => {
-            const futureMinutes = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+            const futureMinutes = new Date(Date.now() + 15 * 60 * 1000 + 2000).toISOString();
             expect(formatRemainingTime(futureMinutes)).toContain("15분 후");
 
             const futureHours = new Date(Date.now() + 2 * 3600 * 1000 + 10 * 60 * 1000).toISOString();

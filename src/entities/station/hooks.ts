@@ -15,8 +15,14 @@ const apiFetcher = async (url: string) => {
 };
 
 // useBusStop (stops for a specific route)
-export function useBusStop(routeName: string) {
-    const {data: stops} = useSWR(routeName ? `/api/route-stops/${routeName}` : null, apiFetcher, {
+export function useBusStop(routeName: string, cityCode = "32020") {
+    const url = routeName
+        ? cityCode === "32020"
+            ? `/api/route-stops/${encodeURIComponent(routeName)}`
+            : `/api/route-stops/${encodeURIComponent(routeName)}?cityCode=${cityCode}`
+        : null;
+
+    const {data: stops} = useSWR(url, apiFetcher, {
         revalidateOnFocus: false, // Stops are static
         dedupingInterval: 60000, fallbackData: [],
     });

@@ -94,6 +94,7 @@ export const UI_CONFIG = {
 export const STORAGE_KEYS = {
     ROUTE_ID: "wbus_selected_route",
     CITY_CODE: "wbus_selected_city",
+    CITY_AUTO_DETECT: "wbus_city_auto_detect",
     MAP_VIEW: "wbus_map_view",
     ACTIVE_TAB: "wbus_active_tab",
     TIMETABLE_SUBTAB: "wbus_timetable_subtab",

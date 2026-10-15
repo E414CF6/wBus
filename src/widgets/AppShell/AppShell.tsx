@@ -83,19 +83,10 @@ export function AppShell() {
     }, [activeRoute]);
 
     useEffect(() => {
-        if (!routeMap) return;
+        if (!routeMap || Object.keys(routeMap).length === 0) return;
         if (!activeRoute || activeRoute === selectedRoute) return;
-        try {
-            localStorage.setItem(STORAGE_KEYS.ROUTE_ID, activeRoute);
-        } catch (e) {
-            if (APP_CONFIG.IS_DEV) {
-                console.warn(
-                    "[handleRouteChange] Failed to save route preference to localStorage",
-                    e
-                );
-            }
-        }
-    }, [routeMap, activeRoute, selectedRoute]);
+        handleRouteChange(activeRoute);
+    }, [routeMap, activeRoute, selectedRoute, handleRouteChange]);
 
     const isFixedLayout = activeTab !== "schedule";
 
@@ -134,6 +125,7 @@ export function AppShell() {
                             onRouteChange={handleRouteChange}
                             enabled={isMapActive}
                             selectedDirection={selectedDirection}
+                            cityCode={currentCity.code}
                         />
                     </MapWrapper>
                 </div>

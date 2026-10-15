@@ -4,6 +4,7 @@ import {buildSegmentedRouteGeoJson} from "@entities/route/polylineService";
 import {useRoutePolylineData} from "@features/live-tracking";
 import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useCityContext} from "@entities/city";
 import {useTheme} from "next-themes";
 import {useEffect, useMemo, useRef} from "react";
 import {Layer, Source} from "react-map-gl/maplibre";
@@ -11,14 +12,18 @@ import {Layer, Source} from "react-map-gl/maplibre";
 export interface BusRoutePolylineProps {
     routeName: string;
     selectedDirection?: "all" | "up" | "down";
+    cityCode?: string;
 }
 
-export default function BusRoutePolyline({routeName, selectedDirection = "all"}: BusRoutePolylineProps) {
+export default function BusRoutePolyline({routeName, selectedDirection = "all", cityCode}: BusRoutePolylineProps) {
     const {map} = useAppMapContext();
     const {resolvedTheme} = useTheme();
     const isDark = resolvedTheme === "dark";
 
-    const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName);
+    const {currentCity} = useCityContext();
+    const effectiveCityCode = cityCode || currentCity?.code || "32020";
+
+    const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName, true, effectiveCityCode);
     const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo?.vehicleRouteIds]);
     const lastBoundsKeyRef = useRef<string | null>(null);
 

@@ -11,6 +11,7 @@ import {useBusData} from "@features/live-tracking/useBusData";
 
 import {API_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
+import {useCityContext} from "@entities/city";
 
 import PopupMarquee from "@shared/ui/MarqueeText";
 
@@ -172,9 +173,13 @@ interface BusMarkerProps {
     enabled?: boolean;
     onPopupOpen?: (routeName: string) => void;
     onPopupClose?: () => void;
+    cityCode?: string;
 }
 
-export default function BusMarker({routeName, enabled = true, onPopupOpen, onPopupClose}: BusMarkerProps) {
+export default function BusMarker({routeName, enabled = true, onPopupOpen, onPopupClose, cityCode}: BusMarkerProps) {
+    const {currentCity} = useCityContext();
+    const effectiveCityCode = cityCode || currentCity?.code || "32020";
+
     // Data Fetching
     const {
         routeInfo,
@@ -183,7 +188,7 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
         polylineMap,
         fallbackPolylines,
         activeRouteId,
-    } = useBusData(routeName, enabled);
+    } = useBusData(routeName, enabled, effectiveCityCode);
 
     const [selectedBusKey, setSelectedBusKey] = useState<string | null>(null);
 

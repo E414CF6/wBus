@@ -26,7 +26,14 @@ const PROVINCE_GROUPS: { label: string; match: (city: CityInfo) => boolean }[] =
 
 export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose}) => {
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
-    const {currentCity, setCity, detectCurrentLocation, isDetecting} = useCityContext();
+    const {
+        currentCity,
+        setCity,
+        detectCurrentLocation,
+        isDetecting,
+        isAutoDetectEnabled,
+        setIsAutoDetectEnabled,
+    } = useCityContext();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedTab, setSelectedTab] = useState("전체");
@@ -166,8 +173,34 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                         className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200/60 dark:border-blue-800/60 rounded-xl text-blue-700 dark:text-blue-300 font-bold text-xs sm:text-sm transition-all duration-200 cursor-pointer disabled:opacity-50"
                     >
                         <Navigation className={`w-3.5 h-3.5 ${isDetecting ? "animate-spin" : ""}`} />
-                        <span>{isDetecting ? "내 위치 탐색 중..." : "현재 내 위치 기준으로 도시 자동 감색"}</span>
+                        <span>{isDetecting ? "내 위치 탐색 중..." : "현재 내 위치 기준으로 도시 자동 검색"}</span>
                     </button>
+
+                    {/* Viewport Auto-Detect Toggle */}
+                    <div className="flex items-center justify-between px-3 py-2 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-black/5 dark:border-white/5">
+                        <div className="flex items-center gap-2 min-w-0">
+                            <Compass className="w-4 h-4 text-blue-500 shrink-0" />
+                            <div className="text-left">
+                                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                                    지도 이동 시 지역 자동 인식
+                                </p>
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                                    화면 중심 지역에 맞춰 노선 목록 자동 갱신
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setIsAutoDetectEnabled(!isAutoDetectEnabled)}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
+                                isAutoDetectEnabled
+                                    ? "bg-blue-600 text-white shadow-sm shadow-blue-500/25"
+                                    : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                            }`}
+                        >
+                            {isAutoDetectEnabled ? "켜짐" : "꺼짐"}
+                        </button>
+                    </div>
 
                     {/* Province Filter Chips */}
                     {!searchQuery && (
