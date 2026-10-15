@@ -2,6 +2,8 @@
 
 import type {RouteInfo, RouteVariation} from "@entities/route/types";
 import {getRouteInfo, getRouteMap, getRouteVariations} from "@entities/route/api";
+import {registerDynamicRouteMeta} from "./routeMetadata";
+import type {RawCityRoute} from "@entities/bus";
 
 import {APP_CONFIG} from "@shared/config/env";
 
@@ -59,11 +61,15 @@ export function useBusRouteMap(enabled: boolean = true, cityCode: string = "3202
     const key = enabled ? (cityCode === "32020" ? "busRouteMap" : `busRouteMap:${cityCode}`) : null;
     const fetcher = async () => {
         if (cityCode === "32020") {
-            return getRouteMap();
+            const staticMap = await getRouteMap();
+            return staticMap;
         }
         const res = await fetch(`/api/routes?cityCode=${cityCode}`);
         if (!res.ok) throw new Error("Failed to fetch city routes");
         const json = await res.json();
+        if (json.routes && Array.isArray(json.routes)) {
+            registerDynamicRouteMeta(cityCode, json.routes);
+        }
         return (json.route_numbers || {}) as Record<string, string[]>;
     };
 
@@ -79,6 +85,36 @@ export function useBusRouteMap(enabled: boolean = true, cityCode: string = "3202
     }
 
     return data ?? null;
+}
+
+/**
+ * Hook to retrieve full city route list with metadata (start/end nodes, hours, route types)
+ */
+export function useCityRoutes(cityCode: string = "32020", enabled: boolean = true) {
+    const key = enabled ? `cityRoutes:${cityCode}` : null;
+    const fetcher = async () => {
+        const res = await fetch(`/api/routes?cityCode=${cityCode}`);
+        if (!res.ok) throw new Error("Failed to fetch city routes");
+        const json = await res.json();
+        if (json.routes && Array.isArray(json.routes)) {
+            registerDynamicRouteMeta(cityCode, json.routes);
+        }
+        return json;
+    };
+
+    const {data, error, isLoading, mutate} = useSWR(key, fetcher, {
+        revalidateOnFocus: false,
+        revalidateOnReconnect: false,
+        dedupingInterval: 60000,
+    });
+
+    return {
+        routes: (data?.routes || []) as RawCityRoute[],
+        routeMap: (data?.route_numbers || {}) as Record<string, string[]>,
+        isLoading: isLoading && !data,
+        error,
+        refresh: mutate,
+    };
 }
 
 /**

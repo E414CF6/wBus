@@ -16,6 +16,7 @@ import {BottomNav} from "@widgets/BottomNav";
 
 import {TimetableWidget} from "@widgets/TimetableWidget";
 import {YonseiTimetableWidget} from "@widgets/YonseiTimetableWidget";
+import {CityTimetableWidget} from "@widgets/CityTimetableWidget";
 import {useAppNavigation} from "./hooks/useAppNavigation";
 
 /**
@@ -131,19 +132,25 @@ export function AppShell() {
                 </div>
             )}
 
-            {/* 2. Schedule Timetable View (Yonsei 30,34,34-1 & All Wonju routes) */}
+            {/* 2. Schedule Timetable View (Wonju Timetable / Yonsei Timetable OR Nationwide City Route Directory) */}
             {activeTab === "schedule" && (
                 <main
                     className="w-full min-h-dvh px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-32 sm:pb-36 flex flex-col items-center">
                     <div className="w-full max-w-6xl flex-1 flex flex-col">
-                        {timetableSubTab === "yonsei" ? (
-                            <YonseiTimetableWidget
-                                onSelectMapRoute={handleSelectMapRoute}
-                                dayMode={dayMode}
-                                onDayModeChange={setDayMode}
-                            />
+                        {currentCity.code === "32020" ? (
+                            timetableSubTab === "yonsei" ? (
+                                <YonseiTimetableWidget
+                                    onSelectMapRoute={handleSelectMapRoute}
+                                    dayMode={dayMode}
+                                    onDayModeChange={setDayMode}
+                                />
+                            ) : (
+                                <TimetableWidget
+                                    onSelectMapRoute={handleSelectMapRoute}
+                                />
+                            )
                         ) : (
-                            <TimetableWidget
+                            <CityTimetableWidget
                                 onSelectMapRoute={handleSelectMapRoute}
                             />
                         )}

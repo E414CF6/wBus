@@ -3,6 +3,7 @@ import {fetchCityRoutes, type RawCityRoute} from "@entities/bus";
 import {getCachedOrFetch} from "@shared/cache";
 import {ApiValidators} from "@shared/api";
 import {getRouteMapData} from "@entities/route/api";
+import {STATIC_ROUTE_METADATA} from "@entities/route/routeMetadata";
 
 export const dynamic = "force-dynamic";
 
@@ -28,12 +29,26 @@ export async function GET(request: NextRequest) {
 
     try {
         if (cityCode === "32020" && !routeNo) {
-            // Wonju default: return static routeMap
+            // Wonju default: return static routeMap with route details
             const data = await getRouteMapData();
+            const wonjuRoutes: RawCityRoute[] = Object.entries(data.route_numbers).map(([rNo, ids]) => {
+                const meta = STATIC_ROUTE_METADATA[rNo] || {};
+                return {
+                    routeid: ids[0] || rNo,
+                    routeno: rNo,
+                    routetp: "일반버스",
+                    startnodenm: meta.origin || "관설동/장양리",
+                    endnodenm: meta.destination || "원주시내",
+                    startvehicletime: "0600",
+                    endvehicletime: "2200",
+                };
+            });
             return NextResponse.json(
                 {
                     cityCode: "32020",
                     route_numbers: data.route_numbers,
+                    routes: wonjuRoutes,
+                    count: wonjuRoutes.length,
                     lastUpdated: data.lastUpdated,
                 },
                 {

@@ -46,12 +46,15 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
     const {currentCity, isAutoDetectEnabled} = useCityContext();
 
     // Current route metadata
-    const meta = useMemo(() => getRouteMeta(selectedRoute), [selectedRoute]);
+    const meta = useMemo(() => getRouteMeta(selectedRoute, currentCity.code), [selectedRoute, currentCity.code]);
     const runningCount = runningBuses.length;
 
     // Load recent & bookmarked routes for quick switch bar
     const quickRoutes = useMemo(() => {
-        const set = new Set<string>(DEFAULT_QUICK_ROUTES);
+        const set = new Set<string>();
+        if (currentCity.code === "32020") {
+            DEFAULT_QUICK_ROUTES.forEach((r) => set.add(r));
+        }
         try {
             const savedBookmarks = localStorage.getItem("wonju_bus_bookmarks");
             if (savedBookmarks) {
@@ -68,11 +71,12 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
         }
 
         // Filter against existing allRoutes if available
-        if (allRoutes.length > 0) {
-            return Array.from(set).filter((r) => allRoutes.includes(r));
+        let list = Array.from(set).filter((r) => allRoutes.includes(r));
+        if (list.length === 0 && allRoutes.length > 0) {
+            list = allRoutes.slice(0, 4);
         }
-        return Array.from(set);
-    }, [allRoutes]);
+        return list;
+    }, [allRoutes, currentCity.code]);
 
     const handleSelectFromModal = useCallback(
         (route: string) => {

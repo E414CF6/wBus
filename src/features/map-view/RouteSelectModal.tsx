@@ -141,10 +141,10 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     const routeMetaMap = useMemo(() => {
         const map = new Map<string, RouteMeta>();
         for (const route of sortedAllRoutes) {
-            map.set(route, getRouteMeta(route));
+            map.set(route, getRouteMeta(route, currentCity.code));
         }
         return map;
-    }, [sortedAllRoutes]);
+    }, [sortedAllRoutes, currentCity.code]);
 
     // Filter routes based on Category and Search Query
     const filteredRoutes = useMemo(() => {
@@ -392,7 +392,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                             {filteredRoutes.map((route) => {
-                                const meta = routeMetaMap.get(route) || getRouteMeta(route);
+                                const meta = routeMetaMap.get(route) || getRouteMeta(route, currentCity.code);
                                 const isSelected = route === selectedRoute;
                                 const isYonsei = meta.isYonsei;
                                 const isBookmarked = bookmarks.includes(route);
@@ -440,10 +440,21 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                             {UI_TEXT.ROUTE_SELECT.YONSEI_BADGE}
                                                         </span>
                                                     )}
+                                                    {meta.routeType && (
+                                                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-black/5 dark:border-white/10">
+                                                            {meta.routeType}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 {meta.description && (
                                                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">
                                                         {meta.description}
+                                                    </p>
+                                                )}
+                                                {(meta.firstTime || meta.lastTime) && (
+                                                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-0.5 flex items-center gap-1">
+                                                        <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                                                        <span>첫차 {meta.firstTime || "--:--"} · 막차 {meta.lastTime || "--:--"}</span>
                                                     </p>
                                                 )}
                                             </div>

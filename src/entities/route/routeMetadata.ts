@@ -8,6 +8,9 @@ export interface RouteMeta {
     viaStops?: string;
     isYonsei?: boolean;
     category: RouteCategory;
+    firstTime?: string;
+    lastTime?: string;
+    routeType?: string;
 }
 
 export type RouteCategory = | "ALL" | "BOOKMARKS" | "YONSEI" | "1_19" | "20_49" | "50_99" | "100_PLUS" | "PUBLIC";
@@ -82,20 +85,84 @@ export function getRouteCategory(route: string): RouteCategory {
     return "100_PLUS";
 }
 
-/**
- * Return human-friendly metadata for a given route name
- */
-export function getRouteMeta(routeName: string): RouteMeta {
-    const isYonsei = YONSEI_ROUTE_SET.has(routeName);
-    const yonseiConfig = ROUTE_CONFIG[routeName];
-    const staticInfo = STATIC_ROUTE_METADATA[routeName];
+const DYNAMIC_ROUTE_METADATA = new Map<string, RouteMeta>();
 
-    const origin = yonseiConfig?.originLabel?.replace(" 출발", "") || staticInfo?.origin || "원주";
-    const destination = yonseiConfig?.destLabel?.replace(" 출발", "") || staticInfo?.destination || "원주";
-    const description = yonseiConfig?.description || staticInfo?.description || `${origin} ↔ ${destination}`;
-    const viaStops = yonseiConfig?.viaStops;
+export function registerDynamicRouteMeta(
+    cityCode: string,
+    rawRoutes: Array<{
+        routeid: string;
+        routeno: string | number;
+        routetp?: string;
+        startnodenm?: string;
+        endnodenm?: string;
+        startvehicletime?: string | number;
+        endvehicletime?: string | number;
+    }>
+) {
+    for (const r of rawRoutes) {
+        const routeNo = String(r.routeno);
+        const origin = r.startnodenm || "기점";
+        const destination = r.endnodenm || "종점";
+        const formatTime = (t?: string | number) => {
+            if (!t) return undefined;
+            const s = String(t).padStart(4, "0");
+            return `${s.slice(0, 2)}:${s.slice(2, 4)}`;
+        };
+        const firstTime = formatTime(r.startvehicletime);
+        const lastTime = formatTime(r.endvehicletime);
+        const routeType = r.routetp;
+
+        const key = `${cityCode}:${routeNo}`;
+        DYNAMIC_ROUTE_METADATA.set(key, {
+            routeNo,
+            origin,
+            destination,
+            description: routeType ? `[${routeType}] ${origin} ↔ ${destination}` : `${origin} ↔ ${destination}`,
+            isYonsei: cityCode === "32020" && YONSEI_ROUTE_SET.has(routeNo),
+            category: getRouteCategory(routeNo),
+            firstTime,
+            lastTime,
+            routeType,
+        });
+    }
+}
+
+/**
+ * Return human-friendly metadata for a given route name and city code
+ */
+export function getRouteMeta(routeName: string, cityCode = "32020"): RouteMeta {
+    const dynamicKey = `${cityCode}:${routeName}`;
+    if (DYNAMIC_ROUTE_METADATA.has(dynamicKey)) {
+        return DYNAMIC_ROUTE_METADATA.get(dynamicKey)!;
+    }
+
+    if (cityCode === "32020") {
+        const isYonsei = YONSEI_ROUTE_SET.has(routeName);
+        const yonseiConfig = ROUTE_CONFIG[routeName];
+        const staticInfo = STATIC_ROUTE_METADATA[routeName];
+
+        const origin = yonseiConfig?.originLabel?.replace(" 출발", "") || staticInfo?.origin || "관설동/장양리";
+        const destination = yonseiConfig?.destLabel?.replace(" 출발", "") || staticInfo?.destination || "원주시내";
+        const description = yonseiConfig?.description || staticInfo?.description || `${origin} ↔ ${destination}`;
+        const viaStops = yonseiConfig?.viaStops;
+
+        return {
+            routeNo: routeName,
+            origin,
+            destination,
+            description,
+            viaStops,
+            isYonsei,
+            category: getRouteCategory(routeName),
+        };
+    }
 
     return {
-        routeNo: routeName, origin, destination, description, viaStops, isYonsei, category: getRouteCategory(routeName),
+        routeNo: routeName,
+        origin: "기점",
+        destination: "종점",
+        description: `${routeName}번 시내버스`,
+        isYonsei: false,
+        category: getRouteCategory(routeName),
     };
 }
