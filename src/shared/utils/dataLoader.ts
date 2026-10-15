@@ -56,9 +56,9 @@ export async function loadStaticData<T>(fileName: string): Promise<T> {
             const {readFile, existsSync, join} = await getServerFsModules();
 
             const pathsToTry = [
+                join("/tmp", cleanFileName),
                 join(process.cwd(), "public", cleanFileName),
                 join(process.cwd(), "public", "data", cleanFileName),
-                join("/tmp", cleanFileName),
             ];
 
             for (const filePath of pathsToTry) {

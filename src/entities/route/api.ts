@@ -185,3 +185,12 @@ export async function getRouteVariations(routeName: string): Promise<RouteVariat
     });
 }
 
+/**
+ * Invalidate in-memory caches for route map, polylines, and route variations
+ */
+export function invalidateRouteCaches(): void {
+    routeMapCache.clear();
+    polylineCache.clear();
+    variationsCache.clear();
+}
+

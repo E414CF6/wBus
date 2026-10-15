@@ -220,7 +220,9 @@ automated error recovery:
 | `GET`  | `/api/bus-stops/[routeId]`     | Ordered sequence of bus stops for a specific route      | `s-maxage=86400`           |
 | `GET`  | `/api/route-stops/[routeName]` | Ordered directional stops mapped by route name          | `s-maxage=86400`           |
 | `GET`  | `/api/schedule`                | Complete schedule JSON payload and freshness metadata   | `s-maxage=60`, SWR: `300s` |
-| `POST` | `/api/schedule/refresh`        | Scrape & update Wonju ITS schedule cache                | `no-store`                 |
+| `GET/POST` | `/api/cron/refresh`            | Unified Vercel Cron trigger (daily schedule + weekly routes) | `no-store`                 |
+| `GET/POST` | `/api/schedule/refresh`        | Scrape & update Wonju ITS schedule cache                | `no-store`                 |
+| `GET/POST` | `/api/routes/refresh`          | Sync route list, stop maps, and GeoJSON polylines       | `no-store`                 |
 | `POST` | `/api/bus/refresh`             | *(Deprecated)* Legacy proxy to `/api/schedule/refresh`  | `no-store`                 |
 | `GET`  | `/api/notice`                  | List of municipal transit notices from Wonju ITS        | `s-maxage=900`             |
 | `GET`  | `/api/notice/[id]`             | Full detail of a specific ITS transit notice            | `s-maxage=600`             |
@@ -264,8 +266,8 @@ DATA_GO_KR_SERVICE_KEY="YOUR_DECODED_OR_ENCODED_PUBLIC_DATA_KEY"
 NEXT_PUBLIC_USE_REMOTE_STATIC_DATA="false"
 NEXT_PUBLIC_STATIC_API_URL=""
 
-# Local OSRM Routing Engine URL (used during polyline generation pipeline)
-OSRM_API_URL="http://localhost:4000/route/v1/driving"
+# OSRM Routing Engine URL (defaults to official public server https://router.project-osrm.org)
+# OSRM_API_URL="https://router.project-osrm.org/route/v1/driving"
 ```
 
 ### 3. Data Pipeline Execution
@@ -284,16 +286,15 @@ The output is verified and saved to `public/data/schedule.json`.
 
 #### Generate Route Polylines
 
-Connects to the public data portal and your OSRM routing container to construct high-precision route vector GeoJSON
-files:
+Connects to the public data portal and OSRM (defaults to the official public OSRM server without needing a local container) to construct high-precision route vector GeoJSON files:
 
 ```bash
-node scripts/generate-polylines.mjs
+npm run data:polylines
 ```
 
-> [!NOTE]
-> For instructions on setting up the local OSRM routing server on ARM64 or x86_64, refer to
-the [OSRM Setup Guide](./scripts/osrm-assets/README.md).
+> [!TIP]
+> The pipeline automatically connects to the official OSRM demo server (`https://router.project-osrm.org`) with waypoint chunking and rate-limiting. A local OSRM Docker container is **not required**.
+> If you prefer running an isolated, high-throughput offline OSRM instance, see the [OSRM Setup Guide](./scripts/osrm-assets/README.md).
 
 ### 4. Run Development Server
 
@@ -316,8 +317,40 @@ Open [http://localhost:3000](http://localhost:3000) in your browser to inspect t
 | `npm run start`     | Launches the compiled production application                |
 | `npm run lint`      | Runs ESLint across all source and script files              |
 | `npm run lint:fix`  | Automatically resolves fixable ESLint warnings and errors   |
-| `npm run typecheck` | Executes TypeScript compiler checks without emitting output |
-| `npm run test`      | Runs unit test suites using Vitest                          |
+| `npm run typecheck`      | Executes TypeScript compiler checks without emitting output |
+| `npm run test`           | Runs unit test suites using Vitest                          |
+| `npm run data:schedule`  | Scrapes and updates bus timetable dataset from Wonju ITS    |
+| `npm run data:polylines` | Generates route vector GeoJSONs & station maps via TAGO API |
+| `npm run data:all`       | Runs full ingestion pipeline (timetables + route geometries)|
+
+---
+
+## Automated Dataset Updates
+
+wBus provides a dual-layer automated data renewal pipeline ensuring both runtime edge freshness and repository static dataset persistence:
+
+### 1. Vercel Cron Job (Serverless Runtime Cache)
+
+Configured via `vercel.json` to automatically trigger `/api/cron/refresh`:
+
+- **Daily Schedule (04:00 KST / 19:00 UTC)**: Scrapes Wonju ITS for the latest timetables and purges Next.js Data Cache tags (`revalidateTag("schedule")`).
+- **Weekly Route Sync (Sundays)**: Syncs route numbers, bus stops, and polyline definitions via TAGO API.
+- **Security**: Secured with `CRON_SECRET` or `ADMIN_KEY` Bearer authentication.
+
+```bash
+# Manual trigger example via curl
+curl -X POST "https://your-domain.vercel.app/api/cron/refresh?target=all" \
+  -H "Authorization: Bearer YOUR_CRON_SECRET"
+```
+
+### 2. GitHub Actions Workflow (Repository Static File Sync)
+
+Defined in `.github/workflows/update-datasets.yml`:
+
+- **Automatic Execution**: Runs every Sunday at 18:00 UTC (Monday 03:00 KST).
+- **Manual Trigger**: Supports `workflow_dispatch` with optional polyline generation flag.
+- **Auto-Commit**: Automatically inspects `public/` diffs, commits updated datasets with `[skip ci]`, and pushes to the repository—triggering an automated fresh Vercel production build.
+
 
 ---
 

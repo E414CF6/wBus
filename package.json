@@ -9,7 +9,10 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "data:schedule": "node scripts/fetch-schedule.mjs",
+    "data:polylines": "node scripts/generate-polylines.mjs",
+    "data:all": "node scripts/fetch-schedule.mjs && node scripts/generate-polylines.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
