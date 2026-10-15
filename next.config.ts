@@ -1,6 +1,7 @@
 import type {NextConfig} from "next";
 
 const nextConfig: NextConfig = {
+    turbopack: {},
     reactStrictMode: true, async headers() {
         return [{
             source: "/:all*(json|geojson)", headers: [{
