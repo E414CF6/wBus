@@ -97,4 +97,7 @@ export const STORAGE_KEYS = {
     SCHEDULE_CACHE: "wbus_cached_schedule_v2",
     NOTICE_LIST_CACHE: "wbus_cached_notice_list_v1",
     NOTICE_DETAIL_PREFIX: "wbus_cached_notice_detail_",
+    CITY_ROUTES_PREFIX: "wbus_cached_city_routes_v1_",
+    POLYLINE_PREFIX: "wbus_cached_polyline_v1_",
+    ROUTE_STOPS_PREFIX: "wbus_cached_route_stops_v1_",
 } as const;

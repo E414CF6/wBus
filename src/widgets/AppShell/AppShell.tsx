@@ -112,8 +112,8 @@ export function AppShell() {
     }, [routeMap, activeRoute, selectedRoute, currentCity.code, handleRouteChange]);
 
     return (
-        <div className="fixed inset-0 flex flex-col w-full h-[100dvh] overflow-hidden bg-slate-50 dark:bg-[#0b0f19]">
-            {/* 1. Real-time Map View Container (Always persistent & active, zero reload lag) */}
+        <div className="fixed inset-0 flex flex-col w-full h-full min-h-[100lvh] overflow-hidden bg-slate-50 dark:bg-[#0b0f19]">
+            {/* 1. Real-time Map View Container (Always persistent & active, full-bleed into iOS Dynamic Island & Home Indicator) */}
             <div className="relative flex-1 w-full h-full overflow-hidden">
                 {/* Map Top Floating Header & Fast Route Switcher with Detailed Live Status */}
                 <MapRouteHeader

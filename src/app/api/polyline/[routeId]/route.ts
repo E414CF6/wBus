@@ -1,18 +1,23 @@
 import {type NextRequest, NextResponse} from "next/server";
 import {ApiValidators} from "@shared/api";
+import {peekCached, setCached} from "@shared/cache";
 import {generateSingleRoutePolyline} from "@entities/route/routeSyncService";
+import type {GeoPolyline} from "@entities/route/types";
 
 export const dynamic = "force-dynamic";
 
 const CACHE_CONTROL_HEADER =
     "public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000, stale-if-error=2592000";
 
+const POLYLINE_TTL_SECONDS = 86400; // 24 hours in L1 memory
+
 /**
  * GET /api/polyline/[routeId]?cityCode=...&routeNo=...
  * Returns the full GeoPolyline object for any city in South Korea.
- * 1. Checks local filesystem (public/routes or /tmp/routes) for instant response
- * 2. On-demand generates road-snapped polyline using TAGO stations + OSRM chunked pipeline
- * 3. Falls back to smooth spline geometry if road-snapping detours or fails
+ * 1. Checks L1 in-memory cache for sub-millisecond response
+ * 2. Checks local filesystem (public/routes or /tmp/routes) and warms L1 cache
+ * 3. On-demand generates road-snapped polyline using TAGO stations + OSRM chunked pipeline
+ * 4. Falls back to smooth spline geometry if road-snapping detours or fails
  */
 export async function GET(
     request: NextRequest,
@@ -26,8 +31,22 @@ export async function GET(
     const {searchParams} = request.nextUrl;
     const cityCode = searchParams.get("cityCode") || "32020";
     const routeNo = searchParams.get("routeNo") || undefined;
+    const cacheKey = `polyline:${cityCode}:${routeId}`;
 
-    // 1. Try local filesystem (public/routes/ or /tmp/routes/)
+    // 1. Check L1 In-Memory Cache
+    const memCached = peekCached<GeoPolyline>(cacheKey, POLYLINE_TTL_SECONDS);
+    if (memCached?.data) {
+        return NextResponse.json(memCached.data, {
+            status: 200,
+            headers: {
+                "Cache-Control": CACHE_CONTROL_HEADER,
+                "X-Cache-Status": "hit",
+                "X-Cache-Layer": "memory",
+            },
+        });
+    }
+
+    // 2. Try local filesystem (public/routes/ or /tmp/routes/)
     try {
         const {readFile} = await import("fs/promises");
         const {existsSync} = await import("fs");
@@ -41,11 +60,19 @@ export async function GET(
         for (const localPath of localPaths) {
             if (existsSync(/*turbopackIgnore: true*/ localPath)) {
                 const content = await readFile(/*turbopackIgnore: true*/ localPath, "utf-8");
+                try {
+                    const parsed = JSON.parse(content) as GeoPolyline;
+                    setCached(cacheKey, parsed);
+                } catch {
+                    // Ignore JSON cache parse issue
+                }
                 return new NextResponse(content, {
                     status: 200,
                     headers: {
                         "Content-Type": "application/json; charset=utf-8",
                         "Cache-Control": CACHE_CONTROL_HEADER,
+                        "X-Cache-Status": "hit",
+                        "X-Cache-Layer": "disk",
                     },
                 });
             }
@@ -54,14 +81,17 @@ export async function GET(
         // Continue to generator
     }
 
-    // 2. Generate on-demand via OSRM + TAGO
+    // 3. Generate on-demand via OSRM + TAGO (with request deduplication)
     try {
         const polyline = await generateSingleRoutePolyline(routeId, cityCode, routeNo);
         if (polyline) {
+            setCached(cacheKey, polyline);
             return NextResponse.json(polyline, {
                 status: 200,
                 headers: {
                     "Cache-Control": CACHE_CONTROL_HEADER,
+                    "X-Cache-Status": "miss",
+                    "X-Cache-Layer": "origin",
                 },
             });
         }

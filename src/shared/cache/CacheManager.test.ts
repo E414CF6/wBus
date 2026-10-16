@@ -65,4 +65,63 @@ describe("CacheManager", () => {
         expect(cache.get("k2")).toBe("v2");
         expect(cache.get("k3")).toBeNull();
     });
+
+    it("expires items when ttlMs has elapsed", () => {
+        vi.useFakeTimers();
+        try {
+            const cache = new CacheManager<string>({maxSize: 5, ttlMs: 1000});
+            cache.set("ephemeral", "data");
+            expect(cache.get("ephemeral")).toBe("data");
+
+            vi.advanceTimersByTime(1001);
+            expect(cache.get("ephemeral")).toBeNull();
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("persists to and hydrates from L2 localStorage when storagePrefix is configured", () => {
+        const store = new Map<string, string>();
+        const mockStorage = {
+            get length() {
+                return store.size;
+            },
+            key: (idx: number) => Array.from(store.keys())[idx] ?? null,
+            getItem: (k: string) => store.get(k) ?? null,
+            setItem: (k: string, v: string) => {
+                store.set(k, v);
+            },
+            removeItem: (k: string) => {
+                store.delete(k);
+            },
+            clear: () => store.clear(),
+        };
+
+        vi.stubGlobal("window", {localStorage: mockStorage});
+        vi.stubGlobal("localStorage", mockStorage);
+
+        try {
+            const writerCache = new CacheManager<{ count: number }>({
+                maxSize: 5,
+                ttlMs: 60_000,
+                storagePrefix: "test_l2_",
+            });
+            writerCache.set("route-30", {count: 42});
+
+            // A fresh CacheManager instance with empty L1 memory should hydrate from L2 localStorage
+            const readerCache = new CacheManager<{ count: number }>({
+                maxSize: 5,
+                ttlMs: 60_000,
+                storagePrefix: "test_l2_",
+            });
+            expect(readerCache.get("route-30")).toEqual({count: 42});
+
+            // Clearing removes from L2 storage too
+            readerCache.clear();
+            expect(store.size).toBe(0);
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
 });
+

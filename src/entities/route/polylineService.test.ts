@@ -2,6 +2,7 @@ import {describe, expect, it} from "vitest";
 import {
     BRANCH_PALETTE,
     buildSegmentedRouteGeoJson,
+    clearProcessedPolylineCache,
     isPointNearPolyline,
     type PolylineData,
     SHARED_BLUE_COLOR,
@@ -106,6 +107,17 @@ describe("polylineService", () => {
             // Ensure the shared segment is not duplicated
             const sharedFeatures = geoJson?.features.filter((f) => f.properties?.is_shared === true);
             expect(sharedFeatures?.length).toBe(1);
+
+            // Subsequent calls with identical routeIds/polylineMap return the exact cached FeatureCollection reference
+            const secondCall = buildSegmentedRouteGeoJson(["ROUTE_A", "ROUTE_B"], map);
+            expect(secondCall).toBe(geoJson);
+
+            // Clearing cache forces a fresh FeatureCollection instance on next call
+            clearProcessedPolylineCache();
+            const thirdCall = buildSegmentedRouteGeoJson(["ROUTE_A", "ROUTE_B"], map);
+            expect(thirdCall).not.toBe(geoJson);
+            expect(thirdCall).toEqual(geoJson);
         });
     });
 });
+

@@ -243,6 +243,9 @@ function BottomNavComponent({
                         <LocateFixed className={`w-4 h-4 stroke-[2.2] ${isDetecting ? "animate-spin text-blue-600 dark:text-blue-400" : ""}`}/>
                     </button>
 
+                    {/* Divider before Theme Toggle */}
+                    <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+
                     {/* Theme Toggle Button */}
                     <NavThemeToggle/>
                 </nav>

@@ -5,6 +5,8 @@ import type {
     RouteVariation,
     RouteVariationStop,
 } from "@entities/route/types";
+import type {RawCityRoute} from "@entities/bus/api/publicApi";
+import {registerDynamicRouteMeta} from "@entities/route/routeMetadata";
 import {getStationMap} from "@entities/station/api";
 import type {StationLocation} from "@entities/station/types";
 
@@ -12,25 +14,119 @@ import {fetchAPI, HttpError} from "@shared/api/fetchAPI";
 import {CacheManager} from "@shared/cache/CacheManager";
 import {APP_CONFIG, STORAGE_KEYS} from "@shared/config/env";
 
-// Caches
+export interface CityRoutesPayload {
+    cityCode: string;
+    route_numbers: Record<string, string[]>;
+    routes: RawCityRoute[];
+    count: number;
+}
 
-const polylineCache = new CacheManager<GeoPolyline | null>();
-const variationsCache = new CacheManager<RouteVariation[]>();
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+// Caches (L1 Memory + L2 Persistent localStorage)
+const cityRoutesCache = new CacheManager<CityRoutesPayload>({
+    maxSize: 30,
+    ttlMs: ONE_DAY_MS,
+    storagePrefix: STORAGE_KEYS.CITY_ROUTES_PREFIX,
+    maxStorageEntries: 15,
+});
+
+const routeInfoCache = new CacheManager<RouteInfo | null>({
+    maxSize: 300,
+    ttlMs: ONE_DAY_MS,
+});
+
+const polylineCache = new CacheManager<GeoPolyline | null>({
+    maxSize: 150,
+    ttlMs: ONE_DAY_MS,
+    storagePrefix: STORAGE_KEYS.POLYLINE_PREFIX,
+    maxStorageEntries: 35,
+});
+
+const variationsCache = new CacheManager<RouteVariation[]>({
+    maxSize: 100,
+    ttlMs: ONE_DAY_MS,
+});
+
+function resolveCityCode(cityCode?: string): string {
+    return (
+        cityCode ||
+        (typeof window !== "undefined"
+            ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020"
+            : "32020")
+    );
+}
+
+/**
+ * Synchronously inspect cached city routes (L1 Memory or L2 localStorage)
+ */
+export function getCachedCityRoutesSync(cityCode?: string): CityRoutesPayload | null {
+    const cCode = resolveCityCode(cityCode);
+    const cached = cityRoutesCache.get(cCode);
+    if (cached && cached.routes?.length) {
+        registerDynamicRouteMeta(cCode, cached.routes);
+    }
+    return cached;
+}
+
+/**
+ * Synchronously inspect cached route info (from cityRoutesCache or routeInfoCache)
+ */
+export function getCachedRouteInfoSync(routeName: string, cityCode?: string): RouteInfo | null {
+    if (!routeName || routeName === "0") return null;
+    const cCode = resolveCityCode(cityCode);
+
+    const cityData = cityRoutesCache.get(cCode);
+    const idsFromCity = cityData?.route_numbers?.[routeName];
+    if (idsFromCity && idsFromCity.length > 0) {
+        return {routeName, vehicleRouteIds: idsFromCity};
+    }
+
+    return routeInfoCache.get(`${cCode}:${routeName}`);
+}
+
+/**
+ * Synchronously inspect cached GeoPolyline (L1 Memory or L2 localStorage)
+ */
+export function getCachedPolylineSync(routeKey: string, cityCode?: string): GeoPolyline | null {
+    const cCode = resolveCityCode(cityCode);
+    return polylineCache.get(`${cCode}:${routeKey}`);
+}
+
+/**
+ * Fetch and cache full city routes list & route_numbers map (with request coalescing + L2 persistence)
+ */
+export async function fetchCityRoutesData(cityCode?: string): Promise<CityRoutesPayload> {
+    const cCode = resolveCityCode(cityCode);
+    return cityRoutesCache.getOrFetch(cCode, async () => {
+        const json = await fetchAPI<Partial<CityRoutesPayload>>(`/api/routes?cityCode=${cCode}`);
+        const routes = Array.isArray(json.routes) ? json.routes : [];
+        const routeNumbers = json.route_numbers || {};
+        if (routes.length > 0) {
+            registerDynamicRouteMeta(cCode, routes);
+        }
+        return {
+            cityCode: cCode,
+            route_numbers: routeNumbers,
+            routes,
+            count: json.count ?? routes.length,
+        };
+    });
+}
 
 // Public API
 
 export async function getRouteMap(cityCode?: string): Promise<Record<string, string[]>> {
-    const cCode = cityCode || (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020" : "32020");
     try {
-        const json = await fetchAPI<{route_numbers?: Record<string, string[]>}>(`/api/routes?cityCode=${cCode}`);
-        return json.route_numbers || {};
+        const data = await fetchCityRoutesData(cityCode);
+        return data.route_numbers || {};
     } catch {
         return {};
     }
 }
 
 export async function getPolyline(routeKey: string, cityCode?: string): Promise<GeoPolyline | null> {
-    const cCode = cityCode || (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020" : "32020");
+    const cCode = resolveCityCode(cityCode);
     const cacheKey = `${cCode}:${routeKey}`;
     return polylineCache.getOrFetch(cacheKey, async () => {
         try {
@@ -49,26 +145,38 @@ export async function getPolyline(routeKey: string, cityCode?: string): Promise<
 
 export async function getRouteInfo(routeName: string, cityCode?: string): Promise<RouteInfo | null> {
     if (!routeName || routeName === "0") return null;
-    const cCode = cityCode || (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020" : "32020");
-    try {
-        const json = await fetchAPI<{route_numbers?: Record<string, string[]>; routes?: Array<{routeid: string}>}>(
-            `/api/routes?cityCode=${cCode}&routeNo=${encodeURIComponent(routeName)}`
-        );
-        const ids = json?.route_numbers?.[routeName] || (json?.routes?.[0]?.routeid ? [json.routes[0].routeid] : null);
-        if (ids && ids.length > 0) {
-            return { routeName, vehicleRouteIds: ids };
-        }
-        return null;
-    } catch (err) {
-        if (APP_CONFIG.IS_DEV && routeName !== "0") {
-            console.warn(`[getRouteInfo] Route info fetch failed: ${routeName}`, err);
-        }
-        return null;
+    const cCode = resolveCityCode(cityCode);
+
+    // 1. Check already-cached full city route map first (0 network calls!)
+    const cachedCity = getCachedCityRoutesSync(cCode);
+    const cachedIds = cachedCity?.route_numbers?.[routeName];
+    if (cachedIds && cachedIds.length > 0) {
+        return {routeName, vehicleRouteIds: cachedIds};
     }
+
+    // 2. Coalesced fetch with routeInfoCache
+    const cacheKey = `${cCode}:${routeName}`;
+    return routeInfoCache.getOrFetch(cacheKey, async () => {
+        try {
+            const json = await fetchAPI<{route_numbers?: Record<string, string[]>; routes?: Array<{routeid: string}>}>(
+                `/api/routes?cityCode=${cCode}&routeNo=${encodeURIComponent(routeName)}`
+            );
+            const ids = json?.route_numbers?.[routeName] || (json?.routes?.[0]?.routeid ? [json.routes[0].routeid] : null);
+            if (ids && ids.length > 0) {
+                return {routeName, vehicleRouteIds: ids};
+            }
+            return null;
+        } catch (err) {
+            if (APP_CONFIG.IS_DEV && routeName !== "0") {
+                console.warn(`[getRouteInfo] Route info fetch failed: ${routeName}`, err);
+            }
+            return null;
+        }
+    });
 }
 
-export async function getRouteDetails(routeId: string): Promise<RouteDetail | null> {
-    const polyline = await getPolyline(routeId);
+export async function getRouteDetails(routeId: string, cityCode?: string): Promise<RouteDetail | null> {
+    const polyline = await getPolyline(routeId, cityCode);
     if (!polyline || !polyline.stops) return null;
     const sequence = polyline.stops.map((s) => ({
         nodeid: s.id, nodeord: s.ord, updowncd: s.ud
@@ -185,9 +293,11 @@ export async function getRouteVariations(routeName: string, cityCode?: string): 
 }
 
 /**
- * Invalidate in-memory caches for route map, polylines, and route variations
+ * Invalidate in-memory & persistent caches for route map, polylines, and route variations
  */
 export function invalidateRouteCaches(): void {
+    cityRoutesCache.clear();
+    routeInfoCache.clear();
     polylineCache.clear();
     variationsCache.clear();
 }

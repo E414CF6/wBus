@@ -1,8 +1,14 @@
 "use client";
 
 import type {RouteInfo, RouteVariation} from "@entities/route/types";
-import {getRouteVariations} from "@entities/route/api";
-import {registerDynamicRouteMeta} from "./routeMetadata";
+import {
+    type CityRoutesPayload,
+    fetchCityRoutesData,
+    getCachedCityRoutesSync,
+    getCachedRouteInfoSync,
+    getRouteInfo,
+    getRouteVariations,
+} from "@entities/route/api";
 import type {RawCityRoute} from "@entities/bus";
 
 import {APP_CONFIG} from "@shared/config/env";
@@ -13,29 +19,44 @@ import useSWR from "swr";
 const ROUTE_INFO_SWR_OPTIONS = {
     revalidateOnFocus: false,
     revalidateOnReconnect: false,
+    revalidateIfStale: false,
     dedupingInterval: 60000,
     errorRetryCount: 2,
 } as const;
 
+const CITY_ROUTES_SWR_OPTIONS = {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    revalidateIfStale: false,
+    dedupingInterval: 60000,
+    errorRetryCount: 3,
+} as const;
+
 export function useRouteInfo(routeName: string, enabled: boolean = true, cityCode: string = "32020"): RouteInfo | null {
+    // 1. Subscribe to the unified city route map so if city routes are loaded, we get routeIds with 0 extra network requests
+    const routeMap = useBusRouteMap(enabled, cityCode);
+
+    const resolvedFromMap = useMemo<RouteInfo | null>(() => {
+        if (!enabled || !routeName) return null;
+        const mapIds = routeMap?.[routeName];
+        if (mapIds && mapIds.length > 0) {
+            return {routeName, vehicleRouteIds: mapIds};
+        }
+        return getCachedRouteInfoSync(routeName, cityCode);
+    }, [enabled, routeName, routeMap, cityCode]);
+
+    // 2. Only fetch individual routeInfo if not already resolved from the city-wide route map
+    const shouldFetchSingle = enabled && Boolean(routeName) && !resolvedFromMap;
     const {
         data, error
     } = useSWR<RouteInfo | null>(
-        enabled && routeName ? ["routeInfo", cityCode, routeName] : null,
+        shouldFetchSingle ? ["routeInfo", cityCode, routeName] : null,
         async ([, cCode, name]: [string, string, string]) => {
-            try {
-                const res = await fetch(`/api/routes?cityCode=${cCode}&routeNo=${encodeURIComponent(name)}`);
-                if (res.ok) {
-                    const json = await res.json();
-                    const ids = json.route_numbers?.[name] || (json.routes?.[0]?.routeid ? [json.routes[0].routeid] : null);
-                    if (ids && ids.length > 0) {
-                        return { routeName: name, vehicleRouteIds: ids };
-                    }
-                }
-            } catch {
-                // Fall back below
+            const info = await getRouteInfo(name, cCode);
+            if (info && info.vehicleRouteIds.length > 0) {
+                return info;
             }
-            return { routeName: name, vehicleRouteIds: [name] };
+            return {routeName: name, vehicleRouteIds: [name]};
         },
         ROUTE_INFO_SWR_OPTIONS
     );
@@ -44,7 +65,7 @@ export function useRouteInfo(routeName: string, enabled: boolean = true, cityCod
         console.error(`[useRouteInfo] Failed to fetch route info: ${routeName}`, error);
     }
 
-    return data ?? null;
+    return resolvedFromMap ?? data ?? null;
 }
 
 export function useRouteIds(routeName: string, enabled: boolean = true, cityCode: string = "32020"): string[] {
@@ -56,62 +77,44 @@ export function useRouteIds(routeName: string, enabled: boolean = true, cityCode
  * Get (routeName) -> routeIds[] mapping for bus routes.
  * Example: { "30": ["30100123", "30100124"] }
  *
- * Uses SWR for caching and revalidation.
+ * Shares the unified `cityRoutes:${cityCode}` SWR cache & L1/L2 persistent cache with `useCityRoutes`.
  */
 export function useBusRouteMap(enabled: boolean = true, cityCode: string = "32020"): Record<string, string[]> | null {
-    const key = enabled ? `busRouteMap:${cityCode}` : null;
-    const fetcher = async () => {
-        try {
-            const res = await fetch(`/api/routes?cityCode=${cityCode}`);
-            if (res.ok) {
-                const json = await res.json();
-                if (json.routes && Array.isArray(json.routes)) {
-                    registerDynamicRouteMeta(cityCode, json.routes);
-                }
-                if (json.route_numbers && Object.keys(json.route_numbers).length > 0) {
-                    return json.route_numbers as Record<string, string[]>;
-                }
-            }
-        } catch (e) {
-            throw e;
-        }
-        return {};
-    };
+    const fallback = useMemo(() => (enabled ? getCachedCityRoutesSync(cityCode) ?? undefined : undefined), [enabled, cityCode]);
+    const key = enabled ? `cityRoutes:${cityCode}` : null;
 
-    const {data, error} = useSWR(key, fetcher, {
-        revalidateOnFocus: false,
-        revalidateOnReconnect: false,
-        dedupingInterval: 60000,
-        errorRetryCount: 3,
-    });
+    const {data, error} = useSWR<CityRoutesPayload>(
+        key,
+        () => fetchCityRoutesData(cityCode),
+        {
+            ...CITY_ROUTES_SWR_OPTIONS,
+            fallbackData: fallback,
+        }
+    );
 
     if (error && APP_CONFIG.IS_DEV) {
         console.error("[useBusRouteMap] Error fetching route map", error);
     }
 
-    return data ?? null;
+    return data?.route_numbers ?? null;
 }
 
 /**
- * Hook to retrieve full city route list with metadata (start/end nodes, hours, route types)
+ * Hook to retrieve full city route list with metadata (start/end nodes, hours, route types).
+ * Shares the unified `cityRoutes:${cityCode}` SWR cache & L1/L2 persistent cache with `useBusRouteMap`.
  */
 export function useCityRoutes(cityCode: string = "32020", enabled: boolean = true) {
+    const fallback = useMemo(() => (enabled ? getCachedCityRoutesSync(cityCode) ?? undefined : undefined), [enabled, cityCode]);
     const key = enabled ? `cityRoutes:${cityCode}` : null;
-    const fetcher = async () => {
-        const res = await fetch(`/api/routes?cityCode=${cityCode}`);
-        if (!res.ok) throw new Error("Failed to fetch city routes");
-        const json = await res.json();
-        if (json.routes && Array.isArray(json.routes)) {
-            registerDynamicRouteMeta(cityCode, json.routes);
-        }
-        return json;
-    };
 
-    const {data, error, isLoading, mutate} = useSWR(key, fetcher, {
-        revalidateOnFocus: false,
-        revalidateOnReconnect: false,
-        dedupingInterval: 60000,
-    });
+    const {data, error, isLoading, mutate} = useSWR<CityRoutesPayload>(
+        key,
+        () => fetchCityRoutesData(cityCode),
+        {
+            ...CITY_ROUTES_SWR_OPTIONS,
+            fallbackData: fallback,
+        }
+    );
 
     return {
         routes: (data?.routes || []) as RawCityRoute[],

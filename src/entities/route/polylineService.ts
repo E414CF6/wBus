@@ -27,7 +27,14 @@ export interface PolylineData {
     bbox?: [[number, number], [number, number]];
 }
 
-const processedCache = new CacheManager<PolylineData>(50);
+const processedCache = new CacheManager<PolylineData>({
+    maxSize: 150,
+    ttlMs: 24 * 60 * 60 * 1000,
+});
+const segmentedGeoJsonCache = new CacheManager<FeatureCollection>({
+    maxSize: 100,
+    ttlMs: 24 * 60 * 60 * 1000,
+});
 
 async function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordinate[], data: GeoPolyline): Promise<StopIndexMap | undefined> {
     const stops = data.stops || [];
@@ -120,170 +127,195 @@ function extractBBox(data: GeoPolyline, coords: [number, number][]): [[number, n
     return [[minLat, minLng], [maxLat, maxLng]];
 }
 
-async function fetchRoutePolyline(routeId: string, cityCode?: string): Promise<PolylineData> {
-    const cCode =
+function resolveCityCode(cityCode?: string): string {
+    return (
         cityCode ||
         (typeof window !== "undefined"
             ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020"
-            : "32020");
+            : "32020")
+    );
+}
+
+/**
+ * Synchronously inspect processed polyline cache for a set of routeIds.
+ * Returns a populated Map if all requested routeIds are already processed in L1 memory, otherwise null.
+ */
+export function getCachedRoutePolylinesSync(
+    routeIds: string[],
+    cityCode?: string
+): Map<string, PolylineData> | null {
+    if (!routeIds || routeIds.length === 0) return null;
+    const cCode = resolveCityCode(cityCode);
+    const map = new Map<string, PolylineData>();
+
+    for (const id of routeIds) {
+        if (!id) continue;
+        const cached = processedCache.get(`${cCode}:${id}`);
+        if (!cached) return null;
+        map.set(id, cached);
+    }
+
+    return map.size > 0 ? map : null;
+}
+
+async function fetchRoutePolyline(routeId: string, cityCode?: string): Promise<PolylineData> {
+    const cCode = resolveCityCode(cityCode);
     const cacheKey = `${cCode}:${routeId}`;
-    const cached = processedCache.get(cacheKey);
-    if (cached) return cached;
 
-    let rawData = await getPolyline(routeId, cCode);
+    // Use getOrFetch to coalesce concurrent calls from BusMarker, BusRoutePolyline, and BusStopMarker
+    return processedCache.getOrFetch(cacheKey, async () => {
+        let rawData = await getPolyline(routeId, cCode);
 
-    // Resilient Fallback: if rawData is missing or has no stops, query /api/bus-stops/[routeId] and construct spline
-    if (!rawData || !rawData.stops || rawData.stops.length === 0) {
-        try {
-            const stopsRes = await fetch(
-                `/api/bus-stops/${encodeURIComponent(routeId)}?cityCode=${cCode}`
-            );
-            if (stopsRes.ok) {
-                const stopList = await stopsRes.json();
-                if (Array.isArray(stopList) && stopList.length >= 2) {
-                    const sortedStops = [...stopList].sort(
-                        (a, b) => Number(a.nodeord || 0) - Number(b.nodeord || 0)
-                    );
-                    const upStops = sortedStops.filter((s) => Number(s.updowncd) === 1);
-                    const downStops = sortedStops.filter((s) => Number(s.updowncd) === 0);
+        // Resilient Fallback: if rawData is missing or has no stops, query /api/bus-stops/[routeId] and construct spline
+        if (!rawData || !rawData.stops || rawData.stops.length === 0) {
+            try {
+                const stopsRes = await fetch(
+                    `/api/bus-stops/${encodeURIComponent(routeId)}?cityCode=${cCode}`
+                );
+                if (stopsRes.ok) {
+                    const stopPayload = await stopsRes.json();
+                    const stopList = Array.isArray(stopPayload) ? stopPayload : stopPayload?.data;
+                    if (Array.isArray(stopList) && stopList.length >= 2) {
+                        const sortedStops = [...stopList].sort(
+                            (a, b) => Number(a.nodeord || 0) - Number(b.nodeord || 0)
+                        );
+                        const upStops = sortedStops.filter((s) => Number(s.updowncd) === 1);
+                        const downStops = sortedStops.filter((s) => Number(s.updowncd) === 0);
 
-                    let upCoords: [number, number][] = (
-                        upStops.length >= 2 ? upStops : sortedStops
-                    )
-                        .filter((s) => s.gpslong > 0 && s.gpslati > 0)
-                        .map((s) => [Number(s.gpslong), Number(s.gpslati)]);
-                    let downCoords: [number, number][] = (
-                        downStops.length >= 2 ? downStops : upCoords
-                    )
-                        .filter((s) => s.gpslong > 0 && s.gpslati > 0)
-                        .map((s) => [Number(s.gpslong), Number(s.gpslati)]);
+                        let upCoords: [number, number][] = (
+                            upStops.length >= 2 ? upStops : sortedStops
+                        )
+                            .filter((s) => s.gpslong > 0 && s.gpslati > 0)
+                            .map((s) => [Number(s.gpslong), Number(s.gpslati)]);
+                        let downCoords: [number, number][] = (
+                            downStops.length >= 2 ? downStops : upCoords
+                        )
+                            .filter((s) => s.gpslong > 0 && s.gpslati > 0)
+                            .map((s) => [Number(s.gpslong), Number(s.gpslati)]);
 
-                    if (upStops.length >= 2 && downStops.length >= 2 && upCoords.length >= 2 && downCoords.length >= 2) {
-                        const turningDir = findTurningDirection(sortedStops);
-                        if (turningDir === "down_to_up") {
-                            upCoords = [downCoords[downCoords.length - 1], ...upCoords];
-                        } else if (turningDir === "up_to_down") {
-                            downCoords = [upCoords[upCoords.length - 1], ...downCoords];
+                        if (upStops.length >= 2 && downStops.length >= 2 && upCoords.length >= 2 && downCoords.length >= 2) {
+                            const turningDir = findTurningDirection(sortedStops);
+                            if (turningDir === "down_to_up") {
+                                upCoords = [downCoords[downCoords.length - 1], ...upCoords];
+                            } else if (turningDir === "up_to_down") {
+                                downCoords = [upCoords[upCoords.length - 1], ...downCoords];
+                            }
                         }
+
+                        const smoothUp = smoothPolylineSpline(upCoords);
+                        const smoothDown =
+                            downStops.length >= 2 ? smoothPolylineSpline(downCoords) : smoothUp;
+
+                        rawData = {
+                            route_id: routeId,
+                            route_no: routeId,
+                            stops_count: sortedStops.length,
+                            total_dist: 0,
+                            up_polyline: smoothUp,
+                            down_polyline: smoothDown,
+                            stops: sortedStops.map((s) => ({
+                                id: String(s.nodeid),
+                                name: String(s.nodenm),
+                                ord: Number(s.nodeord || 0),
+                                ud: Number(s.updowncd ?? 0),
+                                lat: Number(s.gpslati),
+                                lon: Number(s.gpslong),
+                                nodeno: String(s.nodeno || ""),
+                            })),
+                        };
                     }
+                }
+            } catch (e) {
+                console.warn(`[fetchRoutePolyline] Client bus stops fallback failed for ${routeId}:`, e);
+            }
+        }
 
-                    const smoothUp = smoothPolylineSpline(upCoords);
-                    const smoothDown =
-                        downStops.length >= 2 ? smoothPolylineSpline(downCoords) : smoothUp;
+        if (!rawData || !rawData.stops) {
+            return {upPolyline: [], downPolyline: [], turnIndex: 0};
+        }
 
-                    rawData = {
-                        route_id: routeId,
-                        route_no: routeId,
-                        stops_count: sortedStops.length,
-                        total_dist: 0,
-                        up_polyline: smoothUp,
-                        down_polyline: smoothDown,
-                        stops: sortedStops.map((s) => ({
-                            id: String(s.nodeid),
-                            name: String(s.nodenm),
-                            ord: Number(s.nodeord || 0),
-                            ud: Number(s.updowncd ?? 0),
-                            lat: Number(s.gpslati),
-                            lon: Number(s.gpslong),
-                            nodeno: String(s.nodeno || ""),
-                        })),
-                    };
+        const upCoords = rawData.up_polyline || [];
+        const downCoords = rawData.down_polyline || [];
+
+        // Convert coordinates from [lng, lat] (GeoJSON standard) to [lat, lng] (Leaflet/frontend standard)
+        let upPolyline: Coordinate[] = upCoords.map(([lng, lat]) => [lat, lng]);
+        let downPolyline: Coordinate[] = downCoords.map(([lng, lat]) => [lat, lng]);
+
+        // Runtime Fallback: Validate polyline span against stop sequence to prevent collapsed polylines
+        const getPolylineSpanMeters = (line: Coordinate[]): number => {
+            if (line.length < 2) return 0;
+            let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+            for (const [lat, lng] of line) {
+                if (lat < minLat) minLat = lat;
+                if (lat > maxLat) maxLat = lat;
+                if (lng < minLng) minLng = lng;
+                if (lng > maxLng) maxLng = lng;
+            }
+            const dLat = maxLat - minLat;
+            const dLng = maxLng - minLng;
+            return Math.sqrt(dLat * dLat + dLng * dLng) * 111000;
+        };
+
+        let stationMap: Record<string, StationLocation> | null = null;
+        const getStationMapLazy = async (): Promise<Record<string, StationLocation>> => {
+            if (!stationMap) {
+                try {
+                    stationMap = await getStationMap();
+                } catch {
+                    stationMap = {};
                 }
             }
-        } catch (e) {
-            console.warn(`[fetchRoutePolyline] Client bus stops fallback failed for ${routeId}:`, e);
-        }
-    }
+            return stationMap;
+        };
 
-    if (!rawData || !rawData.stops) {
-        const empty: PolylineData = {upPolyline: [], downPolyline: [], turnIndex: 0};
-        processedCache.set(cacheKey, empty);
-        return empty;
-    }
+        const buildPolylineFromStops = async (dirStops: typeof rawData.stops): Promise<Coordinate[]> => {
+            const coords: Coordinate[] = [];
+            const sorted = [...dirStops].sort((a, b) => a.ord - b.ord);
+            const mapData = dirStops.some(s => s.lat === undefined || s.lon === undefined) ? await getStationMapLazy() : {};
 
-    const upCoords = rawData.up_polyline || [];
-    const downCoords = rawData.down_polyline || [];
+            for (const s of sorted) {
+                const rawId = typeof s.id === "string" ? s.id.trim() : "";
+                const station = rawId ? mapData[rawId] : null;
+                const sCoords = s as { id?: string; ord: number; lat?: number; lon?: number };
+                if (isFiniteNumber(sCoords.lat) && isFiniteNumber(sCoords.lon)) {
+                    coords.push([sCoords.lat!, sCoords.lon!]);
+                } else if (station && isFiniteNumber(station.gpslati) && isFiniteNumber(station.gpslong)) {
+                    coords.push([station.gpslati, station.gpslong]);
+                }
+            }
+            return coords;
+        };
 
-    // Convert coordinates from [lng, lat] (GeoJSON standard) to [lat, lng] (Leaflet/frontend standard)
-    let upPolyline: Coordinate[] = upCoords.map(([lng, lat]) => [lat, lng]);
-    let downPolyline: Coordinate[] = downCoords.map(([lng, lat]) => [lat, lng]);
+        const stops = rawData.stops || [];
+        const upStops = stops.filter(s => Number(s.ud) === 1);
+        const downStops = stops.filter(s => Number(s.ud) === 0);
 
-    // Runtime Fallback: Validate polyline span against stop sequence to prevent collapsed polylines
-    const getPolylineSpanMeters = (line: Coordinate[]): number => {
-        if (line.length < 2) return 0;
-        let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
-        for (const [lat, lng] of line) {
-            if (lat < minLat) minLat = lat;
-            if (lat > maxLat) maxLat = lat;
-            if (lng < minLng) minLng = lng;
-            if (lng > maxLng) maxLng = lng;
-        }
-        const dLat = maxLat - minLat;
-        const dLng = maxLng - minLng;
-        return Math.sqrt(dLat * dLat + dLng * dLng) * 111000;
-    };
-
-    let stationMap: Record<string, StationLocation> | null = null;
-    const getStationMapLazy = async (): Promise<Record<string, StationLocation>> => {
-        if (!stationMap) {
-            try {
-                stationMap = await getStationMap();
-            } catch {
-                stationMap = {};
+        const upSpan = getPolylineSpanMeters(upPolyline);
+        if (upSpan < 1000 && upStops.length >= 2) {
+            const upStopsPoly = await buildPolylineFromStops(upStops);
+            const upStopSpan = getPolylineSpanMeters(upStopsPoly);
+            if (upStopSpan > 1500) {
+                upPolyline = smoothPolylineSpline(upStopsPoly);
             }
         }
-        return stationMap;
-    };
 
-    const buildPolylineFromStops = async (dirStops: typeof rawData.stops): Promise<Coordinate[]> => {
-        const coords: Coordinate[] = [];
-        const sorted = [...dirStops].sort((a, b) => a.ord - b.ord);
-        const mapData = dirStops.some(s => s.lat === undefined || s.lon === undefined) ? await getStationMapLazy() : {};
-
-        for (const s of sorted) {
-            const rawId = typeof s.id === "string" ? s.id.trim() : "";
-            const station = rawId ? mapData[rawId] : null;
-            const sCoords = s as { id?: string; ord: number; lat?: number; lon?: number };
-            if (isFiniteNumber(sCoords.lat) && isFiniteNumber(sCoords.lon)) {
-                coords.push([sCoords.lat!, sCoords.lon!]);
-            } else if (station && isFiniteNumber(station.gpslati) && isFiniteNumber(station.gpslong)) {
-                coords.push([station.gpslati, station.gpslong]);
+        const downSpan = getPolylineSpanMeters(downPolyline);
+        if (downSpan < 1000 && downStops.length >= 2) {
+            const downStopsPoly = await buildPolylineFromStops(downStops);
+            const downStopSpan = getPolylineSpanMeters(downStopsPoly);
+            if (downStopSpan > 1500) {
+                downPolyline = smoothPolylineSpline(downStopsPoly);
             }
         }
-        return coords;
-    };
 
-    const stops = rawData.stops || [];
-    const upStops = stops.filter(s => Number(s.ud) === 1);
-    const downStops = stops.filter(s => Number(s.ud) === 0);
-
-    const upSpan = getPolylineSpanMeters(upPolyline);
-    if (upSpan < 1000 && upStops.length >= 2) {
-        const upStopsPoly = await buildPolylineFromStops(upStops);
-        const upStopSpan = getPolylineSpanMeters(upStopsPoly);
-        if (upStopSpan > 1500) {
-            upPolyline = smoothPolylineSpline(upStopsPoly);
-        }
-    }
-
-    const downSpan = getPolylineSpanMeters(downPolyline);
-    if (downSpan < 1000 && downStops.length >= 2) {
-        const downStopsPoly = await buildPolylineFromStops(downStops);
-        const downStopSpan = getPolylineSpanMeters(downStopsPoly);
-        if (downStopSpan > 1500) {
-            downPolyline = smoothPolylineSpline(downStopsPoly);
-        }
-    }
-
-    const result: PolylineData = {
-        upPolyline,
-        downPolyline,
-        stopIndexMap: await buildStopIndexMap(upPolyline, downPolyline, rawData),
-        turnIndex: upPolyline.length > 0 ? upPolyline.length - 1 : 0,
-        bbox: extractBBox(rawData, [...upCoords, ...downCoords]),
-    };
-    processedCache.set(cacheKey, result);
-    return result;
+        return {
+            upPolyline,
+            downPolyline,
+            stopIndexMap: await buildStopIndexMap(upPolyline, downPolyline, rawData),
+            turnIndex: upPolyline.length > 0 ? upPolyline.length - 1 : 0,
+            bbox: extractBBox(rawData, [...upCoords, ...downCoords]),
+        };
+    });
 }
 
 export async function fetchRoutePolylines(
@@ -360,6 +392,11 @@ export function isPointNearPolyline(point: Coordinate, polyline: Coordinate[], m
     return false;
 }
 
+export function clearProcessedPolylineCache(): void {
+    processedCache.clear();
+    segmentedGeoJsonCache.clear();
+}
+
 /**
  * Builds a clean GeoJSON FeatureCollection where:
  * - Overlapping/shared route segments across sub-routes are styled in unified blue (#2563eb) without duplicates.
@@ -372,6 +409,26 @@ export function buildSegmentedRouteGeoJson(
     baseColor: string = SHARED_BLUE_COLOR
 ): FeatureCollection | null {
     if (validRouteIds.length === 0) return null;
+
+    const keyParts: string[] = [baseColor];
+    let hasAnyData = false;
+    for (const id of validRouteIds) {
+        const d = polylineMap.get(id);
+        if (d) {
+            hasAnyData = true;
+            keyParts.push(`${id}:${d.upPolyline.length}:${d.downPolyline.length}`);
+        } else {
+            keyParts.push(`${id}:0:0`);
+        }
+    }
+    if (!hasAnyData) return null;
+
+    const cacheKey = keyParts.join("|");
+    const cachedGeoJson = segmentedGeoJsonCache.get(cacheKey);
+    if (cachedGeoJson) {
+        return cachedGeoJson;
+    }
+
     const features: Feature[] = [];
 
     // Single route ID case: Entire route in unified base color (red/blue/green)
@@ -410,7 +467,9 @@ export function buildSegmentedRouteGeoJson(
                 }
             });
         }
-        return {type: "FeatureCollection", features};
+        const singleResult: FeatureCollection = {type: "FeatureCollection", features};
+        segmentedGeoJsonCache.set(cacheKey, singleResult);
+        return singleResult;
     }
 
     // Multiple route IDs: Segment into shared (baseColor) vs distinct branch colors
@@ -527,5 +586,7 @@ export function buildSegmentedRouteGeoJson(
         }
     }
 
-    return {type: "FeatureCollection", features};
+    const result: FeatureCollection = {type: "FeatureCollection", features};
+    segmentedGeoJsonCache.set(cacheKey, result);
+    return result;
 }

@@ -5,7 +5,11 @@
 
 "use client";
 
-import {fetchRoutePolylines, type PolylineData,} from "@entities/route/polylineService";
+import {
+    fetchRoutePolylines,
+    getCachedRoutePolylinesSync,
+    type PolylineData,
+} from "@entities/route/polylineService";
 
 import type {Coordinate} from "@entities/route/types";
 import {useRouteInfo} from "@entities/route/hooks";
@@ -29,17 +33,27 @@ export interface BusPolylineSet {
 const EMPTY_POLYLINE_MAP = new Map<string, PolylineData>();
 
 function usePolylineSnapshot(routeIds: string[], cityCode: string = "32020"): Map<string, PolylineData> {
+    const ids = useMemo(() => buildRouteIdsKey(routeIds, "|").split("|").filter(Boolean), [routeIds]);
+    const routeKey = useMemo(() => `${cityCode}:${ids.join("|")}`, [cityCode, ids]);
+    const syncCached = useMemo(() => getCachedRoutePolylinesSync(ids, cityCode), [ids, cityCode]);
+
     const [snapshot, setSnapshot] = useState<{
         key: string; map: Map<string, PolylineData>;
-    }>({key: "", map: EMPTY_POLYLINE_MAP});
-    const routeKey = useMemo(() => `${cityCode}:${buildRouteIdsKey(routeIds, "|")}`, [cityCode, routeIds]);
+    }>(() => ({
+        key: syncCached ? routeKey : "",
+        map: syncCached ?? EMPTY_POLYLINE_MAP,
+    }));
 
     useEffect(() => {
-        if (!routeKey) return;
+        if (ids.length === 0) return;
+
+        const currentCached = getCachedRoutePolylinesSync(ids, cityCode);
+        if (currentCached) {
+            setSnapshot((prev) => (prev.key === routeKey && prev.map === currentCached ? prev : {key: routeKey, map: currentCached}));
+            return;
+        }
 
         let mounted = true;
-        const ids = buildRouteIdsKey(routeIds, "|").split("|").filter(Boolean);
-
         fetchRoutePolylines(ids, cityCode).then((map) => {
             if (mounted) setSnapshot({key: routeKey, map});
         });
@@ -47,9 +61,12 @@ function usePolylineSnapshot(routeIds: string[], cityCode: string = "32020"): Ma
         return () => {
             mounted = false;
         };
-    }, [routeKey, cityCode, routeIds]);
+    }, [routeKey, cityCode, ids]);
 
-    return useMemo(() => (snapshot.key === routeKey ? snapshot.map : EMPTY_POLYLINE_MAP), [snapshot, routeKey]);
+    return useMemo(
+        () => (snapshot.key === routeKey ? snapshot.map : syncCached ?? EMPTY_POLYLINE_MAP),
+        [snapshot, routeKey, syncCached]
+    );
 }
 
 /**

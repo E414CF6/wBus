@@ -25,7 +25,7 @@ export const useBusSortedList = (routeName: string, enabled: boolean = true, cit
         reconnect,
     } = useBusLocationData(activeRouteIds, cityCode);
 
-    const getDirection = useBusDirection(routeName);
+    const getDirection = useBusDirection(routeName, cityCode);
     const error = mapError;
     const hasFetched = locationFetched;
 

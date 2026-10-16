@@ -22,7 +22,11 @@ html,
 body {
     margin: 0;
     padding: 0;
-    min-height: 100dvh;
+    width: 100%;
+    height: 100%;
+    min-height: 100lvh;
+    min-height: -webkit-fill-available;
+    overflow: hidden;
     background-color: var(--background);
     color: var(--foreground);
     font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard Variable", Pretendard, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -167,14 +171,14 @@ body {
 
 /* MapLibre Controls Positioning & Glassmorphism */
 .maplibregl-ctrl-top-right {
-    top: 92px !important;
-    right: 12px !important;
+    top: calc(env(safe-area-inset-top, 0px) + 92px) !important;
+    right: max(12px, env(safe-area-inset-right, 12px)) !important;
 }
 
 @media (min-width: 640px) {
     .maplibregl-ctrl-top-right {
-        top: 14px !important;
-        right: 16px !important;
+        top: calc(env(safe-area-inset-top, 0px) + 14px) !important;
+        right: max(16px, env(safe-area-inset-right, 16px)) !important;
     }
 }
 

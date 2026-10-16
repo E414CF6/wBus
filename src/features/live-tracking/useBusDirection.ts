@@ -23,12 +23,12 @@ import {useCallback, useEffect, useMemo, useState} from "react";
  *
  * Business logic is delegated to DirectionService (pure, testable).
  */
-export function useBusDirection(routeName: string) {
+export function useBusDirection(routeName: string, cityCode: string = "32020") {
     const [isReady, setIsReady] = useState(false);
     const [routeState, setRouteState] = useState<DirectionResolverState>({
         sequences: [], routeIdOrder: [],
     });
-    const routeInfo = useRouteInfo(routeName);
+    const routeInfo = useRouteInfo(routeName, true, cityCode);
 
     // Load Route Data
     useEffect(() => {
@@ -44,7 +44,7 @@ export function useBusDirection(routeName: string) {
 
             try {
                 const details = await Promise.all(routeInfo.vehicleRouteIds.map(async (id) => {
-                    const d = await getRouteDetails(id);
+                    const d = await getRouteDetails(id, cityCode);
                     return d ? {routeid: id, sequence: d.sequence} : null;
                 }));
 
@@ -68,7 +68,7 @@ export function useBusDirection(routeName: string) {
         return () => {
             isMounted = false;
         };
-    }, [routeName, routeInfo]);
+    }, [routeName, routeInfo, cityCode]);
 
     // Build lookup indexes (pure computation, memoized)
     const lookup = useMemo(() => (isReady ? buildDirectionLookup(routeState) : null), [routeState, isReady]);

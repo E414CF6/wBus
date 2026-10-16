@@ -1,33 +1,84 @@
 import {useMemo} from "react";
 import useSWR from "swr";
 
+import {getCachedPolylineSync, getCachedRouteInfoSync} from "@entities/route/api";
 import type {BusStop, BusStopArrival} from "@entities/station/types";
 import type {CachedData} from "@shared/cache";
+import {CacheManager} from "@shared/cache/CacheManager";
+import {STORAGE_KEYS} from "@shared/config/env";
 
 import {UI_TEXT} from "@shared/config/locale";
 
+const routeStopsCache = new CacheManager<BusStop[]>({
+    maxSize: 150,
+    ttlMs: 24 * 60 * 60 * 1000,
+    storagePrefix: STORAGE_KEYS.ROUTE_STOPS_PREFIX,
+    maxStorageEntries: 80,
+});
+
+function deriveStopsFromCachedPolylines(routeName: string, cityCode: string): BusStop[] | null {
+    const routeInfo = getCachedRouteInfoSync(routeName, cityCode);
+    if (!routeInfo || !routeInfo.vehicleRouteIds?.length) return null;
+
+    const allStops: BusStop[] = [];
+    for (const rId of routeInfo.vehicleRouteIds) {
+        const poly = getCachedPolylineSync(rId, cityCode);
+        if (poly && Array.isArray(poly.stops) && poly.stops.length > 0) {
+            for (const s of poly.stops) {
+                allStops.push({
+                    nodeid: s.id,
+                    nodenm: s.name,
+                    nodeno: s.nodeno ?? 0,
+                    nodeord: s.ord,
+                    gpslati: s.lat ?? 0,
+                    gpslong: s.lon ?? 0,
+                    updowncd: s.ud,
+                });
+            }
+        }
+    }
+
+    if (allStops.length === 0) return null;
+    allStops.sort((a, b) => Number(a.nodeord || 0) - Number(b.nodeord || 0));
+    return allStops;
+}
+
 // Fetcher for the new API
-const apiFetcher = async (url: string) => {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("Failed to fetch stops");
-    const data = await res.json();
-    return data.data; // Cached response wrapper has .data
+const fetchRouteStops = async (routeName: string, cityCode: string): Promise<BusStop[]> => {
+    const cacheKey = `${cityCode}:${routeName}`;
+    return routeStopsCache.getOrFetch(cacheKey, async () => {
+        const url =
+            cityCode === "32020"
+                ? `/api/route-stops/${encodeURIComponent(routeName)}`
+                : `/api/route-stops/${encodeURIComponent(routeName)}?cityCode=${cityCode}`;
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("Failed to fetch stops");
+        const data = await res.json();
+        return (data.data ?? []) as BusStop[];
+    });
 };
 
 // useBusStop (stops for a specific route)
 export function useBusStop(routeName: string, cityCode = "32020"): BusStop[] {
-    const url = routeName
-        ? cityCode === "32020"
-            ? `/api/route-stops/${encodeURIComponent(routeName)}`
-            : `/api/route-stops/${encodeURIComponent(routeName)}?cityCode=${cityCode}`
-        : null;
+    const swrKey = routeName ? `route-stops:${cityCode}:${routeName}` : null;
+    const syncCached = useMemo(() => {
+        if (!routeName) return [];
+        const cached = routeStopsCache.get(`${cityCode}:${routeName}`);
+        if (cached && cached.length > 0) return cached;
+        return deriveStopsFromCachedPolylines(routeName, cityCode) ?? [];
+    }, [routeName, cityCode]);
 
-    const {data: stops} = useSWR<BusStop[]>(url, apiFetcher, {
-        revalidateOnFocus: false, // Stops are static
-        dedupingInterval: 60000, fallbackData: [],
-    });
+    const {data: stops} = useSWR<BusStop[]>(
+        swrKey,
+        () => fetchRouteStops(routeName, cityCode),
+        {
+            revalidateOnFocus: false, // Stops are static
+            dedupingInterval: 300000,
+            fallbackData: syncCached,
+        }
+    );
 
-    return stops ?? [];
+    return stops ?? syncCached;
 }
 
 // useBusArrivalInfo

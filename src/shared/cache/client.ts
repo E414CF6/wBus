@@ -22,12 +22,71 @@ export interface CacheOptions {
     forceRefresh?: boolean;
 }
 
-const MEMORY_CACHE_MAX_KEYS = 500;
+const MEMORY_CACHE_MAX_KEYS = 2000;
 const REVALIDATE_COOLDOWN_MS = 1000;
 
 const pendingRequests = new Map<string, Promise<CachedData<unknown>>>();
 const memoryCache = new CacheManager<CachedData<unknown>>(MEMORY_CACHE_MAX_KEYS);
 const revalidateState = new Map<string, { nextAllowedAt: number; failureCount: number }>();
+
+/**
+ * Synchronously inspect L1 Memory Cache without triggering a fetch.
+ */
+export function peekCached<T>(key: string, maxAgeSeconds?: number): CachedData<T> | null {
+    const memEntry = memoryCache.get(key) as CachedData<T> | null;
+    if (!memEntry) return null;
+    const ageMs = Date.now() - memEntry.timestamp;
+    if (maxAgeSeconds !== undefined && ageMs > maxAgeSeconds * 1000) {
+        return null;
+    }
+    return {
+        ...memEntry,
+        meta: {status: "hit", layer: "memory", ageMs},
+    };
+}
+
+/**
+ * Directly seed or update L1 Memory Cache (e.g. during batch sync or cross-populating related keys).
+ */
+export function setCached<T>(key: string, data: T): CachedData<T> {
+    const entry: CachedData<T> = {
+        data,
+        timestamp: Date.now(),
+        meta: {
+            status: "hit",
+            layer: "memory",
+            ageMs: 0,
+        },
+    };
+    memoryCache.set(key, entry);
+    return entry;
+}
+
+/**
+ * Invalidate all L1 cache entries whose key starts with any of the given prefixes.
+ */
+export function invalidateCacheByPrefix(prefixes: string | string[]): number {
+    const prefixList = Array.isArray(prefixes) ? prefixes : [prefixes];
+    let removed = 0;
+    for (const key of memoryCache.keys()) {
+        if (prefixList.some((p) => key.startsWith(p))) {
+            memoryCache.delete(key);
+            pendingRequests.delete(key);
+            revalidateState.delete(key);
+            removed++;
+        }
+    }
+    return removed;
+}
+
+/**
+ * Clear the entire L1 memory cache.
+ */
+export function clearMemoryCache(): void {
+    memoryCache.clear();
+    pendingRequests.clear();
+    revalidateState.clear();
+}
 
 /**
  * High-performance Cache-Aside pattern with Memory LRU + SWR.
@@ -45,7 +104,7 @@ export async function getCachedOrFetch<T>(
 
     // 1. Check L1 Memory Cache
     if (!forceRefresh) {
-        const memEntry = memoryCache.get(key) as CachedData<T> | undefined;
+        const memEntry = memoryCache.get(key) as CachedData<T> | null;
         if (memEntry) {
             const ageMs = now - memEntry.timestamp;
             const ttlMs = ttlSeconds * 1000;
@@ -68,7 +127,7 @@ export async function getCachedOrFetch<T>(
     }
 
     // 2. Cache Miss: Fetch and store
-    const memEntry = memoryCache.get(key) as CachedData<T> | undefined;
+    const memEntry = (memoryCache.get(key) as CachedData<T> | null) ?? undefined;
     return fetchAndStore(key, fetcher, ttlSeconds, memEntry, staleIfErrorSeconds);
 }
 

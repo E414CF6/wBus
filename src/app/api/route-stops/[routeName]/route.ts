@@ -1,24 +1,59 @@
 import {ApiValidators, createApiHandler} from "@shared/api";
 import type {BusStop} from "@entities/station/types";
+import type {GeoPolyline} from "@entities/route/types";
 import {buildCacheControl} from "@shared/cache/cachePolicy";
-import {fetchCityRoutes, fetchRouteStops} from "@entities/bus";
+import {getCachedOrFetch, peekCached} from "@shared/cache";
+import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
+import {fetchRouteStops, getCachedCityRoutes} from "@entities/bus";
 
 // Edge CDN ISR Cache: Revalidate every 24 hours (86400 seconds)
 export const revalidate = 86400;
 
 async function getRouteStopsForCity(routeName: string, cityCode: string): Promise<BusStop[]> {
     try {
-        const rawRoutes = await fetchCityRoutes(cityCode, routeName);
+        const routesResult = await getCachedCityRoutes(cityCode, routeName);
+        const rawRoutes = routesResult.data || [];
         const matched = rawRoutes.filter((r) => String(r.routeno) === routeName);
         const routeIds = (matched.length > 0 ? matched : rawRoutes).map((r) => r.routeid);
         if (routeIds.length === 0) return [];
 
         const stopMap = new Map<string, BusStop>();
 
-        for (const rId of routeIds) {
-            try {
-                const stops = await fetchRouteStops(rId, cityCode);
-                for (const s of stops) {
+        const settled = await mapWithConcurrencyLimit(
+            routeIds,
+            async (rId) => {
+                // 1. Check if polyline is already cached in L1 memory (contains stops)
+                const cachedPoly = peekCached<GeoPolyline>(`polyline:${cityCode}:${rId}`, 86400);
+                if (cachedPoly?.data?.stops?.length) {
+                    return cachedPoly.data.stops.map((s) => ({
+                        nodeid: s.id,
+                        nodenm: s.name,
+                        nodeno: String(s.nodeno ?? ""),
+                        gpslati: Number(s.lat ?? 0),
+                        gpslong: Number(s.lon ?? 0),
+                        nodeord: Number(s.ord ?? 0),
+                        updowncd: Number(s.ud ?? 0),
+                    }));
+                }
+
+                // 2. Otherwise use shared bus-stops L1 cache
+                const cachedStops = await getCachedOrFetch(
+                    `bus-stops:${cityCode}:${rId}`,
+                    () => fetchRouteStops(rId, cityCode),
+                    {
+                        ttlSeconds: 3600,
+                        staleWhileRevalidateSeconds: 86400,
+                        staleIfErrorSeconds: 86400,
+                    }
+                );
+                return cachedStops.data || [];
+            },
+            {concurrency: 4, staggerMs: 15}
+        );
+
+        for (const res of settled) {
+            if (res.status === "fulfilled" && Array.isArray(res.value)) {
+                for (const s of res.value) {
                     const key = `${s.nodeid}-${s.updowncd ?? ""}`;
                     if (!stopMap.has(key)) {
                         stopMap.set(key, {
@@ -32,8 +67,6 @@ async function getRouteStopsForCity(routeName: string, cityCode: string): Promis
                         });
                     }
                 }
-            } catch (err) {
-                console.warn(`[getRouteStopsForCity] Failed for routeId ${rId}:`, err);
             }
         }
 

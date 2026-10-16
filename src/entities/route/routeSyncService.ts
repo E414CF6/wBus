@@ -4,6 +4,8 @@ import fs from "fs";
 import path from "path";
 import {revalidatePath} from "next/cache";
 
+import {CacheManager, getCachedOrFetch, invalidateCacheByPrefix, setCached} from "@shared/cache";
+import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import {invalidateRouteCaches} from "./api";
 import type {GeoPolyline, RouteMapData} from "./types";
 import type {StationLocation} from "@entities/station/types";
@@ -22,39 +24,54 @@ const DEFAULT_TAGO_URL = "https://apis.data.go.kr/1613000/BusRouteInfoInqireServ
 const DEFAULT_OSRM_URL = process.env.OSRM_API_URL || "https://router.project-osrm.org/route/v1/driving";
 const OSRM_CHUNK_SIZE = 18;
 
+// L1 cache for OSRM road-snapped coordinate chunks (shared across sub-routes & re-syncs)
+const osrmChunkCache = new CacheManager<[number, number][] | null>({
+    maxSize: 1500,
+    ttlMs: 7 * 24 * 60 * 60 * 1000, // 7 days
+});
+
+// In-flight & L1 cache for generated route polylines
+const polylineGenerationCache = new CacheManager<GeoPolyline | null>({
+    maxSize: 500,
+    ttlMs: 24 * 60 * 60 * 1000, // 24 hours
+});
+
 function getServiceKey(): string | null {
     return process.env.DATA_GO_KR_SERVICE_KEY || process.env.DATA_GO_KR_SERVICE_KEYS?.split(",")[0] || null;
 }
 
 async function fetchOsrmSingleChunk(chunk: [number, number][]): Promise<[number, number][] | null> {
     if (chunk.length < 2) return null;
-    try {
-        const coordsStr = chunk.map((c) => `${c[0].toFixed(6)},${c[1].toFixed(6)}`).join(";");
-        const radiuses = chunk.map(() => 45).join(";");
-        const url = `${DEFAULT_OSRM_URL}/${coordsStr}?overview=full&geometries=geojson&steps=false&continue_straight=false&radiuses=${radiuses}`;
-        const res = await fetch(url, {
-            headers: {"User-Agent": "wBus-Transit-Pipeline/2.0"},
-            signal: AbortSignal.timeout(5000),
-        });
-        if (res.ok) {
-            const json = await res.json();
-            const routeCoords = json?.routes?.[0]?.geometry?.coordinates as [number, number][] | undefined;
-            if (Array.isArray(routeCoords) && routeCoords.length >= 2) {
-                const straightDist = calculatePolylineMeters(chunk);
-                const routedDist = calculatePolylineMeters(routeCoords);
-                if (isExcessiveDetour(straightDist, routedDist)) {
-                    console.warn(
-                        `[RouteSyncService] OSRM detour detected (${routedDist.toFixed(0)}m vs straight ${straightDist.toFixed(0)}m). Falling back to smoothed spline.`
-                    );
-                    return null;
+    const coordsStr = chunk.map((c) => `${c[0].toFixed(6)},${c[1].toFixed(6)}`).join(";");
+
+    return osrmChunkCache.getOrFetch(coordsStr, async () => {
+        try {
+            const radiuses = chunk.map(() => 45).join(";");
+            const url = `${DEFAULT_OSRM_URL}/${coordsStr}?overview=full&geometries=geojson&steps=false&continue_straight=false&radiuses=${radiuses}`;
+            const res = await fetch(url, {
+                headers: {"User-Agent": "wBus-Transit-Pipeline/2.0"},
+                signal: AbortSignal.timeout(5000),
+            });
+            if (res.ok) {
+                const json = await res.json();
+                const routeCoords = json?.routes?.[0]?.geometry?.coordinates as [number, number][] | undefined;
+                if (Array.isArray(routeCoords) && routeCoords.length >= 2) {
+                    const straightDist = calculatePolylineMeters(chunk);
+                    const routedDist = calculatePolylineMeters(routeCoords);
+                    if (isExcessiveDetour(straightDist, routedDist)) {
+                        console.warn(
+                            `[RouteSyncService] OSRM detour detected (${routedDist.toFixed(0)}m vs straight ${straightDist.toFixed(0)}m). Falling back to smoothed spline.`
+                        );
+                        return null;
+                    }
+                    return routeCoords;
                 }
-                return routeCoords;
             }
+        } catch {
+            // Fallback to null for this chunk
         }
-    } catch {
-        // Fallback to null for this chunk
-    }
-    return null;
+        return null;
+    });
 }
 
 async function fetchOsrmPolyline(coords: [number, number][]): Promise<[number, number][] | null> {
@@ -66,19 +83,18 @@ async function fetchOsrmPolyline(coords: [number, number][]): Promise<[number, n
     }
 
     const chunks = chunkCoordinates(coords, OSRM_CHUNK_SIZE);
-    const segments: [number, number][][] = [];
+    const settled = await mapWithConcurrencyLimit(
+        chunks,
+        async (chunk) => {
+            const snapped = await fetchOsrmSingleChunk(chunk);
+            return snapped && snapped.length >= 2 ? snapped : smoothPolylineSpline(chunk);
+        },
+        {concurrency: 3, staggerMs: 20}
+    );
 
-    for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        const snapped = await fetchOsrmSingleChunk(chunk);
-        const segment = snapped && snapped.length >= 2 ? snapped : smoothPolylineSpline(chunk);
-        segments.push(segment);
-
-        // Small yield between chunks to prevent burst rate limits on public OSRM server
-        if (i < chunks.length - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 30));
-        }
-    }
+    const segments: [number, number][][] = settled.map((res, idx) =>
+        res.status === "fulfilled" && res.value ? res.value : smoothPolylineSpline(chunks[idx])
+    );
 
     const stitched = stitchPolylineSegments(segments);
     return stitched.length >= 2 ? stitched : coords;
@@ -387,6 +403,8 @@ export async function refreshRouteData(
 
     // Invalidate caches
     invalidateRouteCaches();
+    polylineGenerationCache.clear();
+    invalidateCacheByPrefix(["routes:", "polyline:", "bus-stops:", "route-stops:"]);
     try {
         revalidatePath("/api/route-stops");
         revalidatePath("/map");
@@ -409,161 +427,177 @@ export async function refreshRouteData(
 }
 
 /**
- * On-demand polyline generator for non-Wonju routes across South Korea.
- * Fetches route through-stations from TAGO, snaps with OSRM, saves to /tmp/routes/, and returns GeoPolyline.
+ * On-demand polyline generator for routes across South Korea.
+ * Fetches route through-stations from TAGO (with L1 cache), snaps with OSRM (with chunk cache + concurrency),
+ * saves to /tmp/routes/, and returns GeoPolyline with in-flight request deduplication.
  */
 export async function generateSingleRoutePolyline(
     routeId: string,
     cityCode = DEFAULT_CITY_CODE,
     routeNo?: string
 ): Promise<GeoPolyline | null> {
-    try {
-        let stops: Array<{
-            nodeid: string;
-            nodenm: string;
-            nodeord: number;
-            nodeno: string;
-            gpslati: number;
-            gpslong: number;
-            updowncd: number;
-        }> = [];
-
-        // 1. Try standard transit bus stop service with key rotation
+    const cacheKey = `${cityCode}:${routeId}`;
+    return polylineGenerationCache.getOrFetch(cacheKey, async () => {
         try {
-            const {fetchRouteStops} = await import("@entities/bus");
-            const rawStops = await fetchRouteStops(routeId, cityCode);
-            if (rawStops && rawStops.length > 0) {
-                stops = rawStops.map((s) => ({
-                    nodeid: String(s.nodeid || ""),
-                    nodenm: String(s.nodenm || ""),
-                    nodeord: Number(s.nodeord || 0),
-                    nodeno: String(s.nodeno || ""),
-                    gpslati: Number(s.gpslati || 0),
-                    gpslong: Number(s.gpslong || 0),
-                    updowncd: Number(s.updowncd ?? 0),
-                }));
-            }
-        } catch {
-            // Fall through to raw fetchTago
-        }
+            let stops: Array<{
+                nodeid: string;
+                nodenm: string;
+                nodeord: number;
+                nodeno: string;
+                gpslati: number;
+                gpslong: number;
+                updowncd: number;
+            }> = [];
 
-        // 2. Direct TAGO fallback if needed
-        if (stops.length === 0) {
+            // 1. Try standard transit bus stop service with L1 cache & key rotation
             try {
-                const stopItems = await fetchTago<TagoStopItem>("getRouteAcctoThrghSttnList", {
-                    cityCode,
-                    routeId,
-                    numOfRows: 2048,
-                });
-                if (stopItems && stopItems.length > 0) {
-                    stops = stopItems.map((item) => ({
-                        nodeid: String(item.nodeid || ""),
-                        nodenm: String(item.nodenm || ""),
-                        nodeord: Number(item.nodeord || 0),
-                        nodeno: String(item.nodeno || ""),
-                        gpslati: Number(item.gpslati || 0),
-                        gpslong: Number(item.gpslong || 0),
-                        updowncd: Number(item.updowncd ?? 0),
+                const {fetchRouteStops} = await import("@entities/bus");
+                const cachedStops = await getCachedOrFetch(
+                    `bus-stops:${cityCode}:${routeId}`,
+                    () => fetchRouteStops(routeId, cityCode),
+                    {
+                        ttlSeconds: 3600,
+                        staleWhileRevalidateSeconds: 86400,
+                        staleIfErrorSeconds: 86400,
+                    }
+                );
+                const rawStops = cachedStops.data;
+                if (rawStops && rawStops.length > 0) {
+                    stops = rawStops.map((s) => ({
+                        nodeid: String(s.nodeid || ""),
+                        nodenm: String(s.nodenm || ""),
+                        nodeord: Number(s.nodeord || 0),
+                        nodeno: String(s.nodeno || ""),
+                        gpslati: Number(s.gpslati || 0),
+                        gpslong: Number(s.gpslong || 0),
+                        updowncd: Number(s.updowncd ?? 0),
                     }));
                 }
             } catch {
-                // Ignore
+                // Fall through to raw fetchTago
             }
-        }
 
-        if (stops.length === 0) return null;
-
-        stops.sort((a, b) => a.nodeord - b.nodeord);
-
-        const hasBothDirections =
-            stops.some((s) => s.updowncd === 1) && stops.some((s) => s.updowncd === 0);
-
-        let upCoords: [number, number][];
-        let downCoords: [number, number][];
-
-        if (hasBothDirections) {
-            upCoords = stops
-                .filter((s) => s.updowncd === 1 && s.gpslong > 0 && s.gpslati > 0)
-                .map((s) => [s.gpslong, s.gpslati]);
-            downCoords = stops
-                .filter((s) => s.updowncd === 0 && s.gpslong > 0 && s.gpslati > 0)
-                .map((s) => [s.gpslong, s.gpslati]);
-        } else {
-            const allCoords: [number, number][] = stops
-                .filter((s) => s.gpslong > 0 && s.gpslati > 0)
-                .map((s) => [s.gpslong, s.gpslati]);
-            upCoords = allCoords;
-            downCoords = allCoords;
-        }
-
-        if (upCoords.length < 2) return null;
-
-        const [snappedUp, snappedDown] = await Promise.all([
-            fetchOsrmPolyline(upCoords),
-            hasBothDirections && downCoords.length >= 2 ? fetchOsrmPolyline(downCoords) : Promise.resolve(null),
-        ]);
-
-        let finalUp = snappedUp && snappedUp.length >= 2 ? snappedUp : smoothPolylineSpline(upCoords);
-        let finalDown = hasBothDirections
-            ? (snappedDown && snappedDown.length >= 2 ? snappedDown : smoothPolylineSpline(downCoords))
-            : finalUp;
-
-        if (hasBothDirections && finalUp.length >= 2 && finalDown.length >= 2) {
-            const turningDir = findTurningDirection(stops);
-            const connected = await connectTurningPoint(
-                finalUp,
-                finalDown,
-                turningDir,
-                fetchOsrmPolyline
-            );
-            finalUp = connected.upPolyline;
-            finalDown = connected.downPolyline;
-        }
-
-        const totalDist =
-            calculatePolylineDistanceMeters(finalUp) +
-            (hasBothDirections ? calculatePolylineDistanceMeters(finalDown) : 0);
-
-        const polylineData: GeoPolyline = {
-            route_id: routeId,
-            route_no: routeNo || routeId,
-            stops_count: stops.length,
-            total_dist: Math.round(totalDist),
-            up_polyline: finalUp,
-            down_polyline: finalDown,
-            stops: stops.map((s) => ({
-                id: s.nodeid,
-                name: s.nodenm,
-                ord: s.nodeord,
-                ud: s.updowncd,
-                lat: s.gpslati,
-                lon: s.gpslong,
-                nodeno: s.nodeno,
-            })),
-        };
-
-        // Cache in /tmp/routes/{routeId}.json and public/routes/{routeId}.json
-        try {
-            const tmpDir = "/tmp/routes";
-            if (!fs.existsSync(tmpDir)) {
-                fs.mkdirSync(tmpDir, {recursive: true});
-            }
-            fs.writeFileSync(path.join(tmpDir, `${routeId}.json`), JSON.stringify(polylineData), "utf-8");
-
-            if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
-                const localDir = path.join(process.cwd(), "public", "routes");
-                if (!fs.existsSync(localDir)) {
-                    fs.mkdirSync(localDir, {recursive: true});
+            // 2. Direct TAGO fallback if needed
+            if (stops.length === 0) {
+                try {
+                    const stopItems = await fetchTago<TagoStopItem>("getRouteAcctoThrghSttnList", {
+                        cityCode,
+                        routeId,
+                        numOfRows: 2048,
+                    });
+                    if (stopItems && stopItems.length > 0) {
+                        stops = stopItems.map((item) => ({
+                            nodeid: String(item.nodeid || ""),
+                            nodenm: String(item.nodenm || ""),
+                            nodeord: Number(item.nodeord || 0),
+                            nodeno: String(item.nodeno || ""),
+                            gpslati: Number(item.gpslati || 0),
+                            gpslong: Number(item.gpslong || 0),
+                            updowncd: Number(item.updowncd ?? 0),
+                        }));
+                    }
+                } catch {
+                    // Ignore
                 }
-                fs.writeFileSync(path.join(localDir, `${routeId}.json`), JSON.stringify(polylineData, null, 2), "utf-8");
             }
-        } catch {
-            // Read-only filesystem fallback
-        }
 
-        return polylineData;
-    } catch (err) {
-        console.error(`[RouteSyncService] Failed to generate polyline for ${routeId}:`, err);
-        return null;
-    }
+            if (stops.length === 0) return null;
+
+            stops.sort((a, b) => a.nodeord - b.nodeord);
+
+            const hasBothDirections =
+                stops.some((s) => s.updowncd === 1) && stops.some((s) => s.updowncd === 0);
+
+            let upCoords: [number, number][];
+            let downCoords: [number, number][];
+
+            if (hasBothDirections) {
+                upCoords = stops
+                    .filter((s) => s.updowncd === 1 && s.gpslong > 0 && s.gpslati > 0)
+                    .map((s) => [s.gpslong, s.gpslati]);
+                downCoords = stops
+                    .filter((s) => s.updowncd === 0 && s.gpslong > 0 && s.gpslati > 0)
+                    .map((s) => [s.gpslong, s.gpslati]);
+            } else {
+                const allCoords: [number, number][] = stops
+                    .filter((s) => s.gpslong > 0 && s.gpslati > 0)
+                    .map((s) => [s.gpslong, s.gpslati]);
+                upCoords = allCoords;
+                downCoords = allCoords;
+            }
+
+            if (upCoords.length < 2) return null;
+
+            const [snappedUp, snappedDown] = await Promise.all([
+                fetchOsrmPolyline(upCoords),
+                hasBothDirections && downCoords.length >= 2 ? fetchOsrmPolyline(downCoords) : Promise.resolve(null),
+            ]);
+
+            let finalUp = snappedUp && snappedUp.length >= 2 ? snappedUp : smoothPolylineSpline(upCoords);
+            let finalDown = hasBothDirections
+                ? (snappedDown && snappedDown.length >= 2 ? snappedDown : smoothPolylineSpline(downCoords))
+                : finalUp;
+
+            if (hasBothDirections && finalUp.length >= 2 && finalDown.length >= 2) {
+                const turningDir = findTurningDirection(stops);
+                const connected = await connectTurningPoint(
+                    finalUp,
+                    finalDown,
+                    turningDir,
+                    fetchOsrmPolyline
+                );
+                finalUp = connected.upPolyline;
+                finalDown = connected.downPolyline;
+            }
+
+            const totalDist =
+                calculatePolylineDistanceMeters(finalUp) +
+                (hasBothDirections ? calculatePolylineDistanceMeters(finalDown) : 0);
+
+            const polylineData: GeoPolyline = {
+                route_id: routeId,
+                route_no: routeNo || routeId,
+                stops_count: stops.length,
+                total_dist: Math.round(totalDist),
+                up_polyline: finalUp,
+                down_polyline: finalDown,
+                stops: stops.map((s) => ({
+                    id: s.nodeid,
+                    name: s.nodenm,
+                    ord: s.nodeord,
+                    ud: s.updowncd,
+                    lat: s.gpslati,
+                    lon: s.gpslong,
+                    nodeno: s.nodeno,
+                })),
+            };
+
+            // Seed server L1 memory cache for /api/polyline/[routeId]
+            setCached(`polyline:${cityCode}:${routeId}`, polylineData);
+
+            // Cache in /tmp/routes/{routeId}.json and public/routes/{routeId}.json
+            try {
+                const tmpDir = "/tmp/routes";
+                if (!fs.existsSync(tmpDir)) {
+                    fs.mkdirSync(tmpDir, {recursive: true});
+                }
+                fs.writeFileSync(path.join(tmpDir, `${routeId}.json`), JSON.stringify(polylineData), "utf-8");
+
+                if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+                    const localDir = path.join(process.cwd(), "public", "routes");
+                    if (!fs.existsSync(localDir)) {
+                        fs.mkdirSync(localDir, {recursive: true});
+                    }
+                    fs.writeFileSync(path.join(localDir, `${routeId}.json`), JSON.stringify(polylineData, null, 2), "utf-8");
+                }
+            } catch {
+                // Read-only filesystem fallback
+            }
+
+            return polylineData;
+        } catch (err) {
+            console.error(`[RouteSyncService] Failed to generate polyline for ${routeId}:`, err);
+            return null;
+        }
+    });
 }

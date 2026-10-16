@@ -2,7 +2,7 @@
 
 import React, {memo, useCallback, useEffect, useState} from "react";
 import {Marker} from "react-map-gl/maplibre";
-import {Bus, Calendar, Clock, GraduationCap, MapPin} from "lucide-react";
+import {Calendar, Clock, GraduationCap} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {MAP_SETTINGS} from "@shared/config/env";
 import type {TimetableSubTab} from "@shared/types/navigation";
@@ -15,11 +15,22 @@ export interface TimetableHub {
     lat: number;
     lng: number;
     subTab: TimetableSubTab;
-    theme: "yonsei" | "terminal" | "station";
+    theme: "yonsei" | "cityhall";
     icon: React.ComponentType<{ className?: string }>;
 }
 
 export const WONJU_TIMETABLE_HUBS: TimetableHub[] = [
+    {
+        id: "hub-cityhall",
+        name: "원주시청 버스 시간표",
+        shortLabel: "원주시청 시간표",
+        badgeText: "원주시 전체 노선 시간표",
+        lat: 37.3421,
+        lng: 127.9198,
+        subTab: "all",
+        theme: "cityhall",
+        icon: Calendar,
+    },
     {
         id: "hub-yonsei",
         name: "연세대 미래캠퍼스 시간표",
@@ -30,28 +41,6 @@ export const WONJU_TIMETABLE_HUBS: TimetableHub[] = [
         subTab: "yonsei",
         theme: "yonsei",
         icon: GraduationCap,
-    },
-    {
-        id: "hub-terminal",
-        name: "원주버스터미널 시간표",
-        shortLabel: "터미널 시간표",
-        badgeText: "시내 · 셔틀 시간표",
-        lat: 37.3442,
-        lng: 127.9323,
-        subTab: "all",
-        theme: "terminal",
-        icon: Calendar,
-    },
-    {
-        id: "hub-station",
-        name: "원주역 버스 시간표",
-        shortLabel: "원주역 시간표",
-        badgeText: "열차연계 · 시내버스",
-        lat: 37.3154,
-        lng: 127.9218,
-        subTab: "all",
-        theme: "station",
-        icon: Bus,
     },
 ];
 

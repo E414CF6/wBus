@@ -1,3 +1,4 @@
+import {getCachedOrFetch, peekCached} from "@shared/cache";
 import {API_PRIORITY, TaskQueue} from "@shared/utils/concurrency";
 import {isRouteInServiceWindow, recordRouteBusActivity} from "./routeWindow";
 
@@ -650,7 +651,7 @@ export interface RawCityRoute {
 export async function fetchCityRoutes(cityCode: string, routeNo?: string): Promise<RawCityRoute[]> {
     const params: Record<string, string> = {
         cityCode,
-        numOfRows: "500",
+        numOfRows: "2048",
     };
     if (routeNo) {
         params.routeNo = routeNo;
@@ -668,3 +669,67 @@ export async function fetchCityRoutes(cityCode: string, routeNo?: string): Promi
         routeno: String(r.routeno ?? ""),
     }));
 }
+
+const ROUTE_CACHE_OPTIONS = {
+    ttlSeconds: 86400,
+    staleWhileRevalidateSeconds: 604800,
+    staleIfErrorSeconds: 604800,
+} as const;
+
+/**
+ * Helper to get or fetch the full city route list with L1 memory caching & SWR.
+ */
+export async function getCachedCityRoutes(cityCode: string, routeNo?: string) {
+    const allCacheKey = `routes:${cityCode}:all`;
+
+    // 1. If routeNo is requested and full city list is already in L1 memory, filter in-memory (0 network calls)
+    if (routeNo) {
+        const cachedAll = peekCached<RawCityRoute[]>(
+            allCacheKey,
+            ROUTE_CACHE_OPTIONS.ttlSeconds + ROUTE_CACHE_OPTIONS.staleWhileRevalidateSeconds
+        );
+        if (cachedAll?.data && cachedAll.data.length > 0) {
+            const exact = cachedAll.data.filter((r) => String(r.routeno) === routeNo);
+            if (exact.length > 0) {
+                return {
+                    data: exact,
+                    meta: cachedAll.meta,
+                };
+            }
+        }
+    }
+
+    // 2. Fetch full city route list first (warms cache for all routes in the city in 1 request)
+    const allResult = await getCachedOrFetch<RawCityRoute[]>(
+        allCacheKey,
+        async () => {
+            const fetched = await fetchCityRoutes(cityCode);
+            return fetched && fetched.length > 0 ? fetched : [];
+        },
+        ROUTE_CACHE_OPTIONS
+    );
+
+    if (!routeNo) {
+        return allResult;
+    }
+
+    const matchedFromAll = (allResult.data || []).filter((r) => String(r.routeno) === routeNo);
+    if (matchedFromAll.length > 0) {
+        return {
+            data: matchedFromAll,
+            meta: allResult.meta,
+        };
+    }
+
+    // 3. Fallback: query specific routeNo if not present in the city-wide list
+    const specificKey = `routes:${cityCode}:${routeNo}`;
+    return getCachedOrFetch<RawCityRoute[]>(
+        specificKey,
+        async () => {
+            const fetched = await fetchCityRoutes(cityCode, routeNo);
+            return fetched && fetched.length > 0 ? fetched : [];
+        },
+        ROUTE_CACHE_OPTIONS
+    );
+}
+

@@ -1,18 +1,17 @@
 import {type NextRequest, NextResponse} from "next/server";
-import {fetchCityRoutes, type RawCityRoute} from "@entities/bus";
-import {getCachedOrFetch} from "@shared/cache";
+import {getCachedCityRoutes} from "@entities/bus";
 import {ApiValidators} from "@shared/api";
-import {STATIC_ROUTE_METADATA} from "@entities/route/routeMetadata";
 
 export const dynamic = "force-dynamic";
 
-const CACHE_CONTROL_HEADER = "public, max-age=3600, s-maxage=86400, stale-while-revalidate=86400";
+const CACHE_CONTROL_HEADER =
+    "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800, stale-if-error=604800";
 
 /**
  * GET /api/routes?cityCode=...&routeNo=...
  * Returns routes for a city.
  * - Defaults to Wonju ("32020") if cityCode is unspecified.
- * - Non-Wonju cities query TAGO BusRouteInfoInqireService/getRouteNoList with 24h caching.
+ * - Shares unified L1 memory cache (`routes:{cityCode}:all`) across full-list and single-route queries.
  */
 export async function GET(request: NextRequest) {
     const {searchParams} = request.nextUrl;
@@ -27,20 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-        const cacheKey = `routes:${cityCode}:${routeNo || "all"}`;
-        const result = await getCachedOrFetch<RawCityRoute[]>(
-            cacheKey,
-            async () => {
-                const fetched = await fetchCityRoutes(cityCode, routeNo);
-                if (fetched && fetched.length > 0) return fetched;
-                return [];
-            },
-            {
-                ttlSeconds: 86400,
-                staleWhileRevalidateSeconds: 604800,
-                staleIfErrorSeconds: 604800,
-            }
-        );
+        const result = await getCachedCityRoutes(cityCode, routeNo);
 
         // Group into route_numbers mapping { [routeNo]: [routeId1, routeId2, ...] }
         const routeNumbersMap: Record<string, string[]> = {};
@@ -64,6 +50,10 @@ export async function GET(request: NextRequest) {
             {
                 headers: {
                     "Cache-Control": CACHE_CONTROL_HEADER,
+                    ...(result.meta ? {
+                        "X-Cache-Status": result.meta.status,
+                        "X-Cache-Layer": result.meta.layer,
+                    } : {}),
                 },
             }
         );

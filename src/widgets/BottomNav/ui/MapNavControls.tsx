@@ -54,9 +54,6 @@ export const MapNavControls = memo(function MapNavControls({
                 }}
             />
 
-            {/* Divider */}
-            <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0 animate-fadeIn"/>
-
             {/* Enhanced Route Selector Button (Opens RouteSelectModal) */}
             <button
                 type="button"

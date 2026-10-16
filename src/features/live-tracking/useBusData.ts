@@ -37,7 +37,7 @@ export function useBusData(routeName: string, enabled: boolean = true, cityCode:
     const {
         data: busList, connectionStatus, hasFetched, error, lastUpdated, isDegraded, reconnect
     } = useBusLocationData(activeRouteIds, cityCode);
-    const directionFn = useBusDirection(routeName);
+    const directionFn = useBusDirection(routeName, cityCode);
 
     const activeRouteId = useMemo(() => {
         const liveRouteId = busList.find((bus) => bus.routeid)?.routeid;
