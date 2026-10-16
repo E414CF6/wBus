@@ -13,14 +13,17 @@ import {useRoutePolylineData} from "@features/live-tracking";
 import {buildSegmentedRouteGeoJson, SHARED_BLUE_COLOR} from "@entities/route/polylineService";
 import type {Feature} from "geojson";
 
-import {BusFront, Info, MapPin, MapPinned} from "lucide-react";
+import {BusFront, Calendar, Info, MapPin, MapPinned} from "lucide-react";
 import {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Marker, Popup} from "react-map-gl/maplibre";
+import type {TimetableSubTab} from "@shared/types/navigation";
 
 type BusStopMarkerItemProps = {
     stop: BusStop;
     isRouteStop?: boolean;
     onRouteChange?: (routeName: string) => void;
+    onOpenScheduleModal?: (subTab?: TimetableSubTab) => void;
+    isWonju?: boolean;
     showLabel?: boolean;
     color?: string;
 };
@@ -89,6 +92,8 @@ const BusStopMarkerItem = memo(({
                                     stop,
                                     isRouteStop = true,
                                     onRouteChange,
+                                    onOpenScheduleModal,
+                                    isWonju = true,
                                     showLabel = true,
                                     color = "#059669",
                                 }: BusStopMarkerItemProps) => {
@@ -104,6 +109,10 @@ const BusStopMarkerItem = memo(({
     const handlePopupClose = useCallback(() => setIsPopupOpen(false), []);
 
     const borderColor = isRouteStop ? color : "#64748b";
+    const isYonseiStop = Boolean(
+        stop.nodenm &&
+        (stop.nodenm.includes("연세대") || stop.nodenm.includes("매지") || stop.nodenm.includes("미래관"))
+    );
 
     return (
         <>
@@ -171,44 +180,61 @@ const BusStopMarkerItem = memo(({
                                 <BusFront size={100} strokeWidth={1}/>
                             </div>
 
-                            <div className="relative z-10 flex flex-col gap-2">
-                                <div className="flex items-start gap-3">
-                                    <div
-                                        className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm"
-                                        style={{
-                                            backgroundColor: isRouteStop ? color : "#64748b"
-                                        }}
-                                    >
-                                        {isRouteStop ? (
-                                            <MapPinned size={18} strokeWidth={2.5}/>
-                                        ) : (
-                                            <MapPin size={18} strokeWidth={2.5}/>
-                                        )}
-                                    </div>
-                                    <div className="flex flex-col overflow-hidden">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                            <h3 className="truncate text-base sm:text-lg font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white">
-                                                {stop.nodenm}
-                                            </h3>
-                                            <span
-                                                className="px-1.5 py-0.2 rounded-md text-[9px] font-black text-white"
-                                                style={{
-                                                    backgroundColor: isRouteStop ? color : "#64748b"
-                                                }}
-                                            >
-                                                {isRouteStop ? "현재 노선" : "주변 정류장"}
-                                            </span>
-                                        </div>
+                            <div className="relative z-10 flex flex-col gap-2.5">
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex items-start gap-3 min-w-0">
                                         <div
-                                            className="flex items-center gap-1.5 mt-1 text-gray-500 dark:text-gray-400">
-                                            <span className="text-[10px] font-bold uppercase tracking-widest">
-                                                {UI_TEXT.STOP_POPUP.STATION_ID_LABEL}
-                                            </span>
-                                            <span className="text-[11px] font-mono font-semibold">
-                                                {stop.nodeno || UI_TEXT.STOP_POPUP.STATION_ID_FALLBACK}
-                                            </span>
+                                            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm"
+                                            style={{
+                                                backgroundColor: isRouteStop ? color : "#64748b"
+                                            }}
+                                        >
+                                            {isRouteStop ? (
+                                                <MapPinned size={18} strokeWidth={2.5}/>
+                                            ) : (
+                                                <MapPin size={18} strokeWidth={2.5}/>
+                                            )}
+                                        </div>
+                                        <div className="flex flex-col overflow-hidden">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <h3 className="truncate text-base sm:text-lg font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white">
+                                                    {stop.nodenm}
+                                                </h3>
+                                                <span
+                                                    className="px-1.5 py-0.2 rounded-md text-[9px] font-black text-white"
+                                                    style={{
+                                                        backgroundColor: isRouteStop ? color : "#64748b"
+                                                    }}
+                                                >
+                                                    {isRouteStop ? "현재 노선" : "주변 정류장"}
+                                                </span>
+                                            </div>
+                                            <div
+                                                className="flex items-center gap-1.5 mt-1 text-gray-500 dark:text-gray-400">
+                                                <span className="text-[10px] font-bold uppercase tracking-widest">
+                                                    {UI_TEXT.STOP_POPUP.STATION_ID_LABEL}
+                                                </span>
+                                                <span className="text-[11px] font-mono font-semibold">
+                                                    {stop.nodeno || UI_TEXT.STOP_POPUP.STATION_ID_FALLBACK}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
+
+                                    {isWonju && onOpenScheduleModal && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsPopupOpen(false);
+                                                onOpenScheduleModal(isYonseiStop ? "yonsei" : "all");
+                                            }}
+                                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+                                            title="버스 시간표 모달 열기"
+                                        >
+                                            <Calendar className="w-3 h-3"/>
+                                            <span>시간표</span>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -238,14 +264,17 @@ BusStopMarkerItem.displayName = "BusStopMarkerItem";
 export default ({
                     routeName,
                     onRouteChange,
+                    onOpenScheduleModal,
                     cityCode,
                 }: {
     routeName: string;
     onRouteChange?: (routeName: string) => void;
+    onOpenScheduleModal?: (subTab?: TimetableSubTab) => void;
     cityCode?: string;
 }) => {
     const {currentCity} = useCityContext();
     const effectiveCityCode = cityCode || currentCity?.code || "32020";
+    const isWonju = effectiveCityCode === "32020";
     const routeStops = useBusStop(routeName, effectiveCityCode);
     const {map} = useAppMapContext();
     const [zoom, setZoom] = useState(map?.getZoom() ?? MAP_SETTINGS.ZOOM.DEFAULT);
@@ -356,6 +385,8 @@ export default ({
                         showLabel={stop.showLabel}
                         color={stop.color}
                         onRouteChange={onRouteChange}
+                        onOpenScheduleModal={onOpenScheduleModal}
+                        isWonju={isWonju}
                     />
                 );
             })}

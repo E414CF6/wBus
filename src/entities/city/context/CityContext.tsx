@@ -16,6 +16,9 @@ interface SetCityOptions {
 
 interface CityContextType {
     currentCity: CityInfo;
+    detectedCity: CityInfo | null;
+    confirmDetectedCity: () => void;
+    dismissDetectedCity: () => void;
     setCity: (cityOrCode: CityInfo | string, options?: SetCityOptions) => void;
     detectCurrentLocation: () => Promise<CityInfo | null>;
     isDetecting: boolean;
@@ -49,6 +52,7 @@ export function useCityContext(): CityContextType {
 
 export function CityContextProvider({children}: CityContextProviderProps) {
     const [currentCity, setCurrentCityState] = useState<CityInfo>(DEFAULT_CITY);
+    const [detectedCity, setDetectedCity] = useState<CityInfo | null>(null);
 
     const currentCityRef = useRef<CityInfo>(currentCity);
     currentCityRef.current = currentCity;
@@ -57,6 +61,9 @@ export function CityContextProvider({children}: CityContextProviderProps) {
 
     const setIsAutoDetectEnabled = useCallback((enabled: boolean) => {
         setIsAutoDetectEnabledState(enabled);
+        if (!enabled) {
+            setDetectedCity(null);
+        }
         try {
             localStorage.setItem(STORAGE_KEYS.CITY_AUTO_DETECT, String(enabled));
         } catch {
@@ -103,8 +110,17 @@ export function CityContextProvider({children}: CityContextProviderProps) {
     const setCity = useCallback(
         (cityOrCode: CityInfo | string, options?: SetCityOptions) => {
             const nextCity = typeof cityOrCode === "string" ? getCityByCode(cityOrCode) : cityOrCode;
+            setDetectedCity(null);
             if (nextCity.code === currentCityRef.current.code) {
-                return; // Early return: already active city
+                if (map && !options?.skipFlyTo) {
+                    map.flyTo({
+                        center: [nextCity.lng, nextCity.lat],
+                        zoom: nextCity.zoom,
+                        duration: 1200,
+                        essential: true,
+                    });
+                }
+                return;
             }
             currentCityRef.current = nextCity;
             setCurrentCityState(nextCity);
@@ -132,23 +148,40 @@ export function CityContextProvider({children}: CityContextProviderProps) {
         [map]
     );
 
+    const confirmDetectedCity = useCallback(() => {
+        if (!detectedCity) return;
+        setCity(detectedCity, {skipFlyTo: true});
+    }, [detectedCity, setCity]);
+
+    const dismissDetectedCity = useCallback(() => {
+        setDetectedCity(null);
+    }, []);
+
     const handleViewportChange = useCallback(
         (lat: number, lng: number, zoom: number): CityInfo | null => {
             if (!isAutoDetectEnabled || isFlyingRef.current) return null;
-            // When zoomed out too far (e.g. country view), avoid rapid switching
-            if (zoom < 7.2) return null;
+            // When zoomed out too far (e.g. country view), avoid rapid detection
+            if (zoom < 7.2) {
+                setDetectedCity(null);
+                return null;
+            }
 
             const {city, distanceKm} = findNearestCityWithDistance(lat, lng);
             // If the viewport center is too far from any city center (e.g. open ocean), skip
-            if (distanceKm > 75) return null;
+            if (distanceKm > 75) {
+                setDetectedCity(null);
+                return null;
+            }
 
             if (city.code !== currentCityRef.current.code) {
-                setCity(city, {skipFlyTo: true});
+                setDetectedCity((prev) => (prev?.code === city.code ? prev : city));
                 return city;
+            } else {
+                setDetectedCity(null);
+                return null;
             }
-            return null;
         },
-        [isAutoDetectEnabled, setCity]
+        [isAutoDetectEnabled]
     );
 
     // Sync with browser back/forward buttons when city changes in URL
@@ -193,6 +226,9 @@ export function CityContextProvider({children}: CityContextProviderProps) {
     const value = useMemo(
         () => ({
             currentCity,
+            detectedCity,
+            confirmDetectedCity,
+            dismissDetectedCity,
             setCity,
             detectCurrentLocation,
             isDetecting,
@@ -203,6 +239,9 @@ export function CityContextProvider({children}: CityContextProviderProps) {
         }),
         [
             currentCity,
+            detectedCity,
+            confirmDetectedCity,
+            dismissDetectedCity,
             setCity,
             detectCurrentLocation,
             isDetecting,
@@ -214,4 +253,5 @@ export function CityContextProvider({children}: CityContextProviderProps) {
 
     return <CityContext.Provider value={value}>{children}</CityContext.Provider>;
 }
+
 
