@@ -90,20 +90,26 @@ const arrivalFetcher = async (url: string): Promise<CachedData<BusStopArrival[]>
 
 const EMPTY_ARRIVAL_LIST: BusStopArrival[] = [];
 
-export function useBusArrivalInfo(busStopId: string | null) {
+export function useBusArrivalInfo(busStopId: string | null, cityCode: string = "32020") {
+    const trimmedId = busStopId?.trim() ?? "";
+    const swrUrl = trimmedId
+        ? `/api/bus-arrival/${encodeURIComponent(trimmedId)}?cityCode=${encodeURIComponent(cityCode)}`
+        : null;
+
     const {
-        data, error, isLoading, mutate
-    } = useSWR<CachedData<BusStopArrival[]>>(busStopId && busStopId.trim() !== "" ? `/api/bus-arrival/${busStopId}` : null, arrivalFetcher, {
+        data, error, isLoading, isValidating, mutate
+    } = useSWR<CachedData<BusStopArrival[]>>(swrUrl, arrivalFetcher, {
         refreshInterval: 10000, revalidateOnFocus: true, dedupingInterval: 4000,
     });
 
     return useMemo(() => ({
         data: data?.data ?? EMPTY_ARRIVAL_LIST,
         loading: isLoading,
+        isValidating,
         error: error ? UI_TEXT.ERROR.NO_ARRIVAL_INFO : null,
         isDegraded: Boolean(data?.meta?.degraded || error),
         lastUpdated: data?.timestamp ?? null,
         ageMs: data?.meta?.ageMs ?? 0,
         refresh: () => void mutate(),
-    }), [data, isLoading, error, mutate]);
+    }), [data, isLoading, isValidating, error, mutate]);
 }

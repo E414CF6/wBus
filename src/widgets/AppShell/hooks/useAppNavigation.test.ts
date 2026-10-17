@@ -1,5 +1,6 @@
 import {describe, expect, it} from "vitest";
-import {buildMapUrl, resolveTabFromPathname} from "./useAppNavigation";
+import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
+import {buildMapUrl, buildScheduleUrl, resolveTabFromPathname} from "./useAppNavigation";
 
 describe("resolveTabFromPathname", () => {
     it("maps root, /live, and /map to map tab", () => {
@@ -42,6 +43,30 @@ describe("buildMapUrl", () => {
 
     it("returns root / when both route and cityCode are absent", () => {
         expect(buildMapUrl(undefined, undefined)).toBe("/");
+    });
+});
+
+describe("buildScheduleUrl", () => {
+    it("builds clean /schedule URL for Wonju yonsei subtab", () => {
+        expect(buildScheduleUrl("yonsei", "32020")).toBe("/schedule");
+        expect(buildScheduleUrl("yonsei")).toBe("/schedule");
+    });
+
+    it("includes subTab=all for Wonju all-routes subtab while staying on /schedule", () => {
+        expect(buildScheduleUrl("all", "32020")).toBe("/schedule?subTab=all");
+    });
+
+    it("preserves non-Wonju cityCode when building schedule URL", () => {
+        expect(buildScheduleUrl("all", "32010")).toBe("/schedule?cityCode=32010&subTab=all");
+    });
+});
+
+describe("storage key helpers", () => {
+    it("uses legacy Wonju keys for cityCode 32020 and scoped keys for other cities", () => {
+        expect(getBookmarkStorageKey("32020")).toBe("wonju_bus_bookmarks");
+        expect(getBookmarkStorageKey("11")).toBe("wbus_bookmarks_11");
+        expect(getRecentRoutesStorageKey("32020")).toBe("wbus_recent_map_routes");
+        expect(getRecentRoutesStorageKey("11")).toBe("wbus_recent_routes_11");
     });
 });
 

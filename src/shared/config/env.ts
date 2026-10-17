@@ -1,4 +1,4 @@
-import {getEnv, getEnvArray, getEnvBoolean, getEnvBounds, getEnvNumber} from "@shared/utils/parser";
+import {getEnv, getEnvArray, getEnvBounds, getEnvNumber} from "@shared/utils/parser";
 import {UI_TEXT} from "@shared/config/locale";
 
 /**
@@ -94,6 +94,8 @@ export const STORAGE_KEYS = {
     MAP_VIEW: "wbus_map_view",
     ACTIVE_TAB: "wbus_active_tab",
     TIMETABLE_SUBTAB: "wbus_timetable_subtab",
+    WONJU_BOOKMARKS: "wonju_bus_bookmarks",
+    WONJU_RECENT_ROUTES: "wbus_recent_map_routes",
     SCHEDULE_CACHE: "wbus_cached_schedule_v2",
     NOTICE_LIST_CACHE: "wbus_cached_notice_list_v1",
     NOTICE_DETAIL_PREFIX: "wbus_cached_notice_detail_",
@@ -101,3 +103,11 @@ export const STORAGE_KEYS = {
     POLYLINE_PREFIX: "wbus_cached_polyline_v1_",
     ROUTE_STOPS_PREFIX: "wbus_cached_route_stops_v1_",
 } as const;
+
+export function getBookmarkStorageKey(cityCode: string = "32020"): string {
+    return cityCode === "32020" ? STORAGE_KEYS.WONJU_BOOKMARKS : `wbus_bookmarks_${cityCode}`;
+}
+
+export function getRecentRoutesStorageKey(cityCode: string = "32020"): string {
+    return cityCode === "32020" ? STORAGE_KEYS.WONJU_RECENT_ROUTES : `wbus_recent_routes_${cityCode}`;
+}

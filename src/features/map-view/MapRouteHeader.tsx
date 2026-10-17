@@ -1,10 +1,11 @@
 "use client";
 
-import React, {useCallback, useEffect, useMemo, useState} from "react";
+import React, {useCallback, useMemo, useSyncExternalStore} from "react";
 import {GraduationCap, RefreshCw} from "lucide-react";
 
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useCityContext} from "@entities/city";
+import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 
@@ -26,6 +27,8 @@ interface MapRouteHeaderProps {
 }
 
 const DEFAULT_QUICK_ROUTES = ["30", "34", "34-1"];
+const emptySubscribe = () => () => {
+};
 
 export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                                   selectedRoute,
@@ -40,23 +43,28 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                                   onSelectDirection,
                                                               }) => {
     const {currentCity} = useCityContext();
+    const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
+    const isWonju = currentCity.code === "32020";
 
-    // Current route metadata
-    const meta = useMemo(() => getRouteMeta(selectedRoute, currentCity.code), [selectedRoute, currentCity.code]);
+    // Current route metadata (re-evaluates when dynamic route list loads)
+    const meta = useMemo(
+        () => getRouteMeta(selectedRoute, currentCity.code),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [selectedRoute, currentCity.code, allRoutes.length]
+    );
     const runningCount = runningBuses.length;
 
-    // Load recent & bookmarked routes for quick switch bar (loaded in useEffect to prevent SSR hydration mismatch)
-    const [quickRoutes, setQuickRoutes] = useState<string[]>(() => {
-        if (currentCity.code === "32020") return DEFAULT_QUICK_ROUTES;
-        return [];
-    });
+    // Derive recent & bookmarked routes for quick switch bar (SSR-safe via useSyncExternalStore)
+    const quickRoutes = useMemo<string[]>(() => {
+        if (!isClient) {
+            return isWonju ? DEFAULT_QUICK_ROUTES : [];
+        }
 
-    useEffect(() => {
         const set = new Set<string>();
-        const bookmarkKey = currentCity.code === "32020" ? "wonju_bus_bookmarks" : `wbus_bookmarks_${currentCity.code}`;
-        const recentKey = `wbus_recent_routes_${currentCity.code}`;
+        const bookmarkKey = getBookmarkStorageKey(currentCity.code);
+        const recentKey = getRecentRoutesStorageKey(currentCity.code);
 
-        if (currentCity.code === "32020") {
+        if (isWonju) {
             DEFAULT_QUICK_ROUTES.forEach((r) => set.add(r));
         }
         try {
@@ -74,13 +82,17 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             // Ignore
         }
 
+        if (selectedRoute) {
+            set.add(selectedRoute);
+        }
+
         // Filter against existing allRoutes if available
-        let list = Array.from(set).filter((r) => allRoutes.includes(r));
+        let list = allRoutes.length > 0 ? Array.from(set).filter((r) => allRoutes.includes(r)) : Array.from(set);
         if (list.length === 0 && allRoutes.length > 0) {
             list = allRoutes.slice(0, 4);
         }
-        setQuickRoutes(list);
-    }, [allRoutes, currentCity.code]);
+        return list;
+    }, [isClient, isWonju, allRoutes, currentCity.code, selectedRoute]);
 
     const handleToggleDirection = useCallback(() => {
         if (!onSelectDirection) return;
@@ -181,6 +193,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                     {selectedDirection === "down" && `→ ${meta.origin}`}
                                 </span>
                                 <span
+                                    suppressHydrationWarning
                                     className={`px-1.5 py-0.5 rounded-md text-[9px] font-black shrink-0 transition-colors ${
                                         selectedDirection === "all"
                                             ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
@@ -190,6 +203,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                     {selectedDirection === "all" ? "전체" : selectedDirection === "up" ? "상행" : "하행"}
                                 </span>
                                 <span
+                                    suppressHydrationWarning
                                     className={`px-1.5 py-0.5 rounded-md text-[9px] font-black shrink-0 ${meta.colorTheme.badgeBg} ${meta.colorTheme.text}`}
                                 >
                                     {meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : "간선"}
@@ -234,7 +248,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                     className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden max-w-full px-1 py-0.5">
                     {quickRoutes.map((route) => {
                         const isCurrent = route === selectedRoute;
-                        const isYonsei = DEFAULT_QUICK_ROUTES.includes(route);
+                        const isYonsei = isWonju && DEFAULT_QUICK_ROUTES.includes(route);
 
                         return (
                             <button

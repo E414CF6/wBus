@@ -37,14 +37,19 @@ const polylineGenerationCache = new CacheManager<GeoPolyline | null>({
 });
 
 function getServiceKey(): string | null {
-    return process.env.DATA_GO_KR_SERVICE_KEY || process.env.DATA_GO_KR_SERVICE_KEYS?.split(",")[0] || null;
+    return (
+        process.env.DATA_GO_KR_SERVICE_KEY?.trim() ||
+        process.env.DATA_GO_KR_SERVICE_KEYS?.split(",")[0]?.trim() ||
+        null
+    );
 }
 
 async function fetchOsrmSingleChunk(chunk: [number, number][]): Promise<[number, number][] | null> {
     if (chunk.length < 2) return null;
     const coordsStr = chunk.map((c) => `${c[0].toFixed(6)},${c[1].toFixed(6)}`).join(";");
 
-    return osrmChunkCache.getOrFetch(coordsStr, async () => {
+    let hadNetworkError = false;
+    const result = await osrmChunkCache.getOrFetch(coordsStr, async () => {
         try {
             const radiuses = chunk.map(() => 45).join(";");
             const url = `${DEFAULT_OSRM_URL}/${coordsStr}?overview=full&geometries=geojson&steps=false&continue_straight=false&radiuses=${radiuses}`;
@@ -66,12 +71,19 @@ async function fetchOsrmSingleChunk(chunk: [number, number][]): Promise<[number,
                     }
                     return routeCoords;
                 }
+            } else {
+                hadNetworkError = true;
             }
         } catch {
-            // Fallback to null for this chunk
+            hadNetworkError = true;
         }
         return null;
     });
+
+    if (hadNetworkError && result === null) {
+        osrmChunkCache.delete(coordsStr);
+    }
+    return result;
 }
 
 async function fetchOsrmPolyline(coords: [number, number][]): Promise<[number, number][] | null> {
@@ -112,7 +124,7 @@ interface TagoRouteItem {
 interface TagoStopItem {
     nodeid: string;
     nodenm: string;
-    nodeord: number;
+    nodeord?: number;
     nodeno?: string | number;
     gpslati: number;
     gpslong: number;
@@ -188,24 +200,30 @@ export async function refreshRouteData(
 
     console.log(`[RouteSyncService] Starting route sync (cityCode: ${cityCode}, mode: ${options.mode || "standard"})...`);
 
-    // 1. Fetch route list from TAGO
-    let allRoutes: TagoRouteItem[] = [];
+    const {fetchCityRoutes, fetchRouteStops} = await import("@entities/bus");
+
+    // 1. Fetch route list via resilient TAGO client (multi-key rotation + rate limiting) with raw fallback
+    let allRoutes: TagoRouteItem[];
     try {
-        allRoutes = await fetchTago<TagoRouteItem>("getRouteNoList", {
-            cityCode,
-            numOfRows: 2048,
-            pageNo: 1,
-        });
-    } catch (err) {
-        console.error("[RouteSyncService] Failed to fetch route list:", err);
-        return {
-            success: false,
-            refreshed: false,
-            message: `공공데이터포털 노선 목록 조회 실패: ${err instanceof Error ? err.message : String(err)}`,
-            totalRoutesProcessed: 0,
-            routesCount: 0,
-            elapsedMs: Date.now() - startTime,
-        };
+        allRoutes = await fetchCityRoutes(cityCode);
+    } catch {
+        try {
+            allRoutes = await fetchTago<TagoRouteItem>("getRouteNoList", {
+                cityCode,
+                numOfRows: 2048,
+                pageNo: 1,
+            });
+        } catch (err) {
+            console.error("[RouteSyncService] Failed to fetch route list:", err);
+            return {
+                success: false,
+                refreshed: false,
+                message: `공공데이터포털 노선 목록 조회 실패: ${err instanceof Error ? err.message : String(err)}`,
+                totalRoutesProcessed: 0,
+                routesCount: 0,
+                elapsedMs: Date.now() - startTime,
+            };
+        }
     }
 
     let targetRoutes = allRoutes.filter((r) => {
@@ -267,11 +285,16 @@ export async function refreshRouteData(
                 const routeNo = String(route.routeno);
 
                 try {
-                    const stopItems = await fetchTago<TagoStopItem>("getRouteAcctoThrghSttnList", {
-                        cityCode,
-                        routeId,
-                        numOfRows: 2048,
-                    });
+                    let stopItems: TagoStopItem[] = [];
+                    try {
+                        stopItems = await fetchRouteStops(routeId, cityCode);
+                    } catch {
+                        stopItems = await fetchTago<TagoStopItem>("getRouteAcctoThrghSttnList", {
+                            cityCode,
+                            routeId,
+                            numOfRows: 2048,
+                        });
+                    }
 
                     if (stopItems.length === 0) return;
 
@@ -599,5 +622,10 @@ export async function generateSingleRoutePolyline(
             console.error(`[RouteSyncService] Failed to generate polyline for ${routeId}:`, err);
             return null;
         }
+    }).then((result) => {
+        if (!result) {
+            polylineGenerationCache.delete(cacheKey);
+        }
+        return result;
     });
 }

@@ -68,6 +68,18 @@ export function AppShell() {
         }
     }, [isWonju, activeTab, handleTabChange]);
 
+    // Close schedule modal on Escape key press
+    useEffect(() => {
+        if (activeTab !== "schedule") return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                handleTabChange("map");
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [activeTab, handleTabChange]);
+
     // Handler for opening the Timetable Modal directly from Map Pins or Stop Popups
     const handleOpenScheduleModal = useCallback(
         (subTab?: TimetableSubTab) => {
@@ -100,10 +112,11 @@ export function AppShell() {
 
     // Direction filter for map polyline rendering (all, up, down)
     const [selectedDirection, setSelectedDirection] = useState<"all" | "up" | "down">("all");
-
-    useEffect(() => {
+    const [prevActiveRoute, setPrevActiveRoute] = useState(activeRoute);
+    if (activeRoute !== prevActiveRoute) {
+        setPrevActiveRoute(activeRoute);
         setSelectedDirection("all");
-    }, [activeRoute]);
+    }
 
     useEffect(() => {
         if (!routeMap || Object.keys(routeMap).length === 0) return;

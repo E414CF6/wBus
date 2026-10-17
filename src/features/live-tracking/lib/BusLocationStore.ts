@@ -4,11 +4,12 @@ import type {CachedData} from "@shared/cache";
 import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import {type BusLocationState, EMPTY_BUS_LIST, EMPTY_STATE, type Listener,} from "../model/types";
 
-const fetchRouteData = async (url: string): Promise<CachedData<BusItem[]>> => {
+const fetchRouteData = async (url: string, signal?: AbortSignal): Promise<CachedData<BusItem[]>> => {
     const res = await fetch(url, {
         headers: {
             Accept: "application/json",
         },
+        ...(signal ? {signal} : {}),
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
@@ -27,6 +28,7 @@ export class BusLocationStore {
     private state: BusLocationState;
     private listeners = new Set<Listener>();
     private pollInterval: ReturnType<typeof setInterval> | null = null;
+    private abortController: AbortController | null = null;
     private isFetching = false;
     private isSuspended = false;
     private routeDataMap = new Map<string, BusItem[]>();
@@ -60,6 +62,7 @@ export class BusLocationStore {
     };
 
     public manualReconnect = () => {
+        this.abortInflight();
         this.routeDataMap.clear();
         this.stopPolling();
         this.isSuspended = false;
@@ -67,6 +70,14 @@ export class BusLocationStore {
         void this.fetchLocations();
         this.startPolling();
     };
+
+    private abortInflight() {
+        if (this.abortController) {
+            this.abortController.abort();
+            this.abortController = null;
+        }
+        this.isFetching = false;
+    }
 
     private emit() {
         for (const listener of this.listeners) {
@@ -144,13 +155,17 @@ export class BusLocationStore {
     private async fetchLocations() {
         if (this.isFetching || this.routeIds.length === 0) return;
         this.isFetching = true;
+        const controller = new AbortController();
+        this.abortController = controller;
+        const {signal} = controller;
 
         try {
             const cityParam = `cityCode=${encodeURIComponent(this.cityCode)}`;
             if (this.routeIds.length === 1) {
                 // Single route direct call
                 const routeId = this.routeIds[0];
-                const res = await fetchRouteData(`/api/bus/${routeId}?${cityParam}`);
+                const res = await fetchRouteData(`/api/bus/${routeId}?${cityParam}`, signal);
+                if (signal.aborted) return;
                 const items = Array.isArray(res.data) ? res.data : [];
                 this.applyData(items, {
                     degraded: Boolean(res.meta?.degraded),
@@ -161,7 +176,8 @@ export class BusLocationStore {
                 // Multi-route batched call (single HTTP roundtrip)
                 try {
                     const batchUrl = `/api/bus?routeIds=${encodeURIComponent(this.routeIds.join(","))}&${cityParam}`;
-                    const res = await fetchRouteData(batchUrl);
+                    const res = await fetchRouteData(batchUrl, signal);
+                    if (signal.aborted) return;
                     const items = Array.isArray(res.data) ? res.data : [];
                     this.applyData(items, {
                         degraded: Boolean(res.meta?.degraded),
@@ -169,16 +185,18 @@ export class BusLocationStore {
                         targetRouteIds: this.routeIds,
                     });
                 } catch (batchErr) {
+                    if (signal.aborted) return;
                     console.warn("[BusLocationStore] Batch fetch failed, falling back to concurrent individual requests:", batchErr);
                     // Resilient fallback: Query each route individually
                     const settled = await mapWithConcurrencyLimit(
                         this.routeIds,
-                        (routeId) => fetchRouteData(`/api/bus/${routeId}?${cityParam}`),
+                        (routeId) => fetchRouteData(`/api/bus/${routeId}?${cityParam}`, signal),
                         {
                             concurrency: 3,
                             staggerMs: 30,
                         }
                     );
+                    if (signal.aborted) return;
 
                     const fulfilledResults: BusItem[] = [];
                     const fulfilledRouteIds: string[] = [];
@@ -208,6 +226,7 @@ export class BusLocationStore {
                 }
             }
         } catch (err) {
+            if (signal.aborted) return;
             console.error("[useBusLocationData] Micro-cache fetch failed", err);
             if (this.state.data.length === 0) {
                 this.setState({
@@ -226,7 +245,10 @@ export class BusLocationStore {
                 });
             }
         } finally {
-            this.isFetching = false;
+            if (this.abortController === controller) {
+                this.abortController = null;
+                this.isFetching = false;
+            }
         }
     }
 
@@ -259,6 +281,7 @@ export class BusLocationStore {
         } else {
             if (!this.isSuspended) {
                 this.isSuspended = true;
+                this.abortInflight();
                 this.stopPolling();
                 this.updateState({connectionStatus: "suspended"});
             }
@@ -281,7 +304,7 @@ export class BusLocationStore {
         }
         if (typeof window !== "undefined") {
             window.removeEventListener("online", this.handleActivityChange);
-            window.removeEventListener("offline", this.handleActivityChange);
+            window.addEventListener("offline", this.handleActivityChange);
         }
     }
 
@@ -308,8 +331,8 @@ export class BusLocationStore {
     }
 
     private stop() {
+        this.abortInflight();
         this.stopPolling();
-        this.isFetching = false;
         this.isSuspended = false;
         this.state = EMPTY_STATE;
     }

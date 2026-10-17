@@ -3,7 +3,7 @@ import {NextRequest} from "next/server";
 import {GET} from "./route";
 
 vi.mock("@entities/route/routeSyncService", () => ({
-    generateSingleRoutePolyline: vi.fn().mockImplementation(async (routeId: string, cityCode: string) => {
+    generateSingleRoutePolyline: vi.fn().mockImplementation(async (routeId: string, _cityCode: string) => {
         if (routeId === "INVALID_ROUTE") return null;
         return {
             route_id: routeId,

@@ -5,7 +5,7 @@
 [![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev/)
 [![TypeScript 6](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
-[![MapLibre GL](https://img.shields.io/badge/MapLibre_GL-6.7-blue?logo=maplibre)](https://maplibre.org/)
+[![MapLibre GL](https://img.shields.io/badge/MapLibre_GL-6.14-blue?logo=maplibre)](https://maplibre.org/)
 
 wBus is a modern, high-performance public transit tracking and timetable exploration web platform
 built for Wonju City (원주시), South Korea. Engineered specifically to solve transit scheduling pain points—particularly
@@ -80,51 +80,57 @@ dependencies, and domain-driven encapsulation:
 src/
 |-- app/                      # Next.js App Router
 |   |-- api/                  # Serverless API routes and edge endpoints
-|   |   |-- bus/              # Route schedules, health checks, cache refresh
+|   |   |-- bus/              # Real-time bus telemetry, health checks, cache refresh
 |   |   |   |-- [routeId]/    # Real-time telemetry endpoint for route ID
 |   |   |   |-- health/       # External API connectivity check
-|   |   |   `-- refresh/      # Forced schedule scraper trigger
+|   |   |   `-- refresh/      # Legacy schedule scraper proxy
 |   |   |-- bus-arrival/      # Bus stop estimated arrival query
 |   |   |-- bus-stops/        # Stop list for route ID
+|   |   |-- cities/           # Nationwide TAGO city code directory
+|   |   |-- cron/refresh/     # Unified Vercel Cron trigger
 |   |   |-- notice/           # Wonju ITS announcements
+|   |   |-- polyline/         # Dynamic OSRM route polyline generator
 |   |   |-- route-stops/      # Directional stops by route name
+|   |   |-- routes/           # City route list & sync endpoints
 |   |   |-- schedule/         # Timetable data and refresh trigger
-|   |   `-- data/             # Static file fallback handler
+|   |   `-- stops/nearby/     # Coordinate-based nearby bus stops lookup
+|   |-- data/[...path]/       # Static asset & on-demand route polyline handler
 |   |-- live/                 # Real-time map route (/live alias)
 |   |-- map/                  # Real-time map route (/map)
 |   |-- privacy/              # Privacy policy documentation
 |   |-- schedule/             # Timetable page route (/schedule)
+|   |-- terms/                # Terms of service documentation
 |   |-- globals.css           # Tailwind CSS 4 theme imports and utility rules
 |   |-- layout.tsx            # Root HTML layout, font setup, theme provider
 |   `-- page.tsx              # Application shell entry point
-|-- data/                     # Fallback datasets and route identifiers
 |-- entities/                 # Domain entities and core business definitions
-|   |-- bus/                  # Bus telemetry types, transformers, and utilities
+|   |-- bus/                  # Bus telemetry types, TAGO client, and utilities
+|   |-- city/                 # Nationwide 138-city directory and CityContext
 |   |-- notice/               # Notice parsers and storage models
-|   |-- route/                # Route definitions, polyline hooks, color palettes
-|   |-- schedule/             # Schedule definitions, time math, and parsers
-|   `-- station/              # Bus stop coordinates and sequence definitions
+|   |-- route/                # Route definitions, OSRM polyline service, colors
+|   |-- schedule/             # Schedule definitions, time math, and ITS scraper
+|   `-- station/              # Bus stop coordinates, filtering, and popups
 |-- features/                 # User-centric application workflows
+|   |-- city-select/          # Nationwide city selector and GPS auto-detection modal
 |   |-- live-tracking/        # Telemetry store, external store sync, direction math
-|   `-- map-view/             # Map state persistence, route headers, viewport hooks
+|   `-- map-view/             # Map state persistence, route headers, route selector
 |-- shared/                   # Cross-cutting infrastructure and reusable UI
 |   |-- animation/            # Interpolation and coordinate transition helpers
 |   |-- api/                  # HTTP clients, retry wrappers, handler factories
-|   |-- cache/                # CacheManager (LRU, TTL policies, request coalescing)
-|   |-- config/               # Environment variable schemas, routes, storage keys
-|   |-- context/              # Global application and map context providers
-|   |-- hooks/                # Generic utility hooks (debounce, window size, etc.)
+|   |-- cache/                # CacheManager (L1 Memory LRU + L2 Storage + Coalescing)
+|   |-- config/               # Environment variable schemas, locales, storage keys
+|   |-- context/              # Global application map context provider
 |   |-- lib/                  # Time helpers and utilities
 |   |-- types/                # Core TypeScript interfaces and shared schemas
-|   |-- ui/                   # Design system primitives, bottom navigation bar
+|   |-- ui/                   # Design system primitives, badges, theme controls
 |   `-- utils/                # Coordinate math, route formatting, concurrency limiters
 `-- widgets/                  # Composite UI modules
     |-- AppShell/             # Main tab orchestrator and route sync controller
-    |-- BusListSheet/         # Interactive drawer listing active buses on route
+    |-- BottomNav/            # Unified floating bottom nav and BusListDrawer
     |-- MapContainer/         # MapLibre GL wrapper, vector route layers, live markers
     |-- NoticeWidget/         # ITS announcement banners and detail modals
-    |-- TimetableWidget/      # City-wide searchable schedule directory
-    `-- YonseiTimetableWidget/# Dedicated campus schedule cards and export modal
+    |-- TimetableWidget/      # Wonju city-wide searchable schedule directory
+    `-- YonseiTimetableWidget/# Dedicated campus schedule cards, shuttle map & modal
 ```
 
 **Dependency Rule**: `app -> widgets -> features -> entities -> shared`.
@@ -198,9 +204,9 @@ src/
 | **User Interface**   | React 19, Lucide React, Next Themes   | Strict concurrent mode, modern hooks, dark mode support |
 | **Language**         | TypeScript 6 (Strict Mode)            | Full type safety across API handlers, models, and UI    |
 | **Styling**          | Tailwind CSS 4, Modern CSS Directives | Variable-driven theme system, zero-runtime overhead     |
-| **Map Rendering**    | MapLibre GL 6.7 via `react-map-gl`    | WebGL hardware-accelerated vector tile rendering        |
-| **Telemetry & Sync** | Custom `BusLocationStore`, SWR        | Micro-cached polling, tab visibility suspension         |
-| **Data Ingestion**   | Node.js Fetch, OSRM MLD Routing       | TAGO REST integration, Cheerio ITS scraping             |
+| **Map Rendering**    | MapLibre GL 6.14 via `react-map-gl`   | WebGL hardware-accelerated vector tile rendering        |
+| **Telemetry & Sync** | Custom `BusLocationStore`, SWR        | Multi-tier L1/L2 caching, tab visibility suspension     |
+| **Data Ingestion**   | Node.js Fetch, OSRM MLD Routing       | TAGO REST integration, ITS scraping, chunked polylines  |
 | **Testing**          | Vitest 5                              | High-speed unit tests covering utils, geo, and cache    |
 | **Deployment**       | Vercel Serverless & Edge Network      | Global CDN caching headers, edge request deduplication  |
 
@@ -219,14 +225,18 @@ automated error recovery:
 | `GET`  | `/api/bus-arrival/[busStopId]` | Predicted arrival times for buses arriving at a stop    | `s-maxage=3`, SWR: `5s`    |
 | `GET`  | `/api/bus-stops/[routeId]`     | Ordered sequence of bus stops for a specific route      | `s-maxage=86400`           |
 | `GET`  | `/api/route-stops/[routeName]` | Ordered directional stops mapped by route name          | `s-maxage=86400`           |
+| `GET`  | `/api/routes?cityCode=...`     | Full route list and route number map for a city         | `s-maxage=86400`           |
+| `GET`  | `/api/polyline/[routeId]`      | Road-snapped OSRM polyline for a route ID               | `s-maxage=86400`           |
+| `GET`  | `/api/stops/nearby`            | Nearby bus stops within radius of GPS coordinates       | `s-maxage=3600`            |
+| `GET`  | `/api/cities`                  | Supported nationwide cities and TAGO city codes         | `s-maxage=86400`           |
 | `GET`  | `/api/schedule`                | Complete schedule JSON payload and freshness metadata   | `s-maxage=60`, SWR: `300s` |
-| `GET/POST` | `/api/cron/refresh`            | Unified Vercel Cron trigger (daily schedule + weekly routes) | `no-store`                 |
-| `GET/POST` | `/api/schedule/refresh`        | Scrape & update Wonju ITS schedule cache                | `no-store`                 |
-| `GET/POST` | `/api/routes/refresh`          | Sync route list, stop maps, and GeoJSON polylines       | `no-store`                 |
+| `GET/POST` | `/api/cron/refresh`        | Unified Vercel Cron trigger (daily schedule + weekly routes) | `no-store`            |
+| `GET/POST` | `/api/schedule/refresh`    | Scrape & update Wonju ITS schedule cache                | `no-store`                 |
+| `GET/POST` | `/api/routes/refresh`      | Sync route list, stop maps, and GeoJSON polylines       | `no-store`                 |
 | `POST` | `/api/bus/refresh`             | *(Deprecated)* Legacy proxy to `/api/schedule/refresh`  | `no-store`                 |
 | `GET`  | `/api/notice`                  | List of municipal transit notices from Wonju ITS        | `s-maxage=900`             |
 | `GET`  | `/api/notice/[id]`             | Full detail of a specific ITS transit notice            | `s-maxage=600`             |
-| `GET`  | `/api/data/[...path]`          | Serves static assets from local `public/` directory     | `public, max-age=3600`     |
+| `GET`  | `/data/[...path]`              | Serves static assets & on-demand polylines              | `s-maxage=604800`          |
 
 ---
 

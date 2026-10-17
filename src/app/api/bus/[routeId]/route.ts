@@ -22,7 +22,10 @@ export const GET = createApiHandler<RawBusLocation[]>({
         const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
         return fetchBusLocations(id, {cityCode});
     },
-    ttl: (id) => getAdaptiveTtlSeconds(id, 8, 15),
+    ttl: (id, req) => {
+        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        return getAdaptiveTtlSeconds(id, 8, 15, cityCode);
+    },
     cacheOptions: LIVE_CACHE_OPTIONS,
     errorMessage: "Failed to fetch bus data",
     cacheControl: "public, max-age=2, s-maxage=10, stale-while-revalidate=5, stale-if-error=60",

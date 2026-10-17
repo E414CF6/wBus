@@ -1,8 +1,8 @@
 "use client";
 
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {usePathname, useSearchParams} from "next/navigation";
-import {APP_CONFIG, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
+import {APP_CONFIG, getRecentRoutesStorageKey, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 import {useCityContext} from "@entities/city";
 import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
 
@@ -23,10 +23,23 @@ export function buildMapUrl(route: string | null | undefined, cityCode?: string)
     return qs ? `/?${qs}` : "/";
 }
 
+export function buildScheduleUrl(subTab: TimetableSubTab, cityCode?: string): string {
+    const params = new URLSearchParams();
+    if (cityCode && cityCode !== "32020") {
+        params.set("cityCode", cityCode);
+    }
+    if (subTab === "all") {
+        params.set("subTab", "all");
+    }
+    const qs = params.toString();
+    return qs ? `/schedule?${qs}` : "/schedule";
+}
+
 export function useAppNavigation() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const {currentCity} = useCityContext();
+    const currentCityCode = currentCity.code;
 
     // Derive active tab with client-side state preservation across tab switches (Map-first default)
     const [activeTab, setActiveTab] = useState<NavTab>(() => resolveTabFromPathname(pathname));
@@ -95,21 +108,25 @@ export function useAppNavigation() {
         }
     }, [activeTab]);
 
-    // Restore saved preferences on initial client mount if not in URL
+    // Restore saved preferences once on initial client mount if not in URL
+    const hasRestoredRef = useRef(false);
     useEffect(() => {
-        requestAnimationFrame(() => {
+        if (hasRestoredRef.current) return;
+        hasRestoredRef.current = true;
+        const frameId = requestAnimationFrame(() => {
             try {
+                const search = new URLSearchParams(window.location.search);
                 const savedSubTab = localStorage.getItem(
                     STORAGE_KEYS.TIMETABLE_SUBTAB
                 ) as TimetableSubTab | null;
-                if (savedSubTab && !searchParams.get("subTab")) {
+                if (savedSubTab && !search.get("subTab")) {
                     if (savedSubTab === "yonsei" || savedSubTab === "all") {
                         setTimetableSubTab(savedSubTab);
                     }
                 }
 
                 const savedRoute = localStorage.getItem(STORAGE_KEYS.ROUTE_ID);
-                if (savedRoute && !searchParams.get("route")) {
+                if (savedRoute && !search.get("route")) {
                     setSelectedRoute(savedRoute);
                 }
             } catch (e) {
@@ -118,7 +135,8 @@ export function useAppNavigation() {
                 }
             }
         });
-    }, [searchParams]);
+        return () => cancelAnimationFrame(frameId);
+    }, []);
 
     const handleScheduleSubTabChange = useCallback(
         (subTab: TimetableSubTab) => {
@@ -131,30 +149,20 @@ export function useAppNavigation() {
                 }
             }
             if (typeof window !== "undefined" && activeTab === "schedule") {
-                const query = subTab === "yonsei" ? "/" : "/?subTab=all";
-                window.history.replaceState(null, "", query);
+                const targetUrl = buildScheduleUrl(subTab, currentCityCode);
+                window.history.replaceState(null, "", targetUrl);
             }
         },
-        [activeTab]
+        [activeTab, currentCityCode]
     );
 
     const handleTabChange = useCallback(
         (tab: NavTab) => {
             setActiveTab(tab);
-            let targetUrl: string;
-            if (tab === "map") {
-                targetUrl = buildMapUrl(selectedRoute, currentCity?.code);
-            } else {
-                const params = new URLSearchParams();
-                if (currentCity?.code && currentCity.code !== "32020") {
-                    params.set("cityCode", currentCity.code);
-                }
-                if (timetableSubTab === "all") {
-                    params.set("subTab", "all");
-                }
-                const qs = params.toString();
-                targetUrl = qs ? `/schedule?${qs}` : "/schedule";
-            }
+            const targetUrl =
+                tab === "map"
+                    ? buildMapUrl(selectedRoute, currentCityCode)
+                    : buildScheduleUrl(timetableSubTab, currentCityCode);
 
             if (typeof window !== "undefined") {
                 window.history.pushState(null, "", targetUrl);
@@ -166,15 +174,16 @@ export function useAppNavigation() {
                 // Ignore
             }
         },
-        [selectedRoute, timetableSubTab, currentCity?.code]
+        [selectedRoute, timetableSubTab, currentCityCode]
     );
 
     const handleRouteChange = useCallback(
         (route: string, cityCode?: string) => {
             setSelectedRoute(route);
-            const targetCityCode = cityCode || currentCity?.code;
+            const targetCityCode = cityCode || currentCityCode;
             try {
-                const recentKey = targetCityCode === "32020" ? "wbus_recent_map_routes" : `wbus_recent_routes_${targetCityCode}`;
+                localStorage.setItem(STORAGE_KEYS.ROUTE_ID, route);
+                const recentKey = getRecentRoutesStorageKey(targetCityCode);
                 const savedRecent = localStorage.getItem(recentKey);
                 const recents: string[] = savedRecent ? JSON.parse(savedRecent) : [];
                 const filtered = recents.filter((r) => r !== route);
@@ -191,12 +200,12 @@ export function useAppNavigation() {
                 window.history.replaceState(null, "", targetUrl);
             }
         },
-        [activeTab, currentCity?.code]
+        [activeTab, currentCityCode]
     );
 
     const handleSelectMapRoute = useCallback(
         (routeName: string, cityCode?: string) => {
-            const targetCityCode = cityCode || currentCity?.code;
+            const targetCityCode = cityCode || currentCityCode;
             handleRouteChange(routeName, targetCityCode);
             setActiveTab("map");
             if (typeof window !== "undefined") {
@@ -204,7 +213,7 @@ export function useAppNavigation() {
                 window.history.pushState(null, "", targetUrl);
             }
         },
-        [handleRouteChange, currentCity?.code]
+        [handleRouteChange, currentCityCode]
     );
 
     return {

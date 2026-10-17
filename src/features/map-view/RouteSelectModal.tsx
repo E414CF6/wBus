@@ -2,8 +2,9 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
-import {Bus, ChevronDown, Clock, GraduationCap, MapPin, Search, Star, X} from "lucide-react";
-import {getRouteMeta, RouteCategory, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
+import {Bus, Clock, GraduationCap, MapPin, Search, Star, X} from "lucide-react";
+import {getRouteMeta, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
+import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useCityContext} from "@entities/city";
 import {useCityRoutes} from "@entities/route/hooks";
@@ -55,28 +56,31 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
 
     // City-scoped bookmarks & recent history keys
-    const bookmarkKey = isWonju ? "wonju_bus_bookmarks" : `wbus_bookmarks_${currentCity.code}`;
-    const recentKey = isWonju ? "wbus_recent_map_routes" : `wbus_recent_routes_${currentCity.code}`;
+    const bookmarkKey = getBookmarkStorageKey(currentCity.code);
+    const recentKey = getRecentRoutesStorageKey(currentCity.code);
     const defaultBookmarks = isWonju ? WONJU_DEFAULT_BOOKMARKS : EMPTY_DEFAULT_BOOKMARKS;
 
     const [bookmarks, setBookmarks] = useState<string[]>(defaultBookmarks);
     const [recentRoutes, setRecentRoutes] = useState<string[]>([]);
 
-    // Re-sync bookmarks and recents when currentCity changes
+    // Re-sync bookmarks and recents when currentCity changes or modal opens
     useEffect(() => {
-        try {
-            const savedBookmarks = localStorage.getItem(bookmarkKey);
-            const nextBookmarks: string[] = savedBookmarks ? JSON.parse(savedBookmarks) : defaultBookmarks;
-            setBookmarks((prev) => (JSON.stringify(prev) === JSON.stringify(nextBookmarks) ? prev : nextBookmarks));
+        const frameId = requestAnimationFrame(() => {
+            try {
+                const savedBookmarks = localStorage.getItem(bookmarkKey);
+                const nextBookmarks: string[] = savedBookmarks ? JSON.parse(savedBookmarks) : defaultBookmarks;
+                setBookmarks((prev) => (JSON.stringify(prev) === JSON.stringify(nextBookmarks) ? prev : nextBookmarks));
 
-            const savedRecent = localStorage.getItem(recentKey);
-            const nextRecent: string[] = savedRecent ? JSON.parse(savedRecent) : [];
-            setRecentRoutes((prev) => (JSON.stringify(prev) === JSON.stringify(nextRecent) ? prev : nextRecent));
-        } catch {
-            setBookmarks(defaultBookmarks);
-            setRecentRoutes([]);
-        }
-    }, [bookmarkKey, recentKey, defaultBookmarks]);
+                const savedRecent = localStorage.getItem(recentKey);
+                const nextRecent: string[] = savedRecent ? JSON.parse(savedRecent) : [];
+                setRecentRoutes((prev) => (JSON.stringify(prev) === JSON.stringify(nextRecent) ? prev : nextRecent));
+            } catch {
+                setBookmarks(defaultBookmarks);
+                setRecentRoutes([]);
+            }
+        });
+        return () => cancelAnimationFrame(frameId);
+    }, [bookmarkKey, recentKey, defaultBookmarks, isOpen]);
 
     const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -231,11 +235,10 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         }
 
         return list;
-    }, [sortedAllRoutes, selectedCategory, searchQuery, bookmarks, routeMetaMap, cityRoutes]);
+    }, [sortedAllRoutes, selectedCategory, searchQuery, bookmarks, routeMetaMap]);
 
     if (!isOpen || !isClient) return null;
 
-    const bookmarkedList = sortedAllRoutes.filter((r) => bookmarks.includes(r));
     const validRecentRoutes = recentRoutes.filter((r) => sortedAllRoutes.includes(r));
 
     const modalContent = (

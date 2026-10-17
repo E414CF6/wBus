@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     try {
         let hasDegraded = false;
         const settled = await mapWithConcurrencyLimit(routeIds, async (routeId) => {
-            const ttl = getAdaptiveTtlSeconds(routeId, 8, 15);
+            const ttl = getAdaptiveTtlSeconds(routeId, 8, 15, cityCode);
             const res = await getCachedOrFetch<RawBusLocation[]>(`bus:${cityCode}:${routeId}`, () => fetchBusLocations(routeId, { cityCode }), {
                 ttlSeconds: ttl, ...LIVE_CACHE_OPTIONS,
             });

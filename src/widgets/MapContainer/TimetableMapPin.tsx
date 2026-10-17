@@ -22,9 +22,9 @@ export interface TimetableHub {
 export const WONJU_TIMETABLE_HUBS: TimetableHub[] = [
     {
         id: "hub-cityhall",
-        name: "원주시청 버스 시간표",
-        shortLabel: "원주시청 시간표",
-        badgeText: "원주시 전체 노선 시간표",
+        name: "원주시 버스 시간표",
+        shortLabel: "원주시",
+        badgeText: "전체 노선 시간표",
         lat: 37.3421,
         lng: 127.9198,
         subTab: "all",
@@ -34,7 +34,7 @@ export const WONJU_TIMETABLE_HUBS: TimetableHub[] = [
     {
         id: "hub-yonsei",
         name: "연세대 미래캠퍼스 시간표",
-        shortLabel: "연세대 시간표",
+        shortLabel: "연세대학교",
         badgeText: "셔틀 · 30 · 34 · 34-1",
         lat: 37.2795,
         lng: 127.9035,

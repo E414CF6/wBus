@@ -89,79 +89,83 @@ function getScheduleData() {
 
 /**
  * Compute the operating service window for a given route.
+ * Wonju ("32020") routes use Yonsei static timetables and schedule.json; other cities use default window.
  */
-export function getRouteOperatingWindow(routeIdOrNo: string): RouteOperatingWindow {
+export function getRouteOperatingWindow(routeIdOrNo: string, cityCode: string = "32020"): RouteOperatingWindow {
     const routeNo = extractRouteNumber(routeIdOrNo);
-    const cacheKey = routeNo;
+    const normalizedCity = cityCode || "32020";
+    const cacheKey = `${normalizedCity}:${routeNo}`;
 
     const cached = windowCache.get(cacheKey);
     if (cached) return cached;
 
-    // 1. Check Yonsei Static Timetables (30, 34, 34-1)
-    const yonseiKey = routeNo as keyof typeof YONSEI_STATIC_TIMETABLES;
-    if (YONSEI_STATIC_TIMETABLES[yonseiKey]) {
-        const routeData = YONSEI_STATIC_TIMETABLES[yonseiKey];
-        let earliestMin = Infinity;
-        let latestMin = -Infinity;
+    if (normalizedCity === "32020") {
+        // 1. Check Yonsei Static Timetables (30, 34, 34-1) - Wonju only
+        const yonseiKey = routeNo as keyof typeof YONSEI_STATIC_TIMETABLES;
+        if (YONSEI_STATIC_TIMETABLES[yonseiKey]) {
+            const routeData = YONSEI_STATIC_TIMETABLES[yonseiKey];
+            let earliestMin = Infinity;
+            let latestMin = -Infinity;
 
-        // Check both weekday & vacation origins/destinations
-        [routeData.weekday, routeData.vacation].forEach((modeData) => {
-            if (!modeData) return;
-            [...modeData.origin, ...modeData.dest].forEach((timeStr) => {
-                const min = parseTimeToMinutes(timeStr);
-                if (min !== null) {
-                    if (min < earliestMin) earliestMin = min;
-                    if (min > latestMin) latestMin = min;
+            // Check both weekday & vacation origins/destinations
+            [routeData.weekday, routeData.vacation].forEach((modeData) => {
+                if (!modeData) return;
+                [...modeData.origin, ...modeData.dest].forEach((timeStr) => {
+                    const min = parseTimeToMinutes(timeStr);
+                    if (min !== null) {
+                        if (min < earliestMin) earliestMin = min;
+                        if (min > latestMin) latestMin = min;
+                    }
+                });
+            });
+
+            if (earliestMin !== Infinity && latestMin !== -Infinity) {
+                const startMinutes = Math.max(0, earliestMin - PRE_DEPARTURE_BUFFER_MINUTES);
+                const endMinutes = latestMin + POST_DEPARTURE_BUFFER_MINUTES;
+
+                const window: RouteOperatingWindow = {
+                    routeNo,
+                    firstBus: formatMinutesToTime(earliestMin),
+                    lastBus: formatMinutesToTime(latestMin),
+                    startMinutes,
+                    endMinutes,
+                    source: "yonsei_static",
+                };
+                windowCache.set(cacheKey, window);
+                return window;
+            }
+        }
+
+        // 2. Check full schedule.json dataset for Wonju routes
+        const schedule = getScheduleData();
+        if (schedule?.routes) {
+            let earliestMin = Infinity;
+            let latestMin = -Infinity;
+
+            schedule.routes.forEach((r) => {
+                if (extractRouteNumber(r.routeNo) === routeNo) {
+                    const firstMin = parseTimeToMinutes(r.firstBus);
+                    const lastMin = parseTimeToMinutes(r.lastBus);
+                    if (firstMin !== null && firstMin < earliestMin) earliestMin = firstMin;
+                    if (lastMin !== null && lastMin > latestMin) latestMin = lastMin;
                 }
             });
-        });
 
-        if (earliestMin !== Infinity && latestMin !== -Infinity) {
-            const startMinutes = Math.max(0, earliestMin - PRE_DEPARTURE_BUFFER_MINUTES);
-            const endMinutes = latestMin + POST_DEPARTURE_BUFFER_MINUTES;
+            if (earliestMin !== Infinity && latestMin !== -Infinity) {
+                const startMinutes = Math.max(0, earliestMin - PRE_DEPARTURE_BUFFER_MINUTES);
+                const endMinutes = latestMin + POST_DEPARTURE_BUFFER_MINUTES;
 
-            const window: RouteOperatingWindow = {
-                routeNo,
-                firstBus: formatMinutesToTime(earliestMin),
-                lastBus: formatMinutesToTime(latestMin),
-                startMinutes,
-                endMinutes,
-                source: "yonsei_static",
-            };
-            windowCache.set(cacheKey, window);
-            return window;
-        }
-    }
-
-    // 2. Check full schedule.json dataset for Wonju routes
-    const schedule = getScheduleData();
-    if (schedule?.routes) {
-        let earliestMin = Infinity;
-        let latestMin = -Infinity;
-
-        schedule.routes.forEach((r) => {
-            if (extractRouteNumber(r.routeNo) === routeNo) {
-                const firstMin = parseTimeToMinutes(r.firstBus);
-                const lastMin = parseTimeToMinutes(r.lastBus);
-                if (firstMin !== null && firstMin < earliestMin) earliestMin = firstMin;
-                if (lastMin !== null && lastMin > latestMin) latestMin = lastMin;
+                const window: RouteOperatingWindow = {
+                    routeNo,
+                    firstBus: formatMinutesToTime(earliestMin),
+                    lastBus: formatMinutesToTime(latestMin),
+                    startMinutes,
+                    endMinutes,
+                    source: "schedule_json",
+                };
+                windowCache.set(cacheKey, window);
+                return window;
             }
-        });
-
-        if (earliestMin !== Infinity && latestMin !== -Infinity) {
-            const startMinutes = Math.max(0, earliestMin - PRE_DEPARTURE_BUFFER_MINUTES);
-            const endMinutes = latestMin + POST_DEPARTURE_BUFFER_MINUTES;
-
-            const window: RouteOperatingWindow = {
-                routeNo,
-                firstBus: formatMinutesToTime(earliestMin),
-                lastBus: formatMinutesToTime(latestMin),
-                startMinutes,
-                endMinutes,
-                source: "schedule_json",
-            };
-            windowCache.set(cacheKey, window);
-            return window;
         }
     }
 
@@ -181,24 +185,29 @@ export function getRouteOperatingWindow(routeIdOrNo: string): RouteOperatingWind
 /**
  * Record active bus telemetry to dynamically extend service window if a bus is still running late.
  */
-export function recordRouteBusActivity(routeIdOrNo: string, busCount: number): void {
+export function recordRouteBusActivity(routeIdOrNo: string, busCount: number, cityCode: string = "32020"): void {
     const routeNo = extractRouteNumber(routeIdOrNo);
+    const normalizedCity = cityCode || "32020";
     if (busCount > 0) {
-        lastActiveBusTimestamp.set(routeNo, Date.now());
-        lastActiveBusTimestamp.set(routeIdOrNo, Date.now());
+        const now = Date.now();
+        lastActiveBusTimestamp.set(`${normalizedCity}:${routeNo}`, now);
+        lastActiveBusTimestamp.set(`${normalizedCity}:${routeIdOrNo}`, now);
     }
 }
 
 /**
  * Determines whether a route is currently in its active operating service window.
  */
-export function isRouteInServiceWindow(routeIdOrNo: string, now: Date = new Date()): ServiceStatus {
+export function isRouteInServiceWindow(routeIdOrNo: string, now: Date = new Date(), cityCode: string = "32020"): ServiceStatus {
     const routeNo = extractRouteNumber(routeIdOrNo);
-    const window = getRouteOperatingWindow(routeIdOrNo);
+    const normalizedCity = cityCode || "32020";
+    const window = getRouteOperatingWindow(routeIdOrNo, normalizedCity);
     const currentKst = getCurrentKstMinutes(now);
 
     // 1. Check dynamic activity override (a bus was recently seen running within last 15 min)
-    const lastActive = lastActiveBusTimestamp.get(routeNo) || lastActiveBusTimestamp.get(routeIdOrNo);
+    const lastActive =
+        lastActiveBusTimestamp.get(`${normalizedCity}:${routeNo}`) ||
+        lastActiveBusTimestamp.get(`${normalizedCity}:${routeIdOrNo}`);
     if (lastActive && Date.now() - lastActive < ACTIVITY_HOLD_MS) {
         return {
             inService: true, reason: "activity_override", window, currentKstMinutes: currentKst, retryAfterSeconds: 4,

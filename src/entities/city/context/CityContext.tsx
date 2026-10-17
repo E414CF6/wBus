@@ -55,7 +55,9 @@ export function CityContextProvider({children}: CityContextProviderProps) {
     const [detectedCity, setDetectedCity] = useState<CityInfo | null>(null);
 
     const currentCityRef = useRef<CityInfo>(currentCity);
-    currentCityRef.current = currentCity;
+    useEffect(() => {
+        currentCityRef.current = currentCity;
+    }, [currentCity]);
 
     const [isAutoDetectEnabled, setIsAutoDetectEnabledState] = useState<boolean>(true);
 
@@ -73,39 +75,51 @@ export function CityContextProvider({children}: CityContextProviderProps) {
 
     // Restore saved city and preferences on initial mount without triggering SSR hydration mismatch
     useEffect(() => {
-        try {
-            const params = new URLSearchParams(window.location.search);
-            const queryCity = params.get("cityCode") || params.get("city");
-            if (queryCity) {
-                const found = getCityByCode(queryCity);
-                if (found && found.code !== currentCityRef.current.code) {
-                    currentCityRef.current = found;
-                    setCurrentCityState(found);
-                    return;
+        const frameId = requestAnimationFrame(() => {
+            try {
+                const savedAuto = localStorage.getItem(STORAGE_KEYS.CITY_AUTO_DETECT);
+                if (savedAuto !== null) {
+                    setIsAutoDetectEnabledState(savedAuto !== "false");
                 }
-            }
 
-            const savedCode = localStorage.getItem(STORAGE_KEYS.CITY_CODE);
-            if (savedCode) {
-                const found = getCityByCode(savedCode);
-                if (found && found.code !== currentCityRef.current.code) {
-                    currentCityRef.current = found;
-                    setCurrentCityState(found);
+                const params = new URLSearchParams(window.location.search);
+                const queryCity = params.get("cityCode") || params.get("city");
+                if (queryCity) {
+                    const found = getCityByCode(queryCity);
+                    if (found && found.code !== currentCityRef.current.code) {
+                        currentCityRef.current = found;
+                        setCurrentCityState(found);
+                        return;
+                    }
                 }
-            }
 
-            const savedAuto = localStorage.getItem(STORAGE_KEYS.CITY_AUTO_DETECT);
-            if (savedAuto !== null) {
-                setIsAutoDetectEnabledState(savedAuto !== "false");
+                const savedCode = localStorage.getItem(STORAGE_KEYS.CITY_CODE);
+                if (savedCode) {
+                    const found = getCityByCode(savedCode);
+                    if (found && found.code !== currentCityRef.current.code) {
+                        currentCityRef.current = found;
+                        setCurrentCityState(found);
+                    }
+                }
+            } catch {
+                // Ignore localStorage errors
             }
-        } catch {
-            // Ignore localStorage errors
-        }
+        });
+        return () => cancelAnimationFrame(frameId);
     }, []);
 
     const [isDetecting, setIsDetecting] = useState(false);
     const isFlyingRef = useRef(false);
+    const flyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const {map} = useAppMapContext();
+
+    useEffect(() => {
+        return () => {
+            if (flyTimeoutRef.current) {
+                clearTimeout(flyTimeoutRef.current);
+            }
+        };
+    }, []);
 
     const setCity = useCallback(
         (cityOrCode: CityInfo | string, options?: SetCityOptions) => {
@@ -131,8 +145,24 @@ export function CityContextProvider({children}: CityContextProviderProps) {
                 // Ignore storage failure
             }
 
+            if (typeof window !== "undefined") {
+                try {
+                    const url = new URL(window.location.href);
+                    if (url.searchParams.get("cityCode") !== nextCity.code) {
+                        url.searchParams.set("cityCode", nextCity.code);
+                        url.searchParams.delete("city");
+                        window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+                    }
+                } catch {
+                    // Ignore URL update failure
+                }
+            }
+
             // Animate map to the city center unless skipFlyTo is set
             if (map && !options?.skipFlyTo) {
+                if (flyTimeoutRef.current) {
+                    clearTimeout(flyTimeoutRef.current);
+                }
                 isFlyingRef.current = true;
                 map.flyTo({
                     center: [nextCity.lng, nextCity.lat],
@@ -140,8 +170,9 @@ export function CityContextProvider({children}: CityContextProviderProps) {
                     duration: 1200,
                     essential: true,
                 });
-                setTimeout(() => {
+                flyTimeoutRef.current = setTimeout(() => {
                     isFlyingRef.current = false;
+                    flyTimeoutRef.current = null;
                 }, 1300);
             }
         },

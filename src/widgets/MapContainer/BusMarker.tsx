@@ -295,6 +295,7 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
         fallbackPolylines,
         activeRouteId,
         routeName,
+        effectiveCityCode,
         routeIndicesMap,
     ]);
 
@@ -310,7 +311,6 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
                      bus,
                      position,
                      angle,
-                     direction,
                      polyline,
                      snapIndexHint,
                      stopCoordIndices,

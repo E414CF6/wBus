@@ -10,16 +10,19 @@ import {useCityContext} from "@entities/city";
 
 import {BusStopPopup} from "@entities/station";
 import {useRoutePolylineData} from "@features/live-tracking";
+import {getRouteMeta} from "@entities/route/routeMetadata";
 import {buildSegmentedRouteGeoJson, SHARED_BLUE_COLOR} from "@entities/route/polylineService";
 import type {Feature} from "geojson";
 
-import {BusFront, Calendar, Info, MapPin, MapPinned} from "lucide-react";
+import {BusFront, Calendar, Info, MapPin, MapPinned, X} from "lucide-react";
 import {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Marker, Popup} from "react-map-gl/maplibre";
 import type {TimetableSubTab} from "@shared/types/navigation";
 
 type BusStopMarkerItemProps = {
     stop: BusStop;
+    cityCode: string;
+    currentRouteName: string;
     isRouteStop?: boolean;
     onRouteChange?: (routeName: string) => void;
     onOpenScheduleModal?: (subTab?: TimetableSubTab) => void;
@@ -63,10 +66,11 @@ function getDistanceToSegmentMeters(
 function findNearestFeatureColor(
     stopLat: number,
     stopLng: number,
-    features: Feature[]
+    features: Feature[],
+    fallbackColor: string = SHARED_BLUE_COLOR
 ): string {
     let minDistance = Infinity;
-    let matchedColor = SHARED_BLUE_COLOR;
+    let matchedColor = fallbackColor;
 
     for (const feat of features) {
         if (feat.geometry.type !== "LineString") continue;
@@ -90,6 +94,8 @@ function findNearestFeatureColor(
 
 const BusStopMarkerItem = memo(({
                                     stop,
+                                    cityCode,
+                                    currentRouteName,
                                     isRouteStop = true,
                                     onRouteChange,
                                     onOpenScheduleModal,
@@ -107,6 +113,14 @@ const BusStopMarkerItem = memo(({
     }, []);
 
     const handlePopupClose = useCallback(() => setIsPopupOpen(false), []);
+
+    const handleSelectRouteFromPopup = useCallback(
+        (nextRoute: string) => {
+            setIsPopupOpen(false);
+            onRouteChange?.(nextRoute);
+        },
+        [onRouteChange]
+    );
 
     const borderColor = isRouteStop ? color : "#64748b";
     const isYonseiStop = Boolean(
@@ -175,7 +189,7 @@ const BusStopMarkerItem = memo(({
                         className="flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl overflow-hidden rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.6)] border border-black/5 dark:border-white/10 w-75 sm:w-90">
                         {/* Header Section */}
                         <div
-                            className="relative overflow-hidden bg-transparent px-5 py-5 text-black dark:text-white border-b border-black/5 dark:border-white/5">
+                            className="relative overflow-hidden bg-transparent px-5 py-4 text-black dark:text-white border-b border-black/5 dark:border-white/5">
                             <div className="absolute -right-4 -top-4 opacity-5 pointer-events-none">
                                 <BusFront size={100} strokeWidth={1}/>
                             </div>
@@ -221,27 +235,43 @@ const BusStopMarkerItem = memo(({
                                         </div>
                                     </div>
 
-                                    {isWonju && onOpenScheduleModal && (
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                        {isWonju && onOpenScheduleModal && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsPopupOpen(false);
+                                                    onOpenScheduleModal(isYonseiStop ? "yonsei" : "all");
+                                                }}
+                                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
+                                                title="버스 시간표 모달 열기"
+                                            >
+                                                <Calendar className="w-3 h-3"/>
+                                                <span>시간표</span>
+                                            </button>
+                                        )}
                                         <button
                                             type="button"
-                                            onClick={() => {
-                                                setIsPopupOpen(false);
-                                                onOpenScheduleModal(isYonseiStop ? "yonsei" : "all");
-                                            }}
-                                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-extrabold shadow-xs transition-all cursor-pointer active:scale-95 shrink-0"
-                                            title="버스 시간표 모달 열기"
+                                            onClick={handlePopupClose}
+                                            className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer active:scale-90"
+                                            title="팝업 닫기"
+                                            aria-label="정류장 팝업 닫기"
                                         >
-                                            <Calendar className="w-3 h-3"/>
-                                            <span>시간표</span>
+                                            <X className="w-3.5 h-3.5"/>
                                         </button>
-                                    )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Body Section: Real-time Bus Arrivals at this Stop */}
                         <div className="relative min-h-30 bg-transparent">
-                            <BusStopPopup stopId={stop.nodeid} onRouteChange={onRouteChange}/>
+                            <BusStopPopup
+                                stopId={stop.nodeid}
+                                cityCode={cityCode}
+                                currentRouteName={currentRouteName}
+                                onRouteChange={handleSelectRouteFromPopup}
+                            />
                         </div>
 
                         {/* Footer Section */}
@@ -284,6 +314,10 @@ export default ({
     // Retrieve polyline data to synchronize stop marker & label colors with route segments
     const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName, true, effectiveCityCode);
     const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo?.vehicleRouteIds]);
+    const routeMainColor = useMemo(
+        () => getRouteMeta(routeName, effectiveCityCode).colorTheme.main,
+        [routeName, effectiveCityCode]
+    );
 
     const validRouteIds = useMemo(() => {
         const available = routeIds.filter((id) => {
@@ -301,8 +335,8 @@ export default ({
     }, [routeIds, polylineMap, activeRouteId]);
 
     const activeGeoJson = useMemo(() => {
-        return buildSegmentedRouteGeoJson(validRouteIds, polylineMap);
-    }, [validRouteIds, polylineMap]);
+        return buildSegmentedRouteGeoJson(validRouteIds, polylineMap, routeMainColor);
+    }, [validRouteIds, polylineMap, routeMainColor]);
 
     // Map each stop ID to its corresponding polyline segment color
     const stopColorMap = useMemo(() => {
@@ -311,14 +345,14 @@ export default ({
         if (features.length === 0) return colorMap;
 
         for (const stop of routeStops) {
-            const color = findNearestFeatureColor(stop.gpslati, stop.gpslong, features);
+            const color = findNearestFeatureColor(stop.gpslati, stop.gpslong, features, routeMainColor);
             const key = `${stop.nodeid}-${stop.updowncd ?? "na"}`;
             colorMap.set(key, color);
             colorMap.set(stop.nodeid, color);
         }
 
         return colorMap;
-    }, [routeStops, activeGeoJson]);
+    }, [routeStops, activeGeoJson, routeMainColor]);
 
     useEffect(() => {
         if (!map) return;
@@ -348,18 +382,18 @@ export default ({
         };
     }, [map]);
 
-    // Zoom threshold for displaying stops in viewport (zoom >= 13.5 for route stops)
+    // Zoom threshold for displaying stops in viewport (zoom >= 12.2 for route stop icons, >= 14.2 for labels)
     const visibleStops = useMemo(() => {
-        if (!bounds || zoom < 13.5) return [];
+        if (!bounds || zoom < 12.2) return [];
 
         const stopsInView: Array<BusStop & { isRouteStop: boolean; showLabel: boolean; color: string }> = [];
-        const isRouteLabelVisible = zoom >= 14.3;
+        const isRouteLabelVisible = zoom >= 14.2;
 
         // Include route stops that are inside current viewport bounds
         for (const rStop of routeStops) {
             if (bounds.contains([rStop.gpslong, rStop.gpslati])) {
                 const stopKey = `${rStop.nodeid}-${rStop.updowncd ?? "na"}`;
-                const color = stopColorMap.get(stopKey) || stopColorMap.get(rStop.nodeid) || "#059669";
+                const color = stopColorMap.get(stopKey) || stopColorMap.get(rStop.nodeid) || routeMainColor;
 
                 stopsInView.push({
                     ...rStop,
@@ -371,7 +405,7 @@ export default ({
         }
 
         return stopsInView;
-    }, [routeStops, bounds, zoom, stopColorMap]);
+    }, [routeStops, bounds, zoom, stopColorMap, routeMainColor]);
 
     return (
         <>
@@ -381,6 +415,8 @@ export default ({
                     <BusStopMarkerItem
                         key={key}
                         stop={stop}
+                        cityCode={effectiveCityCode}
+                        currentRouteName={routeName}
                         isRouteStop={stop.isRouteStop}
                         showLabel={stop.showLabel}
                         color={stop.color}

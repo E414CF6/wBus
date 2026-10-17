@@ -1,5 +1,13 @@
 import {describe, expect, it} from "vitest";
-import {extractRouteNumber, formatMinutesToTime, getCurrentKstMinutes, parseTimeToMinutes,} from "./routeWindow";
+import {
+    extractRouteNumber,
+    formatMinutesToTime,
+    getCurrentKstMinutes,
+    getRouteOperatingWindow,
+    isRouteInServiceWindow,
+    parseTimeToMinutes,
+    recordRouteBusActivity,
+} from "./routeWindow";
 
 describe("routeWindow utility functions", () => {
     describe("parseTimeToMinutes", () => {
@@ -77,6 +85,31 @@ describe("routeWindow utility functions", () => {
             const testUtcDate = new Date(Date.UTC(2026, 8, 12, 0, 0, 0));
             const kstMinutes = getCurrentKstMinutes(testUtcDate);
             expect(kstMinutes).toBe(540);
+        });
+    });
+
+    describe("cityCode window and activity isolation", () => {
+        it("resolves Wonju route 30 from yonsei_static while non-Wonju route 30 uses default window", () => {
+            const wonjuWindow = getRouteOperatingWindow("30", "32020");
+            const chuncheonWindow = getRouteOperatingWindow("30", "32010");
+
+            expect(wonjuWindow.source).toBe("yonsei_static");
+            expect(chuncheonWindow.source).toBe("default");
+        });
+
+        it("isolates dynamic activity overrides by cityCode during late-night hours", () => {
+            // 03:00 KST = 18:00 UTC previous day (outside normal operating window)
+            const dawnDate = new Date(Date.UTC(2026, 8, 11, 18, 0, 0));
+
+            recordRouteBusActivity("NIGHT_TEST_ROUTE", 2, "32020");
+
+            const wonjuStatus = isRouteInServiceWindow("NIGHT_TEST_ROUTE", dawnDate, "32020");
+            const otherCityStatus = isRouteInServiceWindow("NIGHT_TEST_ROUTE", dawnDate, "32010");
+
+            expect(wonjuStatus.inService).toBe(true);
+            expect(wonjuStatus.reason).toBe("activity_override");
+            expect(otherCityStatus.inService).toBe(false);
+            expect(otherCityStatus.reason).toBe("outside_window");
         });
     });
 });

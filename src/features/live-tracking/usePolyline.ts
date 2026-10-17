@@ -5,11 +5,7 @@
 
 "use client";
 
-import {
-    fetchRoutePolylines,
-    getCachedRoutePolylinesSync,
-    type PolylineData,
-} from "@entities/route/polylineService";
+import {fetchRoutePolylines, getCachedRoutePolylinesSync, type PolylineData,} from "@entities/route/polylineService";
 
 import type {Coordinate} from "@entities/route/types";
 import {useRouteInfo} from "@entities/route/hooks";
@@ -45,23 +41,22 @@ function usePolylineSnapshot(routeIds: string[], cityCode: string = "32020"): Ma
     }));
 
     useEffect(() => {
-        if (ids.length === 0) return;
-
-        const currentCached = getCachedRoutePolylinesSync(ids, cityCode);
-        if (currentCached) {
-            setSnapshot((prev) => (prev.key === routeKey && prev.map === currentCached ? prev : {key: routeKey, map: currentCached}));
-            return;
-        }
+        if (ids.length === 0 || syncCached) return;
 
         let mounted = true;
-        fetchRoutePolylines(ids, cityCode).then((map) => {
-            if (mounted) setSnapshot({key: routeKey, map});
-        });
+        fetchRoutePolylines(ids, cityCode)
+            .then((map) => {
+                if (mounted) setSnapshot({key: routeKey, map});
+            })
+            .catch((err) => {
+                console.warn("[usePolyline] Failed to fetch route polylines:", err);
+                if (mounted) setSnapshot({key: routeKey, map: EMPTY_POLYLINE_MAP});
+            });
 
         return () => {
             mounted = false;
         };
-    }, [routeKey, cityCode, ids]);
+    }, [routeKey, cityCode, ids, syncCached]);
 
     return useMemo(
         () => (snapshot.key === routeKey ? snapshot.map : syncCached ?? EMPTY_POLYLINE_MAP),

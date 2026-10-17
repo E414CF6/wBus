@@ -27,7 +27,20 @@ export async function GET(_request: Request, {params}: { params: Promise<{ path:
     try {
         const {readFile} = await import("fs/promises");
         const {existsSync} = await import("fs");
-        const {join} = await import("path");
+        const {join, resolve, sep} = await import("path");
+
+        const publicRoot = resolve(process.cwd(), "public");
+        const tmpRoutesRoot = resolve("/tmp", "routes");
+
+        const isWithinAllowedRoot = (candidatePath: string): boolean => {
+            const resolved = resolve(candidatePath);
+            return (
+                resolved === publicRoot ||
+                resolved.startsWith(publicRoot + sep) ||
+                resolved === tmpRoutesRoot ||
+                resolved.startsWith(tmpRoutesRoot + sep)
+            );
+        };
 
         const routeFileName = relativePath.startsWith("routes/")
             ? relativePath.slice(7)
@@ -36,21 +49,33 @@ export async function GET(_request: Request, {params}: { params: Promise<{ path:
             : null;
 
         const localPaths = [
-            join(process.cwd(), "public", relativePath),
-            join(process.cwd(), "public", "data", relativePath),
+            join(publicRoot, relativePath),
+            join(publicRoot, "data", relativePath),
             // Map style alias fallbacks
-            ...(relativePath.endsWith("style.json") || relativePath.endsWith("liberty.json") ? [join(process.cwd(), "public", "styles", "liberty.json")] : []),
-            ...(relativePath.endsWith("style-dark.json") || relativePath.endsWith("darker.json") ? [join(process.cwd(), "public", "styles", "darker.json")] : []),
+            ...(relativePath.endsWith("style.json") || relativePath.endsWith("liberty.json") ? [join(publicRoot, "styles", "liberty.json")] : []),
+            ...(relativePath.endsWith("style-dark.json") || relativePath.endsWith("darker.json") ? [join(publicRoot, "styles", "darker.json")] : []),
             // Route dir alias fallbacks (data/route/* -> public/routes/* or /tmp/routes/*)
             ...(routeFileName ? [
-                join(process.cwd(), "public", "routes", routeFileName),
-                join("/tmp", "routes", routeFileName),
+                join(publicRoot, "routes", routeFileName),
+                join(tmpRoutesRoot, routeFileName),
             ] : []),
         ];
 
         for (const localPath of localPaths) {
+            if (!isWithinAllowedRoot(localPath)) {
+                continue;
+            }
             if (existsSync(/*turbopackIgnore: true*/ localPath)) {
                 const content = await readFile(/*turbopackIgnore: true*/ localPath, "utf-8");
+                if (routeFileName) {
+                    try {
+                        const parsed = JSON.parse(content);
+                        if (!parsed || typeof parsed !== "object") continue;
+                    } catch {
+                        // Corrupted route JSON on disk: skip and allow on-demand regeneration
+                        continue;
+                    }
+                }
                 return new NextResponse(content, {status: 200, headers});
             }
         }

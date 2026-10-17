@@ -217,8 +217,8 @@ interface RouteBusMetrics {
 
 const routeBusMetricsMap = new Map<string, RouteBusMetrics>();
 
-export function getRouteBusCount(routeId: string): number | undefined {
-    return routeBusMetricsMap.get(routeId)?.busCount;
+export function getRouteBusCount(routeId: string, cityCode: string = CITY_CODE): number | undefined {
+    return routeBusMetricsMap.get(`${cityCode}:${routeId}`)?.busCount ?? routeBusMetricsMap.get(routeId)?.busCount;
 }
 
 /**
@@ -227,13 +227,13 @@ export function getRouteBusCount(routeId: string): number | undefined {
  * - Inside window with active buses: High-frequency activeTtl (e.g. 8s).
  * - Inside window with 0 buses: Backoff idleTtl (e.g. 15s).
  */
-export function getAdaptiveTtlSeconds(routeId: string, activeTtl = 8, idleTtl = 15): number {
-    const status = isRouteInServiceWindow(routeId);
+export function getAdaptiveTtlSeconds(routeId: string, activeTtl = 8, idleTtl = 15, cityCode: string = CITY_CODE): number {
+    const status = isRouteInServiceWindow(routeId, new Date(), cityCode);
     if (!status.inService) {
         return status.retryAfterSeconds;
     }
 
-    const metrics = routeBusMetricsMap.get(routeId);
+    const metrics = routeBusMetricsMap.get(`${cityCode}:${routeId}`) ?? routeBusMetricsMap.get(routeId);
     if (!metrics) return activeTtl;
     return metrics.busCount > 0 ? activeTtl : idleTtl;
 }
@@ -494,18 +494,19 @@ export async function fetchBusLocations(routeId: string, options?: {
     force?: boolean; priority?: number; cityCode?: string;
 }): Promise<RawBusLocation[]> {
     const cityCode = options?.cityCode ?? CITY_CODE;
+    const metricsKey = `${cityCode}:${routeId}`;
 
     // 1. Check Operating Service Window (Short-circuit during midnight / non-operating hours)
-    const serviceStatus = isRouteInServiceWindow(routeId);
+    const serviceStatus = isRouteInServiceWindow(routeId, new Date(), cityCode);
     if (!serviceStatus.inService && !options?.force) {
         // Record 0 bus count for metrics
-        routeBusMetricsMap.set(routeId, {
+        routeBusMetricsMap.set(metricsKey, {
             busCount: 0, lastFetchedAt: Date.now(),
         });
         return [];
     }
 
-    const currentMetrics = routeBusMetricsMap.get(routeId);
+    const currentMetrics = routeBusMetricsMap.get(metricsKey);
     // Priority: Priority argument or calculated level
     const priority = options?.priority ?? (serviceStatus.reason === "activity_override" || (currentMetrics && currentMetrics.busCount > 0) ? API_PRIORITY.USER_INTERACTIVE : API_PRIORITY.STREAM_ACTIVE);
 
@@ -518,10 +519,10 @@ export async function fetchBusLocations(routeId: string, options?: {
     const items = extractItems(data, `getRouteAcctoBusLcList:${cityCode}:${routeId}`);
 
     // Update bus count metrics & activity timestamp for dynamic window extension
-    routeBusMetricsMap.set(routeId, {
+    routeBusMetricsMap.set(metricsKey, {
         busCount: items.length, lastFetchedAt: Date.now(),
     });
-    recordRouteBusActivity(routeId, items.length);
+    recordRouteBusActivity(routeId, items.length, cityCode);
 
     return items.map((bus) => ({
         ...bus,

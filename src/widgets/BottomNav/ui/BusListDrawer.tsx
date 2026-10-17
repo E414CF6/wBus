@@ -1,17 +1,16 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Bus, Loader2, RefreshCw, RotateCw, X} from "lucide-react";
+import {Bus, Loader2, LocateFixed, RefreshCw, RotateCw, Search, X} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {type RouteVariationStop, useRouteVariations} from "@entities/route";
-import type {RouteVariation} from "@entities/route/types";
+import type {DirectionCode, RouteVariation} from "@entities/route/types";
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useSchedule} from "@entities/schedule/hooks";
 import {useCityContext} from "@entities/city";
 import {useBusStop} from "@entities/station/hooks";
 import type {BusItem} from "@entities/bus/types";
 import type {BusStop} from "@entities/station/types";
-import type {DirectionCode} from "@entities/route/types";
 
 interface BusListDrawerProps {
     isOpen: boolean;
@@ -53,21 +52,30 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const {currentCity} = useCityContext();
     const isWonju = currentCity.code === "32020";
 
-    const {variations} = useRouteVariations(selectedRoute, isOpen && isWonju);
+    const {variations} = useRouteVariations(selectedRoute, isOpen, currentCity.code);
     const nationwideStops = useBusStop(isOpen && !isWonju ? selectedRoute : "", currentCity.code);
     const {routes: scheduleRoutes} = useSchedule(isOpen && isWonju);
 
     const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
     const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
     const [directionFilter, setDirectionFilter] = useState<"all" | "up" | "down">("all");
+    const [stopSearchQuery, setStopSearchQuery] = useState("");
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [timeAgo, setTimeAgo] = useState("0초 전");
     const listRef = useRef<HTMLDivElement>(null);
+    const hasAutoScrolledRef = useRef<string | null>(null);
+
+    const [prevRoute, setPrevRoute] = useState(selectedRoute);
+    if (selectedRoute !== prevRoute) {
+        setPrevRoute(selectedRoute);
+        setStopSearchQuery("");
+        setDirectionFilter("all");
+    }
 
     // Route Metadata & Schedule info
     const meta = useMemo(() => getRouteMeta(selectedRoute, currentCity.code), [selectedRoute, currentCity.code]);
 
-    // Construct synthetic single variation for nationwide cities when variations are not pre-indexed
+    // Construct synthetic single variation for nationwide cities when variations are not yet resolved
     const nationwideVariations = useMemo<RouteVariation[]>(() => {
         if (isWonju || !nationwideStops || nationwideStops.length === 0) return [];
         return [
@@ -81,31 +89,24 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         ];
     }, [isWonju, nationwideStops, selectedRoute]);
 
-    const effectiveVariations = isWonju ? variations : nationwideVariations;
+    const effectiveVariations = variations.length > 0 ? variations : nationwideVariations;
 
-    // Auto-select variation: prefer variant with running buses, or fallback to first variant
-    useEffect(() => {
-        if (!effectiveVariations || effectiveVariations.length === 0) {
-            setSelectedVariantId(null);
-            return;
-        }
-
-        // Keep current selected variant if still valid for this route
-        if (selectedVariantId && effectiveVariations.some((v) => v.routeId === selectedVariantId)) {
-            return;
-        }
-
-        // Prioritize variation that has running buses
-        const variantWithBuses = runningBuses.find((b) => b.routeid && effectiveVariations.some((v) => v.routeId === b.routeid))?.routeid;
-
-        setSelectedVariantId(variantWithBuses ?? effectiveVariations[0].routeId);
-    }, [effectiveVariations, selectedRoute, runningBuses, selectedVariantId]);
-
-    // Active variant object
+    // Active variant object: keep user selection if valid, otherwise prefer variant with running buses or fallback to first
     const currentVariant = useMemo(() => {
         if (!effectiveVariations || effectiveVariations.length === 0) return null;
-        return effectiveVariations.find((v) => v.routeId === selectedVariantId) ?? effectiveVariations[0];
-    }, [effectiveVariations, selectedVariantId]);
+        if (selectedVariantId) {
+            const matched = effectiveVariations.find((v) => v.routeId === selectedVariantId);
+            if (matched) return matched;
+        }
+        const variantWithBuses = runningBuses.find(
+            (b) => b.routeid && effectiveVariations.some((v) => v.routeId === b.routeid)
+        )?.routeid;
+        if (variantWithBuses) {
+            const matched = effectiveVariations.find((v) => v.routeId === variantWithBuses);
+            if (matched) return matched;
+        }
+        return effectiveVariations[0];
+    }, [effectiveVariations, selectedVariantId, runningBuses]);
 
     const currentStops = useMemo(() => currentVariant?.stops ?? [], [currentVariant]);
     const turningStop = useMemo(() => currentVariant?.turningStop ?? null, [currentVariant]);
@@ -174,14 +175,23 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         return uds.size > 1;
     }, [currentStops]);
 
-    // Filtered stops by direction
+    // Filtered stops by direction & search query
     const filteredStops = useMemo(() => {
-        if (directionFilter === "all" || !hasDirections) {
-            return currentStops;
+        let list = currentStops;
+        if (directionFilter !== "all" && hasDirections) {
+            const targetUd = directionFilter === "up" ? 0 : 1;
+            list = list.filter((s) => s.updowncd === targetUd);
         }
-        const targetUd = directionFilter === "up" ? 0 : 1;
-        return currentStops.filter((s) => s.updowncd === targetUd);
-    }, [currentStops, directionFilter, hasDirections]);
+        const q = stopSearchQuery.trim().toLowerCase();
+        if (q) {
+            list = list.filter(
+                (s) =>
+                    s.nodenm.toLowerCase().includes(q) ||
+                    String(s.nodeno ?? "").toLowerCase().includes(q)
+            );
+        }
+        return list;
+    }, [currentStops, directionFilter, hasDirections, stopSearchQuery]);
 
     // Match live running buses to current variation's stops
     const busesByStopKey = useMemo(() => {
@@ -211,7 +221,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                     // Disambiguate using getDirection or nodeord proximity
                     const dir = getDirection ? getDirection(bus.nodeid, bus.nodeord ?? 0, bus.routeid) : null;
                     if (dir !== null && dir !== undefined) {
-                        const targetUd = dir === 1 ? 0 : 1;
+                        const targetUd = dir === 1 ? 1 : 0;
                         matched = candidates.find((c) => c.updowncd === targetUd) || candidates[0];
                     } else if (bus.nodeord !== undefined) {
                         matched = candidates.reduce((prev, curr) => Math.abs(curr.nodeord - (bus.nodeord ?? 0)) < Math.abs(prev.nodeord - (bus.nodeord ?? 0)) ? curr : prev);
@@ -259,6 +269,28 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         return map;
     }, [runningBuses, currentStops, effectiveVariations.length, currentVariant, getDirection]);
 
+    // Scroll to the first active running bus in the timeline
+    const scrollToActiveBus = useCallback(() => {
+        if (!listRef.current) return;
+        const busRow = listRef.current.querySelector<HTMLElement>('[data-has-bus="true"]');
+        if (busRow) {
+            busRow.scrollIntoView({behavior: "smooth", block: "center"});
+        }
+    }, []);
+
+    // Auto-scroll to first active bus once when drawer opens & stops are ready
+    useEffect(() => {
+        if (!isOpen || currentStops.length === 0 || busesByStopKey.size === 0) return;
+        const scrollKey = `${currentCity.code}:${selectedRoute}:${currentVariant?.routeId ?? ""}`;
+        if (hasAutoScrolledRef.current === scrollKey) return;
+        hasAutoScrolledRef.current = scrollKey;
+
+        const timer = setTimeout(() => {
+            scrollToActiveBus();
+        }, 120);
+        return () => clearTimeout(timer);
+    }, [isOpen, currentStops.length, busesByStopKey.size, currentCity.code, selectedRoute, currentVariant?.routeId, scrollToActiveBus]);
+
     // Trigger manual telemetry refresh
     const handleRefresh = useCallback(() => {
         if (isRefreshing) return;
@@ -267,7 +299,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         setTimeout(() => setIsRefreshing(false), 800);
     }, [isRefreshing, onReconnect]);
 
-    // Station selection and flyTo
+    // Station selection and flyTo (auto-closes drawer on mobile so map target is visible)
     const handleStopClick = useCallback(
         (stop: BusStop) => {
             setSelectedStopId(stop.nodeid);
@@ -278,8 +310,22 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                     duration: 1000,
                 });
             }
+            if (typeof window !== "undefined" && window.innerWidth < 640) {
+                onClose();
+            }
         },
-        [map]
+        [map, onClose]
+    );
+
+    const handleBusBadgeClick = useCallback(
+        (e: React.MouseEvent, lat: number, lng: number) => {
+            e.stopPropagation();
+            onBusClick(lat, lng);
+            if (typeof window !== "undefined" && window.innerWidth < 640) {
+                onClose();
+            }
+        },
+        [onBusClick, onClose]
     );
 
     if (!isOpen) return null;
@@ -310,13 +356,24 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                         >
                             {routeSubInfo}
                         </p>
-                        <div className="flex items-center gap-2 mt-1.5 text-xs">
+                        <div className="flex items-center gap-2 mt-1.5 text-xs flex-wrap">
                             <span className="font-bold text-blue-600 dark:text-blue-400">
                                 {isConnecting
                                     ? "실시간 연결 중..."
                                     : `실시간 ${runningBuses.length}대 운행중`}
                             </span>
                             <span className="text-slate-400 dark:text-slate-500 font-medium">{timeAgo}</span>
+                            {busesByStopKey.size > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={scrollToActiveBus}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold border border-blue-500/25 transition cursor-pointer active:scale-95"
+                                    title="현재 운행 중인 버스 정류장 위치로 스크롤"
+                                >
+                                    <LocateFixed className="w-2.5 h-2.5"/>
+                                    <span>버스 위치로</span>
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -380,39 +437,65 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                 })}
             </div>)}
 
-            {/* 2. Direction Filter Segment (if route has up & down stops) */}
-            {hasDirections && (
-                <div
-                    className="flex items-center gap-1.5 px-4 py-2 border-b border-slate-200/80 dark:border-white/5 bg-slate-100/40 dark:bg-black/20 text-xs shrink-0 overflow-x-auto custom-scrollbar-hidden">
-                    <button
-                        type="button"
-                        onClick={() => setDirectionFilter("all")}
-                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                            directionFilter === "all" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
-                        }`}
-                    >
-                        전체 ({currentStops.length})
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setDirectionFilter("up")}
-                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                            directionFilter === "up" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
-                        }`}
-                    >
-                        {meta.destination || "종점"} 방면 (상행)
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setDirectionFilter("down")}
-                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                            directionFilter === "down" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
-                        }`}
-                    >
-                        {meta.origin || "기점"} 방면 (하행)
-                    </button>
-                </div>
-            )}
+            {/* 2. Direction Filter & Stop Quick Search Bar */}
+            <div
+                className="flex flex-col gap-2 px-4 py-2.5 border-b border-slate-200/80 dark:border-white/5 bg-slate-100/40 dark:bg-black/20 shrink-0">
+                {hasDirections && (
+                    <div className="flex items-center gap-1.5 text-xs overflow-x-auto custom-scrollbar-hidden">
+                        <button
+                            type="button"
+                            onClick={() => setDirectionFilter("all")}
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                directionFilter === "all" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
+                            }`}
+                        >
+                            전체 ({currentStops.length})
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setDirectionFilter("up")}
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                directionFilter === "up" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
+                            }`}
+                        >
+                            {meta.destination || "종점"} 방면 (상행)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setDirectionFilter("down")}
+                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                directionFilter === "down" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
+                            }`}
+                        >
+                            {meta.origin || "기점"} 방면 (하행)
+                        </button>
+                    </div>
+                )}
+
+                {currentStops.length > 5 && (
+                    <div className="relative flex items-center">
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none"/>
+                        <input
+                            type="text"
+                            value={stopSearchQuery}
+                            onChange={(e) => setStopSearchQuery(e.target.value)}
+                            placeholder="정류장 이름 또는 번호 검색..."
+                            aria-label="정류장 검색"
+                            className="w-full pl-8 pr-7 py-1.5 rounded-xl bg-white/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                        />
+                        {stopSearchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => setStopSearchQuery("")}
+                                className="absolute right-2 p-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                                aria-label="검색어 지우기"
+                            >
+                                <X className="w-3.5 h-3.5"/>
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
 
             {/* 3. Bus Stop Timeline List Body */}
             <div
@@ -428,7 +511,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                     </div>
                 ) : filteredStops.length === 0 ? (
                     <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
-                        해당 방향의 정류장 정보가 없습니다.
+                        {stopSearchQuery ? `"${stopSearchQuery}" 검색 결과가 없습니다.` : "해당 방향의 정류장 정보가 없습니다."}
                     </div>
                 ) : (
                     filteredStops.map((stop, index) => {
@@ -442,6 +525,8 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                         return (
                             <div
                                 key={stopKey}
+                                data-has-bus={busesHere.length > 0 ? "true" : undefined}
+                                data-selected-stop={isSelected ? "true" : undefined}
                                 className={`relative flex items-center min-h-[58px] py-3 transition-colors cursor-pointer group border-b border-slate-100 dark:border-white/5 ${
                                     isSelected ? isTurningStop ? "bg-amber-100/70 dark:bg-amber-950/30" : "bg-blue-50/80 dark:bg-blue-950/40" : isTurningStop ? "bg-amber-50/70 hover:bg-amber-100/60 dark:bg-amber-500/[0.06] dark:hover:bg-amber-500/[0.12]" : "hover:bg-slate-50 dark:hover:bg-white/[0.04]"
                                 }`}
@@ -488,10 +573,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                                 <button
                                                     key={`${bus.vehicleno}-${bus.nodeord}`}
                                                     type="button"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        onBusClick(bus.gpslati, bus.gpslong);
-                                                    }}
+                                                    onClick={(e) => handleBusBadgeClick(e, bus.gpslati, bus.gpslong)}
                                                     className="flex items-center gap-1 group/bus cursor-pointer active:scale-95 transition-transform"
                                                     title={`${bus.vehicleno} 실시간 위치로 이동`}
                                                 >

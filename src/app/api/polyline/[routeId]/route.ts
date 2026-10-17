@@ -62,19 +62,21 @@ export async function GET(
                 const content = await readFile(/*turbopackIgnore: true*/ localPath, "utf-8");
                 try {
                     const parsed = JSON.parse(content) as GeoPolyline;
-                    setCached(cacheKey, parsed);
+                    if (parsed && Array.isArray(parsed.stops) && parsed.stops.length > 0) {
+                        setCached(cacheKey, parsed);
+                        return new NextResponse(content, {
+                            status: 200,
+                            headers: {
+                                "Content-Type": "application/json; charset=utf-8",
+                                "Cache-Control": CACHE_CONTROL_HEADER,
+                                "X-Cache-Status": "hit",
+                                "X-Cache-Layer": "disk",
+                            },
+                        });
+                    }
                 } catch {
-                    // Ignore JSON cache parse issue
+                    // Corrupted disk file: fall through to on-demand regeneration (self-healing)
                 }
-                return new NextResponse(content, {
-                    status: 200,
-                    headers: {
-                        "Content-Type": "application/json; charset=utf-8",
-                        "Cache-Control": CACHE_CONTROL_HEADER,
-                        "X-Cache-Status": "hit",
-                        "X-Cache-Layer": "disk",
-                    },
-                });
             }
         }
     } catch {

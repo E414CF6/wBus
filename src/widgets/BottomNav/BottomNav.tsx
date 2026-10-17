@@ -1,7 +1,7 @@
 "use client";
 
 import React, {memo, useCallback, useState} from "react";
-import {ChevronDown, Compass, LocateFixed, MapIcon, MapPin, Sparkles, X} from "lucide-react";
+import {CalendarClock, ChevronDown, Compass, LocateFixed, MapIcon, MapPin, Sparkles, X} from "lucide-react";
 import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
@@ -50,10 +50,13 @@ export interface BottomNavProps {
  * - Brand Identity (Click to recenter current city)
  * - Region Selector Button (Manual confirmation when panning to new region + 138-city modal)
  * - Route Selector & Running Bus List Drawer Toggle
+ * - Quick Schedule Modal Toggle (when available in Wonju)
  * - Quick GPS Locate & Theme Switcher
- * (Timetable is now opened via interactive pins on the map)
  */
 function BottomNavComponent({
+                                activeTab = "map",
+                                onTabChange,
+                                showScheduleTab = false,
                                 allRoutes = [],
                                 selectedRoute = "",
                                 onSelectRoute,
@@ -111,6 +114,15 @@ function BottomNavComponent({
                 isOpen={isCityModalOpen}
                 onClose={() => setIsCityModalOpen(false)}
             />
+
+            {/* Click-outside Backdrop when BusListDrawer is open */}
+            {isBusListOpen && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/15 dark:bg-black/35 backdrop-blur-[1px] transition-opacity animate-fadeIn"
+                    onClick={() => setIsBusListOpen(false)}
+                    aria-hidden="true"
+                />
+            )}
 
             <div
                 className={`fixed bottom-[calc(env(safe-area-inset-bottom,0)+1rem)] left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-2.5 max-w-[95vw] ${className}`}
@@ -227,6 +239,30 @@ function BottomNavComponent({
                         isBusListOpen={isBusListOpen}
                         onToggleBusList={() => setIsBusListOpen((prev) => !prev)}
                     />
+
+                    {/* Quick Schedule Timetable Toggle (Wonju region) */}
+                    {showScheduleTab && onTabChange && (
+                        <>
+                            <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsBusListOpen(false);
+                                    onTabChange(activeTab === "schedule" ? "map" : "schedule");
+                                }}
+                                title="원주 버스 시간표 열기"
+                                aria-label="시간표 열기"
+                                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
+                                    activeTab === "schedule"
+                                        ? "bg-blue-600 text-white shadow-sm shadow-blue-600/25"
+                                        : "text-slate-700 dark:text-slate-300 hover:bg-black/[0.05] dark:hover:bg-white/[0.08]"
+                                }`}
+                            >
+                                <CalendarClock className="w-3.5 h-3.5 stroke-[2.2] shrink-0"/>
+                                <span className="hidden xs:inline whitespace-nowrap">시간표</span>
+                            </button>
+                        </>
+                    )}
 
                     {/* Divider before Utility Controls */}
                     <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>

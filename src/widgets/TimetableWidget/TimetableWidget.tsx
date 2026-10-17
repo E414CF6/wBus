@@ -3,6 +3,7 @@
 import React, {useCallback, useEffect, useMemo, useState} from "react";
 import type {BusRoute} from "@entities/schedule";
 import {CacheInfoBanner} from "@entities/schedule";
+import {STORAGE_KEYS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
 import {Footer} from "@shared/ui/Footer";
@@ -58,9 +59,9 @@ export default function TimetableWidget({
     const [bookmarks, setBookmarks] = useState<string[]>(DEFAULT_BOOKMARK_ROUTES);
 
     useEffect(() => {
-        requestAnimationFrame(() => {
+        const frameId = requestAnimationFrame(() => {
             try {
-                const saved = localStorage.getItem("wonju_bus_bookmarks");
+                const saved = localStorage.getItem(STORAGE_KEYS.WONJU_BOOKMARKS);
                 if (saved) {
                     const parsed = JSON.parse(saved);
                     if (Array.isArray(parsed)) {
@@ -71,6 +72,7 @@ export default function TimetableWidget({
                 // Storage error
             }
         });
+        return () => cancelAnimationFrame(frameId);
     }, []);
     const [now, setNow] = useState<Date>(() => new Date());
 
@@ -87,7 +89,7 @@ export default function TimetableWidget({
             const isBookmarked = prev.includes(routeId);
             const next = isBookmarked ? prev.filter((id) => id !== routeId) : [...prev, routeId];
             try {
-                localStorage.setItem("wonju_bus_bookmarks", JSON.stringify(next));
+                localStorage.setItem(STORAGE_KEYS.WONJU_BOOKMARKS, JSON.stringify(next));
             } catch (e) {
                 console.error("Failed to save bookmarks:", e);
             }

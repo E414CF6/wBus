@@ -6,7 +6,7 @@ export interface ApiHandlerConfig<T> {
     paramKey: string;
     cacheKey: (id: string, req?: Request) => string;
     fetcher: (id: string, req?: Request) => Promise<T>;
-    ttl: number | ((id: string) => number);
+    ttl: number | ((id: string, req?: Request) => number);
     errorMessage: string;
     cacheControl?: string;
     cacheOptions?: Omit<CacheOptions, "ttlSeconds">;
@@ -33,7 +33,7 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
         }
 
         try {
-            const resolvedTtl = typeof config.ttl === "function" ? config.ttl(id) : config.ttl;
+            const resolvedTtl = typeof config.ttl === "function" ? config.ttl(id, request) : config.ttl;
             const cacheOptions: CacheOptions = {
                 ttlSeconds: resolvedTtl, ...config.cacheOptions,
             };

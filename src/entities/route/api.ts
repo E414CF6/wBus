@@ -1,10 +1,4 @@
-import type {
-    GeoPolyline,
-    RouteDetail,
-    RouteInfo,
-    RouteVariation,
-    RouteVariationStop,
-} from "@entities/route/types";
+import type {GeoPolyline, RouteDetail, RouteInfo, RouteVariation, RouteVariationStop,} from "@entities/route/types";
 import type {RawCityRoute} from "@entities/bus/api/publicApi";
 import {registerDynamicRouteMeta} from "@entities/route/routeMetadata";
 import {getStationMap} from "@entities/station/api";
@@ -128,7 +122,7 @@ export async function getRouteMap(cityCode?: string): Promise<Record<string, str
 export async function getPolyline(routeKey: string, cityCode?: string): Promise<GeoPolyline | null> {
     const cCode = resolveCityCode(cityCode);
     const cacheKey = `${cCode}:${routeKey}`;
-    return polylineCache.getOrFetch(cacheKey, async () => {
+    const result = await polylineCache.getOrFetch(cacheKey, async () => {
         try {
             return await fetchAPI<GeoPolyline>(`/api/polyline/${encodeURIComponent(routeKey)}?cityCode=${cCode}`);
         } catch (error) {
@@ -141,6 +135,10 @@ export async function getPolyline(routeKey: string, cityCode?: string): Promise<
             throw error;
         }
     });
+    if (!result) {
+        polylineCache.delete(cacheKey);
+    }
+    return result;
 }
 
 export async function getRouteInfo(routeName: string, cityCode?: string): Promise<RouteInfo | null> {
@@ -156,7 +154,7 @@ export async function getRouteInfo(routeName: string, cityCode?: string): Promis
 
     // 2. Coalesced fetch with routeInfoCache
     const cacheKey = `${cCode}:${routeName}`;
-    return routeInfoCache.getOrFetch(cacheKey, async () => {
+    const result = await routeInfoCache.getOrFetch(cacheKey, async () => {
         try {
             const json = await fetchAPI<{route_numbers?: Record<string, string[]>; routes?: Array<{routeid: string}>}>(
                 `/api/routes?cityCode=${cCode}&routeNo=${encodeURIComponent(routeName)}`
@@ -173,6 +171,10 @@ export async function getRouteInfo(routeName: string, cityCode?: string): Promis
             return null;
         }
     });
+    if (!result) {
+        routeInfoCache.delete(cacheKey);
+    }
+    return result;
 }
 
 export async function getRouteDetails(routeId: string, cityCode?: string): Promise<RouteDetail | null> {

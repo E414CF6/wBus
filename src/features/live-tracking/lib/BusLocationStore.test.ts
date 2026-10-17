@@ -66,10 +66,42 @@ describe("BusLocationStore", () => {
         expect(snapshot.connectionStatus).toBe("connected");
     });
 
-    it("returns cached store instance for identical route key", () => {
-        const store1 = getBusLocationStore("route-30");
-        const store2 = getBusLocationStore("route-30");
+    it("returns cached store instance for identical route key and isolates by cityCode", () => {
+        const store1 = getBusLocationStore("route-30", "32020");
+        const store2 = getBusLocationStore("route-30", "32020");
+        const storeOtherCity = getBusLocationStore("route-30", "32010");
 
         expect(store1).toBe(store2);
+        expect(store1).not.toBe(storeOtherCity);
+    });
+
+    it("falls back to individual route requests when batch fetch fails", async () => {
+        vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+            const url = String(input);
+            if (url.startsWith("/api/bus?routeIds=")) {
+                return {ok: false, status: 502} as Response;
+            }
+            return {
+                ok: true,
+                json: async () => ({
+                    data: [{
+                        routeid: "1001",
+                        vehicleno: "9999",
+                        nodenm: "Stop Fallback",
+                        gpslati: 37.34,
+                        gpslong: 127.92
+                    }],
+                    timestamp: Date.now(),
+                }),
+            } as Response;
+        });
+
+        const store = new BusLocationStore(["1001", "1002"], "1001,1002", "32020");
+        store.manualReconnect();
+        await vi.advanceTimersByTimeAsync(150);
+
+        const snapshot = store.getSnapshot();
+        expect(snapshot.hasFetched).toBe(true);
+        expect(snapshot.data.length).toBeGreaterThan(0);
     });
 });

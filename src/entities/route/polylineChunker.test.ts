@@ -6,7 +6,6 @@ import {
     type Coordinate,
     findTurningDirection,
     haversineMeters,
-    interpolateCatmullRom,
     isExcessiveDetour,
     smoothPolylineSpline,
     stitchPolylineSegments,
