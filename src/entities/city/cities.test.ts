@@ -9,11 +9,17 @@ import {
 } from "./cities";
 
 describe("cities entity & nearest city resolution", () => {
-    it("contains 138 nationwide cities/counties", () => {
-        expect(NATIONWIDE_CITIES.length).toBe(138);
+    it("contains 139 nationwide cities/counties including Seoul", () => {
+        expect(NATIONWIDE_CITIES.length).toBe(139);
     });
 
     describe("getCityByCode", () => {
+        it("returns Seoul for code 11", () => {
+            const city = getCityByCode("11");
+            expect(city.name).toBe("서울특별시");
+            expect(city.code).toBe("11");
+        });
+
         it("returns Wonju for code 32020", () => {
             const city = getCityByCode("32020");
             expect(city.name).toBe("원주시/횡성군");
@@ -39,6 +45,12 @@ describe("cities entity & nearest city resolution", () => {
     });
 
     describe("findNearestCity", () => {
+        it("identifies Seoul from Seoul City Hall coordinates", () => {
+            const city = findNearestCity(37.5665, 126.9780);
+            expect(city.code).toBe("11");
+            expect(city.name).toBe("서울특별시");
+        });
+
         it("identifies Wonju from Wonju coordinates", () => {
             // Wonju City Hall area
             const city = findNearestCity(37.3422, 127.9202);

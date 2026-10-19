@@ -59,6 +59,10 @@ body {
 }
 
 /* Custom Popup Styling */
+.maplibregl-popup {
+    z-index: 100 !important;
+}
+
 .maplibregl-popup-content {
     padding: 0 !important;
     border-radius: 28px !important;

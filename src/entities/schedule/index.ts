@@ -4,3 +4,5 @@ export {CacheInfoBanner} from "./ui/CacheInfoBanner";
 export * from "./yonseiShuttleSchedule";
 export * from "./yonseiStaticTimetables";
 export * from "./lib/departureUtils";
+export * from "./lib/hourlyTimetable";
+

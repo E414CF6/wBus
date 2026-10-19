@@ -2,12 +2,15 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
-import {Bus, Clock, GraduationCap, MapPin, Search, Star, X} from "lucide-react";
+import {Bus, Clock, GraduationCap, MapPin, Navigation, Search, Star, X} from "lucide-react";
 import {getRouteMeta, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
+import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useCityContext} from "@entities/city";
 import {useCityRoutes} from "@entities/route/hooks";
+import {useBusStop, useFavoriteStops} from "@entities/station/hooks";
+import type {BusStop} from "@entities/station/types";
 
 // ----------------------------------------------------------------------
 // Types & Constants
@@ -47,10 +50,13 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                                   }) => {
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const {currentCity} = useCityContext();
+    const {map} = useAppMapContext();
     const isWonju = currentCity.code === "32020";
 
     // Direct nationwide route list fetch for current city
     const {routes: cityRoutes = []} = useCityRoutes(currentCity.code);
+    const {favoriteStops, isFavoriteStop, toggleFavoriteStop} = useFavoriteStops(currentCity.code);
+    const currentRouteStops = useBusStop(isOpen ? selectedRoute : "", currentCity.code);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
@@ -128,6 +134,24 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         [onSelectRoute, onClose, recentKey]
     );
 
+    // Select a stop (fly to stop & open live arrival popup)
+    const handleSelectStop = useCallback(
+        (stop: BusStop) => {
+            if (map && stop.gpslong && stop.gpslati) {
+                map.flyTo({
+                    center: [stop.gpslong, stop.gpslati],
+                    zoom: Math.max(map.getZoom(), 16.2),
+                    duration: 950,
+                });
+            }
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: stop}));
+            }
+            onClose();
+        },
+        [map, onClose]
+    );
+
     // Auto-focus on open
     useEffect(() => {
         if (isOpen) {
@@ -186,6 +210,14 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             {id: "BOOKMARKS", label: UI_TEXT.ROUTE_SELECT.CATEGORY_BOOKMARKS(bookmarkedCount), icon: Star},
         ];
 
+        if (favoriteStops.length > 0) {
+            list.push({
+                id: "FAV_STOPS",
+                label: `정류장 즐겨찾기 (${favoriteStops.length})`,
+                icon: MapPin,
+            });
+        }
+
         if (isWonju) {
             list.push({id: "YONSEI", label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI, icon: GraduationCap});
         }
@@ -201,10 +233,50 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         }
 
         return list;
-    }, [isWonju, sortedAllRoutes, bookmarks, routeMetaMap]);
+    }, [isWonju, sortedAllRoutes, bookmarks, favoriteStops.length, routeMetaMap]);
+
+    // Filter stops based on Search Query or FAV_STOPS Category
+    const matchedStops = useMemo<BusStop[]>(() => {
+        const q = searchQuery.trim().toLowerCase();
+        if (!q && selectedCategory !== "FAV_STOPS") return [];
+
+        const deduped = new Map<string, BusStop>();
+        for (const fav of favoriteStops) {
+            deduped.set(fav.nodeid, {
+                nodeid: fav.nodeid,
+                nodenm: fav.nodenm,
+                nodeno: fav.nodeno,
+                gpslati: fav.gpslati,
+                gpslong: fav.gpslong,
+            });
+        }
+
+        if (selectedCategory !== "FAV_STOPS") {
+            for (const s of currentRouteStops) {
+                if (!deduped.has(s.nodeid)) {
+                    deduped.set(s.nodeid, s);
+                }
+            }
+        }
+
+        const allCandidateStops = Array.from(deduped.values());
+        if (!q) return allCandidateStops;
+
+        return allCandidateStops
+            .filter(
+                (s) =>
+                    s.nodenm.toLowerCase().includes(q) ||
+                    String(s.nodeno ?? "").toLowerCase().includes(q)
+            )
+            .slice(0, 12);
+    }, [searchQuery, selectedCategory, favoriteStops, currentRouteStops]);
 
     // Filter routes based on Category and Search Query
     const filteredRoutes = useMemo(() => {
+        if (selectedCategory === "FAV_STOPS" && !searchQuery.trim()) {
+            return [];
+        }
+
         let list = sortedAllRoutes;
 
         // Apply Category
@@ -384,7 +456,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                         ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/30 scale-[1.02]"
                                                         : cat.id === "YONSEI"
                                                             ? "bg-[#003876] text-white shadow-md shadow-[#003876]/30 scale-[1.02]"
-                                                            : cat.id === "BOOKMARKS"
+                                                            : cat.id === "BOOKMARKS" || cat.id === "FAV_STOPS"
                                                                 ? "bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-[1.02]"
                                                                 : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]"
                                             : "bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.07] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300 border border-black/5 dark:border-white/5"
@@ -400,9 +472,69 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                     </div>
                 )}
 
-                {/* Route List Display Section (Card Format Only) */}
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-2 sm:pt-3 custom-scrollbar">
-                    {filteredRoutes.length === 0 ? (
+                {/* Route & Stop List Display Section */}
+                <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-2 sm:pt-3 custom-scrollbar space-y-4">
+                    {/* Matched Stops Section (Shown when searching or in FAV_STOPS category) */}
+                    {matchedStops.length > 0 && (
+                        <div>
+                            <div className="flex items-center justify-between mb-2 px-1">
+                                <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                    <MapPin className="w-3.5 h-3.5 text-amber-500"/>
+                                    <span>
+                                        {selectedCategory === "FAV_STOPS" && !searchQuery.trim()
+                                            ? `즐겨찾는 정류장 (${matchedStops.length})`
+                                            : `정류장 검색 결과 (${matchedStops.length})`}
+                                    </span>
+                                </span>
+                                <span className="text-[10px] font-semibold text-slate-400">
+                                    선택 시 해당 정류장 도착정보 팝업 열림
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                {matchedStops.map((stop) => {
+                                    const isFav = isFavoriteStop(stop.nodeid);
+                                    return (
+                                        <div
+                                            key={`modal-stop-${stop.nodeid}`}
+                                            onClick={() => handleSelectStop(stop)}
+                                            className="group flex items-center justify-between p-3 rounded-2xl bg-amber-500/[0.04] hover:bg-amber-500/[0.1] dark:bg-amber-400/[0.05] dark:hover:bg-amber-400/[0.12] border border-amber-500/20 transition-all cursor-pointer select-none active:scale-[0.98]"
+                                        >
+                                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                                <div className="w-9 h-9 rounded-xl bg-amber-500/15 dark:bg-amber-500/25 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0">
+                                                    <Navigation className="w-4 h-4"/>
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
+                                                        {stop.nodenm}
+                                                    </p>
+                                                    <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
+                                                        {stop.nodeno ? `정류장 번호 ${stop.nodeno}` : "실시간 도착정보 보기"}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleFavoriteStop(stop);
+                                                }}
+                                                className={`p-1.5 rounded-full transition-colors cursor-pointer shrink-0 ${
+                                                    isFav
+                                                        ? "text-amber-500 hover:text-amber-600"
+                                                        : "text-slate-300 dark:text-slate-600 hover:text-amber-500"
+                                                }`}
+                                                title={isFav ? "정류장 즐겨찾기 해제" : "정류장 즐겨찾기 추가"}
+                                            >
+                                                <Star className={`w-4 h-4 ${isFav ? "fill-amber-500" : ""}`}/>
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {filteredRoutes.length === 0 && matchedStops.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-14 text-center text-slate-400">
                             <Bus className="w-10 h-10 mb-2.5 stroke-[1.4] opacity-40"/>
                             <p className="text-sm font-black text-slate-700 dark:text-slate-200">
@@ -426,7 +558,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                 </button>
                             )}
                         </div>
-                    ) : (
+                    ) : filteredRoutes.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                             {filteredRoutes.map((route) => {
                                 const meta = routeMetaMap.get(route) || getRouteMeta(route, currentCity.code);
@@ -503,7 +635,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                 );
                             })}
                         </div>
-                    )}
+                    ) : null}
                 </div>
 
                 {/* Footer Bar */}

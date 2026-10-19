@@ -3,7 +3,7 @@
  */
 
 const ROUTE_ID_REGEX = /^[a-zA-Z0-9_-]+$/;
-const ROUTE_NAME_REGEX = /^[a-zA-Z0-9_\uAC00-\uD7A3-]+$/;
+const ROUTE_NAME_REGEX = /^[a-zA-Z0-9_\uAC00-\uD7A3.()-]+$/;
 const NUMERIC_ID_REGEX = /^\d+$/;
 
 export const ApiValidators = {

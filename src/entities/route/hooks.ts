@@ -13,8 +13,18 @@ import type {RawCityRoute} from "@entities/bus";
 
 import {APP_CONFIG} from "@shared/config/env";
 
-import {useMemo} from "react";
+import {useMemo, useSyncExternalStore} from "react";
 import useSWR from "swr";
+
+const emptySubscribe = () => () => {};
+
+function useIsHydrated(): boolean {
+    return useSyncExternalStore(
+        emptySubscribe,
+        () => true,
+        () => false
+    );
+}
 
 const ROUTE_INFO_SWR_OPTIONS = {
     revalidateOnFocus: false,
@@ -33,17 +43,18 @@ const CITY_ROUTES_SWR_OPTIONS = {
 } as const;
 
 export function useRouteInfo(routeName: string, enabled: boolean = true, cityCode: string = "32020"): RouteInfo | null {
+    const isHydrated = useIsHydrated();
     // 1. Subscribe to the unified city route map so if city routes are loaded, we get routeIds with 0 extra network requests
     const routeMap = useBusRouteMap(enabled, cityCode);
 
     const resolvedFromMap = useMemo<RouteInfo | null>(() => {
-        if (!enabled || !routeName) return null;
+        if (!isHydrated || !enabled || !routeName) return null;
         const mapIds = routeMap?.[routeName];
         if (mapIds && mapIds.length > 0) {
             return {routeName, vehicleRouteIds: mapIds};
         }
         return getCachedRouteInfoSync(routeName, cityCode);
-    }, [enabled, routeName, routeMap, cityCode]);
+    }, [isHydrated, enabled, routeName, routeMap, cityCode]);
 
     // 2. Only fetch individual routeInfo if not already resolved from the city-wide route map
     const shouldFetchSingle = enabled && Boolean(routeName) && !resolvedFromMap;
@@ -80,7 +91,11 @@ export function useRouteIds(routeName: string, enabled: boolean = true, cityCode
  * Shares the unified `cityRoutes:${cityCode}` SWR cache & L1/L2 persistent cache with `useCityRoutes`.
  */
 export function useBusRouteMap(enabled: boolean = true, cityCode: string = "32020"): Record<string, string[]> | null {
-    const fallback = useMemo(() => (enabled ? getCachedCityRoutesSync(cityCode) ?? undefined : undefined), [enabled, cityCode]);
+    const isHydrated = useIsHydrated();
+    const fallback = useMemo(
+        () => (isHydrated && enabled ? getCachedCityRoutesSync(cityCode) ?? undefined : undefined),
+        [isHydrated, enabled, cityCode]
+    );
     const key = enabled ? `cityRoutes:${cityCode}` : null;
 
     const {data, error} = useSWR<CityRoutesPayload>(
@@ -96,7 +111,7 @@ export function useBusRouteMap(enabled: boolean = true, cityCode: string = "3202
         console.error("[useBusRouteMap] Error fetching route map", error);
     }
 
-    return data?.route_numbers ?? null;
+    return isHydrated ? (data?.route_numbers ?? null) : null;
 }
 
 /**
@@ -104,7 +119,11 @@ export function useBusRouteMap(enabled: boolean = true, cityCode: string = "3202
  * Shares the unified `cityRoutes:${cityCode}` SWR cache & L1/L2 persistent cache with `useBusRouteMap`.
  */
 export function useCityRoutes(cityCode: string = "32020", enabled: boolean = true) {
-    const fallback = useMemo(() => (enabled ? getCachedCityRoutesSync(cityCode) ?? undefined : undefined), [enabled, cityCode]);
+    const isHydrated = useIsHydrated();
+    const fallback = useMemo(
+        () => (isHydrated && enabled ? getCachedCityRoutesSync(cityCode) ?? undefined : undefined),
+        [isHydrated, enabled, cityCode]
+    );
     const key = enabled ? `cityRoutes:${cityCode}` : null;
 
     const {data, error, isLoading, mutate} = useSWR<CityRoutesPayload>(
@@ -116,10 +135,12 @@ export function useCityRoutes(cityCode: string = "32020", enabled: boolean = tru
         }
     );
 
+    const hydratedData = isHydrated ? data : undefined;
+
     return {
-        routes: (data?.routes || []) as RawCityRoute[],
-        routeMap: (data?.route_numbers || {}) as Record<string, string[]>,
-        isLoading: isLoading && !data,
+        routes: (hydratedData?.routes || []) as RawCityRoute[],
+        routeMap: (hydratedData?.route_numbers || {}) as Record<string, string[]>,
+        isLoading: isLoading && !hydratedData,
         error,
         refresh: mutate,
     };

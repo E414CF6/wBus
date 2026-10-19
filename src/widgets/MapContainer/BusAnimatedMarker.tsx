@@ -86,7 +86,7 @@ function BusAnimatedMarker({
         rotationAlignment="map"
         onClick={handleMarkerClick}
         anchor="center"
-        style={{pointerEvents: 'auto'}}
+        style={{pointerEvents: 'auto', zIndex: 35}}
     >
         {children}
     </Marker>);

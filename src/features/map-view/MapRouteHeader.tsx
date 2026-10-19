@@ -1,11 +1,16 @@
 "use client";
 
-import React, {useCallback, useMemo, useSyncExternalStore} from "react";
-import {GraduationCap, RefreshCw} from "lucide-react";
+import React, {useCallback, useEffect, useMemo, useState, useSyncExternalStore} from "react";
+import {Bus, CalendarClock, ChevronDown, GraduationCap, RefreshCw, Star} from "lucide-react";
 
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useCityContext} from "@entities/city";
+import {useFavoriteStops} from "@entities/station/hooks";
+import type {FavoriteStop} from "@entities/station/types";
+import {getNextDeparture, useSchedule} from "@entities/schedule";
+import {useAppMapContext} from "@shared/context/AppMapContext";
 import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
+import {RouteSelectModal} from "./RouteSelectModal";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 
@@ -24,6 +29,7 @@ interface MapRouteHeaderProps {
     onReconnect?: () => void;
     selectedDirection?: "all" | "up" | "down";
     onSelectDirection?: (dir: "all" | "up" | "down") => void;
+    onOpenScheduleModal?: (docOrSubTab?: string) => void;
 }
 
 const DEFAULT_QUICK_ROUTES = ["30", "34", "34-1"];
@@ -41,10 +47,31 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                                   onReconnect,
                                                                   selectedDirection = "all",
                                                                   onSelectDirection,
+                                                                  onOpenScheduleModal,
                                                               }) => {
     const {currentCity} = useCityContext();
+    const {map} = useAppMapContext();
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const isWonju = currentCity.code === "32020";
+    const [isModalOpen, setIsModalOpen] = useState(false);
+
+    const {favoriteStops} = useFavoriteStops(currentCity.code);
+    const {routes: scheduleRoutes} = useSchedule(isWonju);
+
+    const handleSelectFromModal = useCallback(
+        (route: string) => {
+            onSelectRoute(route);
+            setIsModalOpen(false);
+        },
+        [onSelectRoute]
+    );
+
+    // Tick every 30s to keep next departure countdown fresh when 0 buses are running
+    const [now, setNow] = useState<Date>(() => new Date());
+    useEffect(() => {
+        const timer = setInterval(() => setNow(new Date()), 30000);
+        return () => clearInterval(timer);
+    }, []);
 
     // Current route metadata (re-evaluates when dynamic route list loads)
     const meta = useMemo(
@@ -53,6 +80,29 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
         [selectedRoute, currentCity.code, allRoutes.length]
     );
     const runningCount = runningBuses.length;
+
+    // Next scheduled departure for Wonju routes when no buses are currently running
+    const nextScheduleInfo = useMemo(() => {
+        if (!isWonju || scheduleRoutes.length === 0) return null;
+        const matched = scheduleRoutes.find((r) => r.routeNo === selectedRoute);
+        if (!matched || !matched.timetable || matched.timetable.length === 0) return null;
+        const {nextOrigin, nextDest, originWaitMins, destWaitMins} = getNextDeparture(matched.timetable, now);
+        if (nextOrigin && originWaitMins !== null) {
+            return {
+                time: nextOrigin.originDepTime,
+                waitMins: originWaitMins,
+                label: "기점 출발",
+            };
+        }
+        if (nextDest && destWaitMins !== null) {
+            return {
+                time: nextDest.destDepTime,
+                waitMins: destWaitMins,
+                label: "종점 출발",
+            };
+        }
+        return null;
+    }, [isWonju, scheduleRoutes, selectedRoute, now]);
 
     // Derive recent & bookmarked routes for quick switch bar (SSR-safe via useSyncExternalStore)
     const quickRoutes = useMemo<string[]>(() => {
@@ -105,6 +155,32 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
         }
     }, [selectedDirection, onSelectDirection]);
 
+    const handleJumpToFavoriteStop = useCallback(
+        (fav: FavoriteStop) => {
+            if (map && fav.gpslong && fav.gpslati) {
+                map.flyTo({
+                    center: [fav.gpslong, fav.gpslati],
+                    zoom: Math.max(map.getZoom(), 16.2),
+                    duration: 950,
+                });
+            }
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(
+                    new CustomEvent("wbus:focus-stop", {
+                        detail: {
+                            nodeid: fav.nodeid,
+                            nodenm: fav.nodenm,
+                            nodeno: fav.nodeno,
+                            gpslati: fav.gpslati,
+                            gpslong: fav.gpslong,
+                        },
+                    })
+                );
+            }
+        },
+        [map]
+    );
+
     // Determine status badge appearance & copy
     const statusConfig = useMemo(() => {
         // 1. Still connecting or waiting for initial API response
@@ -153,7 +229,20 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             };
         }
 
-        // 4. API responded but 0 buses running
+        // 4. API responded with 0 running buses, but next scheduled departure is available
+        if (nextScheduleInfo) {
+            const waitText = nextScheduleInfo.waitMins <= 0 ? "곧 출발" : `${nextScheduleInfo.waitMins}분 후`;
+            return {
+                label: `다음 ${nextScheduleInfo.time} (${waitText})`,
+                badgeClass: "bg-blue-500/10 dark:bg-blue-400/15 border-blue-500/30 text-blue-700 dark:text-blue-300",
+                dotClass: "bg-blue-500",
+                pingClass: "",
+                isPulsing: false,
+                tooltip: `현재 운행 대기 중 · 다음 ${nextScheduleInfo.label}: ${nextScheduleInfo.time} (${waitText})`,
+            };
+        }
+
+        // 5. API responded and 0 buses running with no upcoming departure
         return {
             label: "운행 종료",
             badgeClass: "bg-slate-500/10 dark:bg-slate-400/10 border-slate-400/20 text-slate-600 dark:text-slate-400",
@@ -162,20 +251,42 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             isPulsing: false,
             tooltip: "현재 운행 중인 버스가 없습니다 (운행 종료 또는 배차 대기)",
         };
-    }, [hasFetched, connectionStatus, runningCount, isDegraded]);
+    }, [hasFetched, connectionStatus, runningCount, isDegraded, nextScheduleInfo]);
 
     return (
-        <header
-            className="absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-col items-center gap-1.5 max-w-[95vw] w-full sm:w-auto animate-fadeIn select-none">
-            {/* 1. Main Route Overview Glass Card */}
-            <div
-                className="flex items-center gap-1.5 sm:gap-2 p-1.5 px-2.5 sm:p-2 sm:px-3 bg-white/92 dark:bg-[#111218]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full">
-                {/* Route Direction & Focus Switcher */}
-                <button
-                    type="button"
-                    suppressHydrationWarning
-                    onClick={handleToggleDirection}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-200 cursor-pointer overflow-hidden max-w-[55vw] sm:max-w-[340px] text-left select-none active:scale-95"
+        <>
+            <RouteSelectModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                allRoutes={allRoutes}
+                selectedRoute={selectedRoute}
+                onSelectRoute={handleSelectFromModal}
+            />
+
+            <header
+                className="absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-col items-center gap-1.5 max-w-[95vw] w-full sm:w-auto animate-fadeIn select-none">
+                {/* 1. Main Route Overview Glass Card */}
+                <div
+                    className="flex items-center gap-1 sm:gap-1.5 p-1.5 pr-2.5 sm:p-2 sm:pr-3 bg-white/92 dark:bg-[#111218]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full">
+                    {/* Route Selector Button (Far Left, Triggers Modal) */}
+                    <button
+                        type="button"
+                        onClick={() => setIsModalOpen(true)}
+                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-xs sm:text-sm tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shadow-sm shrink-0 ${meta.colorTheme.bg} text-white ${meta.colorTheme.shadow || ""}`}
+                        title="다른 노선 선택하기 (검색/목록)"
+                        aria-label="노선 선택 모달 열기"
+                    >
+                        <Bus className="w-3.5 h-3.5 shrink-0"/>
+                        <span suppressHydrationWarning className="whitespace-nowrap font-extrabold">{selectedRoute || "노선"}번</span>
+                        <ChevronDown className="w-3.5 h-3.5 opacity-80 shrink-0"/>
+                    </button>
+
+                    {/* Route Direction & Focus Switcher */}
+                    <button
+                        type="button"
+                        suppressHydrationWarning
+                        onClick={handleToggleDirection}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-200 cursor-pointer overflow-hidden max-w-[44vw] sm:max-w-[300px] text-left select-none active:scale-95"
                         title={`경로 표시 방향: ${
                             selectedDirection === "all"
                                 ? "양방향 전체"
@@ -220,10 +331,16 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
 
                     {/* Detailed Real-Time Status Pill */}
                     <div
-                        className="flex items-center gap-1.5 pl-1.5 border-l border-black/10 dark:border-white/10 shrink-0">
+                        className="flex items-center gap-1 pl-1.5 border-l border-black/10 dark:border-white/10 shrink-0">
                         <button
                             type="button"
-                            onClick={onReconnect}
+                            onClick={() => {
+                                if (runningCount === 0 && nextScheduleInfo && onOpenScheduleModal) {
+                                    onOpenScheduleModal(`route:${selectedRoute}`);
+                                } else {
+                                    onReconnect?.();
+                                }
+                            }}
                             className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer active:scale-95 ${statusConfig.badgeClass}`}
                             title={statusConfig.tooltip}
                         >
@@ -236,6 +353,9 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                 <span className={`relative inline-flex rounded-full h-2 w-2 ${statusConfig.dotClass}`}/>
                             </span>
                             <span>{statusConfig.label}</span>
+                            {runningCount === 0 && nextScheduleInfo && onOpenScheduleModal && (
+                                <CalendarClock className="w-3 h-3 opacity-80 ml-0.5"/>
+                            )}
                             {onReconnect && (!hasFetched || connectionStatus === "connecting") && (
                                 <RefreshCw className="w-2.5 h-2.5 animate-spin opacity-70 ml-0.5"/>
                             )}
@@ -243,7 +363,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                     </div>
                 </div>
 
-                {/* 2. Fast Route Switcher Bar (Horizontal Swipeable Quick Pills) */}
+                {/* 2. Fast Route & Favorite Stop Switcher Bar (Horizontal Swipeable Quick Pills) */}
                 <div
                     className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden max-w-full px-1 py-0.5">
                     {quickRoutes.map((route) => {
@@ -268,7 +388,23 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                             </button>
                         );
                     })}
+
+                    {/* Favorite Stops Quick Jump Pills */}
+                    {isClient && favoriteStops.slice(0, 3).map((fav) => (
+                        <button
+                            key={`fav-stop-${fav.nodeid}`}
+                            type="button"
+                            onClick={() => handleJumpToFavoriteStop(fav)}
+                            title={`즐겨찾는 정류장: ${fav.nodenm} (클릭하여 이동 및 실시간 도착정보 보기)`}
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold tracking-tight whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95 shadow-xs bg-amber-50/95 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/70 text-amber-800 dark:text-amber-300 border border-amber-300/70 dark:border-amber-700/60 backdrop-blur-xl"
+                        >
+                            <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500 shrink-0"/>
+                            <span className="max-w-[96px] truncate">{fav.nodenm}</span>
+                        </button>
+                    ))}
                 </div>
             </header>
-        );
+        </>
+    );
 };
+

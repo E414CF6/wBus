@@ -92,20 +92,28 @@ export function getCachedPolylineSync(routeKey: string, cityCode?: string): GeoP
  */
 export async function fetchCityRoutesData(cityCode?: string): Promise<CityRoutesPayload> {
     const cCode = resolveCityCode(cityCode);
-    return cityRoutesCache.getOrFetch(cCode, async () => {
-        const json = await fetchAPI<Partial<CityRoutesPayload>>(`/api/routes?cityCode=${cCode}`);
-        const routes = Array.isArray(json.routes) ? json.routes : [];
-        const routeNumbers = json.route_numbers || {};
-        if (routes.length > 0) {
-            registerDynamicRouteMeta(cCode, routes);
-        }
-        return {
-            cityCode: cCode,
-            route_numbers: routeNumbers,
-            routes,
-            count: json.count ?? routes.length,
-        };
-    });
+    const cached = cityRoutesCache.get(cCode);
+    if (cached && cached.routes && cached.routes.length > 0) {
+        registerDynamicRouteMeta(cCode, cached.routes);
+        return cached;
+    }
+
+    const json = await fetchAPI<Partial<CityRoutesPayload>>(`/api/routes?cityCode=${cCode}`);
+    const routes = Array.isArray(json.routes) ? json.routes : [];
+    const routeNumbers = json.route_numbers || {};
+    if (routes.length > 0) {
+        registerDynamicRouteMeta(cCode, routes);
+    }
+    const payload: CityRoutesPayload = {
+        cityCode: cCode,
+        route_numbers: routeNumbers,
+        routes,
+        count: json.count ?? routes.length,
+    };
+    if (routes.length > 0) {
+        cityRoutesCache.set(cCode, payload);
+    }
+    return payload;
 }
 
 // Public API

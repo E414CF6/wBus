@@ -54,3 +54,12 @@ describe("filterStopsByViewport", () => {
         expect(result).toHaveLength(3);
     });
 });
+
+describe("getFavoriteStopsStorageKey", () => {
+    it("returns city-scoped favorite stops storage key", async () => {
+        const {getFavoriteStopsStorageKey, STORAGE_KEYS} = await import("@shared/config/env");
+        expect(getFavoriteStopsStorageKey()).toBe(`${STORAGE_KEYS.FAVORITE_STOPS}_32020`);
+        expect(getFavoriteStopsStorageKey("32020")).toBe(`${STORAGE_KEYS.FAVORITE_STOPS}_32020`);
+        expect(getFavoriteStopsStorageKey("11")).toBe(`${STORAGE_KEYS.FAVORITE_STOPS}_11`);
+    });
+});

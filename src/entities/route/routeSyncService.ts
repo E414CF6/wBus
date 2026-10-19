@@ -462,6 +462,20 @@ export async function generateSingleRoutePolyline(
     const cacheKey = `${cityCode}:${routeId}`;
     return polylineGenerationCache.getOrFetch(cacheKey, async () => {
         try {
+            // 0. For Seoul ("11"), use official TOPIS road-snapped polyline & stop sequence directly
+            if (cityCode === "11") {
+                try {
+                    const {fetchSeoulRoutePolyline} = await import("@entities/bus");
+                    const seoulPolyline = await fetchSeoulRoutePolyline(routeId, routeNo);
+                    if (seoulPolyline && seoulPolyline.stops?.length) {
+                        setCached(`polyline:${cityCode}:${routeId}`, seoulPolyline);
+                        return seoulPolyline;
+                    }
+                } catch {
+                    // Fall through to generic stop + OSRM pipeline
+                }
+            }
+
             let stops: Array<{
                 nodeid: string;
                 nodenm: string;

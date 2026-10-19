@@ -13,9 +13,9 @@ async function getRouteStopsForCity(routeName: string, cityCode: string): Promis
     try {
         const routesResult = await getCachedCityRoutes(cityCode, routeName);
         const rawRoutes = routesResult.data || [];
-        const matched = rawRoutes.filter((r) => String(r.routeno) === routeName);
-        const routeIds = (matched.length > 0 ? matched : rawRoutes).map((r) => r.routeid);
-        if (routeIds.length === 0) return [];
+        const matched = rawRoutes.filter((r) => String(r.routeno) === routeName || r.routeid === routeName);
+        if (matched.length === 0) return [];
+        const routeIds = matched.map((r) => r.routeid);
 
         const stopMap = new Map<string, BusStop>();
 

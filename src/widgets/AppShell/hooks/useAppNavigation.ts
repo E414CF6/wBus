@@ -7,7 +7,7 @@ import {useCityContext} from "@entities/city";
 import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
 
 export function resolveTabFromPathname(path: string): NavTab {
-    if (path.startsWith("/schedule")) return "schedule";
+    if (path.startsWith("/schedule") || path.startsWith("/wiki")) return "schedule";
     return "map";
 }
 
@@ -23,13 +23,20 @@ export function buildMapUrl(route: string | null | undefined, cityCode?: string)
     return qs ? `/?${qs}` : "/";
 }
 
-export function buildScheduleUrl(subTab: TimetableSubTab, cityCode?: string): string {
+export function buildScheduleUrl(
+    subTab: TimetableSubTab,
+    cityCode?: string,
+    docId?: string
+): string {
     const params = new URLSearchParams();
     if (cityCode && cityCode !== "32020") {
         params.set("cityCode", cityCode);
     }
     if (subTab === "all") {
         params.set("subTab", "all");
+    }
+    if (docId && docId !== "yonsei" && docId !== "all" && docId !== `city:${cityCode || "32020"}`) {
+        params.set("doc", docId);
     }
     const qs = params.toString();
     return qs ? `/schedule?${qs}` : "/schedule";
@@ -49,12 +56,21 @@ export function useAppNavigation() {
         setActiveTab(resolveTabFromPathname(pathname));
     }
 
-    // Timetable Sub-tab & Day Mode
+    // Timetable Sub-tab, Wiki Document ID & Day Mode
     const [timetableSubTab, setTimetableSubTab] = useState<TimetableSubTab>(() => {
         const querySubTab = searchParams.get("subTab");
         if (querySubTab === "yonsei" || querySubTab === "all") return querySubTab;
         return "yonsei";
     });
+
+    const [wikiDocId, setWikiDocId] = useState<string>(() => {
+        const queryDoc = searchParams.get("doc");
+        if (queryDoc) return queryDoc;
+        const querySubTab = searchParams.get("subTab");
+        if (querySubTab === "all") return `city:${currentCityCode}`;
+        return currentCityCode === "32020" ? "yonsei" : `city:${currentCityCode}`;
+    });
+
     const [dayMode, setDayMode] = useState<DayMode>("AUTO");
 
     // Route & Map Activation State
@@ -65,10 +81,9 @@ export function useAppNavigation() {
     });
 
     const isMapActive = activeTab === "map";
-    // In map-centric architecture, map is always mounted and ready
     const hasVisitedMap = true;
 
-    // Synchronize route & timetable subtab when searchParams change
+    // Synchronize route, subTab & doc when searchParams change
     const [prevSearchParams, setPrevSearchParams] = useState(searchParams);
     if (searchParams !== prevSearchParams) {
         setPrevSearchParams(searchParams);
@@ -76,9 +91,17 @@ export function useAppNavigation() {
         if (queryRoute !== null && queryRoute !== "" && queryRoute !== selectedRoute) {
             setSelectedRoute(queryRoute);
         }
+        const queryDoc = searchParams.get("doc");
         const querySubTab = searchParams.get("subTab");
         if (querySubTab === "yonsei" || querySubTab === "all") {
             setTimetableSubTab(querySubTab);
+        }
+        if (queryDoc) {
+            setWikiDocId(queryDoc);
+        } else if (querySubTab === "all") {
+            setWikiDocId(`city:${currentCityCode}`);
+        } else if (querySubTab === "yonsei") {
+            setWikiDocId("yonsei");
         }
     }
 
@@ -91,15 +114,23 @@ export function useAppNavigation() {
             const search = new URLSearchParams(window.location.search);
             const queryRoute = search.get("route");
             if (queryRoute !== null && queryRoute !== "") setSelectedRoute(queryRoute);
+            const queryDoc = search.get("doc");
             const querySubTab = search.get("subTab");
             if (querySubTab === "yonsei" || querySubTab === "all") {
                 setTimetableSubTab(querySubTab);
+            }
+            if (queryDoc) {
+                setWikiDocId(queryDoc);
+            } else if (querySubTab === "all") {
+                setWikiDocId(`city:${currentCityCode}`);
+            } else if (querySubTab === "yonsei") {
+                setWikiDocId("yonsei");
             }
         };
 
         window.addEventListener("popstate", handlePopState);
         return () => window.removeEventListener("popstate", handlePopState);
-    }, []);
+    }, [currentCityCode]);
 
     // Scroll to top when changing tabs
     useEffect(() => {
@@ -119,9 +150,12 @@ export function useAppNavigation() {
                 const savedSubTab = localStorage.getItem(
                     STORAGE_KEYS.TIMETABLE_SUBTAB
                 ) as TimetableSubTab | null;
-                if (savedSubTab && !search.get("subTab")) {
+                if (savedSubTab && !search.get("subTab") && !search.get("doc")) {
                     if (savedSubTab === "yonsei" || savedSubTab === "all") {
                         setTimetableSubTab(savedSubTab);
+                        setWikiDocId(
+                            savedSubTab === "all" ? `city:${currentCityCode}` : "yonsei"
+                        );
                     }
                 }
 
@@ -136,20 +170,29 @@ export function useAppNavigation() {
             }
         });
         return () => cancelAnimationFrame(frameId);
-    }, []);
+    }, [currentCityCode]);
 
     const handleScheduleSubTabChange = useCallback(
-        (subTab: TimetableSubTab) => {
-            setTimetableSubTab(subTab);
+        (docOrSubTab: string) => {
+            const nextSubTab: TimetableSubTab =
+                docOrSubTab === "yonsei" || docOrSubTab === "yonsei-shuttle"
+                    ? "yonsei"
+                    : "all";
+            const nextDocId =
+                docOrSubTab === "all" ? `city:${currentCityCode}` : docOrSubTab;
+
+            setTimetableSubTab(nextSubTab);
+            setWikiDocId(nextDocId);
+
             try {
-                localStorage.setItem(STORAGE_KEYS.TIMETABLE_SUBTAB, subTab);
+                localStorage.setItem(STORAGE_KEYS.TIMETABLE_SUBTAB, nextSubTab);
             } catch (e) {
                 if (APP_CONFIG.IS_DEV) {
                     console.warn("[handleScheduleSubTabChange] Failed to save subtab preference", e);
                 }
             }
             if (typeof window !== "undefined" && activeTab === "schedule") {
-                const targetUrl = buildScheduleUrl(subTab, currentCityCode);
+                const targetUrl = buildScheduleUrl(nextSubTab, currentCityCode, nextDocId);
                 window.history.replaceState(null, "", targetUrl);
             }
         },
@@ -162,7 +205,7 @@ export function useAppNavigation() {
             const targetUrl =
                 tab === "map"
                     ? buildMapUrl(selectedRoute, currentCityCode)
-                    : buildScheduleUrl(timetableSubTab, currentCityCode);
+                    : buildScheduleUrl(timetableSubTab, currentCityCode, wikiDocId);
 
             if (typeof window !== "undefined") {
                 window.history.pushState(null, "", targetUrl);
@@ -174,7 +217,7 @@ export function useAppNavigation() {
                 // Ignore
             }
         },
-        [selectedRoute, timetableSubTab, currentCityCode]
+        [selectedRoute, timetableSubTab, wikiDocId, currentCityCode]
     );
 
     const handleRouteChange = useCallback(
@@ -219,6 +262,7 @@ export function useAppNavigation() {
     return {
         activeTab,
         timetableSubTab,
+        wikiDocId,
         dayMode,
         setDayMode,
         selectedRoute,

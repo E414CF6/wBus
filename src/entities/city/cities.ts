@@ -1,10 +1,11 @@
 import type {CityInfo} from "./types";
 
 /**
- * Standard nationwide city codes provided by MOLIT TAGO API (138 cities/counties)
+ * Standard nationwide city codes provided by MOLIT TAGO API & Seoul TOPIS (139 cities/counties)
  */
 export const NATIONWIDE_CITIES: CityInfo[] = [
     // 특별시 / 광역시 / 특별자치시 / 특별자치도
+    {code: "11", name: "서울특별시", province: "서울특별시", lat: 37.5665, lng: 126.9780, zoom: 12, isMajor: true},
     {code: "12", name: "세종특별자치시", province: "세종특별자치시", lat: 36.4800, lng: 127.2890, zoom: 12, isMajor: true},
     {code: "21", name: "부산광역시", province: "부산광역시", lat: 35.1796, lng: 129.0756, zoom: 12, isMajor: true},
     {code: "22", name: "대구광역시", province: "대구광역시", lat: 35.8714, lng: 128.6014, zoom: 12, isMajor: true},

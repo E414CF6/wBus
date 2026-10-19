@@ -102,6 +102,8 @@ export const STORAGE_KEYS = {
     CITY_ROUTES_PREFIX: "wbus_cached_city_routes_v1_",
     POLYLINE_PREFIX: "wbus_cached_polyline_v1_",
     ROUTE_STOPS_PREFIX: "wbus_cached_route_stops_v1_",
+    FAVORITE_STOPS: "wbus_favorite_stops_v1",
+    NEARBY_STOPS_ENABLED: "wbus_nearby_stops_enabled",
 } as const;
 
 export function getBookmarkStorageKey(cityCode: string = "32020"): string {
@@ -111,3 +113,8 @@ export function getBookmarkStorageKey(cityCode: string = "32020"): string {
 export function getRecentRoutesStorageKey(cityCode: string = "32020"): string {
     return cityCode === "32020" ? STORAGE_KEYS.WONJU_RECENT_ROUTES : `wbus_recent_routes_${cityCode}`;
 }
+
+export function getFavoriteStopsStorageKey(cityCode: string = "32020"): string {
+    return `${STORAGE_KEYS.FAVORITE_STOPS}_${cityCode}`;
+}
+

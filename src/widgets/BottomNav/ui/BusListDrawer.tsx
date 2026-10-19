@@ -1,14 +1,14 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Bus, Loader2, LocateFixed, RefreshCw, RotateCw, Search, X} from "lucide-react";
+import {Bus, Loader2, LocateFixed, RefreshCw, RotateCw, Search, Star, X} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {type RouteVariationStop, useRouteVariations} from "@entities/route";
 import type {DirectionCode, RouteVariation} from "@entities/route/types";
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useSchedule} from "@entities/schedule/hooks";
 import {useCityContext} from "@entities/city";
-import {useBusStop} from "@entities/station/hooks";
+import {useBusStop, useFavoriteStops} from "@entities/station/hooks";
 import type {BusItem} from "@entities/bus/types";
 import type {BusStop} from "@entities/station/types";
 
@@ -55,10 +55,11 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const {variations} = useRouteVariations(selectedRoute, isOpen, currentCity.code);
     const nationwideStops = useBusStop(isOpen && !isWonju ? selectedRoute : "", currentCity.code);
     const {routes: scheduleRoutes} = useSchedule(isOpen && isWonju);
+    const {isFavoriteStop, toggleFavoriteStop} = useFavoriteStops(currentCity.code);
 
     const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
     const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
-    const [directionFilter, setDirectionFilter] = useState<"all" | "up" | "down">("all");
+    const [directionFilter, setDirectionFilter] = useState<"all" | "up" | "down" | "fav">("all");
     const [stopSearchQuery, setStopSearchQuery] = useState("");
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [timeAgo, setTimeAgo] = useState("0초 전");
@@ -175,10 +176,16 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         return uds.size > 1;
     }, [currentStops]);
 
-    // Filtered stops by direction & search query
+    const favoriteStopsCountInRoute = useMemo(() => {
+        return currentStops.filter((s) => isFavoriteStop(s.nodeid)).length;
+    }, [currentStops, isFavoriteStop]);
+
+    // Filtered stops by direction, favorite, & search query
     const filteredStops = useMemo(() => {
         let list = currentStops;
-        if (directionFilter !== "all" && hasDirections) {
+        if (directionFilter === "fav") {
+            list = list.filter((s) => isFavoriteStop(s.nodeid));
+        } else if (directionFilter !== "all" && hasDirections) {
             const targetUd = directionFilter === "up" ? 0 : 1;
             list = list.filter((s) => s.updowncd === targetUd);
         }
@@ -191,7 +198,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             );
         }
         return list;
-    }, [currentStops, directionFilter, hasDirections, stopSearchQuery]);
+    }, [currentStops, directionFilter, hasDirections, stopSearchQuery, isFavoriteStop]);
 
     // Match live running buses to current variation's stops
     const busesByStopKey = useMemo(() => {
@@ -299,19 +306,22 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         setTimeout(() => setIsRefreshing(false), 800);
     }, [isRefreshing, onReconnect]);
 
-    // Station selection and flyTo (auto-closes drawer on mobile so map target is visible)
+    // Station selection, flyTo, and open live arrival popup on map
     const handleStopClick = useCallback(
         (stop: BusStop) => {
             setSelectedStopId(stop.nodeid);
             if (map && stop.gpslong && stop.gpslati) {
                 map.flyTo({
                     center: [stop.gpslong, stop.gpslati],
-                    zoom: 16,
-                    duration: 1000,
+                    zoom: Math.max(map.getZoom(), 16.2),
+                    duration: 950,
                 });
             }
-            if (typeof window !== "undefined" && window.innerWidth < 640) {
-                onClose();
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: stop}));
+                if (window.innerWidth < 640) {
+                    onClose();
+                }
             }
         },
         [map, onClose]
@@ -334,7 +344,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         <div
             className="w-[94vw] sm:w-[400px] max-w-md max-h-[75vh] sm:max-h-[640px] flex flex-col backdrop-blur-2xl bg-white/95 dark:bg-[#0c100f]/95 border border-slate-200/80 dark:border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.12)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] rounded-[28px] overflow-hidden transition-all duration-300 animate-fadeIn text-slate-900 dark:text-white select-none pointer-events-auto"
             role="dialog"
-            aria-label={`${selectedRoute}번 버스 정류장 목록`}
+            aria-label={`${selectedRoute} 버스 정류장 목록`}
         >
             {/* 1. Header Section */}
             <div
@@ -440,7 +450,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             {/* 2. Direction Filter & Stop Quick Search Bar */}
             <div
                 className="flex flex-col gap-2 px-4 py-2.5 border-b border-slate-200/80 dark:border-white/5 bg-slate-100/40 dark:bg-black/20 shrink-0">
-                {hasDirections && (
+                {(hasDirections || favoriteStopsCountInRoute > 0) && (
                     <div className="flex items-center gap-1.5 text-xs overflow-x-auto custom-scrollbar-hidden">
                         <button
                             type="button"
@@ -451,24 +461,42 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                         >
                             전체 ({currentStops.length})
                         </button>
-                        <button
-                            type="button"
-                            onClick={() => setDirectionFilter("up")}
-                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                directionFilter === "up" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
-                            }`}
-                        >
-                            {meta.destination || "종점"} 방면 (상행)
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setDirectionFilter("down")}
-                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                directionFilter === "down" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
-                            }`}
-                        >
-                            {meta.origin || "기점"} 방면 (하행)
-                        </button>
+                        {favoriteStopsCountInRoute > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => setDirectionFilter("fav")}
+                                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                    directionFilter === "fav"
+                                        ? "bg-amber-500/20 dark:bg-amber-500/30 text-amber-800 dark:text-amber-300 border border-amber-500/40 shadow-xs"
+                                        : "text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+                                }`}
+                            >
+                                <Star className="w-3 h-3 fill-amber-500 text-amber-500"/>
+                                <span>즐겨찾기 ({favoriteStopsCountInRoute})</span>
+                            </button>
+                        )}
+                        {hasDirections && (
+                            <>
+                                <button
+                                    type="button"
+                                    onClick={() => setDirectionFilter("up")}
+                                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                        directionFilter === "up" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
+                                    }`}
+                                >
+                                    {meta.destination || "종점"} 방면 (상행)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setDirectionFilter("down")}
+                                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                        directionFilter === "down" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
+                                    }`}
+                                >
+                                    {meta.origin || "기점"} 방면 (하행)
+                                </button>
+                            </>
+                        )}
                     </div>
                 )}
 
@@ -521,6 +549,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                         const isLast = index === filteredStops.length - 1;
                         const isSelected = selectedStopId === stop.nodeid;
                         const isTurningStop = Boolean(turningStop && turningStop.nodeid === stop.nodeid && turningStop.nodeord === stop.nodeord);
+                        const isFavStop = isFavoriteStop(stop.nodeid);
 
                         return (
                             <div
@@ -595,7 +624,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                 )}
 
                                 {/* Station Name & Metadata */}
-                                <div className="ml-[92px] flex-1 flex flex-col justify-center min-w-0 pr-4">
+                                <div className="ml-[92px] flex-1 flex flex-col justify-center min-w-0 pr-2">
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                         <span
                                             className={`text-[14px] sm:text-[15px] font-bold truncate transition-colors ${isSelected ? isTurningStop ? "text-amber-800 dark:text-amber-300 font-black" : "text-blue-700 dark:text-blue-300 font-black" : isTurningStop ? "text-amber-900 dark:text-amber-200 font-extrabold group-hover:text-amber-950 dark:group-hover:text-amber-100" : "text-slate-800 dark:text-slate-100 group-hover:text-slate-950 dark:group-hover:text-white"}`}
@@ -614,6 +643,30 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                         </span>
                                     )}
                                 </div>
+
+                                {/* Stop Favorite Star Button */}
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        toggleFavoriteStop({
+                                            nodeid: stop.nodeid,
+                                            nodenm: stop.nodenm,
+                                            nodeno: stop.nodeno,
+                                            gpslati: stop.gpslati,
+                                            gpslong: stop.gpslong,
+                                        });
+                                    }}
+                                    className={`mr-3 p-1.5 rounded-full transition-colors cursor-pointer shrink-0 ${
+                                        isFavStop
+                                            ? "text-amber-500 hover:text-amber-600"
+                                            : "text-slate-300 dark:text-slate-600 opacity-60 group-hover:opacity-100 hover:text-amber-500 dark:hover:text-amber-400"
+                                    }`}
+                                    title={isFavStop ? "정류장 즐겨찾기 해제" : "정류장 즐겨찾기 추가"}
+                                    aria-label={isFavStop ? "정류장 즐겨찾기 해제" : "정류장 즐겨찾기 추가"}
+                                >
+                                    <Star className={`w-4 h-4 ${isFavStop ? "fill-amber-500" : ""}`}/>
+                                </button>
                             </div>
                         );
                     })

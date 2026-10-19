@@ -2,8 +2,8 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
-import {Check, Compass, MapPin, Navigation, RotateCcw, Search, Sparkles, X} from "lucide-react";
-import {DEFAULT_CITY, NATIONWIDE_CITIES, useCityContext} from "@entities/city";
+import {Check, Compass, MapPin, Navigation, Search, Sparkles, X} from "lucide-react";
+import {NATIONWIDE_CITIES, useCityContext} from "@entities/city";
 import type {CityInfo} from "@entities/city/types";
 
 interface CitySelectModalProps {
@@ -216,7 +216,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                         )}
                     </div>
 
-                    {/* Quick Action Buttons: GPS & Wonju Default */}
+                    {/* Quick Action Button: GPS */}
                     <div className="flex items-center gap-2">
                         <button
                             type="button"
@@ -227,17 +227,6 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                             <Navigation className={`w-3.5 h-3.5 ${isDetecting ? "animate-spin" : ""}`}/>
                             <span>{isDetecting ? "내 위치 탐색 중..." : "내 주변 지역 찾기 (GPS)"}</span>
                         </button>
-
-                        {currentCity.code !== "32020" && (
-                            <button
-                                type="button"
-                                onClick={() => handleSelectCity(DEFAULT_CITY)}
-                                className="flex items-center justify-center gap-1.5 py-2 px-3 bg-[#003876]/10 dark:bg-[#003876]/30 hover:bg-[#003876]/20 border border-[#003876]/30 rounded-xl text-[#003876] dark:text-blue-300 font-extrabold text-xs transition-all duration-200 cursor-pointer active:scale-98 shrink-0"
-                            >
-                                <RotateCcw className="w-3.5 h-3.5"/>
-                                <span>원주(기본) 복귀</span>
-                            </button>
-                        )}
                     </div>
 
                     {/* Province Filter Chips */}

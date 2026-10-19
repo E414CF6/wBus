@@ -169,7 +169,35 @@ export function getRouteOperatingWindow(routeIdOrNo: string, cityCode: string = 
         }
     }
 
-    // 3. Fallback default window (05:20 ~ 23:50)
+    // 3. Night / Owl / Autonomous Dawn routes (e.g. N13, N61, 새벽A160, 심야A21) operate through late night & dawn
+    if (/^(?:N\d+|A\d+|새벽|심야)/i.test(routeNo)) {
+        const nightWindow: RouteOperatingWindow = {
+            routeNo,
+            firstBus: "00:00",
+            lastBus: "23:59",
+            startMinutes: 0,
+            endMinutes: 1440,
+            source: "default",
+        };
+        windowCache.set(cacheKey, nightWindow);
+        return nightWindow;
+    }
+
+    // 4. Seoul ("11") metropolitan routes run from 04:00 until ~01:30 AM next day
+    if (normalizedCity === "11") {
+        const seoulWindow: RouteOperatingWindow = {
+            routeNo,
+            firstBus: "04:00",
+            lastBus: "01:00",
+            startMinutes: 3 * 60 + 40, // 03:40
+            endMinutes: 25 * 60 + 30,  // 01:30 next day
+            source: "default",
+        };
+        windowCache.set(cacheKey, seoulWindow);
+        return seoulWindow;
+    }
+
+    // 5. Fallback default window (05:20 ~ 23:50)
     const defaultWindow: RouteOperatingWindow = {
         routeNo,
         firstBus: formatMinutesToTime(DEFAULT_FIRST_BUS_MINUTES),

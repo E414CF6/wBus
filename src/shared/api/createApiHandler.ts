@@ -33,9 +33,13 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
         }
 
         try {
+            const url = new URL(request.url);
+            const forceRefresh = url.searchParams.get("refresh") === "true";
             const resolvedTtl = typeof config.ttl === "function" ? config.ttl(id, request) : config.ttl;
             const cacheOptions: CacheOptions = {
-                ttlSeconds: resolvedTtl, ...config.cacheOptions,
+                ttlSeconds: resolvedTtl,
+                ...config.cacheOptions,
+                forceRefresh,
             };
             const result = await getCachedOrFetch<T>(config.cacheKey(id, request), () => config.fetcher(id, request), cacheOptions);
 

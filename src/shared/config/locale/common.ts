@@ -9,7 +9,7 @@ export const COMMON_STRINGS = {
     EXPAND: "펼치기",
     COLLAPSE: "접기",
     CLOSE: "닫기",
-    ROUTE_LABEL: (route: string) => `${route}번`,
+    ROUTE_LABEL: (route: string) => `${route}`,
 } as const;
 
 export const CONNECTION_STRINGS = {
@@ -96,7 +96,7 @@ export const SCHEDULE_STRINGS = {
 
 export const BUS_LIST_STRINGS = {
     TITLE_ALL: "전체 버스 목록",
-    TITLE_ROUTE: (route: string) => `${route}번 버스`,
+    TITLE_ROUTE: (route: string) => `${route}`,
     NO_RUNNING: "운행 중인 버스 없음",
     NO_RUNNING_DESC: "운행 중인 버스가 없습니다.",
     EMPTY_TODAY: "오늘 운행 예정인 버스가 없습니다.",

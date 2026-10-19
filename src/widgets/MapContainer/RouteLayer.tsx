@@ -4,8 +4,6 @@ import React, {memo} from "react";
 import BusMarker from "./BusMarker";
 import BusRoutePolyline from "./BusRoutePolyline";
 import BusStopMarker from "./BusStopMarker";
-import {TimetableMapPins} from "./TimetableMapPin";
-import type {TimetableSubTab} from "@shared/types/navigation";
 
 // ----------------------------------------------------------------------
 // Types
@@ -14,10 +12,13 @@ import type {TimetableSubTab} from "@shared/types/navigation";
 interface RouteLayerProps {
     routeName: string;
     onRouteChange?: (routeName: string) => void;
-    onOpenScheduleModal?: (subTab?: TimetableSubTab) => void;
+    onOpenScheduleModal?: (docOrSubTab?: string) => void;
     enabled?: boolean;
     selectedDirection?: "all" | "up" | "down";
     cityCode?: string;
+    showNearbyStops?: boolean;
+    focusedStopId?: string | null;
+    onClearFocusedStop?: () => void;
 }
 
 // ----------------------------------------------------------------------
@@ -25,7 +26,7 @@ interface RouteLayerProps {
 // ----------------------------------------------------------------------
 
 /**
- * Renders all map layers for a single route (markers, stops, polyline, and timetable hub pins).
+ * Renders all map layers for a single route (markers, stops, and polyline).
  * Memoized to prevent re-rendering ALL routes when only one route's data updates.
  */
 const RouteLayer = memo(({
@@ -35,9 +36,10 @@ const RouteLayer = memo(({
                              enabled = true,
                              selectedDirection = "all",
                              cityCode,
+                             showNearbyStops = true,
+                             focusedStopId = null,
+                             onClearFocusedStop,
                          }: RouteLayerProps) => {
-    const isWonju = !cityCode || cityCode === "32020";
-
     return (<>
         <BusMarker routeName={routeName} enabled={enabled} cityCode={cityCode}/>
         <BusStopMarker
@@ -45,11 +47,11 @@ const RouteLayer = memo(({
             onRouteChange={onRouteChange}
             onOpenScheduleModal={onOpenScheduleModal}
             cityCode={cityCode}
+            showNearbyStops={showNearbyStops}
+            focusedStopId={focusedStopId}
+            onClearFocusedStop={onClearFocusedStop}
         />
         <BusRoutePolyline routeName={routeName} selectedDirection={selectedDirection} cityCode={cityCode}/>
-        {onOpenScheduleModal && (
-            <TimetableMapPins isWonju={isWonju} onOpenScheduleModal={onOpenScheduleModal}/>
-        )}
     </>);
 }, (prev, next) => {
     return (
@@ -58,7 +60,10 @@ const RouteLayer = memo(({
         prev.onOpenScheduleModal === next.onOpenScheduleModal &&
         prev.enabled === next.enabled &&
         prev.selectedDirection === next.selectedDirection &&
-        prev.cityCode === next.cityCode
+        prev.cityCode === next.cityCode &&
+        prev.showNearbyStops === next.showNearbyStops &&
+        prev.focusedStopId === next.focusedStopId &&
+        prev.onClearFocusedStop === next.onClearFocusedStop
     );
 });
 

@@ -73,6 +73,28 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
     }, [validRouteIds, polylineMap, routeName, effectiveCityCode]);
 
     // Fit map to bounds of routes with safe asymmetric padding for floating UI elements
+    const fitToRouteBounds = useMemo(() => {
+        return () => {
+            if (!map || !bbox) return;
+            const [[s, w], [n, e]] = bbox;
+            map.fitBounds(
+                [
+                    [w, s],
+                    [e, n],
+                ],
+                {
+                    padding: {
+                        top: 110,
+                        bottom: 120,
+                        left: 36,
+                        right: 36,
+                    },
+                    duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
+                }
+            );
+        };
+    }, [map, bbox]);
+
     useEffect(() => {
         if (!map || !bbox) return;
 
@@ -80,23 +102,17 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
         if (lastBoundsKeyRef.current === key) return;
         lastBoundsKeyRef.current = key;
 
-        const [[s, w], [n, e]] = bbox;
-        map.fitBounds(
-            [
-                [w, s],
-                [e, n],
-            ],
-            {
-                padding: {
-                    top: 110,
-                    bottom: 120,
-                    left: 36,
-                    right: 36,
-                },
-                duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
-            }
-        );
-    }, [map, bbox]);
+        fitToRouteBounds();
+    }, [map, bbox, fitToRouteBounds]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const handleFitBoundsEvent = () => {
+            fitToRouteBounds();
+        };
+        window.addEventListener("wbus:fit-route-bounds", handleFitBoundsEvent);
+        return () => window.removeEventListener("wbus:fit-route-bounds", handleFitBoundsEvent);
+    }, [fitToRouteBounds]);
 
     if (validRouteIds.length === 0 || !activeGeoJson) return null;
 

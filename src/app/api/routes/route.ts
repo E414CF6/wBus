@@ -1,6 +1,7 @@
 import {type NextRequest, NextResponse} from "next/server";
 import {getCachedCityRoutes} from "@entities/bus";
 import {ApiValidators} from "@shared/api";
+import {invalidateCacheByPrefix} from "@shared/cache";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export async function GET(request: NextRequest) {
     const {searchParams} = request.nextUrl;
     const cityCode = searchParams.get("cityCode") || "32020";
     const routeNo = searchParams.get("routeNo") || undefined;
+    const forceRefresh = searchParams.get("refresh") === "true";
 
     if (!ApiValidators.isValidCityCode(cityCode)) {
         return NextResponse.json(
@@ -25,8 +27,15 @@ export async function GET(request: NextRequest) {
         );
     }
 
+    if (forceRefresh) {
+        invalidateCacheByPrefix(`routes:${cityCode}`);
+    }
+
     try {
         const result = await getCachedCityRoutes(cityCode, routeNo);
+        if (!result.data || result.data.length === 0) {
+            invalidateCacheByPrefix(`routes:${cityCode}`);
+        }
 
         // Group into route_numbers mapping { [routeNo]: [routeId1, routeId2, ...] }
         const routeNumbersMap: Record<string, string[]> = {};

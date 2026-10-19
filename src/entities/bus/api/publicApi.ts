@@ -1,6 +1,16 @@
-import {getCachedOrFetch, peekCached} from "@shared/cache";
+import {type CachedData, getCachedOrFetch, peekCached} from "@shared/cache";
 import {API_PRIORITY, TaskQueue} from "@shared/utils/concurrency";
 import {isRouteInServiceWindow, recordRouteBusActivity} from "./routeWindow";
+import {
+    fetchSeoulBusArrivals,
+    fetchSeoulBusLocations,
+    fetchSeoulCityRoutes,
+    fetchSeoulNearbyStops,
+    fetchSeoulRoutesByStation,
+    fetchSeoulRouteStops,
+    isWithinSeoulBounds,
+    SEOUL_CITY_CODE,
+} from "./seoulApi";
 
 /**
  * Advanced Client for Korea's Public Data Portal (apis.data.go.kr)
@@ -510,6 +520,20 @@ export async function fetchBusLocations(routeId: string, options?: {
     // Priority: Priority argument or calculated level
     const priority = options?.priority ?? (serviceStatus.reason === "activity_override" || (currentMetrics && currentMetrics.busCount > 0) ? API_PRIORITY.USER_INTERACTIVE : API_PRIORITY.STREAM_ACTIVE);
 
+    if (cityCode === SEOUL_CITY_CODE) {
+        const items = await fetchSeoulBusLocations(
+            routeId,
+            () => keyManager.getKey(),
+            (idx) => keyManager.markCooldown(idx)
+        );
+        routeBusMetricsMap.set(metricsKey, {
+            busCount: items.length,
+            lastFetchedAt: Date.now(),
+        });
+        recordRouteBusActivity(routeId, items.length, cityCode);
+        return items;
+    }
+
     const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusLocation>>(
         "/BusLcInfoInqireService/getRouteAcctoBusLcList",
         {routeId, cityCode},
@@ -544,6 +568,10 @@ export interface RawBusArrival {
 }
 
 export async function fetchBusArrivals(nodeId: string, cityCode = CITY_CODE): Promise<RawBusArrival[]> {
+    if (cityCode === SEOUL_CITY_CODE) {
+        return fetchSeoulBusArrivals(nodeId);
+    }
+
     const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusArrival>>(
         "/ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList",
         {nodeId, cityCode},
@@ -570,6 +598,10 @@ export interface RawBusStop {
 }
 
 export async function fetchRouteStops(routeId: string, cityCode = CITY_CODE): Promise<RawBusStop[]> {
+    if (cityCode === SEOUL_CITY_CODE) {
+        return fetchSeoulRouteStops(routeId);
+    }
+
     const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusStop>>(
         "/BusRouteInfoInqireService/getRouteAcctoThrghSttnList",
         {routeId, cityCode},
@@ -599,6 +631,17 @@ export async function fetchNearbyStops(params: {
     gpsLati: number;
     gpsLong: number;
 }): Promise<RawNearbyStop[]> {
+    if (isWithinSeoulBounds(params.gpsLati, params.gpsLong)) {
+        try {
+            const seoulStops = await fetchSeoulNearbyStops(params);
+            if (seoulStops.length > 0) {
+                return seoulStops;
+            }
+        } catch {
+            // Fall through to TAGO if Seoul endpoint fails
+        }
+    }
+
     const data = await fetchPublicApi<PublicApiResponseEnvelope<RawNearbyStop>>(
         "/BusSttnInfoInqireService/getCrdntPrxmtSttnList",
         {
@@ -626,6 +669,10 @@ export interface RawStationRoute {
 }
 
 export async function fetchRoutesByStation(nodeId: string, cityCode = CITY_CODE): Promise<RawStationRoute[]> {
+    if (cityCode === SEOUL_CITY_CODE) {
+        return fetchSeoulRoutesByStation(nodeId);
+    }
+
     const data = await fetchPublicApi<PublicApiResponseEnvelope<RawStationRoute>>(
         "/BusSttnInfoInqireService/getSttnThrghRouteList",
         {nodeId, cityCode, numOfRows: "200"},
@@ -650,6 +697,10 @@ export interface RawCityRoute {
 }
 
 export async function fetchCityRoutes(cityCode: string, routeNo?: string): Promise<RawCityRoute[]> {
+    if (cityCode === SEOUL_CITY_CODE) {
+        return fetchSeoulCityRoutes(routeNo);
+    }
+
     const params: Record<string, string> = {
         cityCode,
         numOfRows: "2048",
@@ -701,14 +752,22 @@ export async function getCachedCityRoutes(cityCode: string, routeNo?: string) {
     }
 
     // 2. Fetch full city route list first (warms cache for all routes in the city in 1 request)
-    const allResult = await getCachedOrFetch<RawCityRoute[]>(
-        allCacheKey,
-        async () => {
-            const fetched = await fetchCityRoutes(cityCode);
-            return fetched && fetched.length > 0 ? fetched : [];
-        },
-        ROUTE_CACHE_OPTIONS
-    );
+    let allResult: CachedData<RawCityRoute[]>;
+    try {
+        allResult = await getCachedOrFetch<RawCityRoute[]>(
+            allCacheKey,
+            async () => {
+                const fetched = await fetchCityRoutes(cityCode);
+                if (!fetched || fetched.length === 0) {
+                    throw new Error(`[PublicAPI] No routes returned for city ${cityCode}`);
+                }
+                return fetched;
+            },
+            ROUTE_CACHE_OPTIONS
+        );
+    } catch {
+        allResult = { data: [], timestamp: Date.now() };
+    }
 
     if (!routeNo) {
         return allResult;
