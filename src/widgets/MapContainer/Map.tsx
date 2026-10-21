@@ -17,9 +17,9 @@ import {useTheme} from "next-themes";
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import MapGL, {GeolocateControl, MapRef, NavigationControl} from "react-map-gl/maplibre";
 
-// Set MapLibre GL JS v6 Web Worker path via CDN matching package.json (6.14.0)
+// Set MapLibre GL JS v6 Web Worker path to locally served static asset
 if (typeof window !== "undefined") {
-    setWorkerUrl("https://unpkg.com/maplibre-gl@6.14.0/dist/maplibre-gl-worker.mjs");
+    setWorkerUrl("/workers/maplibre-gl-worker.mjs");
 }
 
 // ----------------------------------------------------------------------

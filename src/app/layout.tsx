@@ -6,6 +6,7 @@ import type {Metadata, Viewport} from "next";
 import {ThemeProvider} from "@shared/ui/ThemeProvider";
 import {AppMapContextProvider} from "@shared/context/AppMapContext";
 import {CityContextProvider} from "@entities/city";
+import {ServiceWorkerRegister} from "@shared/ui/ServiceWorkerRegister";
 import {Analytics} from "@vercel/analytics/react";
 import {SpeedInsights} from "@vercel/speed-insights/next";
 
@@ -62,8 +63,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
     width: "device-width",
     initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
+    maximumScale: 5,
+    userScalable: true,
     viewportFit: "cover",
 };
 
@@ -107,6 +108,7 @@ export default function RootLayout({
             </CityContextProvider>
         </AppMapContextProvider>
     </ThemeProvider>
+    <ServiceWorkerRegister/>
     <SpeedInsights/>
     <Analytics/>
     </body>

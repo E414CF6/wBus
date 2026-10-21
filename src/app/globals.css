@@ -86,6 +86,28 @@ body {
     display: none !important;
 }
 
+/* Mobile Bus Stop Bottom Sheet dock */
+@media (max-width: 639px) {
+    .custom-bus-stop-popup {
+        transform: none !important;
+        top: auto !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        position: fixed !important;
+        z-index: 9999 !important;
+        padding-bottom: env(safe-area-inset-bottom, 0) !important;
+    }
+    .custom-bus-stop-popup .maplibregl-popup-content {
+        border-radius: 28px 28px 0 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.28) !important;
+    }
+}
+
 /* Scrollbar Customization */
 * {
     scrollbar-width: thin;

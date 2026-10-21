@@ -221,7 +221,12 @@ const BusStopMarkerItem = memo(({
                     style={{zIndex: 100}}
                 >
                     <div
-                        className="flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl overflow-hidden rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.6)] border border-black/5 dark:border-white/10 w-76 sm:w-92">
+                        className="flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl overflow-hidden rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.6)] border border-black/5 dark:border-white/10 w-76 sm:w-92 max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:w-full max-sm:rounded-b-none max-sm:rounded-t-[28px] max-sm:max-h-[75dvh] max-sm:z-[100] max-sm:shadow-[0_-12px_40px_rgba(0,0,0,0.35)] animate-slideUp">
+                        {/* Mobile Drawer Handle Indicator */}
+                        <div className="pt-2 pb-0.5 flex justify-center sm:hidden">
+                            <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700"/>
+                        </div>
+
                         {/* Header Section */}
                         <div
                             className="relative overflow-hidden bg-transparent px-5 py-4 text-black dark:text-white border-b border-black/5 dark:border-white/5">

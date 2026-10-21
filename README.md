@@ -126,11 +126,9 @@ src/
 |   `-- utils/                # Coordinate math, route formatting, concurrency limiters
 `-- widgets/                  # Composite UI modules
     |-- AppShell/             # Main tab orchestrator and route sync controller
-    |-- BottomNav/            # Unified floating bottom nav and BusListDrawer
+    |-- BottomNav/            # Unified floating bottom nav, city selector & BusListDrawer
     |-- MapContainer/         # MapLibre GL wrapper, vector route layers, live markers
-    |-- NoticeWidget/         # ITS announcement banners and detail modals
-    |-- TimetableWidget/      # Wonju city-wide searchable schedule directory
-    `-- YonseiTimetableWidget/# Dedicated campus schedule cards, shuttle map & modal
+    `-- TransitWiki/          # Unified transit wiki & timetable hub (City, Yonsei, Shuttle, Routes, Notices)
 ```
 
 **Dependency Rule**: `app -> widgets -> features -> entities -> shared`.

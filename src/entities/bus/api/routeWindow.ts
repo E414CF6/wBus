@@ -87,19 +87,27 @@ function getScheduleData() {
     return null;
 }
 
-/**
- * Compute the operating service window for a given route.
- * Wonju ("32020") routes use Yonsei static timetables and schedule.json; other cities use default window.
- */
-export function getRouteOperatingWindow(routeIdOrNo: string, cityCode: string = "32020"): RouteOperatingWindow {
-    const routeNo = extractRouteNumber(routeIdOrNo);
-    const normalizedCity = cityCode || "32020";
-    const cacheKey = `${normalizedCity}:${routeNo}`;
+// Strategy Interface for City-scoped Operating Window resolution
+interface CityWindowStrategy {
+    resolve(routeNo: string): RouteOperatingWindow | null;
+}
 
-    const cached = windowCache.get(cacheKey);
-    if (cached) return cached;
+const nightRouteStrategy: CityWindowStrategy = {
+    resolve(routeNo: string): RouteOperatingWindow | null {
+        if (!/^(?:N\d+|A\d+|새벽|심야)/i.test(routeNo)) return null;
+        return {
+            routeNo,
+            firstBus: "00:00",
+            lastBus: "23:59",
+            startMinutes: 0,
+            endMinutes: 1440,
+            source: "default",
+        };
+    },
+};
 
-    if (normalizedCity === "32020") {
+const wonjuStrategy: CityWindowStrategy = {
+    resolve(routeNo: string): RouteOperatingWindow | null {
         // 1. Check Yonsei Static Timetables (30, 34, 34-1) - Wonju only
         const yonseiKey = routeNo as keyof typeof YONSEI_STATIC_TIMETABLES;
         if (YONSEI_STATIC_TIMETABLES[yonseiKey]) {
@@ -120,19 +128,14 @@ export function getRouteOperatingWindow(routeIdOrNo: string, cityCode: string = 
             });
 
             if (earliestMin !== Infinity && latestMin !== -Infinity) {
-                const startMinutes = Math.max(0, earliestMin - PRE_DEPARTURE_BUFFER_MINUTES);
-                const endMinutes = latestMin + POST_DEPARTURE_BUFFER_MINUTES;
-
-                const window: RouteOperatingWindow = {
+                return {
                     routeNo,
                     firstBus: formatMinutesToTime(earliestMin),
                     lastBus: formatMinutesToTime(latestMin),
-                    startMinutes,
-                    endMinutes,
+                    startMinutes: Math.max(0, earliestMin - PRE_DEPARTURE_BUFFER_MINUTES),
+                    endMinutes: latestMin + POST_DEPARTURE_BUFFER_MINUTES,
                     source: "yonsei_static",
                 };
-                windowCache.set(cacheKey, window);
-                return window;
             }
         }
 
@@ -152,40 +155,23 @@ export function getRouteOperatingWindow(routeIdOrNo: string, cityCode: string = 
             });
 
             if (earliestMin !== Infinity && latestMin !== -Infinity) {
-                const startMinutes = Math.max(0, earliestMin - PRE_DEPARTURE_BUFFER_MINUTES);
-                const endMinutes = latestMin + POST_DEPARTURE_BUFFER_MINUTES;
-
-                const window: RouteOperatingWindow = {
+                return {
                     routeNo,
                     firstBus: formatMinutesToTime(earliestMin),
                     lastBus: formatMinutesToTime(latestMin),
-                    startMinutes,
-                    endMinutes,
+                    startMinutes: Math.max(0, earliestMin - PRE_DEPARTURE_BUFFER_MINUTES),
+                    endMinutes: latestMin + POST_DEPARTURE_BUFFER_MINUTES,
                     source: "schedule_json",
                 };
-                windowCache.set(cacheKey, window);
-                return window;
             }
         }
-    }
+        return null;
+    },
+};
 
-    // 3. Night / Owl / Autonomous Dawn routes (e.g. N13, N61, 새벽A160, 심야A21) operate through late night & dawn
-    if (/^(?:N\d+|A\d+|새벽|심야)/i.test(routeNo)) {
-        const nightWindow: RouteOperatingWindow = {
-            routeNo,
-            firstBus: "00:00",
-            lastBus: "23:59",
-            startMinutes: 0,
-            endMinutes: 1440,
-            source: "default",
-        };
-        windowCache.set(cacheKey, nightWindow);
-        return nightWindow;
-    }
-
-    // 4. Seoul ("11") metropolitan routes run from 04:00 until ~01:30 AM next day
-    if (normalizedCity === "11") {
-        const seoulWindow: RouteOperatingWindow = {
+const seoulStrategy: CityWindowStrategy = {
+    resolve(routeNo: string): RouteOperatingWindow | null {
+        return {
             routeNo,
             firstBus: "04:00",
             lastBus: "01:00",
@@ -193,11 +179,44 @@ export function getRouteOperatingWindow(routeIdOrNo: string, cityCode: string = 
             endMinutes: 25 * 60 + 30,  // 01:30 next day
             source: "default",
         };
-        windowCache.set(cacheKey, seoulWindow);
-        return seoulWindow;
+    },
+};
+
+const cityStrategies: Record<string, CityWindowStrategy> = {
+    "32020": wonjuStrategy,
+    "11": seoulStrategy,
+};
+
+/**
+ * Compute the operating service window for a given route.
+ * Wonju ("32020") routes use Yonsei static timetables and schedule.json; other cities use default window.
+ */
+export function getRouteOperatingWindow(routeIdOrNo: string, cityCode: string = "32020"): RouteOperatingWindow {
+    const routeNo = extractRouteNumber(routeIdOrNo);
+    const normalizedCity = cityCode || "32020";
+    const cacheKey = `${normalizedCity}:${routeNo}`;
+
+    const cached = windowCache.get(cacheKey);
+    if (cached) return cached;
+
+    // 1. Check Night / Autonomous routes first across all cities
+    const nightMatch = nightRouteStrategy.resolve(routeNo);
+    if (nightMatch) {
+        windowCache.set(cacheKey, nightMatch);
+        return nightMatch;
     }
 
-    // 5. Fallback default window (05:20 ~ 23:50)
+    // 2. Delegate to city-specific strategy if registered
+    const strategy = cityStrategies[normalizedCity];
+    if (strategy) {
+        const result = strategy.resolve(routeNo);
+        if (result) {
+            windowCache.set(cacheKey, result);
+            return result;
+        }
+    }
+
+    // 3. Fallback default window (05:20 ~ 23:50)
     const defaultWindow: RouteOperatingWindow = {
         routeNo,
         firstBus: formatMinutesToTime(DEFAULT_FIRST_BUS_MINUTES),

@@ -1,7 +1,7 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useState, useSyncExternalStore} from "react";
-import {Bus, CalendarClock, ChevronDown, GraduationCap, RefreshCw, Star} from "lucide-react";
+import {AlertTriangle, Bus, CalendarClock, ChevronDown, GraduationCap, RefreshCw, Star} from "lucide-react";
 
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useCityContext} from "@entities/city";
@@ -362,6 +362,18 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                         </button>
                     </div>
                 </div>
+
+                {/* Degraded External API Status Notice Banner */}
+                {isDegraded && (
+                    <div
+                        className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/95 dark:bg-amber-600/95 text-white rounded-full text-[11px] font-extrabold shadow-sm backdrop-blur-md animate-fadeIn"
+                        role="status"
+                        aria-live="polite"
+                    >
+                        <AlertTriangle className="w-3 h-3 shrink-0"/>
+                        <span>공공데이터 API 응답 지연 중 · 최근 수신된 위치를 표시합니다</span>
+                    </div>
+                )}
 
                 {/* 2. Fast Route & Favorite Stop Switcher Bar (Horizontal Swipeable Quick Pills) */}
                 <div
