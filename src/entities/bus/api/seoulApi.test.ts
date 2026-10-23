@@ -163,6 +163,49 @@ describe("Seoul Bus OpenAPI (ws.bus.go.kr / TOPIS) parser & normalizer", () => {
             );
             expect(normalized).toBeNull();
         });
+
+        it("populates routenm directly from resolved routeName parameter", () => {
+            const normalized = normalizeSeoulBusPosItem(
+                {
+                    vehId: "111033668",
+                    plainNo: "서울75사2646",
+                    sectOrd: "8",
+                    gpsX: "126.919635",
+                    gpsY: "37.617730",
+                    lastStnId: "111000115",
+                    isrunyn: "1",
+                },
+                "100100118",
+                undefined,
+                "753"
+            );
+            expect(normalized).not.toBeNull();
+            expect(normalized?.routenm).toBe("753");
+            expect(normalized?.vehicleno).toBe("서울75사2646");
+        });
+
+        it("matches stop by lastStnId string key in stopLookup", () => {
+            const stopLookup = new Map<number | string, { nodeid: string; nodenm: string; routenm?: string }>([
+                ["111000115", {nodeid: "111000115", nodenm: "구산역", routenm: "753"}],
+            ]);
+
+            const normalized = normalizeSeoulBusPosItem(
+                {
+                    vehId: "111033668",
+                    plainNo: "서울75사2646",
+                    sectOrd: "99",
+                    gpsX: "126.919635",
+                    gpsY: "37.617730",
+                    lastStnId: "111000115",
+                    isrunyn: "1",
+                },
+                "100100118",
+                stopLookup
+            );
+            expect(normalized).not.toBeNull();
+            expect(normalized?.nodenm).toBe("구산역");
+            expect(normalized?.routenm).toBe("753");
+        });
     });
 
     describe("route & vehicle type mappers and bounds", () => {

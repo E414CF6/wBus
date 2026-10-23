@@ -7,6 +7,7 @@ import {getRouteMeta} from "@entities/route/routeMetadata";
 import {getSnappedPosition} from "@features/live-tracking";
 
 import type {BusItem} from "@entities/bus/types";
+import type {Coordinate} from "@shared/utils/geo";
 
 import {useBusData} from "@features/live-tracking/useBusData";
 
@@ -18,7 +19,7 @@ import {useCityContext} from "@entities/city";
 import PopupMarquee from "@shared/ui/MarqueeText";
 
 import {LocateFixed, Navigation} from "lucide-react";
-import React, {memo, useEffect, useMemo, useState} from "react";
+import React, {memo, useCallback, useEffect, useMemo, useState} from "react";
 import {Popup} from "react-map-gl/maplibre";
 import BusAnimatedMarker from "./BusAnimatedMarker";
 
@@ -97,6 +98,7 @@ BusIconDOM.displayName = "BusIconDOM";
 const BusPopupContent = memo(
     ({
          bus,
+         routeName,
          stopName,
          DirectionIcon,
          themeColor,
@@ -105,6 +107,7 @@ const BusPopupContent = memo(
          onToggleFollow,
      }: {
         bus: BusItem;
+        routeName?: string;
         stopName: string;
         DirectionIcon: React.ElementType;
         themeColor?: string;
@@ -135,7 +138,7 @@ const BusPopupContent = memo(
                                 <DirectionIcon className="w-4 h-4" strokeWidth={2.5} aria-hidden="true"/>
                             </div>
                             <span className="font-extrabold text-lg tracking-tight leading-none truncate">
-                                {UI_TEXT.BUS_LIST.TITLE_ROUTE(bus.routenm)}
+                                {UI_TEXT.BUS_LIST.TITLE_ROUTE(bus.routenm || routeName || "")}
                             </span>
                         </div>
                         <span
@@ -232,6 +235,15 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
 
     const [selectedBusKey, setSelectedBusKey] = useState<string | null>(null);
     const [followedBusKey, setFollowedBusKey] = useState<string | null>(null);
+    const [livePositions, setLivePositions] = useState<Record<string, Coordinate>>({});
+
+    const handleLivePositionChange = useCallback((key: string, pos: Coordinate) => {
+        setLivePositions((prev) => {
+            const current = prev[key];
+            if (current && current[0] === pos[0] && current[1] === pos[1]) return prev;
+            return {...prev, [key]: pos};
+        });
+    }, []);
 
     const [prevRouteName, setPrevRouteName] = useState(routeName);
     if (routeName !== prevRouteName) {
@@ -289,14 +301,15 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
         if (!routeInfo || busList.length === 0) return [];
 
         return busList.map((bus) => {
+            const effectiveBus = bus.routenm ? bus : {...bus, routenm: routeName};
             const targetRouteId =
-                bus.routeid ?? activeRouteId ?? routeInfo.vehicleRouteIds[0] ?? null;
+                effectiveBus.routeid ?? activeRouteId ?? routeInfo.vehicleRouteIds[0] ?? null;
             const polylineSet = targetRouteId ? polylineMap.get(targetRouteId) : null;
             const {upPolyline, downPolyline, stopIndexMap, turnIndex} =
             polylineSet ?? fallbackPolylines;
-            const markerKey = `${routeName}-${bus.vehicleno}`;
+            const markerKey = `${routeName}-${effectiveBus.vehicleno}`;
 
-            const snapped = getSnappedPosition(bus, getDirection, upPolyline, downPolyline, {
+            const snapped = getSnappedPosition(effectiveBus, getDirection, upPolyline, downPolyline, {
                 stopIndexMap,
                 turnIndex,
                 snapIndexRange: SNAP_INDEX_RANGE,
@@ -312,7 +325,7 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
 
             const meta = getRouteMeta(routeName, effectiveCityCode);
             const markerColor = getBusMarkerColor(
-                bus.routenm || routeName,
+                effectiveBus.routenm || routeName,
                 snapped.direction,
                 targetRouteId,
                 routeInfo.vehicleRouteIds,
@@ -323,7 +336,7 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
 
             return {
                 key: markerKey,
-                bus,
+                bus: effectiveBus,
                 position: snapped.position,
                 angle: snapped.angle,
                 direction: snapped.direction,
@@ -347,17 +360,18 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
     ]);
 
     const followedMarker = followedBusKey ? markers.find((m) => m.key === followedBusKey) : null;
+    const followedPosition = followedBusKey && followedMarker ? (livePositions[followedBusKey] || followedMarker.position) : null;
 
-    // Camera follow effect when a bus is locked for live tracking
+    // Camera follow effect when a bus is locked for live tracking (smoothly tracks live animated marker)
     useEffect(() => {
-        if (!map || !followedMarker) return;
-        const [lat, lng] = followedMarker.position;
+        if (!map || !followedPosition) return;
+        const [lat, lng] = followedPosition;
         if (!lat || !lng) return;
         map.easeTo({
             center: [lng, lat],
-            duration: 1200,
+            duration: 600,
         });
-    }, [map, followedMarker]);
+    }, [map, followedPosition]);
 
     // Cancel camera follow when user manually drags the map
     useEffect(() => {
@@ -374,6 +388,7 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
     if (!routeInfo || markers.length === 0) return null;
 
     const selectedMarker = selectedBusKey ? markers.find((m) => m.key === selectedBusKey) : null;
+    const selectedPosition = selectedBusKey && selectedMarker ? (livePositions[selectedBusKey] || selectedMarker.position) : null;
 
     return (
         <>
@@ -405,13 +420,14 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
                             dataDelayMs={effectiveDataDelayMs}
                             stopCoordIndices={stopCoordIndices}
                             refreshKey={refreshKey}
+                            onPositionChange={isSelected || isFollowed ? (pos) => handleLivePositionChange(key, pos) : undefined}
                             onClick={() => {
                                 setSelectedBusKey(key);
                                 onPopupOpen?.(routeName);
                             }}
                         >
                             <BusIconDOM
-                                routeNumber={bus.routenm}
+                                routeNumber={bus.routenm || routeName}
                                 color={markerColor}
                                 isSelected={isSelected}
                                 isFollowed={isFollowed}
@@ -421,10 +437,10 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
                 }
             )}
 
-            {selectedMarker && (
+            {selectedMarker && selectedPosition && (
                 <Popup
-                    longitude={selectedMarker.position[1]}
-                    latitude={selectedMarker.position[0]}
+                    longitude={selectedPosition[1]}
+                    latitude={selectedPosition[0]}
                     offset={[0, -10]}
                     closeButton={false}
                     closeOnClick={true}
@@ -438,6 +454,7 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
                 >
                     <BusPopupContent
                         bus={selectedMarker.bus}
+                        routeName={routeName}
                         stopName={selectedMarker.bus.nodenm || ""}
                         DirectionIcon={getDirectionIcon(selectedMarker.direction)}
                         themeColor={selectedMarker.markerColor}

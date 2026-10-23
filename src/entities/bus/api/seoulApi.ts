@@ -228,7 +228,8 @@ export function extractSeoulWsItems<T = Record<string, unknown>>(payload: SeoulW
 export function normalizeSeoulBusPosItem(
     item: SeoulBusPosItem,
     routeId: string,
-    stopLookup?: Map<number, { nodeid: string; nodenm: string; routenm?: string }>
+    stopLookup?: Map<number | string, { nodeid: string; nodenm: string; routenm?: string }>,
+    routeName?: string
 ): RawBusLocation | null {
     if (String(item.isrunyn ?? "1") === "0") {
         return null;
@@ -243,10 +244,12 @@ export function normalizeSeoulBusPosItem(
     }
 
     const sectOrd = Number(item.sectOrd ?? 0);
-    const matchedStop = stopLookup?.get(sectOrd);
-    const nodeid = String(item.lastStnId || matchedStop?.nodeid || item.nextStId || item.sectionId || "").trim();
+    const lastStnId = String(item.lastStnId ?? "").trim();
+    // Look up by lastStnId first, then by sectOrd
+    const matchedStop = (lastStnId ? stopLookup?.get(lastStnId) : undefined) ?? stopLookup?.get(sectOrd);
+    const nodeid = String(lastStnId || matchedStop?.nodeid || item.nextStId || item.sectionId || "").trim();
     const nodenm = matchedStop?.nodenm;
-    const routenm = matchedStop?.routenm ?? "";
+    const routenm = routeName || matchedStop?.routenm || "";
 
     return {
         routeid: routeId,
@@ -439,20 +442,50 @@ export async function fetchSeoulBusLocations(
     getServiceKey: () => { key: string; index: number },
     onKeyRateLimited?: (index: number) => void
 ): Promise<RawBusLocation[]> {
-    // Check if route stops are already in L1 memory so we can enrich nodenm and routenm without extra latency
-    const cachedStops = peekCached<RawBusStop[]>(`bus-stops:${SEOUL_CITY_CODE}:${routeId}`, 86400)?.data;
+    // 1. Resolve routeName and route stops with multi-tier cache & fallback warming
+    let cachedStops = peekCached<RawBusStop[]>(`bus-stops:${SEOUL_CITY_CODE}:${routeId}`, 86400)?.data;
     const cachedPoly = peekCached<GeoPolyline>(`polyline:${SEOUL_CITY_CODE}:${routeId}`, 86400)?.data;
+    let resolvedRouteName = cachedPoly?.route_no || "";
 
-    const stopLookup = new Map<number, { nodeid: string; nodenm: string; routenm?: string }>();
+    if (!resolvedRouteName) {
+        // Check full city routes catalog cache if available
+        const cityRoutes = peekCached<RawCityRoute[]>(`routes:${SEOUL_CITY_CODE}:all`, 604800)?.data;
+        const matchedCityRoute = cityRoutes?.find((r) => String(r.routeid) === String(routeId));
+        if (matchedCityRoute?.routeno) {
+            resolvedRouteName = String(matchedCityRoute.routeno);
+        }
+    }
+
+    // If still missing stops or polyline, proactively warm bundle via TOPIS
+    if ((!cachedStops || !resolvedRouteName) && routeId) {
+        try {
+            const bundle = await getSeoulRouteBundle(routeId);
+            if (bundle) {
+                if (bundle.stops && bundle.stops.length > 0) {
+                    cachedStops = bundle.stops;
+                }
+                if (bundle.routeName && bundle.routeName !== routeId) {
+                    resolvedRouteName = bundle.routeName;
+                }
+            }
+        } catch {
+            // Keep going even if bundle warm fails
+        }
+    }
+
+    const stopLookup = new Map<number | string, { nodeid: string; nodenm: string; routenm?: string }>();
     if (cachedStops && cachedStops.length > 0) {
-        const rName = cachedPoly?.route_no || "";
         for (const s of cachedStops) {
+            const entry = {
+                nodeid: s.nodeid,
+                nodenm: s.nodenm,
+                routenm: resolvedRouteName,
+            };
             if (s.nodeord !== undefined) {
-                stopLookup.set(Number(s.nodeord), {
-                    nodeid: s.nodeid,
-                    nodenm: s.nodenm,
-                    routenm: rName,
-                });
+                stopLookup.set(Number(s.nodeord), entry);
+            }
+            if (s.nodeid) {
+                stopLookup.set(String(s.nodeid), entry);
             }
         }
     }
@@ -490,13 +523,16 @@ export async function fetchSeoulBusLocations(
             throw err;
         }
 
-        const json = (await res.json()) as SbusResponseEnvelope<{ resultList?: SeoulBusPosItem[] }>;
-        rawItems = json.ResponseVO?.data?.resultList ?? [];
+        const json = (await res.json()) as SbusResponseEnvelope<{
+            resultList?: SeoulBusPosItem[];
+            resultRouteBuspos?: SeoulBusPosItem[];
+        }>;
+        rawItems = json.ResponseVO?.data?.resultList ?? json.ResponseVO?.data?.resultRouteBuspos ?? [];
     }
 
     const locations: RawBusLocation[] = [];
     for (const item of rawItems) {
-        const normalized = normalizeSeoulBusPosItem(item, routeId, stopLookup);
+        const normalized = normalizeSeoulBusPosItem(item, routeId, stopLookup, resolvedRouteName);
         if (normalized) {
             locations.push(normalized);
         }

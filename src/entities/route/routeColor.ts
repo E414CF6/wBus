@@ -71,7 +71,27 @@ export function classifyRouteType(routeName: string, routeTp?: string): GenericR
     if (/^[MG]\d|^P\d|급행/i.test(no)) {
         return "EXPRESS";
     }
+    // Seoul & Metropolitan Red Express routes: 9xxx (4 digits starting with 9)
+    if (/^9\d{3}$/.test(no)) {
+        return "EXPRESS";
+    }
+    // Seoul Night bus: Nxx (e.g. N13, N16, N62)
+    if (/^N\d+$/i.test(no)) {
+        return "EXPRESS";
+    }
     if (/마을|공영|순환|조조|통학|따복|희망|누리/i.test(no)) {
+        return "BRANCH";
+    }
+    // Seoul & Metropolitan Green Feeder/Branch routes: 4 digits starting with 1~8 (e.g. 7016, 5511)
+    if (/^[1-8]\d{3}$/.test(no)) {
+        return "BRANCH";
+    }
+    // Seoul Circular routes: 2 digits starting with 0 (e.g. 01, 02, 04)
+    if (/^0\d$/.test(no)) {
+        return "BRANCH";
+    }
+    // Town/Village buses with district names (e.g. 종로01, 서초02, 마포09, 강남01)
+    if (/^[가-힣]{2}\d+$/.test(no)) {
         return "BRANCH";
     }
 
