@@ -41,4 +41,12 @@ export const ApiValidators = {
         const trimmed = code.trim();
         return trimmed.length >= 2 && trimmed.length <= 10 && NUMERIC_ID_REGEX.test(trimmed);
     },
+
+    /** Resolves and sanitizes MOLIT TAGO city code with safe fallback */
+    resolveCityCode(code?: string | null, fallback = "32020"): string {
+        if (code && this.isValidCityCode(code)) {
+            return code.trim();
+        }
+        return fallback;
+    },
 };

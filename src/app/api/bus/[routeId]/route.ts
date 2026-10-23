@@ -15,15 +15,15 @@ const LIVE_CACHE_OPTIONS = {
 export const GET = createApiHandler<RawBusLocation[]>({
     paramKey: "routeId",
     cacheKey: (id, req) => {
-        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        const cityCode = ApiValidators.resolveCityCode(req ? new URL(req.url).searchParams.get("cityCode") : null);
         return `bus:${cityCode}:${id}`;
     },
     fetcher: (id, req) => {
-        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        const cityCode = ApiValidators.resolveCityCode(req ? new URL(req.url).searchParams.get("cityCode") : null);
         return fetchBusLocations(id, {cityCode});
     },
     ttl: (id, req) => {
-        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        const cityCode = ApiValidators.resolveCityCode(req ? new URL(req.url).searchParams.get("cityCode") : null);
         return getAdaptiveTtlSeconds(id, 8, 15, cityCode);
     },
     cacheOptions: LIVE_CACHE_OPTIONS,

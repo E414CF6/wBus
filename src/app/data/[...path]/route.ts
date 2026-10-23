@@ -1,9 +1,9 @@
 import {NextResponse} from "next/server";
 
 import {API_CONFIG} from "@shared/config/env";
+import {ApiValidators} from "@shared/api";
 
-// Edge CDN ISR Cache: Revalidate every 24 hours (86400 seconds)
-export const revalidate = 86400;
+export const dynamic = "force-dynamic";
 
 export async function GET(_request: Request, {params}: { params: Promise<{ path: string[] }> }) {
     const {path} = await params;
@@ -84,7 +84,7 @@ export async function GET(_request: Request, {params}: { params: Promise<{ path:
         if (routeFileName && routeFileName.endsWith(".json")) {
             const routeId = routeFileName.replace(/\.json$/, "");
             const url = new URL(_request.url);
-            const cityCode = url.searchParams.get("cityCode") || "32020";
+            const cityCode = ApiValidators.resolveCityCode(url.searchParams.get("cityCode"));
 
             const {generateSingleRoutePolyline} = await import("@entities/route/routeSyncService");
             const polyline = await generateSingleRoutePolyline(routeId, cityCode);

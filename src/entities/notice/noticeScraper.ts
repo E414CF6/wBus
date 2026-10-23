@@ -3,6 +3,7 @@ import "server-only";
 import type {NoticeDetail, NoticeItem, NoticeListResponse} from "./types";
 import {APP_LOCALE, UI_TEXT} from "@shared/config/locale";
 import {getCachedOrFetch} from "@shared/cache";
+import {sanitizeHtml} from "@shared/utils/sanitizer";
 
 const BASE_URL = "http://its.wonju.go.kr";
 const NOTICE_LIST_URL = `${BASE_URL}/center/notice.do`;
@@ -180,9 +181,10 @@ async function rawFetchNoticeDetail(id: string, maxRetries = 3): Promise<NoticeD
                 }
             }
 
-            // Clean up relative images/links to absolute
+            // Clean up relative images/links to absolute and sanitize content
             content = content.replace(/src="\/([^"]+)"/g, `src="${BASE_URL}/$1"`);
             content = content.replace(/href="\/([^"]+)"/g, `href="${BASE_URL}/$1"`);
+            content = sanitizeHtml(content);
 
             const files: Array<{ name: string; url: string }> = [];
             const fileRegex = /<a[^>]*href="([^"]*(?:noticeAttach\.do|fileDown|download)[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;

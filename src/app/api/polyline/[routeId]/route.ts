@@ -29,7 +29,7 @@ export async function GET(
     }
 
     const {searchParams} = request.nextUrl;
-    const cityCode = searchParams.get("cityCode") || "32020";
+    const cityCode = ApiValidators.resolveCityCode(searchParams.get("cityCode"));
     const routeNo = searchParams.get("routeNo") || undefined;
     const cacheKey = `polyline:${cityCode}:${routeId}`;
 

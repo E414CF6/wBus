@@ -2,8 +2,7 @@ import {ApiValidators} from "@shared/api";
 import {scrapeWonjuNoticeDetail} from "@entities/notice/server";
 import {type NextRequest, NextResponse} from "next/server";
 
-// Edge CDN ISR Cache: Revalidate every 2 hours (7200 seconds)
-export const revalidate = 7200;
+export const dynamic = "force-dynamic";
 
 export async function GET(
     _request: NextRequest,

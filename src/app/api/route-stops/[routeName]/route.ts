@@ -6,8 +6,8 @@ import {getCachedOrFetch, peekCached} from "@shared/cache";
 import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import {fetchRouteStops, getCachedCityRoutes} from "@entities/bus";
 
-// Edge CDN ISR Cache: Revalidate every 24 hours (86400 seconds)
-export const revalidate = 86400;
+// Always treat this route as dynamic to avoid static build-time serialization
+export const dynamic = "force-dynamic";
 
 async function getRouteStopsForCity(routeName: string, cityCode: string): Promise<BusStop[]> {
     try {
@@ -88,11 +88,11 @@ const CACHE_CONTROL = buildCacheControl({
 export const GET = createApiHandler<BusStop[]>({
     paramKey: "routeName",
     cacheKey: (id, req) => {
-        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        const cityCode = ApiValidators.resolveCityCode(req ? new URL(req.url).searchParams.get("cityCode") : null);
         return `route-stops:${cityCode}:${id}`;
     },
     fetcher: async (routeName, req) => {
-        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        const cityCode = ApiValidators.resolveCityCode(req ? new URL(req.url).searchParams.get("cityCode") : null);
         return await getRouteStopsForCity(routeName, cityCode);
     },
     ttl: 3600,

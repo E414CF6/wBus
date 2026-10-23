@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({error: "Invalid or empty routeIds parameter"}, {status: 400});
     }
 
-    const cityCode = searchParams.get("cityCode") || "32020";
+    const cityCode = ApiValidators.resolveCityCode(searchParams.get("cityCode"));
 
     try {
         let hasDegraded = false;

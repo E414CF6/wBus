@@ -10,11 +10,11 @@ const LIVE_CACHE_OPTIONS = {
 export const GET = createApiHandler<RawBusArrival[]>({
     paramKey: "busStopId",
     cacheKey: (id, req) => {
-        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        const cityCode = ApiValidators.resolveCityCode(req ? new URL(req.url).searchParams.get("cityCode") : null);
         return `arrival:${cityCode}:${id}`;
     },
     fetcher: (id, req) => {
-        const cityCode = req ? new URL(req.url).searchParams.get("cityCode") || "32020" : "32020";
+        const cityCode = ApiValidators.resolveCityCode(req ? new URL(req.url).searchParams.get("cityCode") : null);
         return fetchBusArrivals(id, cityCode);
     },
     ttl: 3,

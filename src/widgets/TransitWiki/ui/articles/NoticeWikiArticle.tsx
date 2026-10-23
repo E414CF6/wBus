@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useState} from "react";
+import React, {useMemo, useState} from "react";
 import {
     ChevronLeft,
     ChevronRight,
@@ -13,6 +13,7 @@ import {
     X,
 } from "lucide-react";
 import {useNoticeDetail, useNoticeList} from "@entities/notice/hooks";
+import {sanitizeHtml} from "@shared/utils/sanitizer";
 import {
     WikiCallout,
     WikiInfobox,
@@ -274,6 +275,7 @@ function NoticeDetailWikiView({
     onNavigate: (docId: string) => void;
 }) {
     const {notice, loading, error} = useNoticeDetail(noticeId);
+    const sanitizedContent = useMemo(() => sanitizeHtml(notice?.content), [notice?.content]);
 
     if (loading) {
         return (
@@ -344,7 +346,7 @@ function NoticeDetailWikiView({
                 <div className="p-4 sm:p-5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#12151e]">
                     <div
                         className="prose dark:prose-invert max-w-none break-words overflow-x-auto text-xs sm:text-sm leading-relaxed"
-                        dangerouslySetInnerHTML={{__html: notice.content}}
+                        dangerouslySetInnerHTML={{__html: sanitizedContent}}
                     />
                 </div>
             </WikiSection>
