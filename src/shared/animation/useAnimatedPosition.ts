@@ -128,6 +128,10 @@ export function useAnimatedPosition(
     const lastDwelledStopIdxRef = useRef<number>(-1);
     const dwellStartTimeRef = useRef<number>(0);
 
+    // ---- Animation Loop Lifecycle ----
+    const isLoopRunningRef = useRef(false);
+    const startLoopRef = useRef<() => void>(() => {});
+
     // ----------------------------------------------------------------
     // Direct MapLibre marker update (bypasses React for silky 60fps)
     // ----------------------------------------------------------------
@@ -227,6 +231,7 @@ export function useAnimatedPosition(
         prevTargetRef.current = targetPosition;
         updateMarkerDirect(nextPos, nextAngle);
         setState({position: nextPos, angle: nextAngle});
+        startLoopRef.current();
     }, [
         resetKey,
         targetPosition,
@@ -477,6 +482,8 @@ export function useAnimatedPosition(
                 dwellStartTimeRef.current = 0;
             }
         }
+        // Wake up animation loop on incoming telemetry
+        startLoopRef.current();
     }, [
         targetPosition,
         targetAngle,
@@ -490,9 +497,36 @@ export function useAnimatedPosition(
 
     // ----------------------------------------------------------------
     // Animation loop — Continuous 60fps Rapid Catch-Up & Continuous Dead Reckoning
+    // Optimized with Idle Sleep and Tab Visibility suspend to minimize CPU & battery usage.
     // ----------------------------------------------------------------
     useEffect(() => {
+        const stopLoop = () => {
+            if (animFrameRef.current !== null) {
+                cancelAnimationFrame(animFrameRef.current);
+                animFrameRef.current = null;
+            }
+            isLoopRunningRef.current = false;
+        };
+
+        const startLoop = () => {
+            if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+                return;
+            }
+            if (!isLoopRunningRef.current) {
+                isLoopRunningRef.current = true;
+                lastFrameRef.current = performance.now();
+                animFrameRef.current = requestAnimationFrame(tick);
+            }
+        };
+
+        startLoopRef.current = startLoop;
+
         const tick = (now: number) => {
+            if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+                stopLoop();
+                return;
+            }
+
             const pl = polylineRef.current;
             const cumDist = cumDistRef.current;
 
@@ -564,6 +598,14 @@ export function useAnimatedPosition(
             // If marker is at/near route terminus or reached extrapolation ceiling, stop forward dead reckoning
             if (dist >= hardCeilingDist || dist >= totalDist - STOP_DECEL_ZONE * 0.5) {
                 deadReckoningFactor = 0;
+            }
+
+            // If bus is stationary, dead-reckoning has faded, and marker has reached target, go to sleep
+            if (velocityRef.current <= STOP_THRESHOLD && deadReckoningFactor <= 0 && Math.abs(gap) < 0.00002) {
+                dist = target;
+                markerDistRef.current = dist;
+                stopLoop();
+                return;
             }
 
             // If gap is enormous (> 800m), teleport to target; otherwise smoothly & rapidly animate
@@ -675,12 +717,25 @@ export function useAnimatedPosition(
             animFrameRef.current = requestAnimationFrame(tick);
         };
 
-        animFrameRef.current = requestAnimationFrame(tick);
-        return () => {
-            if (animFrameRef.current !== null) {
-                cancelAnimationFrame(animFrameRef.current);
-                animFrameRef.current = null;
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === "visible") {
+                startLoop();
+            } else {
+                stopLoop();
             }
+        };
+
+        if (typeof document !== "undefined") {
+            document.addEventListener("visibilitychange", handleVisibilityChange);
+        }
+
+        startLoop();
+
+        return () => {
+            if (typeof document !== "undefined") {
+                document.removeEventListener("visibilitychange", handleVisibilityChange);
+            }
+            stopLoop();
         };
     }, [updateMarkerDirect]);
 

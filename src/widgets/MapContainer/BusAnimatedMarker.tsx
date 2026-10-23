@@ -6,7 +6,7 @@ import {type Coordinate, normalizeAngle} from "@shared/utils/geo";
 
 import {useAnimatedPosition} from "@shared/animation";
 
-import React, {memo, useRef} from "react";
+import React, {memo, useEffect, useRef} from "react";
 import {Marker} from "react-map-gl/maplibre";
 import type {Marker as MapLibreMarker} from "maplibre-gl";
 
@@ -31,6 +31,8 @@ interface BusAnimatedMarkerProps {
     /** Force a re-sync when the external state (like route) changes. */
     refreshKey?: string | number;
     onClick?: () => void;
+    /** Optional callback when animated position updates (used for real-time Popup & Camera tracking) */
+    onPositionChange?: (position: Coordinate) => void;
     children?: React.ReactNode;
 }
 
@@ -55,6 +57,7 @@ function BusAnimatedMarker({
                                stopCoordIndices,
                                refreshKey,
                                onClick,
+                               onPositionChange,
                                children,
                            }: BusAnimatedMarkerProps) {
     // Ref to MapLibre marker for direct DOM updates (bypasses React)
@@ -70,6 +73,13 @@ function BusAnimatedMarker({
         dataDelayMs, // Pass stop coordinate indices for speed modulation
         stopCoordIndices,
     });
+
+    // Notify parent if live animated position changes (throttled to >=50ms by useAnimatedPosition)
+    useEffect(() => {
+        if (onPositionChange) {
+            onPositionChange(animatedPosition);
+        }
+    }, [animatedPosition, onPositionChange]);
 
     const handleMarkerClick = (e: { originalEvent?: Event }) => {
         if (e.originalEvent) {

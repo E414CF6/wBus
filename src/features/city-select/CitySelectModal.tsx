@@ -5,6 +5,7 @@ import {createPortal} from "react-dom";
 import {Check, Compass, MapPin, Navigation, Search, Sparkles, X} from "lucide-react";
 import {NATIONWIDE_CITIES, useCityContext} from "@entities/city";
 import type {CityInfo} from "@entities/city/types";
+import {useBodyScrollLock} from "@shared/ui/useBodyScrollLock";
 
 interface CitySelectModalProps {
     isOpen: boolean;
@@ -39,6 +40,8 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedTab, setSelectedTab] = useState("전체");
     const searchInputRef = useRef<HTMLInputElement>(null);
+
+    useBodyScrollLock(isOpen);
 
     // Reset state on open
     const [prevIsOpen, setPrevIsOpen] = useState(isOpen);

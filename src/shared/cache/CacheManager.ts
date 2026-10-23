@@ -183,8 +183,9 @@ export class CacheManager<T> {
      */
     async getOrFetch(key: string, fetchFn: () => Promise<T>, customTtlMs?: number): Promise<T> {
         // Return cached data if available and valid
-        if (this.has(key)) {
-            return this.get(key) as T;
+        const cached = this.get(key);
+        if (cached !== null) {
+            return cached;
         }
 
         // Return a pending request if one exists

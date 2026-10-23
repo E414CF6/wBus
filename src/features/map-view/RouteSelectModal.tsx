@@ -11,6 +11,7 @@ import {useCityContext} from "@entities/city";
 import {useCityRoutes} from "@entities/route/hooks";
 import {useBusStop, useFavoriteStops} from "@entities/station/hooks";
 import type {BusStop} from "@entities/station/types";
+import {useBodyScrollLock} from "@shared/ui/useBodyScrollLock";
 
 // ----------------------------------------------------------------------
 // Types & Constants
@@ -57,6 +58,8 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     const {routes: cityRoutes = []} = useCityRoutes(currentCity.code);
     const {favoriteStops, isFavoriteStop, toggleFavoriteStop} = useFavoriteStops(currentCity.code);
     const currentRouteStops = useBusStop(isOpen ? selectedRoute : "", currentCity.code);
+
+    useBodyScrollLock(isOpen);
 
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
