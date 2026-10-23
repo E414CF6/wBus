@@ -1,7 +1,7 @@
 "use client";
 
 import React, {memo, useCallback, useState} from "react";
-import {BookOpen, ChevronDown, Compass, MapIcon, MapPin, Sparkles, X} from "lucide-react";
+import {ChevronDown, Clock, Compass, MapIcon, MapPin, Sparkles, X} from "lucide-react";
 import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
@@ -226,7 +226,7 @@ function BottomNavComponent({
                         )}
                     </button>
 
-                    {/* Transit Wiki Button (Next to City Selector) */}
+                    {/* Timetable & Campus Transit Sheet Button (Next to City Selector) */}
                     {showScheduleTab && onTabChange && (
                         <button
                             type="button"
@@ -234,16 +234,16 @@ function BottomNavComponent({
                                 setIsBusListOpen(false);
                                 onTabChange(activeTab === "schedule" ? "map" : "schedule");
                             }}
-                            title="대중교통 위키 및 시간표 문서 열기"
-                            aria-label="위키 열기"
+                            title="버스 및 셔틀 운행 시간표 열기"
+                            aria-label="시간표 열기"
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
                                 activeTab === "schedule"
                                     ? "bg-blue-600 text-white shadow-md shadow-blue-600/25"
                                     : "bg-black/[0.05] dark:bg-white/[0.09] hover:bg-black/[0.09] dark:hover:bg-white/[0.14] text-slate-800 dark:text-slate-100 border border-black/8 dark:border-white/10"
                             }`}
                         >
-                            <BookOpen className="w-3.5 h-3.5 stroke-[2.2] shrink-0"/>
-                            <span className="whitespace-nowrap font-black">위키</span>
+                            <Clock className="w-3.5 h-3.5 stroke-[2.2] shrink-0"/>
+                            <span className="whitespace-nowrap font-black">시간표</span>
                         </button>
                     )}
 

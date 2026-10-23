@@ -100,13 +100,12 @@ export function AppShell() {
     // Live telemetry for active map route
     const liveBusData = useBusSortedList(activeRoute, hasVisitedMap && isMapActive, currentCity.code);
 
-    // Direction filter for map polyline rendering (all, up, down)
-    const [selectedDirection, setSelectedDirection] = useState<"all" | "up" | "down">("all");
-    const [prevActiveRoute, setPrevActiveRoute] = useState(activeRoute);
-    if (activeRoute !== prevActiveRoute) {
-        setPrevActiveRoute(activeRoute);
-        setSelectedDirection("all");
-    }
+    // Direction filter for map polyline rendering (all, up, down) scoped per active route
+    const [directionMap, setDirectionMap] = useState<Record<string, "all" | "up" | "down">>({});
+    const selectedDirection = directionMap[activeRoute] || "all";
+    const handleSelectDirection = useCallback((dir: "all" | "up" | "down") => {
+        setDirectionMap((prev) => ({...prev, [activeRoute]: dir}));
+    }, [activeRoute]);
 
     useEffect(() => {
         if (!routeMap || Object.keys(routeMap).length === 0) return;
@@ -135,7 +134,7 @@ export function AppShell() {
                     isDegraded={liveBusData.isDegraded}
                     onReconnect={liveBusData.reconnect}
                     selectedDirection={selectedDirection}
-                    onSelectDirection={setSelectedDirection}
+                    onSelectDirection={handleSelectDirection}
                     onOpenScheduleModal={handleOpenWiki}
                 />
 
@@ -151,7 +150,7 @@ export function AppShell() {
                 </MapWrapper>
             </div>
 
-            {/* 2. Integrated Transit Wiki Drawer (Replaces all specialized timetable/shuttle/notice modals) */}
+            {/* 2. Interactive Bottom Sheet Transit & Timetable Dashboard */}
             {activeTab === "schedule" && (
                 <TransitWiki
                     initialDocId={wikiDocId}
