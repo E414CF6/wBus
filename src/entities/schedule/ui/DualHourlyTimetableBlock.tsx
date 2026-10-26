@@ -16,6 +16,7 @@ export interface DualHourlyTimetableBlockProps {
     allRoutes: BusRoute[];
     now: Date;
     locationLabel?: string;
+    compact?: boolean;
 }
 
 function MinuteBadge({
@@ -81,6 +82,7 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
     allRoutes,
     now,
     locationLabel = "종점 출발 시각",
+                                                                                      compact = false,
 }) => {
     const [tableSearch, setTableSearch] = useState("");
     const [selectedFootnote, setSelectedFootnote] = useState<number | null>(null);
@@ -123,14 +125,16 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
     return (
         <div className="space-y-2.5">
             {/* Search & Legend Strip */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50 dark:bg-[#171b26] p-2.5 rounded-lg border border-slate-200 dark:border-slate-800">
-                <div className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-semibold">
+            <div
+                className={`flex ${compact ? "flex-col" : "flex-col sm:flex-row sm:items-center"} justify-between gap-2 bg-slate-50 dark:bg-[#171b26] p-2.5 rounded-lg border border-slate-200 dark:border-slate-800`}>
+                <div
+                    className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-semibold leading-snug">
                     <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                     <span>
                         기준: <strong>{locationLabel}</strong> (시각 뒤 기호는 경유지·행선지 각주)
                     </span>
                 </div>
-                <div className="relative w-full sm:w-52">
+                <div className={`relative w-full ${compact ? "" : "sm:w-52"}`}>
                     <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input
                         type="text"
@@ -197,8 +201,8 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
             )}
 
             {/* Table */}
-            <div className="overflow-x-auto rounded-lg border border-slate-300 dark:border-slate-700">
-                <table className="w-full border-collapse text-left text-xs">
+            <div className="overflow-x-auto rounded-lg border border-slate-300 dark:border-slate-700 custom-scrollbar">
+                <table className="w-full border-collapse text-left text-xs min-w-[280px]">
                     <thead>
                         <tr className="bg-slate-100 dark:bg-[#1b202e] text-slate-700 dark:text-slate-200 border-b border-slate-300 dark:border-slate-700 font-extrabold">
                             <th className="py-2 px-3 w-16 text-center border-r border-slate-300 dark:border-slate-700">

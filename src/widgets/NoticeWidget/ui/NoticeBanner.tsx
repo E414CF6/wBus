@@ -8,9 +8,14 @@ import {ChevronLeft, ChevronRight, Megaphone} from "lucide-react";
 interface NoticeBannerProps {
     onClick: (noticeId?: string) => void;
     className?: string;
+    compact?: boolean;
 }
 
-export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick, className = ""}) => {
+export const NoticeBanner: React.FC<NoticeBannerProps> = ({
+                                                              onClick,
+                                                              className = "",
+                                                              compact = false,
+                                                          }) => {
     const {data: noticeData, loading} = useNoticeList(1);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isHovered, setIsHovered] = useState(false);
@@ -83,26 +88,32 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick, className = 
                 className="absolute -right-10 -bottom-10 w-40 h-40 bg-amber-500/10 dark:bg-amber-400/10 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-500 pointer-events-none"
             />
 
-            <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3">
+            <div
+                className={`relative flex ${
+                    compact
+                        ? "flex-col gap-2.5"
+                        : "flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3"
+                }`}
+            >
                 {/* Left Side: Icon & Headline */}
-                <div className="flex items-center space-x-3 min-w-0 flex-1">
+                <div className="flex items-start space-x-2.5 min-w-0 flex-1">
                     <div
-                        className="relative flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/20 shrink-0 group-hover:scale-105 transition-transform duration-200"
+                        className="relative flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/20 shrink-0 group-hover:scale-105 transition-transform duration-200 mt-0.5"
                     >
                         <Megaphone className="w-4 h-4 stroke-[2.2]"/>
                     </div>
 
                     <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
                             <span
-                                className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                                className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 whitespace-nowrap shrink-0"
                             >
                                 {UI_TEXT.NOTICE.WIDGET_TITLE}
                             </span>
 
                             {isNew && (
                                 <span
-                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-rose-500 text-white shadow-xs animate-pulse"
+                                    className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-black bg-rose-500 text-white shadow-xs animate-pulse whitespace-nowrap shrink-0"
                                 >
                                     <span>{UI_TEXT.NOTICE.BADGE_NEW}</span>
                                 </span>
@@ -110,15 +121,15 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick, className = 
                         </div>
 
                         {loading ? (
-                            <div className="h-4 w-48 bg-amber-500/10 rounded-lg animate-pulse my-0.5"/>
+                            <div className="h-4 w-40 bg-amber-500/10 rounded-lg animate-pulse my-0.5"/>
                         ) : currentNotice ? (
-                            <div className="flex items-center space-x-2 min-w-0">
+                            <div className="min-w-0">
                                 <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-amber-600 dark:hover:text-amber-400 transition-colors">
                                     {currentNotice.title}
                                 </h3>
                                 {currentNotice.date && (
                                     <span
-                                        className="hidden sm:inline text-[11px] text-slate-400 dark:text-slate-500 shrink-0 font-medium"
+                                        className="text-[11px] text-slate-400 dark:text-slate-500 font-medium block mt-0.5"
                                     >
                                         ({currentNotice.date})
                                     </span>
@@ -134,10 +145,14 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick, className = 
 
                 {/* Right Side: Action Link Button & Carousel Navigation */}
                 <div
-                    className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-amber-500/10"
+                    className={`flex items-center justify-between ${
+                        compact
+                            ? "w-full pt-2 border-t border-amber-500/15"
+                            : "sm:justify-end pt-1.5 sm:pt-0 border-t sm:border-t-0 border-amber-500/10"
+                    } gap-2 shrink-0`}
                 >
                     {/* Carousel Dots & Controls */}
-                    {latestNotices.length > 1 && (
+                    {latestNotices.length > 1 ? (
                         <div
                             className="flex items-center space-x-1 bg-amber-500/10 dark:bg-amber-400/10 px-1.5 py-0.5 rounded-lg"
                         >
@@ -175,6 +190,8 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({onClick, className = 
                                 <ChevronRight className="w-3 h-3"/>
                             </button>
                         </div>
+                    ) : (
+                        <div/>
                     )}
 
                     {/* View All Button */}
