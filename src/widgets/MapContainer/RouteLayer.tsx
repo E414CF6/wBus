@@ -5,6 +5,7 @@ import BusMarker from "./BusMarker";
 import BusRoutePolyline from "./BusRoutePolyline";
 import BusStopMarker from "./BusStopMarker";
 import TimetablePinMarker from "./TimetablePinMarker";
+import YonseiShuttlePinMarker from "./YonseiShuttlePinMarker";
 import type {DayMode} from "@shared/types/navigation";
 
 // ----------------------------------------------------------------------
@@ -66,6 +67,13 @@ const RouteLayer = memo(({
             dayMode={dayMode}
             isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
         />
+        {cityCode === "32020" && (
+            <YonseiShuttlePinMarker
+                enabled={enabled}
+                dayMode={dayMode}
+                isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+            />
+        )}
         <BusRoutePolyline routeName={routeName} selectedDirection={selectedDirection} cityCode={cityCode}/>
     </>);
 }, (prev, next) => {

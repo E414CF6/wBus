@@ -2,12 +2,11 @@
 
 import React, {memo, useCallback, useEffect, useMemo, useState} from "react";
 import {Marker, Popup} from "react-map-gl/maplibre";
-import {Clock, RotateCw, X, Calendar, BusFront, ExternalLink, ArrowRight} from "lucide-react";
+import {ArrowRight, Calendar, Clock, RotateCw, X} from "lucide-react";
 
 import {type RouteVariation, type RouteVariationStop, useRouteVariations} from "@entities/route";
 import {type BusRoute, getUpcomingDepartures, resolveActiveScheduleVariant, useSchedule} from "@entities/schedule";
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {isWeekend} from "@shared/lib/timeUtils";
 import type {DayMode} from "@shared/types/navigation";
 
 // ----------------------------------------------------------------------
@@ -428,7 +427,7 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                                     <span>다음 예정 출발</span>
                                     {activeSchedule && (
                                         <span className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500">
-                                            {activeSchedule.dayType} 편성
+                                            {activeSchedule.dayType}
                                         </span>
                                     )}
                                 </div>
@@ -586,7 +585,7 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                                     className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black shadow-xs transition cursor-pointer active:scale-95"
                                 >
                                     <Calendar className="w-3.5 h-3.5" />
-                                    <span>노선 전체 시간표 열기</span>
+                                    <span>노선 전체 시간표</span>
                                     <ArrowRight className="w-3.5 h-3.5" />
                                 </button>
                             )}
