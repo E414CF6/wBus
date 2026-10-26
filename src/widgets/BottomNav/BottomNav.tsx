@@ -1,7 +1,7 @@
 "use client";
 
 import React, {memo, useCallback, useEffect, useState} from "react";
-import {ChevronDown, Clock, Compass, MapIcon, MapPin, Sparkles, X} from "lucide-react";
+import {ChevronDown, Compass, MapIcon, MapPin, Sparkles, X} from "lucide-react";
 import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
@@ -11,7 +11,7 @@ import {CitySelectModal} from "@features/city-select";
 import {MapNavControls} from "./ui/MapNavControls";
 import {NavThemeToggle} from "./ui/NavThemeToggle";
 import {BusListDrawer} from "./ui/BusListDrawer";
-import {DayModeToggleGroup} from "./ui/DayModeToggleGroup";
+import {DayModeToggle} from "./ui/DayModeToggleGroup";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
@@ -53,9 +53,9 @@ export interface BottomNavProps {
  * - Theme Switcher
  */
 function BottomNavComponent({
-                                activeTab = "map",
-                                onTabChange,
-                                showScheduleTab = true,
+                                activeTab: _activeTab = "map",
+                                onTabChange: _onTabChange,
+                                showScheduleTab: _showScheduleTab = true,
                                 dayMode = "AUTO",
                                 onDayModeChange,
                                 isTodayWeekendOrHoliday = false,
@@ -283,43 +283,7 @@ function BottomNavComponent({
                         )}
                     </button>
 
-                    {/* Timetable Button (Only for Wonju if showScheduleTab is true) */}
-                    {showScheduleTab && onTabChange && (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
-                                if (isDesktop) {
-                                    window.dispatchEvent(new CustomEvent("wbus:open-schedule"));
-                                    window.dispatchEvent(new CustomEvent("wbus:open-bus-list"));
-                                    return;
-                                }
-                                setIsBusListOpen(false);
-                                onTabChange(activeTab === "schedule" ? "map" : "schedule");
-                            }}
-                            title="버스 운행 시간표 열기"
-                            aria-label="시간표 열기"
-                            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
-                                activeTab === "schedule"
-                                    ? "bg-blue-600 text-white shadow-md shadow-blue-600/25"
-                                    : "bg-black/[0.05] dark:bg-white/[0.09] hover:bg-black/[0.09] dark:hover:bg-white/[0.14] text-slate-800 dark:text-slate-100 border border-black/8 dark:border-white/10"
-                            }`}
-                        >
-                            <Clock className="w-3.5 h-3.5 stroke-[2.2] shrink-0"/>
-                            <span className="whitespace-nowrap font-black">시간표</span>
-                        </button>
-                    )}
-
-                    {/* Weekday / Holiday selector (Wonju Only) */}
-                    {isWonju && onDayModeChange && (
-                        <DayModeToggleGroup
-                            dayMode={dayMode}
-                            onDayModeChange={onDayModeChange}
-                            isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-                        />
-                    )}
-
-                    {/* Real-time Map Route & Running Bus Controls */}
+                    {/* Real-time Map Route & Running Bus Controls (Placed right next to City Selector) */}
                     <MapNavControls
                         allRoutes={allRoutes}
                         selectedRoute={selectedRoute}
@@ -331,8 +295,17 @@ function BottomNavComponent({
                         onToggleBusList={handleToggleBusList}
                     />
 
-                    {/* Divider before Theme Toggle */}
+                    {/* Divider before Toggles */}
                     <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+
+                    {/* 3-state Day Mode Toggle (Wonju Only) */}
+                    {isWonju && onDayModeChange && (
+                        <DayModeToggle
+                            dayMode={dayMode}
+                            onDayModeChange={onDayModeChange}
+                            isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                        />
+                    )}
 
                     {/* Theme Toggle Button */}
                     <NavThemeToggle/>

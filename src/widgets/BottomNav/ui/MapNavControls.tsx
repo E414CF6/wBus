@@ -51,11 +51,11 @@ export const MapNavControls = memo(function MapNavControls({
                 }}
             />
 
-            {/* Enhanced Route Selector Button (Opens RouteSelectModal; hidden on compact mobile since MapRouteHeader at top already provides route selection) */}
+            {/* Route Selector Button */}
             <button
                 type="button"
                 onClick={() => setIsRoutePickerOpen(true)}
-                className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${
                     isYonseiSelected
                         ? "bg-[#003876]/15 dark:bg-[#003876]/35 hover:bg-[#003876]/25 border border-[#003876]/40 text-[#003876] dark:text-blue-300"
                         : "bg-blue-600/10 dark:bg-blue-500/15 hover:bg-blue-600/20 dark:hover:bg-blue-500/25 border border-blue-500/30 text-blue-700 dark:text-blue-300"

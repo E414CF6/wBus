@@ -2,13 +2,13 @@
 
 import React, {useMemo, useState} from "react";
 import {Clock, Hash, Search, X} from "lucide-react";
-import type {MinuteItem} from "../lib/hourlyTimetable";
 import {
     buildFootnoteMap,
     computeDualHourlyTimetable,
     getFootnoteSymbol,
-    resolveWeekdayAndVacationRoutes,
-} from "../lib/hourlyTimetable";
+    type MinuteItem,
+    resolveWeekdayAndVacationRoutes
+} from "@entities/schedule";
 import type {BusRoute} from "../types";
 
 export interface DualHourlyTimetableBlockProps {

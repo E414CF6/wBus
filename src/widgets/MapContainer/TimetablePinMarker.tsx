@@ -552,7 +552,7 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                                         </div>
                                     ) : (
                                         <div className="text-sm font-bold text-slate-500 dark:text-slate-400 py-1">
-                                            금일 운행 종료 (이후 예정된 출발이 없습니다)
+                                            이후 예정된 출발이 없습니다.
                                         </div>
                                     )}
 

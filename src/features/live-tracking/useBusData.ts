@@ -28,6 +28,8 @@ interface UseBusData {
  * Custom hook that aggregates all bus-related data for a given route.
  * Now uses routeId-based API for more efficient data fetching.
  * @param routeName - The name of the route (e.g., "30", "34")
+ * @param enabled - Whether to enable fetching data for this route
+ * @param cityCode - The city code (default: "32020" for Wonju)
  * @returns An object containing all bus data for the route
  */
 export function useBusData(routeName: string, enabled: boolean = true, cityCode: string = "32020"): UseBusData {
