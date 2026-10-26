@@ -1,7 +1,8 @@
 "use client";
 
-import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Clock, LocateFixed, RotateCw, Search, X,} from "lucide-react";
+import React, {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
+import {createPortal} from "react-dom";
+import {Clock, LocateFixed, RotateCw, Search, X} from "lucide-react";
 
 import {
     type BusRoute,
@@ -25,6 +26,9 @@ export interface RouteScheduleModalProps {
 
 type TimetableViewMode = "summary" | "full";
 
+const emptySubscribe = () => () => {
+};
+
 export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
     isOpen,
     routeName,
@@ -32,6 +36,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
     dayMode = "AUTO",
     isTodayWeekendOrHoliday,
 }) => {
+    const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     useBodyScrollLock(isOpen);
 
     // Escape key to close
@@ -162,11 +167,11 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
         }
     }, []);
 
-    if (!isOpen) return null;
+    if (!isOpen || !isClient) return null;
 
-    return (
+    const modalContent = (
         <div
-            className="fixed inset-0 z-60 flex flex-col justify-end sm:justify-center items-center bg-black/50 backdrop-blur-xs transition-opacity duration-200 animate-fadeIn"
+            className="fixed inset-0 z-[120] flex flex-col justify-end sm:justify-center items-center bg-black/60 backdrop-blur-xs transition-opacity duration-200 animate-fadeIn pointer-events-auto"
             onClick={(e) => {
                 if (e.target === e.currentTarget) {
                     onClose();
@@ -177,7 +182,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
             aria-label={`${routeName}번 버스 시간표`}
         >
             <div
-                className="relative w-full sm:max-w-2xl max-h-[85dvh] sm:max-h-[82dvh] bg-white/95 dark:bg-[#0e1118]/95 backdrop-blur-3xl rounded-t-[32px] sm:rounded-3xl shadow-[0_-16px_50px_rgba(0,0,0,0.35)] sm:shadow-2xl border border-black/10 dark:border-white/10 flex flex-col overflow-hidden animate-slideUp select-none"
+                className="relative w-full sm:max-w-2xl max-h-[88dvh] sm:max-h-[82dvh] bg-white/95 dark:bg-[#0e1118]/95 backdrop-blur-3xl rounded-t-[32px] sm:rounded-3xl shadow-[0_-16px_50px_rgba(0,0,0,0.35)] sm:shadow-2xl border border-black/10 dark:border-white/10 flex flex-col overflow-hidden animate-slideUp select-none pb-[calc(env(safe-area-inset-bottom,0)+0.75rem)] sm:pb-0"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Mobile Drawer Pull Handle */}
@@ -563,6 +568,8 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
             />
         </div>
     );
+
+    return createPortal(modalContent, document.body);
 };
 
 export default RouteScheduleModal;
