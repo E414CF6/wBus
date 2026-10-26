@@ -7,8 +7,7 @@ import {revalidatePath} from "next/cache";
 import {CacheManager, getCachedOrFetch, invalidateCacheByPrefix, setCached} from "@shared/cache";
 import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import {invalidateRouteCaches} from "./api";
-import type {GeoPolyline, RouteMapData} from "./types";
-import type {StationLocation} from "@entities/station/types";
+import type {GeoPolyline} from "./types";
 import {
     calculatePolylineMeters,
     chunkCoordinates,
@@ -244,37 +243,8 @@ export async function refreshRouteData(
     console.log(`[RouteSyncService] Identified ${targetRoutes.length} routes to process.`);
 
     const routeMapping: Record<string, string[]> = {};
-    const allStopsMap: Record<string, StationLocation> = {};
     const CONCURRENCY = 3;
     let processedCount = 0;
-
-    // Load existing routeMap if exists to preserve non-processed routes
-    try {
-        const existingRouteMapPath = path.join(process.cwd(), "public", "routeMap.json");
-        if (fs.existsSync(existingRouteMapPath)) {
-            const parsed = JSON.parse(fs.readFileSync(existingRouteMapPath, "utf-8")) as RouteMapData;
-            if (parsed.route_numbers) {
-                Object.assign(routeMapping, parsed.route_numbers);
-            }
-        }
-    } catch {
-        // Ignore parse error
-    }
-
-    // Load existing stationMap if exists
-    try {
-        const existingStationMapPath = path.join(process.cwd(), "public", "stationMap.json");
-        if (fs.existsSync(existingStationMapPath)) {
-            const parsed = JSON.parse(fs.readFileSync(existingStationMapPath, "utf-8")) as {
-                stations?: Record<string, StationLocation>;
-            };
-            if (parsed.stations) {
-                Object.assign(allStopsMap, parsed.stations);
-            }
-        }
-    } catch {
-        // Ignore parse error
-    }
 
     // 2. Fetch stops & assemble polylines
     for (let i = 0; i < targetRoutes.length; i += CONCURRENCY) {
@@ -312,15 +282,6 @@ export async function refreshRouteData(
 
                     if (!routeMapping[routeNo]) routeMapping[routeNo] = [];
                     if (!routeMapping[routeNo].includes(routeId)) routeMapping[routeNo].push(routeId);
-
-                    stops.forEach((s) => {
-                        allStopsMap[s.nodeid] = {
-                            nodenm: s.nodenm,
-                            nodeno: s.nodeno,
-                            gpslati: s.gpslati,
-                            gpslong: s.gpslong,
-                        };
-                    });
 
                     // Build UP and DOWN polylines with OSRM road snapping (fallback to straight-lines)
                     const upCoords: [number, number][] = stops
@@ -404,34 +365,12 @@ export async function refreshRouteData(
         );
     }
 
-    const timestamp = new Date().toISOString();
-    const routeMapData: RouteMapData = {
-        lastUpdated: timestamp,
-        route_numbers: routeMapping,
-    };
-    const stationMapData = {
-        lastUpdated: timestamp,
-        stations: allStopsMap,
-    };
-
-    // Save consolidated maps to /tmp
-    try {
-        fs.writeFileSync("/tmp/routeMap.json", JSON.stringify(routeMapData, null, 2), "utf-8");
-        fs.writeFileSync("/tmp/stationMap.json", JSON.stringify(stationMapData, null, 2), "utf-8");
-    } catch (e) {
-        console.warn("[RouteSyncService] Failed writing to /tmp:", e);
-    }
-
-
-
     // Invalidate caches
     invalidateRouteCaches();
     polylineGenerationCache.clear();
     invalidateCacheByPrefix(["routes:", "polyline:", "bus-stops:", "route-stops:"]);
     try {
         revalidatePath("/api/route-stops");
-        revalidatePath("/map");
-        revalidatePath("/live");
     } catch {
         // Silently ignore outside Next.js request context
     }

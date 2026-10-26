@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
         },];
     }, async redirects() {
         return [{
+            source: "/live", destination: "/", permanent: true,
+        }, {
+            source: "/map", destination: "/", permanent: true,
+        }, {
             source: "/square", destination: "/", permanent: false,
         }, {
             source: "/chat", destination: "/", permanent: false,

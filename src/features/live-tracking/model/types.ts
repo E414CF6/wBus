@@ -1,6 +1,6 @@
-import type {BusDataError, BusItem, LiveConnectionStatus, SSEConnectionStatus} from "@entities/bus/types";
+import type {BusDataError, BusItem, LiveConnectionStatus} from "@entities/bus/types";
 
-export type {LiveConnectionStatus, SSEConnectionStatus};
+export type {LiveConnectionStatus};
 
 export interface BusLocationState {
     data: BusItem[];

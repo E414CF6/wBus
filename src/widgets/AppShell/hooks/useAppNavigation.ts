@@ -56,7 +56,6 @@ export function useAppNavigation() {
     });
 
     const isMapActive = activeTab === "map";
-    const hasVisitedMap = true;
 
     // Synchronize route when searchParams change
     const [prevSearchParams, setPrevSearchParams] = useState(searchParams);
@@ -82,13 +81,6 @@ export function useAppNavigation() {
         window.addEventListener("popstate", handlePopState);
         return () => window.removeEventListener("popstate", handlePopState);
     }, []);
-
-    // Scroll to top when changing tabs
-    useEffect(() => {
-        if (typeof window !== "undefined") {
-            window.scrollTo({top: 0, left: 0, behavior: "instant"});
-        }
-    }, [activeTab]);
 
     // Restore saved preferences once on initial client mount if not in URL
     const hasRestoredRef = useRef(false);
@@ -121,12 +113,6 @@ export function useAppNavigation() {
 
             if (typeof window !== "undefined") {
                 window.history.pushState(null, "", targetUrl);
-            }
-
-            try {
-                localStorage.setItem(STORAGE_KEYS.ACTIVE_TAB, tab);
-            } catch {
-                // Ignore
             }
         },
         [selectedRoute, currentCityCode]
@@ -178,7 +164,6 @@ export function useAppNavigation() {
         selectedRoute,
         setSelectedRoute,
         isMapActive,
-        hasVisitedMap,
         handleTabChange,
         handleRouteChange,
         handleSelectMapRoute,

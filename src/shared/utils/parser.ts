@@ -14,11 +14,6 @@ export function getEnvNumber(key: string | undefined, fallback: number): number 
     return Number.isNaN(parsed) ? fallback : parsed;
 }
 
-export function getEnvBoolean(key: string | undefined, fallback = false): boolean {
-    if (key === undefined) return fallback;
-    return ["true", "1", "yes", "y", "on"].includes(key.trim().toLowerCase());
-}
-
 export function getEnvArray<T = string>(key: string | undefined, separator = ",", fallback: T[] = []): T[] {
     if (!key) return fallback;
     return key.split(separator).map((item) => item.trim()) as unknown as T[];

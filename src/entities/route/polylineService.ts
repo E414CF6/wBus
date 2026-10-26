@@ -5,8 +5,6 @@ import type {Coordinate, GeoPolyline} from "@entities/route/types";
 
 import {CacheManager} from "@shared/cache/CacheManager";
 import {STORAGE_KEYS} from "@shared/config/env";
-import {getStationMap} from "@entities/station/api";
-import type {StationLocation} from "@entities/station/types";
 import {isFiniteNumber, snapPointToPolyline} from "@shared/utils/geo";
 import {findTurningDirection, smoothPolylineSpline} from "./polylineChunker";
 
@@ -36,21 +34,11 @@ const segmentedGeoJsonCache = new CacheManager<FeatureCollection>({
     ttlMs: 24 * 60 * 60 * 1000,
 });
 
-async function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordinate[], data: GeoPolyline): Promise<StopIndexMap | undefined> {
+function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordinate[], data: GeoPolyline): StopIndexMap | undefined {
     const stops = data.stops || [];
     if (stops.length === 0) return undefined;
 
     const map: StopIndexMap = {byId: {}, byIdDir: {}, byOrd: {}, byOrdDir: {}};
-
-    const needsStationMap = stops.some(s => s.lat === undefined || s.lon === undefined);
-    let stationMap: Record<string, StationLocation> = {};
-    if (needsStationMap) {
-        try {
-            stationMap = await getStationMap();
-        } catch (_e) {
-            console.warn("Failed to get station map for exact stop indexing", _e);
-        }
-    }
 
     // Group stops by direction and strictly sort by order
     const upStops = stops.filter(s => Number(s.ud) === 1).sort((a, b) => a.ord - b.ord);
@@ -63,8 +51,8 @@ async function buildStopIndexMap(upPolyline: Coordinate[], downPolyline: Coordin
             const ord = Number(stop.ord);
             let exactIndex = lastIdx;
 
-            const stopLat = stop.lat ?? (rawId ? stationMap[rawId]?.gpslati : undefined);
-            const stopLon = stop.lon ?? (rawId ? stationMap[rawId]?.gpslong : undefined);
+            const stopLat = stop.lat;
+            const stopLon = stop.lon;
 
             if (isFiniteNumber(stopLat) && isFiniteNumber(stopLon) && polyline.length >= 2) {
                 // We enforce monotonicity by forcing minSegmentIndex to lastIdx
@@ -256,31 +244,14 @@ async function fetchRoutePolyline(routeId: string, cityCode?: string): Promise<P
             return Math.sqrt(dLat * dLat + dLng * dLng) * 111000;
         };
 
-        let stationMap: Record<string, StationLocation> | null = null;
-        const getStationMapLazy = async (): Promise<Record<string, StationLocation>> => {
-            if (!stationMap) {
-                try {
-                    stationMap = await getStationMap();
-                } catch {
-                    stationMap = {};
-                }
-            }
-            return stationMap;
-        };
-
-        const buildPolylineFromStops = async (dirStops: typeof rawData.stops): Promise<Coordinate[]> => {
+        const buildPolylineFromStops = (dirStops: typeof rawData.stops): Coordinate[] => {
             const coords: Coordinate[] = [];
             const sorted = [...dirStops].sort((a, b) => a.ord - b.ord);
-            const mapData = dirStops.some(s => s.lat === undefined || s.lon === undefined) ? await getStationMapLazy() : {};
 
             for (const s of sorted) {
-                const rawId = typeof s.id === "string" ? s.id.trim() : "";
-                const station = rawId ? mapData[rawId] : null;
                 const sCoords = s as { id?: string; ord: number; lat?: number; lon?: number };
                 if (isFiniteNumber(sCoords.lat) && isFiniteNumber(sCoords.lon)) {
                     coords.push([sCoords.lat!, sCoords.lon!]);
-                } else if (station && isFiniteNumber(station.gpslati) && isFiniteNumber(station.gpslong)) {
-                    coords.push([station.gpslati, station.gpslong]);
                 }
             }
             return coords;
@@ -292,7 +263,7 @@ async function fetchRoutePolyline(routeId: string, cityCode?: string): Promise<P
 
         const upSpan = getPolylineSpanMeters(upPolyline);
         if (upSpan < 1000 && upStops.length >= 2) {
-            const upStopsPoly = await buildPolylineFromStops(upStops);
+            const upStopsPoly = buildPolylineFromStops(upStops);
             const upStopSpan = getPolylineSpanMeters(upStopsPoly);
             if (upStopSpan > 1500) {
                 upPolyline = smoothPolylineSpline(upStopsPoly);
@@ -301,7 +272,7 @@ async function fetchRoutePolyline(routeId: string, cityCode?: string): Promise<P
 
         const downSpan = getPolylineSpanMeters(downPolyline);
         if (downSpan < 1000 && downStops.length >= 2) {
-            const downStopsPoly = await buildPolylineFromStops(downStops);
+            const downStopsPoly = buildPolylineFromStops(downStops);
             const downStopSpan = getPolylineSpanMeters(downStopsPoly);
             if (downStopSpan > 1500) {
                 downPolyline = smoothPolylineSpline(downStopsPoly);
@@ -311,7 +282,7 @@ async function fetchRoutePolyline(routeId: string, cityCode?: string): Promise<P
         return {
             upPolyline,
             downPolyline,
-            stopIndexMap: await buildStopIndexMap(upPolyline, downPolyline, rawData),
+            stopIndexMap: buildStopIndexMap(upPolyline, downPolyline, rawData),
             turnIndex: upPolyline.length > 0 ? upPolyline.length - 1 : 0,
             bbox: extractBBox(rawData, [...upCoords, ...downCoords]),
         };

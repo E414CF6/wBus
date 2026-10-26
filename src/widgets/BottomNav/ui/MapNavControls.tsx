@@ -6,15 +6,12 @@ import {UI_TEXT} from "@shared/config/locale";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
 import {YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
-import type {DirectionCode} from "@entities/route/types";
 
 interface MapNavControlsProps {
     allRoutes?: string[];
     selectedRoute?: string;
     onSelectRoute?: (route: string) => void;
     runningBuses?: BusItem[];
-    getDirection?: (nodeId: string | null | undefined, nodeOrd: number, routeId?: string | null) => DirectionCode;
-    onBusClick?: (lat: number, lng: number) => void;
     connectionStatus?: LiveConnectionStatus;
     hasFetched?: boolean;
     isBusListOpen?: boolean;

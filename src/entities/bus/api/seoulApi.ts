@@ -1,14 +1,7 @@
 import {getCachedOrFetch, peekCached, setCached} from "@shared/cache";
 import {calculatePolylineMeters} from "@entities/route/polylineChunker";
 import type {GeoPolyline} from "@entities/route/types";
-import type {
-    RawBusArrival,
-    RawBusLocation,
-    RawBusStop,
-    RawCityRoute,
-    RawNearbyStop,
-    RawStationRoute,
-} from "./publicApi";
+import type {RawBusArrival, RawBusLocation, RawBusStop, RawCityRoute, RawNearbyStop,} from "./publicApi";
 
 /**
  * Seoul Metropolitan Government Bus Information System (TOPIS / ws.bus.go.kr) Client
@@ -798,50 +791,4 @@ export async function fetchSeoulNearbyStops(params: {
             citycode: SEOUL_CITY_CODE,
         }))
         .filter((s) => s.nodeid && s.gpslati > 0 && s.gpslong > 0);
-}
-
-/**
- * 7. Routes Passing Through a Station (`fetchSeoulRoutesByStation`)
- */
-export async function fetchSeoulRoutesByStation(nodeId: string): Promise<RawStationRoute[]> {
-    const trimmed = nodeId.trim();
-    const url = new URL(`${SBUS_WEB_BASE}/selectBusArrive.do`);
-    if (trimmed.length <= 5) {
-        url.searchParams.set("stnuid", trimmed);
-    } else {
-        url.searchParams.set("stopId", trimmed);
-    }
-
-    const res = await fetch(url.toString(), {
-        headers: {
-            "User-Agent": "Mozilla/5.0 (compatible; wBus/2.0)",
-            Accept: "application/json",
-        },
-        signal: AbortSignal.timeout(4500),
-    });
-
-    if (!res.ok) {
-        throw new Error(`[SeoulAPI] selectBusArrive.do HTTP ${res.status}`);
-    }
-
-    const json = (await res.json()) as SbusResponseEnvelope<{
-        resultList?: Array<{
-            rtid?: number | string;
-            rtnm?: string;
-            rtnum?: string;
-            rttp?: number | string;
-            rttpnm?: string;
-            sstnnm?: string;
-            estnnm?: string;
-        }>;
-    }>;
-    const list = json.ResponseVO?.data?.resultList ?? [];
-
-    return list.map((r) => ({
-        routeid: String(r.rtid ?? "").trim(),
-        routeno: String(r.rtnm || r.rtnum || "").trim(),
-        routetp: r.rttpnm || mapSeoulRouteType(r.rttp),
-        startnodenm: r.sstnnm,
-        endnodenm: r.estnnm,
-    }));
 }

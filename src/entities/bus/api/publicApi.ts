@@ -6,7 +6,6 @@ import {
     fetchSeoulBusLocations,
     fetchSeoulCityRoutes,
     fetchSeoulNearbyStops,
-    fetchSeoulRoutesByStation,
     fetchSeoulRouteStops,
     isWithinSeoulBounds,
     SEOUL_CITY_CODE,
@@ -226,10 +225,6 @@ interface RouteBusMetrics {
 }
 
 const routeBusMetricsMap = new Map<string, RouteBusMetrics>();
-
-export function getRouteBusCount(routeId: string, cityCode: string = CITY_CODE): number | undefined {
-    return routeBusMetricsMap.get(`${cityCode}:${routeId}`)?.busCount ?? routeBusMetricsMap.get(routeId)?.busCount;
-}
 
 /**
  * Returns dynamic TTL based on route service window and active bus count.
@@ -674,33 +669,6 @@ export async function fetchNearbyStops(params: {
         ...s,
         gpslati: Number(s.gpslati),
         gpslong: Number(s.gpslong),
-    }));
-}
-
-export interface RawStationRoute {
-    routeid: string;
-    routeno: string | number;
-    routetp?: string;
-    startnodenm?: string;
-    endnodenm?: string;
-}
-
-export async function fetchRoutesByStation(nodeId: string, cityCode = CITY_CODE): Promise<RawStationRoute[]> {
-    if (cityCode === SEOUL_CITY_CODE) {
-        return fetchSeoulRoutesByStation(nodeId);
-    }
-
-    const tagoCityCode = cityCode === "32320" ? "32020" : cityCode;
-    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawStationRoute>>(
-        "/BusSttnInfoInqireService/getSttnThrghRouteList",
-        {nodeId, cityCode: tagoCityCode, numOfRows: "200"},
-        {priority: API_PRIORITY.USER_INTERACTIVE}
-    );
-
-    const items = extractItems(data, `getSttnThrghRouteList:${cityCode}:${nodeId}`);
-    return items.map((r) => ({
-        ...r,
-        routeno: String(r.routeno ?? ""),
     }));
 }
 

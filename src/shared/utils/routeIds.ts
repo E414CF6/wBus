@@ -7,11 +7,3 @@ export function normalizeRouteIds(routeIds: readonly string[]): string[] {
 export function buildRouteIdsKey(routeIds: readonly string[], separator = ","): string {
     return normalizeRouteIds(routeIds).join(separator);
 }
-
-export function parseRouteIdsParam(rawRouteIds: string | null | undefined, limit?: number): string[] {
-    const normalizedRouteIds = normalizeRouteIds((rawRouteIds ?? "").split(","));
-    if (typeof limit !== "number") {
-        return normalizedRouteIds;
-    }
-    return normalizedRouteIds.slice(0, Math.max(0, limit));
-}

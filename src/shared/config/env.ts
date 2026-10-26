@@ -5,13 +5,8 @@ import {UI_TEXT} from "@shared/config/locale";
  * Common Static Data File & Folder Names
  */
 export const STATIC_FILE_NAMES = {
-    SCHEDULE: "schedule.json",
-    SCHEDULE_SUMMARY: "scheduleSummary.json",
-    STYLE: "styles/liberty.json",
-    STYLE_DARK: "styles/darker.json",
     STYLE_LIBERTY: "styles/liberty.json",
     STYLE_DARKER: "styles/darker.json",
-    ROUTE_DIR: "routes",
 } as const;
 
 // Default Geolocation Coordinates (Wonju City Hall / Central Station Area)
@@ -39,17 +34,11 @@ export const API_CONFIG = {
         DATA_DELAY_MS: getEnvNumber(process.env.NEXT_PUBLIC_LIVE_DATA_DELAY, 12000),
     },
     STATIC: {
-        REVALIDATE_SEC: 3600,
         PATHS: {
-            ROUTE_DIR: STATIC_FILE_NAMES.ROUTE_DIR,
             MAP_STYLE: STATIC_FILE_NAMES.STYLE_LIBERTY,
             MAP_STYLE_DARK: STATIC_FILE_NAMES.STYLE_DARKER,
-            SCHEDULE: STATIC_FILE_NAMES.SCHEDULE,
-            SCHEDULE_SUMMARY: STATIC_FILE_NAMES.SCHEDULE_SUMMARY,
         },
     },
-    MAP_STYLE_FALLBACK: getEnv(process.env.NEXT_PUBLIC_MAP_FALLBACK_API_URL, "https://tiles.openfreemap.org/styles/bright"),
-    MAP_STYLE_DARK_FALLBACK: getEnv(process.env.NEXT_PUBLIC_MAP_DARK_FALLBACK_API_URL, "https://tiles.openfreemap.org/styles/dark"),
 } as const;
 
 export const MAP_SETTINGS = {
@@ -76,15 +65,6 @@ export const MAP_SETTINGS = {
     },
     ALWAYS_UPWARD_NODE_IDS: getEnvArray(process.env.NEXT_PUBLIC_ALWAYS_UPWARD_NODE_IDS, ","),
     DEFAULT_ROUTE: getEnv(process.env.NEXT_PUBLIC_DEFAULT_ROUTE, "30"),
-    BUS_COLOR_BY_TYPE: {
-        EXPRESS: "#dc2626", GENERAL: "#2563eb", VILLAGE: "#16a34a", CIRCUIT: "#16a34a", DEFAULT: "#2563eb",
-    },
-} as const;
-
-export const UI_CONFIG = {
-    TRANSITIONS: {
-        SPLASH_FADE_MS: getEnvNumber(process.env.NEXT_PUBLIC_SPLASH_FADE_DURATION, 500),
-    },
 } as const;
 
 export const STORAGE_KEYS = {
@@ -92,8 +72,6 @@ export const STORAGE_KEYS = {
     CITY_CODE: "wbus_selected_city",
     CITY_AUTO_DETECT: "wbus_city_auto_detect",
     MAP_VIEW: "wbus_map_view",
-    ACTIVE_TAB: "wbus_active_tab",
-    TIMETABLE_SUBTAB: "wbus_timetable_subtab",
     WONJU_BOOKMARKS: "wonju_bus_bookmarks",
     WONJU_RECENT_ROUTES: "wbus_recent_map_routes",
     SCHEDULE_CACHE: "wbus_cached_schedule_v2",
@@ -103,7 +81,6 @@ export const STORAGE_KEYS = {
     POLYLINE_PREFIX: "wbus_cached_polyline_v1_",
     ROUTE_STOPS_PREFIX: "wbus_cached_route_stops_v1_",
     FAVORITE_STOPS: "wbus_favorite_stops_v1",
-    NEARBY_STOPS_ENABLED: "wbus_nearby_stops_enabled",
 } as const;
 
 export function getBookmarkStorageKey(cityCode: string = "32020"): string {

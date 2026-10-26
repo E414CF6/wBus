@@ -100,7 +100,7 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
     // 1. Fetch Route Variations (stops & turning points)
     const {variations} = useRouteVariations(routeName, enabled, cityCode);
     const primaryVariant = variations?.[0] ?? null;
-    const stops = primaryVariant?.stops ?? [];
+    const stops = useMemo(() => primaryVariant?.stops ?? [], [primaryVariant?.stops]);
 
     // 2. Fetch Timetable Schedules
     const {routes: scheduleRoutes} = useSchedule(enabled && isWonju);
@@ -120,11 +120,14 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
 
     // Active Day Mode selection for timetable (평일 vs 주말/공휴일 등)
     const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+    const [prevSelectionKey, setPrevSelectionKey] = useState(() => `${dayMode}_${routeName}`);
 
-    // Reset variant selection when dayMode or routeName changes
-    useEffect(() => {
+    // Reset variant selection during render when dayMode or routeName changes
+    const currentSelectionKey = `${dayMode}_${routeName}`;
+    if (prevSelectionKey !== currentSelectionKey) {
+        setPrevSelectionKey(currentSelectionKey);
         setSelectedVariantId(null);
-    }, [dayMode, routeName]);
+    }
 
     const activeSchedule: BusRoute | null = useMemo(() => {
         return resolveActiveScheduleVariant(

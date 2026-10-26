@@ -1,14 +1,11 @@
-import {ROUTE_CONFIG} from "./yonseiRoutes";
-import {classifyRouteType, type GenericRouteType, type RouteColorConfig, ROUTE_TYPE_COLORS} from "./routeColor";
+import {classifyRouteType, type GenericRouteType, ROUTE_TYPE_COLORS, type RouteColorConfig} from "./routeColor";
 
 export interface RouteMeta {
     routeNo: string;
     origin: string;
     destination: string;
     description?: string;
-    viaStops?: string;
     isYonsei?: boolean;
-    category: RouteCategory;
     firstTime?: string;
     lastTime?: string;
     routeType?: string;
@@ -16,11 +13,9 @@ export interface RouteMeta {
     colorTheme: RouteColorConfig;
 }
 
-export type RouteCategory = | "ALL" | "BOOKMARKS" | "YONSEI" | "1_19" | "20_49" | "50_99" | "100_PLUS" | "PUBLIC";
-
 export const YONSEI_ROUTE_SET = new Set(["30", "34", "34-1"]);
 
-export const STATIC_ROUTE_METADATA: Record<string, { origin: string; destination: string; description?: string }> = {
+const STATIC_ROUTE_METADATA: Record<string, { origin: string; destination: string; description?: string }> = {
     "2": {origin: "관설동종점", destination: "횡성", description: "관설동 ↔ 원주역 ↔ 횡성"},
     "2-1": {origin: "관설동종점", destination: "횡성", description: "관설동 ↔ 남부시장 ↔ 횡성"},
     "3": {origin: "장양리", destination: "장양리 (순환)", description: "장양리 순환"},
@@ -42,17 +37,21 @@ export const STATIC_ROUTE_METADATA: Record<string, { origin: string; destination
     "24": {origin: "장양리", destination: "운학", description: "장양리 ↔ 신림 ↔ 운학"},
     "25": {origin: "장양리", destination: "주천", description: "장양리 ↔ 신림 ↔ 주천"},
     "30": {
-        origin: "장양리", destination: "연세대", description: ROUTE_CONFIG["30"]?.description || "장양리 ↔ 터미널 ↔ 원주역 ↔ 연세대",
+        origin: "장양리",
+        destination: "연세대",
+        description: "장양리 ↔ 터미널 ↔ 원주역 ↔ (상지대) ↔ 연세대 (매일 운행)",
     },
     "31": {origin: "장양리", destination: "귀래·운남·용암", description: "장양리 ↔ 터미널 ↔ 귀래"},
     "32": {origin: "장양리", destination: "서곡리", description: "장양리 ↔ 터미널 ↔ 서곡리"},
     "34": {
-        origin: "장양리", destination: "연세대", description: ROUTE_CONFIG["34"]?.description || "장양리 ↔ 남부시장 ↔ 한라대/흥업 ↔ 연세대",
+        origin: "장양리",
+        destination: "연세대",
+        description: "장양리 ↔ 남부시장 ↔ 의료원 ↔ 한라대/흥업 ↔ 연세대",
     },
     "34-1": {
         origin: "장양리",
-        destination: "회촌 (연세대 경유)",
-        description: ROUTE_CONFIG["34-1"]?.description || "장양리 ↔ 원주역 ↔ 연세대 ↔ 매지리/회촌",
+        destination: "회촌",
+        description: "장양리 ↔ 원주역 ↔ 남부시장 ↔ 연세대 ↔ 매지리/회촌",
     },
     "41": {origin: "관설동종점", destination: "구룡사", description: "관설동 ↔ 중앙시장 ↔ 치악산 구룡사"},
     "41-2": {origin: "관설동종점", destination: "구룡사", description: "관설동 ↔ 혁신도시 ↔ 치악산 구룡사"},
@@ -73,20 +72,6 @@ export const STATIC_ROUTE_METADATA: Record<string, { origin: string; destination
     "100-2": {origin: "당둔지승강장", destination: "기업도시", description: "혁신도시 ↔ 기업도시"},
     "111": {origin: "관설동종점", destination: "롯데캐슬2차", description: "관설동 ↔ 혁신도시 ↔ 기업도시"},
 };
-
-/**
- * Categorize route by route number
- */
-export function getRouteCategory(route: string): RouteCategory {
-    if (YONSEI_ROUTE_SET.has(route)) return "YONSEI";
-    if (route.startsWith("공영") || route.includes("순환") || route.includes("조조")) return "PUBLIC";
-    const num = parseInt(route, 10);
-    if (isNaN(num)) return "ALL";
-    if (num < 20) return "1_19";
-    if (num < 50) return "20_49";
-    if (num < 100) return "50_99";
-    return "100_PLUS";
-}
 
 const DYNAMIC_ROUTE_METADATA = new Map<string, RouteMeta>();
 
@@ -123,7 +108,6 @@ export function registerDynamicRouteMeta(
             destination,
             description: routeType ? `[${routeType}] ${origin} ↔ ${destination}` : `${origin} ↔ ${destination}`,
             isYonsei: cityCode === "32020" && YONSEI_ROUTE_SET.has(routeNo),
-            category: getRouteCategory(routeNo),
             firstTime,
             lastTime,
             routeType,
@@ -144,13 +128,11 @@ export function getRouteMeta(routeName: string, cityCode = "32020"): RouteMeta {
 
     if (cityCode === "32020") {
         const isYonsei = YONSEI_ROUTE_SET.has(routeName);
-        const yonseiConfig = ROUTE_CONFIG[routeName];
         const staticInfo = STATIC_ROUTE_METADATA[routeName];
 
-        const origin = yonseiConfig?.originLabel?.replace(" 출발", "") || staticInfo?.origin || "관설동/장양리";
-        const destination = yonseiConfig?.destLabel?.replace(" 출발", "") || staticInfo?.destination || "원주시내";
-        const description = yonseiConfig?.description || staticInfo?.description || `${origin} ↔ ${destination}`;
-        const viaStops = yonseiConfig?.viaStops;
+        const origin = staticInfo?.origin || "관설동/장양리";
+        const destination = staticInfo?.destination || "원주시내";
+        const description = staticInfo?.description || `${origin} ↔ ${destination}`;
         const genericType = classifyRouteType(routeName);
 
         return {
@@ -158,9 +140,7 @@ export function getRouteMeta(routeName: string, cityCode = "32020"): RouteMeta {
             origin,
             destination,
             description,
-            viaStops,
             isYonsei,
-            category: getRouteCategory(routeName),
             genericType,
             colorTheme: ROUTE_TYPE_COLORS[genericType],
         };
@@ -174,7 +154,6 @@ export function getRouteMeta(routeName: string, cityCode = "32020"): RouteMeta {
         destination: "종점",
         description: `${routeName}번 시내버스`,
         isYonsei: false,
-        category: getRouteCategory(routeName),
         genericType,
         colorTheme: ROUTE_TYPE_COLORS[genericType],
     };

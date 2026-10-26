@@ -1,5 +1,4 @@
 export type LiveConnectionStatus = "connecting" | "connected" | "fallback" | "suspended";
-export type SSEConnectionStatus = LiveConnectionStatus; // Backward-compatibility alias
 
 export interface ApiResponse<T = unknown, M = unknown> {
     success: boolean;

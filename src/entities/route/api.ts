@@ -1,8 +1,6 @@
-import type {GeoPolyline, RouteDetail, RouteInfo, RouteVariation, RouteVariationStop,} from "@entities/route/types";
+import type {GeoPolyline, RouteDetail, RouteInfo, RouteVariation, RouteVariationStop} from "@entities/route/types";
 import type {RawCityRoute} from "@entities/bus/api/publicApi";
 import {registerDynamicRouteMeta} from "@entities/route/routeMetadata";
-import {getStationMap} from "@entities/station/api";
-import type {StationLocation} from "@entities/station/types";
 
 import {fetchAPI, HttpError} from "@shared/api/fetchAPI";
 import {CacheManager} from "@shared/cache/CacheManager";
@@ -183,15 +181,6 @@ export async function fetchCityRoutesData(cityCode?: string): Promise<CityRoutes
 
 // Public API
 
-export async function getRouteMap(cityCode?: string): Promise<Record<string, string[]>> {
-    try {
-        const data = await fetchCityRoutesData(cityCode);
-        return data.route_numbers || {};
-    } catch {
-        return {};
-    }
-}
-
 export async function getPolyline(routeKey: string, cityCode?: string): Promise<GeoPolyline | null> {
     const cCode = resolveCityCode(cityCode);
     const cacheKey = `${cCode}:${routeKey}`;
@@ -291,20 +280,6 @@ export async function getRouteVariations(routeName: string, cityCode?: string): 
         );
         if (validPolylines.length === 0) return [];
 
-        // Lazy fetch stationMap only if any stop is missing nodeno or coordinates
-        const needsStationMap = validPolylines.some((p) =>
-            p.poly.stops.some((s) => !s.nodeno || s.lat === undefined || s.lon === undefined)
-        );
-
-        let stationMap: Record<string, StationLocation> = {};
-        if (needsStationMap) {
-            try {
-                stationMap = await getStationMap();
-            } catch {
-                // Station map is optional for coordinates, used only for nodeno enrichment
-            }
-        }
-
         const baseStops = validPolylines[0].poly.stops;
         const baseNames = new Set(baseStops.map((s) => s.name));
         const baseFirst = baseStops[0]?.name ?? "";
@@ -318,9 +293,9 @@ export async function getRouteVariations(routeName: string, cityCode?: string): 
                 nodenm: s.name,
                 nodeord: s.ord,
                 updowncd: s.ud,
-                gpslati: s.lat ?? stationMap[s.id]?.gpslati ?? 0,
-                gpslong: s.lon ?? stationMap[s.id]?.gpslong ?? 0,
-                nodeno: String(s.nodeno || stationMap[s.id]?.nodeno || ""),
+                gpslati: s.lat ?? 0,
+                gpslong: s.lon ?? 0,
+                nodeno: String(s.nodeno || ""),
             }));
 
             // Find turning point station:

@@ -115,11 +115,14 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
 
     // Day type selection (평일, 토요일, 방학·휴일 등)
     const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+    const [prevSelectionKey, setPrevSelectionKey] = useState(() => `${dayMode}_${routeName}`);
 
-    // Reset variant selection when dayMode or routeName changes
-    useEffect(() => {
+    // Reset variant selection during render when dayMode or routeName changes
+    const currentSelectionKey = `${dayMode}_${routeName}`;
+    if (prevSelectionKey !== currentSelectionKey) {
+        setPrevSelectionKey(currentSelectionKey);
         setSelectedVariantId(null);
-    }, [dayMode, routeName]);
+    }
 
     const activeVariant: BusRoute | null = useMemo(() => {
         return resolveActiveScheduleVariant(
@@ -222,14 +225,26 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                         </div>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="p-1.5 rounded-full bg-black/5 dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition cursor-pointer shrink-0 active:scale-95"
-                        aria-label="시간표 닫기"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => refreshSchedule()}
+                            disabled={isScheduleRefreshing}
+                            className="p-1.5 rounded-full bg-black/5 dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition cursor-pointer active:scale-95 disabled:opacity-40"
+                            aria-label="시간표 새로고침"
+                            title="시간표 새로고침"
+                        >
+                            <RotateCw className={`w-4 h-4 ${isScheduleRefreshing ? "animate-spin" : ""}`}/>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="p-1.5 rounded-full bg-black/5 dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition cursor-pointer active:scale-95"
+                            aria-label="시간표 닫기"
+                        >
+                            <X className="w-4 h-4"/>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Modal Body */}

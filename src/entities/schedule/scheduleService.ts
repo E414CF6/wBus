@@ -26,10 +26,7 @@ function getLocalCachePath(): string {
 function loadCandidateDatasets(): RouteDataset[] {
     const candidates = [
         "/tmp/schedule.json",
-        "/tmp/scheduleCache.json",
-        "/tmp/cache.json",
         getLocalCachePath(),
-        path.join(process.cwd(), "public", "data", "schedule.json"),
     ];
 
     const datasets: RouteDataset[] = [];
@@ -119,29 +116,9 @@ export async function saveCache(data: RouteDataset): Promise<void> {
         data, meta, timestamp: Date.now(),
     };
 
-    const summaryData = {
-        updatedAt: data.updatedAt,
-        sourceUrl: data.sourceUrl,
-        totalRoutes: data.routes.length,
-        routes: data.routes.map((r) => ({
-            id: r.id,
-            rawNo: r.rawNo,
-            routeNo: r.routeNo,
-            dayType: r.dayType,
-            origin: r.origin,
-            destination: r.destination,
-            firstBus: r.firstBus,
-            lastBus: r.lastBus,
-            runCount: r.runCount,
-            interval: r.interval,
-        })),
-    };
-    const summaryJsonStr = JSON.stringify(summaryData, null, 2);
-
     // 2. Save to /tmp for serverless container caching
     try {
         fs.writeFileSync(/*turbopackIgnore: true*/ "/tmp/schedule.json", jsonStr, "utf-8");
-        fs.writeFileSync(/*turbopackIgnore: true*/ "/tmp/scheduleSummary.json", summaryJsonStr, "utf-8");
     } catch {
         // Ignore
     }
@@ -155,8 +132,6 @@ export async function saveCache(data: RouteDataset): Promise<void> {
                 fs.mkdirSync(/*turbopackIgnore: true*/ dir, {recursive: true});
             }
             fs.writeFileSync(/*turbopackIgnore: true*/ p, jsonStr, "utf-8");
-            const summaryPath = p.replace("schedule.json", "scheduleSummary.json");
-            fs.writeFileSync(/*turbopackIgnore: true*/ summaryPath, summaryJsonStr, "utf-8");
         } catch {
             // Silently ignore if filesystem is unexpectedly read-only
         }

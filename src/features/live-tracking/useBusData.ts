@@ -3,7 +3,7 @@ import {useRouteInfo} from "@entities/route/hooks";
 import type {RouteInfo} from "@entities/route/types";
 
 import {useBusDirection} from "./useBusDirection";
-import {type SSEConnectionStatus, useBusLocationData} from "./useBusLocation";
+import {type LiveConnectionStatus, useBusLocationData} from "./useBusLocation";
 
 import {type BusPolylineSet, getFallbackPolylines, useBusPolylineMap} from "./usePolyline";
 
@@ -16,7 +16,7 @@ interface UseBusData {
     polylineMap: Map<string, BusPolylineSet>;
     fallbackPolylines: BusPolylineSet;
     activeRouteId: string | null;
-    connectionStatus: SSEConnectionStatus;
+    connectionStatus: LiveConnectionStatus;
     hasFetched: boolean;
     error: BusDataError;
     lastUpdated: number | null;

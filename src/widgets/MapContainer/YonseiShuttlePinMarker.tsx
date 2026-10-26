@@ -38,7 +38,7 @@ type ShuttleDayType = "WEEKDAY" | "SUNDAY";
 export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
                                                                                enabled = true,
                                                                                dayMode = "AUTO",
-                                                                               isTodayWeekendOrHoliday,
+                                                                               isTodayWeekendOrHoliday: _isTodayWeekendOrHoliday,
                                                                            }: YonseiShuttlePinMarkerProps) {
     const {map} = useAppMapContext();
 

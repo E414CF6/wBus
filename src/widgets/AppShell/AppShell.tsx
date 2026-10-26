@@ -31,7 +31,6 @@ export function AppShell() {
         setDayMode,
         selectedRoute,
         isMapActive,
-        hasVisitedMap,
         handleTabChange,
         handleRouteChange,
     } = useAppNavigation();
@@ -100,7 +99,7 @@ export function AppShell() {
     );
 
     // Live telemetry for active map route
-    const liveBusData = useBusSortedList(activeRoute, hasVisitedMap && isMapActive, currentCity.code);
+    const liveBusData = useBusSortedList(activeRoute, isMapActive, currentCity.code);
 
     // Direction filter for map polyline rendering (all, up, down) scoped per active route
     const [directionMap, setDirectionMap] = useState<Record<string, "all" | "up" | "down">>({});

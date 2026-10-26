@@ -12,20 +12,6 @@ export const COMMON_STRINGS = {
     ROUTE_LABEL: (route: string) => `${route}`,
 } as const;
 
-export const CONNECTION_STRINGS = {
-    CONNECTING: "연결 중...",
-    CONNECTED: "실시간 연결됨",
-    FALLBACK: "업데이트 중",
-    SUSPENDED: "대기 상태",
-    SERVICE_ENDED: "운행 종료",
-    STATUS_TOOLTIP: "실시간 연결 상태 (클릭 시 재연결)",
-    DEGRADED: "(지연)",
-    TOOLTIP_CONNECTING: "실시간 위치 API 연결 대기 중",
-    TOOLTIP_WAITING: "화면 비활성화로 일시 대기 중",
-    TOOLTIP_DEGRADED: "실시간 버스 운행 중 (일부 데이터 지연)",
-    TOOLTIP_SERVICE_ENDED: "현재 운행 중인 버스가 없습니다 (운행 종료 또는 배차 대기)",
-} as const;
-
 export const TIME_STRINGS = {
     MINUTE_SUFFIX: "분",
     HOUR_SUFFIX: "시간",
@@ -74,24 +60,6 @@ export const BOTTOM_NAV_STRINGS = {
     PICK_ROUTE_TITLE: "노선 선택",
     SELECT_ROUTE_TITLE: "노선 선택 (검색/목록)",
     DEFAULT_ROUTE_NAME: "노선",
-} as const;
-
-export const BUS_SERVICE_STRINGS = {
-    DATA_UPDATED: "시간표 데이터가 업데이트되었습니다.",
-    TIMEOUT_MAINTAIN_CACHE: "서버 연결 시간 초과로 인해 신규 수집을 취소하고 기존 시간표를 유지합니다.",
-    SERVER_TIMEOUT_FALLBACK: "서버 응답 지연으로 기존 시간표를 유지합니다.",
-    REFRESH_ERROR: "시간표 갱신 처리 중 오류가 발생했습니다.",
-} as const;
-
-export const SCHEDULE_STRINGS = {
-    MAJOR_STOPS: "주요 정류장",
-    TIMETABLE: "시간표",
-    NEXT_BUS: "다음 버스",
-    SHOW_DETAILS: "시간표 보기",
-    HIDE_DETAILS: "시간표 접기",
-    NO_SERVICE: "운행 없음",
-    NOTES_TITLE: "참고 사항",
-    LAST_UPDATED: "최종 업데이트:",
 } as const;
 
 export const BUS_LIST_STRINGS = {
@@ -157,19 +125,4 @@ export const METADATA_STRINGS = {
     KEYWORDS: ["wBus", "더블유버스", "원주버스", "원주시내버스", "원주 버스 실시간", "원주 버스 시간표", "원주 버스 위치", "연세대 미래캠퍼스 버스", "연세대 미래캠 버스", "연세대 셔틀버스", "30번 버스", "34번 버스", "34-1번 버스", "원주시 교통정보",],
     OG_LOCALE: APP_LOCALE.OG_LOCALE,
     AUTHOR: "wBus",
-} as const;
-
-export const DATA_LABELS_STRINGS = {
-    SCHEDULE_DATA: "시간표 데이터",
-} as const;
-
-export const ROUTE_MAP_STRINGS = {
-    ORIGIN: "기점", DESTINATION: "종점", FIRST_BUS: "첫차", LAST_BUS: "막차", INTERVAL: "배차간격", MINUTES_UNIT: "분",
-} as const;
-
-export const FOOTER_STRINGS = {
-    COPYRIGHT: "© 2026 wBus",
-    DESCRIPTION: "시내버스 정보 서비스",
-    LINKS: [{label: "이용약관", href: "/terms"}, {label: "개인정보처리방침", href: "/privacy"},],
-    DISCLAIMER: "본 서비스는 참고용이며, 실제 운행 정보와 다를 수 있습니다.",
 } as const;

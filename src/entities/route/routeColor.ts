@@ -104,69 +104,6 @@ export function classifyRouteType(routeName: string, routeTp?: string): GenericR
     return "MAIN";
 }
 
-export const ROUTE_COLOR_PALETTE: RouteColorConfig[] = [
-    ROUTE_TYPE_COLORS.MAIN,
-    ROUTE_TYPE_COLORS.BRANCH,
-    ROUTE_TYPE_COLORS.EXPRESS,
-    {
-        main: "#d97706", // Amber
-        downMain: "#b45309",
-        bg: "bg-amber-600",
-        text: "text-amber-600 dark:text-amber-400",
-        border: "border-amber-500/30",
-        badgeBg: "bg-amber-500/10 dark:bg-amber-400/15"
-    },
-    {
-        main: "#7c3aed", // Purple
-        downMain: "#6d28d9",
-        bg: "bg-purple-600",
-        text: "text-purple-600 dark:text-purple-400",
-        border: "border-purple-500/30",
-        badgeBg: "bg-purple-500/10 dark:bg-purple-400/15"
-    },
-    {
-        main: "#0891b2", // Cyan
-        downMain: "#0e7490",
-        bg: "bg-cyan-600",
-        text: "text-cyan-600 dark:text-cyan-400",
-        border: "border-cyan-500/30",
-        badgeBg: "bg-cyan-500/10 dark:bg-cyan-400/15"
-    },
-];
-
-/**
- * Returns a color configuration for a given route name and optional type.
- * EXPRESS: Red, MAIN: Blue, BRANCH: Green.
- */
-export function getRouteColor(routeName: string, routeTp?: string): RouteColorConfig {
-    if (!routeName) return ROUTE_TYPE_COLORS.MAIN;
-    const type = classifyRouteType(routeName, routeTp);
-    return ROUTE_TYPE_COLORS[type];
-}
-
-/**
- * Returns a distinct color configuration for a specific route ID within a route or by ID hash.
- */
-export function getRouteIdColor(routeId?: string | null, routeIds?: string[], routeName?: string, routeTp?: string): RouteColorConfig {
-    if (routeIds && routeIds.length > 0 && routeId) {
-        const idx = routeIds.indexOf(routeId);
-        if (idx === 0) {
-            return getRouteColor(routeName || "", routeTp);
-        }
-        if (idx > 0) {
-            return ROUTE_COLOR_PALETTE[(idx + 1) % ROUTE_COLOR_PALETTE.length];
-        }
-    }
-
-    return getRouteColor(routeName || "", routeTp);
-}
-
-export const BUS_DIRECTION_COLORS = {
-    UP: "#2563eb",     // Blue
-    DOWN: "#1d4ed8",   // Darker Blue
-    UNKNOWN: "#2563eb",
-} as const;
-
 /**
  * Returns a smart bus marker color:
  * - On distinct/diverging branch sections: Branch color matching polyline (#059669, #d97706, etc.).

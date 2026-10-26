@@ -4,7 +4,6 @@ import {
     DEFAULT_STALE_IF_ERROR_SECONDS,
     DEFAULT_STALE_WHILE_REVALIDATE_SECONDS,
 } from "@shared/cache/cachePolicy";
-import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import type {CachedData} from "./types";
 
 /**
@@ -80,15 +79,6 @@ export function invalidateCacheByPrefix(prefixes: string | string[]): number {
 }
 
 /**
- * Clear the entire L1 memory cache.
- */
-export function clearMemoryCache(): void {
-    memoryCache.clear();
-    pendingRequests.clear();
-    revalidateState.clear();
-}
-
-/**
  * High-performance Cache-Aside pattern with Memory LRU + SWR.
  */
 export async function getCachedOrFetch<T>(
@@ -129,30 +119,6 @@ export async function getCachedOrFetch<T>(
     // 2. Cache Miss: Fetch and store
     const memEntry = (memoryCache.get(key) as CachedData<T> | null) ?? undefined;
     return fetchAndStore(key, fetcher, ttlSeconds, memEntry, staleIfErrorSeconds);
-}
-
-export async function getMultipleCachedOrFetch<T>(
-    items: Array<{ key: string; fetcher: () => Promise<T>; options?: CacheOptions }>,
-    defaultOptions?: CacheOptions
-): Promise<Map<string, CachedData<T>>> {
-    const results = new Map<string, CachedData<T>>();
-    const settled = await mapWithConcurrencyLimit(
-        items,
-        async (item) => {
-            const mergedOptions = {...defaultOptions, ...item.options};
-            const cached = await getCachedOrFetch(item.key, item.fetcher, mergedOptions);
-            return {key: item.key, cached};
-        },
-        {concurrency: 5, staggerMs: 20}
-    );
-
-    for (const res of settled) {
-        if (res.status === "fulfilled" && res.value) {
-            results.set(res.value.key, res.value.cached);
-        }
-    }
-
-    return results;
 }
 
 async function fetchAndStore<T>(

@@ -19,11 +19,6 @@ export type BusStopArrival = {
     vehicletp: string;
 };
 
-export interface StationMapData {
-    lastUpdated: string;
-    stations: Record<string, StationLocation>;
-}
-
 export type NearbyStop = BusStop & {
     citycode?: string | number;
     distanceMeters?: number;
