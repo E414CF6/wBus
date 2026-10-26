@@ -9,7 +9,6 @@ const PRECACHE_ASSETS = [
     "/styles/liberty.json",
     "/styles/darker.json",
     "/schedule.json",
-    "/scheduleSummary.json",
 ];
 
 self.addEventListener("install", (event) => {
