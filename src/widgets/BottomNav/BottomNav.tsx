@@ -15,18 +15,16 @@ import {DayModeToggleGroup} from "./ui/DayModeToggleGroup";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
-import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
+import type {DayMode, NavTab} from "@shared/types/navigation";
 
-export type {DayMode, NavTab, TimetableSubTab};
+export type {DayMode, NavTab};
 
 export interface BottomNavProps {
     activeTab?: NavTab;
     onTabChange?: (tab: NavTab) => void;
     showScheduleTab?: boolean;
 
-    // Dynamic Timetable options (passed for compatibility when schedule modal is open)
-    scheduleSubTab?: TimetableSubTab;
-    onScheduleSubTabChange?: (subTab: TimetableSubTab) => void;
+    // Timetable options (Wonju only)
     dayMode?: DayMode;
     onDayModeChange?: (mode: DayMode) => void;
     isTodayWeekendOrHoliday?: boolean;
@@ -50,7 +48,7 @@ export interface BottomNavProps {
  * Redesigned around Map-Centric Philosophy:
  * - Brand Identity (Click to recenter current city)
  * - Region Selector Button (Manual confirmation when panning to new region + 138-city modal)
- * - Transit Wiki Button (Next to Region Selector)
+ * - Timetable Button (Wonju Only)
  * - Route Selector & Running Bus List Drawer Toggle
  * - Theme Switcher
  */

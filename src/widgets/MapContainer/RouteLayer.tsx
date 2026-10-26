@@ -30,6 +30,9 @@ interface RouteLayerProps {
 // Component
 // ----------------------------------------------------------------------
 
+// Routes passing through Yonsei University Mirae Campus that show the shuttle bus pin
+const YONSEI_SHUTTLE_ROUTES = new Set(["30", "34", "34-1"]);
+
 /**
  * Renders all map layers for a single route (markers, stops, and polyline).
  * Memoized to prevent re-rendering ALL routes when only one route's data updates.
@@ -67,7 +70,7 @@ const RouteLayer = memo(({
             dayMode={dayMode}
             isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
         />
-        {cityCode === "32020" && (
+        {cityCode === "32020" && YONSEI_SHUTTLE_ROUTES.has(routeName) && (
             <YonseiShuttlePinMarker
                 enabled={enabled}
                 dayMode={dayMode}

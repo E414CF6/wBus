@@ -1,20 +1,18 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {
-    Clock,
-    LocateFixed,
-    RotateCw,
-    Search,
-    Star,
-    X,
-} from "lucide-react";
+import {Clock, LocateFixed, RotateCw, Search, X,} from "lucide-react";
 
-import {type BusRoute, getNextDeparture, resolveActiveScheduleVariant, useSchedule} from "@entities/schedule";
+import {
+    type BusRoute,
+    DualHourlyTimetableBlock,
+    getNextDeparture,
+    resolveActiveScheduleVariant,
+    useSchedule
+} from "@entities/schedule";
 import {getRouteMeta} from "@entities/route/routeMetadata";
-import {DualHourlyTimetableBlock} from "@widgets/TransitWiki/ui/WikiPrimitives";
+import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
 import {useBodyScrollLock} from "@shared/ui/useBodyScrollLock";
-import {isWeekend} from "@shared/lib/timeUtils";
 import type {DayMode} from "@shared/types/navigation";
 
 export interface RouteScheduleModalProps {
@@ -57,7 +55,53 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
     }, [isOpen]);
 
     // Fetch Wonju bus schedule data
-    const {routes: scheduleRoutes, isLoading} = useSchedule(isOpen);
+    const {
+        data: scheduleData,
+        routes: scheduleRoutes,
+        meta: scheduleMeta,
+        isLoading,
+        refresh: refreshSchedule,
+        isRefreshing: isScheduleRefreshing,
+    } = useSchedule(isOpen);
+
+    // Format recent update timestamp
+    const formattedUpdatedAt = useMemo(() => {
+        const raw = scheduleData?.updatedAt || scheduleMeta?.updatedAt;
+        if (!raw) return null;
+        try {
+            const d = new Date(raw);
+            if (isNaN(d.getTime())) return null;
+            return (
+                d.toLocaleDateString("ko-KR", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                }) +
+                " " +
+                d.toLocaleTimeString("ko-KR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                })
+            );
+        } catch {
+            return null;
+        }
+    }, [scheduleData?.updatedAt, scheduleMeta?.updatedAt]);
+
+    // Notice modal state
+    const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
+    const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
+
+    const handleOpenNotice = useCallback((noticeId?: string) => {
+        setSelectedNoticeId(noticeId || null);
+        setIsNoticeModalOpen(true);
+    }, []);
+
+    const handleCloseNotice = useCallback(() => {
+        setIsNoticeModalOpen(false);
+        setSelectedNoticeId(null);
+    }, []);
 
     const matchingVariants = useMemo(
         () => (scheduleRoutes ? scheduleRoutes.filter((r) => r.routeNo === routeName) : []),
@@ -158,9 +202,18 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                             <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
                                 {originName} ↔ {destName}
                             </h2>
-                            <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 truncate">
-                                원주시 시내버스 운행 시간표
-                            </p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 truncate">
+                                    원주시 시내버스 운행 시간표
+                                </p>
+                                {formattedUpdatedAt && (
+                                    <span
+                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-white/10 px-1.5 py-0.5 rounded-md font-mono">
+                                        <Clock className="w-2.5 h-2.5 opacity-70 shrink-0"/>
+                                        <span>최근 갱신 {formattedUpdatedAt}</span>
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -176,6 +229,9 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
 
                 {/* Modal Body */}
                 <div className="p-4 sm:p-5 overflow-y-auto space-y-4 custom-scrollbar">
+                    {/* 원주시 교통정보센터 공지사항 배너 */}
+                    <NoticeBanner onClick={handleOpenNotice}/>
+
                     {isLoading ? (
                         <div className="py-16 text-center text-xs font-bold text-slate-400">
                             시간표 데이터를 불러오는 중입니다...
@@ -217,8 +273,15 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                     </span>
                                                 )}
                                             </div>
+                                            {nextDepInfo.nextOrigin?.notes && (
+                                                <div
+                                                    className="text-[10px] font-bold text-blue-600 dark:text-blue-400 mt-1">
+                                                    ※ {nextDepInfo.nextOrigin.notes}
+                                                </div>
+                                            )}
                                         </div>
-                                        <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-[10px] font-black text-blue-700 dark:text-blue-300 shrink-0">
+                                        <span
+                                            className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-[10px] font-black text-blue-700 dark:text-blue-300 shrink-0 self-start">
                                             {activeVariant.dayType}
                                         </span>
                                     </div>
@@ -251,8 +314,15 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                     </span>
                                                 )}
                                             </div>
+                                            {nextDepInfo.nextDest?.notes && (
+                                                <div
+                                                    className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-1">
+                                                    ※ {nextDepInfo.nextDest.notes}
+                                                </div>
+                                            )}
                                         </div>
-                                        <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-[10px] font-black text-amber-700 dark:text-amber-300 shrink-0">
+                                        <span
+                                            className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-[10px] font-black text-amber-700 dark:text-amber-300 shrink-0 self-start">
                                             {activeVariant.dayType}
                                         </span>
                                     </div>
@@ -484,6 +554,13 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                     )}
                 </div>
             </div>
+
+            {/* 원주시 교통정보센터 공지사항 상세 모달 */}
+            <NoticeModal
+                isOpen={isNoticeModalOpen}
+                onClose={handleCloseNotice}
+                initialNoticeId={selectedNoticeId}
+            />
         </div>
     );
 };

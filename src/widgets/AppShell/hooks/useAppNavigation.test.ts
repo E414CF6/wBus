@@ -47,17 +47,13 @@ describe("buildMapUrl", () => {
 });
 
 describe("buildScheduleUrl", () => {
-    it("builds clean /schedule URL for Wonju yonsei subtab", () => {
-        expect(buildScheduleUrl("yonsei", "32020")).toBe("/schedule");
-        expect(buildScheduleUrl("yonsei")).toBe("/schedule");
-    });
-
-    it("includes subTab=all for Wonju all-routes subtab while staying on /schedule", () => {
-        expect(buildScheduleUrl("all", "32020")).toBe("/schedule?subTab=all");
+    it("builds clean /schedule URL for Wonju", () => {
+        expect(buildScheduleUrl("32020")).toBe("/schedule");
+        expect(buildScheduleUrl()).toBe("/schedule");
     });
 
     it("preserves non-Wonju cityCode when building schedule URL", () => {
-        expect(buildScheduleUrl("all", "32010")).toBe("/schedule?cityCode=32010&subTab=all");
+        expect(buildScheduleUrl("32010")).toBe("/schedule?cityCode=32010");
     });
 });
 

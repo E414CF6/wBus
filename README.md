@@ -128,7 +128,7 @@ src/
     |-- AppShell/             # Main tab orchestrator and route sync controller
     |-- BottomNav/            # Unified floating bottom nav, city selector & BusListDrawer
     |-- MapContainer/         # MapLibre GL wrapper, vector route layers, live markers
-    `-- TransitWiki/          # Unified transit wiki & timetable hub (City, Yonsei, Shuttle, Routes, Notices)
+    `-- NoticeWidget/         # Wonju ITS official transit notice carousel & modal
 ```
 
 **Dependency Rule**: `app -> widgets -> features -> entities -> shared`.

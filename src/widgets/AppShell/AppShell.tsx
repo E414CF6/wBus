@@ -27,14 +27,12 @@ const RouteScheduleModal = dynamic(() => import("@features/map-view/RouteSchedul
 export function AppShell() {
     const {
         activeTab,
-        timetableSubTab,
         dayMode,
         setDayMode,
         selectedRoute,
         isMapActive,
         hasVisitedMap,
         handleTabChange,
-        handleScheduleSubTabChange,
         handleRouteChange,
     } = useAppNavigation();
 
@@ -51,7 +49,7 @@ export function AppShell() {
     const {currentCity} = useCityContext();
     const isWonju = currentCity.code === "32020";
 
-    // Close wiki drawer on Escape key press
+    // Close schedule modal on Escape key press
     useEffect(() => {
         if (activeTab !== "schedule") return;
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -172,8 +170,6 @@ export function AppShell() {
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
                 showScheduleTab={isWonju}
-                scheduleSubTab={timetableSubTab}
-                onScheduleSubTabChange={handleScheduleSubTabChange}
                 dayMode={dayMode}
                 onDayModeChange={setDayMode}
                 isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}

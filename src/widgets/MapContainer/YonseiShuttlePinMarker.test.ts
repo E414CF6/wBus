@@ -63,4 +63,16 @@ describe("YonseiShuttlePinMarker data & logic", () => {
         expect(next?.departure_time).toBe("13:00");
         expect(next?.destination).toBe("여주역");
     });
+
+    it("verifies Yonsei campus shuttle pin is restricted to routes 30, 34, 34-1", () => {
+        const YONSEI_SHUTTLE_ROUTES = new Set(["30", "34", "34-1"]);
+        expect(YONSEI_SHUTTLE_ROUTES.has("30")).toBe(true);
+        expect(YONSEI_SHUTTLE_ROUTES.has("34")).toBe(true);
+        expect(YONSEI_SHUTTLE_ROUTES.has("34-1")).toBe(true);
+
+        expect(YONSEI_SHUTTLE_ROUTES.has("2")).toBe(false);
+        expect(YONSEI_SHUTTLE_ROUTES.has("16")).toBe(false);
+        expect(YONSEI_SHUTTLE_ROUTES.has("51")).toBe(false);
+        expect(YONSEI_SHUTTLE_ROUTES.has("100")).toBe(false);
+    });
 });

@@ -433,7 +433,7 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                                 </div>
 
                                 {activePopupDepartures?.nextDeparture ? (
-                                    <div className="flex items-baseline justify-between gap-2">
+                                    <div className="space-y-1">
                                         <div className="flex items-baseline gap-1.5">
                                             <span
                                                 className={`text-2xl font-black font-mono tracking-tight ${
@@ -453,9 +453,10 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                                             </span>
                                         </div>
                                         {activePopupDepartures.nextDeparture.entry.notes && (
-                                            <span className="text-[10px] font-bold text-slate-500 bg-white/70 dark:bg-black/30 px-1.5 py-0.5 rounded">
-                                                {activePopupDepartures.nextDeparture.entry.notes}
-                                            </span>
+                                            <div
+                                                className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-white/70 dark:bg-black/30 px-2 py-0.5 rounded-md inline-flex items-center gap-1 border border-black/5 dark:border-white/5">
+                                                <span>※ {activePopupDepartures.nextDeparture.entry.notes}</span>
+                                            </div>
                                         )}
                                     </div>
                                 ) : (
