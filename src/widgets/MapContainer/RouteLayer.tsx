@@ -55,7 +55,6 @@ const RouteLayer = memo(({
         <BusStopMarker
             routeName={routeName}
             onRouteChange={onRouteChange}
-            onOpenScheduleModal={onOpenScheduleModal}
             cityCode={cityCode}
             showNearbyStops={showNearbyStops}
             focusedStopId={focusedStopId}

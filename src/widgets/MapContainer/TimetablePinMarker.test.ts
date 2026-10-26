@@ -1,6 +1,42 @@
 import {describe, expect, it} from "vitest";
-import {resolveTurnaroundStop} from "./TimetablePinMarker";
+import {formatTerminalStopName, resolveTurnaroundStop} from "./TimetablePinMarker";
 import type {RouteVariation, RouteVariationStop} from "@entities/route";
+
+describe("formatTerminalStopName", () => {
+    it("strips common terminal keywords like 차고지, 종점, 승강장", () => {
+        expect(formatTerminalStopName("장양리 차고지")).toBe("장양리");
+        expect(formatTerminalStopName("장양리차고지")).toBe("장양리");
+        expect(formatTerminalStopName("관설동 종점")).toBe("관설동");
+        expect(formatTerminalStopName("관설동종점")).toBe("관설동");
+        expect(formatTerminalStopName("단구동 승강장")).toBe("단구동");
+        expect(formatTerminalStopName("단구동승강장")).toBe("단구동");
+    });
+
+    it("strips direction and location parentheses like (시내방면), (교내), (종점), (회차)", () => {
+        expect(formatTerminalStopName("연세대(시내방면)")).toBe("연세대");
+        expect(formatTerminalStopName("연세대 (시내방면)")).toBe("연세대");
+        expect(formatTerminalStopName("연세대(교내)")).toBe("연세대");
+        expect(formatTerminalStopName("연세대 (교내)")).toBe("연세대");
+        expect(formatTerminalStopName("태장농공단지(종점)")).toBe("태장농공단지");
+        expect(formatTerminalStopName("태장농공단지 (종점)")).toBe("태장농공단지");
+        expect(formatTerminalStopName("흥업(회차)")).toBe("흥업");
+        expect(formatTerminalStopName("흥업 (회차)")).toBe("흥업");
+    });
+
+    it("prevents double parentheses when interpolated into 회차지 (...) tabs", () => {
+        const rawTurningName = "연세대(시내방면)";
+        const cleanName = formatTerminalStopName(rawTurningName);
+        const tabLabel = `회차지 (${cleanName})`;
+        expect(tabLabel).toBe("회차지 (연세대)");
+        expect(tabLabel).not.toContain("))");
+    });
+
+    it("preserves station names that do not contain terminal suffixes", () => {
+        expect(formatTerminalStopName("원주역")).toBe("원주역");
+        expect(formatTerminalStopName("중앙시장")).toBe("중앙시장");
+        expect(formatTerminalStopName("시외버스터미널")).toBe("시외버스터미널");
+    });
+});
 
 describe("resolveTurnaroundStop", () => {
     const makeStop = (

@@ -207,8 +207,15 @@ export default function Map({onReady, children}: MapProps) {
                     MAP_SETTINGS.BOUNDS.MAX[1][1],
                 ]}
                 maxCanvasSize={maxCanvasSize}
-                style={{width: "100%", height: "100%", position: "relative", zIndex: 0}}
+                style={{width: "100%", height: "100%", position: "relative"}}
                 touchPitch={false}
+                onClick={() => {
+                    if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
+                        window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
+                        window.dispatchEvent(new CustomEvent("wbus:deselect-stop"));
+                    }
+                }}
             >
                 <GeolocateControl
                     position="top-right"

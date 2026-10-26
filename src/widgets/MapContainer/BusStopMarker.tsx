@@ -14,8 +14,9 @@ import {getRouteMeta} from "@entities/route/routeMetadata";
 import {buildSegmentedRouteGeoJson, SHARED_BLUE_COLOR} from "@entities/route/polylineService";
 import type {Feature} from "geojson";
 
-import {BusFront, Clock, Info, MapPin, MapPinned, Star, X} from "lucide-react";
+import {BusFront, Info, MapPin, MapPinned, Star, X} from "lucide-react";
 import {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {createPortal} from "react-dom";
 import {Marker, Popup} from "react-map-gl/maplibre";
 
 type BusStopMarkerItemProps = {
@@ -26,8 +27,6 @@ type BusStopMarkerItemProps = {
     isFavorite?: boolean;
     onToggleFavorite?: (stop: BusStop) => void;
     onRouteChange?: (routeName: string) => void;
-    onOpenScheduleModal?: (docOrSubTab?: string) => void;
-    isWonju?: boolean;
     showLabel?: boolean;
     color?: string;
     initialOpen?: boolean;
@@ -103,20 +102,29 @@ const BusStopMarkerItem = memo(({
                                     isFavorite = false,
                                     onToggleFavorite,
                                     onRouteChange,
-                                    onOpenScheduleModal,
-                                    isWonju = true,
                                     showLabel = true,
                                     color = "#059669",
                                     initialOpen = false,
                                     onClearInitialOpen,
                                 }: BusStopMarkerItemProps) => {
-    const [isPopupOpen, setIsPopupOpen] = useState(initialOpen);
+    const [isPopupOpen, setIsPopupOpen] = useState(() => {
+        if (typeof window !== "undefined" && window.innerWidth >= 768) {
+            return false;
+        }
+        return initialOpen;
+    });
 
     const [prevInitialOpen, setPrevInitialOpen] = useState(initialOpen);
     if (initialOpen !== prevInitialOpen) {
         setPrevInitialOpen(initialOpen);
         if (initialOpen) {
-            setIsPopupOpen(true);
+            const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+            if (isDesktop) {
+                window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: stop}));
+                window.dispatchEvent(new CustomEvent("wbus:open-bus-list"));
+            } else {
+                setIsPopupOpen(true);
+            }
         }
     }
 
@@ -124,13 +132,53 @@ const BusStopMarkerItem = memo(({
         if (e.originalEvent) {
             e.originalEvent.stopPropagation();
         }
+        const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+        if (isDesktop) {
+            // On desktop, dispatch stop to open split view in left floating window
+            window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: stop}));
+            window.dispatchEvent(new CustomEvent("wbus:open-bus-list"));
+            return;
+        }
+
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
+            window.dispatchEvent(new CustomEvent("wbus:close-bus-list"));
+            window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
+        }
         setIsPopupOpen(true);
-    }, []);
+    }, [stop]);
 
     const handlePopupClose = useCallback(() => {
         setIsPopupOpen(false);
         onClearInitialOpen?.();
     }, [onClearInitialOpen]);
+
+    // Close when other popups or bus list requests closing
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const handleClosePopups = () => {
+            setIsPopupOpen(false);
+            onClearInitialOpen?.();
+        };
+        window.addEventListener("wbus:close-popups", handleClosePopups);
+        window.addEventListener("wbus:close-stop-popup", handleClosePopups);
+        return () => {
+            window.removeEventListener("wbus:close-popups", handleClosePopups);
+            window.removeEventListener("wbus:close-stop-popup", handleClosePopups);
+        };
+    }, [onClearInitialOpen]);
+
+    // Close on Escape key
+    useEffect(() => {
+        if (!isPopupOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                handlePopupClose();
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isPopupOpen, handlePopupClose]);
 
     const handleSelectRouteFromPopup = useCallback(
         (nextRoute: string) => {
@@ -142,10 +190,6 @@ const BusStopMarkerItem = memo(({
     );
 
     const borderColor = isFavorite ? "#f59e0b" : isRouteStop ? color : "#64748b";
-    const isYonseiStop = Boolean(
-        stop.nodenm &&
-        (stop.nodenm.includes("연세대") || stop.nodenm.includes("매지") || stop.nodenm.includes("미래관"))
-    );
 
     return (
         <>
@@ -154,7 +198,7 @@ const BusStopMarkerItem = memo(({
                 latitude={stop.gpslati}
                 onClick={handleMarkerClick}
                 anchor="center"
-                style={{pointerEvents: "auto", cursor: "pointer", zIndex: isFavorite ? 28 : isRouteStop ? 20 : 12}}
+                style={{pointerEvents: "auto", cursor: "pointer", zIndex: isFavorite ? 22 : isRouteStop ? 18 : 12}}
             >
                 {/* Bus Stop Marker Icon & Name Label */}
                 <div className="relative flex items-center select-none group">
@@ -208,6 +252,17 @@ const BusStopMarkerItem = memo(({
                 </div>
             </Marker>
 
+            {typeof document !== "undefined" && isPopupOpen &&
+                createPortal(
+                    <div
+                        className="fixed inset-0 z-[105] bg-black/25 dark:bg-black/50 backdrop-blur-[1px] transition-opacity animate-fadeIn sm:hidden"
+                        onClick={handlePopupClose}
+                        aria-hidden="true"
+                    />,
+                    document.body
+                )
+            }
+
             {isPopupOpen && (
                 <Popup
                     longitude={stop.gpslong}
@@ -218,10 +273,10 @@ const BusStopMarkerItem = memo(({
                     className="custom-bus-stop-popup"
                     maxWidth="none"
                     offset={[0, -10]}
-                    style={{zIndex: 100}}
+                    style={{zIndex: 110}}
                 >
                     <div
-                        className="flex flex-col bg-white/95 dark:bg-[#111111]/95 backdrop-blur-3xl overflow-hidden rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.15)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.6)] border border-black/5 dark:border-white/10 w-76 sm:w-92 max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:w-full max-sm:rounded-b-none max-sm:rounded-t-[28px] max-sm:max-h-[75dvh] max-sm:z-[100] max-sm:shadow-[0_-12px_40px_rgba(0,0,0,0.35)] animate-slideUp">
+                        className="flex flex-col bg-white dark:bg-[#11131a] sm:bg-white/96 sm:dark:bg-[#11131a]/96 backdrop-blur-3xl overflow-hidden rounded-[28px] shadow-[0_16px_48px_rgba(0,0,0,0.25)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] border border-black/10 dark:border-white/12 w-full sm:w-96 max-h-[70vh] sm:max-h-[600px] animate-fadeIn select-none">
                         {/* Mobile Drawer Handle Indicator */}
                         <div className="pt-2 pb-0.5 flex justify-center sm:hidden">
                             <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700"/>
@@ -291,27 +346,6 @@ const BusStopMarkerItem = memo(({
                                                 <Star className={`w-3.5 h-3.5 ${isFavorite ? "fill-amber-400" : ""}`}/>
                                             </button>
                                         )}
-                                        {onOpenScheduleModal && (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setIsPopupOpen(false);
-                                                    onClearInitialOpen?.();
-                                                    onOpenScheduleModal(
-                                                        isWonju && isYonseiStop
-                                                            ? "yonsei"
-                                                            : currentRouteName
-                                                                ? `route:${currentRouteName}`
-                                                                : `city:${cityCode}`
-                                                    );
-                                                }}
-                                                className="p-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer active:scale-90 shrink-0"
-                                                title="노선 운행 시간표 열기"
-                                                aria-label="노선 운행 시간표 열기"
-                                            >
-                                                <Clock className="w-3.5 h-3.5"/>
-                                            </button>
-                                        )}
                                         <button
                                             type="button"
                                             onClick={handlePopupClose}
@@ -356,7 +390,6 @@ BusStopMarkerItem.displayName = "BusStopMarkerItem";
 export default ({
                     routeName,
                     onRouteChange,
-                    onOpenScheduleModal,
                     cityCode,
                     showNearbyStops = true,
                     focusedStopId = null,
@@ -364,7 +397,6 @@ export default ({
                 }: {
     routeName: string;
     onRouteChange?: (routeName: string) => void;
-    onOpenScheduleModal?: (docOrSubTab?: string) => void;
     cityCode?: string;
     showNearbyStops?: boolean;
     focusedStopId?: string | null;
@@ -372,7 +404,6 @@ export default ({
 }) => {
     const {currentCity} = useCityContext();
     const effectiveCityCode = cityCode || currentCity?.code || "32020";
-    const isWonju = effectiveCityCode === "32020";
     const routeStops = useBusStop(routeName, effectiveCityCode);
     const {favoriteStops, isFavoriteStop, toggleFavoriteStop} = useFavoriteStops(effectiveCityCode);
 
@@ -614,8 +645,6 @@ export default ({
                         showLabel={stop.showLabel}
                         color={stop.color}
                         onRouteChange={onRouteChange}
-                        onOpenScheduleModal={onOpenScheduleModal}
-                        isWonju={isWonju}
                         initialOpen={isFocused}
                         onClearInitialOpen={handleClearFocused}
                     />

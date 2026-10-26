@@ -90,6 +90,8 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
         return () => {
             if (!map || !bbox) return;
             const [[s, w], [n, e]] = bbox;
+            const isCompact = typeof window !== "undefined" && window.innerWidth < 640;
+            const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
             map.fitBounds(
                 [
                     [w, s],
@@ -97,10 +99,10 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
                 ],
                 {
                     padding: {
-                        top: 110,
-                        bottom: 120,
-                        left: 36,
-                        right: 36,
+                        top: isCompact ? 156 : 130,
+                        bottom: isCompact ? 130 : 120,
+                        left: isCompact ? 56 : isDesktop ? 440 : 64,
+                        right: isCompact ? 68 : 76,
                     },
                     duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
                 }

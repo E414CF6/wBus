@@ -1,6 +1,6 @@
 "use client";
 
-import React, {memo, useCallback, useState} from "react";
+import React, {memo, useCallback, useEffect, useState} from "react";
 import {ChevronDown, Clock, Compass, MapIcon, MapPin, Sparkles, X} from "lucide-react";
 import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
@@ -79,8 +79,57 @@ function BottomNavComponent({
         dismissDetectedCity,
     } = useCityContext();
 
-    const [isBusListOpen, setIsBusListOpen] = useState(false);
+    // Default open on desktop view (>= 768px), closed on compact mobile
+    const [isBusListOpen, setIsBusListOpen] = useState(() => {
+        if (typeof window !== "undefined") {
+            return window.innerWidth >= 768;
+        }
+        return false;
+    });
     const [isCityModalOpen, setIsCityModalOpen] = useState(false);
+
+    const handleToggleBusList = useCallback(() => {
+        if (typeof window !== "undefined" && window.innerWidth >= 768) {
+            // Cannot toggle on desktop - always open
+            return;
+        }
+        setIsBusListOpen((prev) => {
+            const next = !prev;
+            if (next && typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
+                window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
+            }
+            return next;
+        });
+    }, []);
+
+    // Listen to close/open bus list custom events
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const handleCloseBusList = () => {
+            if (window.innerWidth >= 768) return; // Permanent on desktop
+            setIsBusListOpen(false);
+        };
+        const handleOpenBusList = () => setIsBusListOpen(true);
+        window.addEventListener("wbus:close-bus-list", handleCloseBusList);
+        window.addEventListener("wbus:open-bus-list", handleOpenBusList);
+        return () => {
+            window.removeEventListener("wbus:close-bus-list", handleCloseBusList);
+            window.removeEventListener("wbus:open-bus-list", handleOpenBusList);
+        };
+    }, []);
+
+    // Ensure permanently open when resized to desktop
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const handleResize = () => {
+            if (window.innerWidth >= 768) {
+                setIsBusListOpen(true);
+            }
+        };
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
 
     const handleDefaultBusClick = useCallback((lat: number, lng: number) => {
         if (onBusClick) {
@@ -116,12 +165,30 @@ function BottomNavComponent({
                 onClose={() => setIsCityModalOpen(false)}
             />
 
-            {/* Click-outside Backdrop when BusListDrawer is open */}
+            {/* Click-outside Backdrop when BusListDrawer is open (Mobile only) */}
             {isBusListOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-black/15 dark:bg-black/35 backdrop-blur-[1px] transition-opacity animate-fadeIn"
+                    className="fixed inset-0 z-40 bg-black/15 dark:bg-black/35 backdrop-blur-[1px] transition-opacity animate-fadeIn md:hidden"
                     onClick={() => setIsBusListOpen(false)}
                     aria-hidden="true"
+                />
+            )}
+
+            {/* Expandable Floating Running Bus List & Split Stop Details Drawer */}
+            {isBusListOpen && (
+                <BusListDrawer
+                    isOpen={isBusListOpen}
+                    onClose={() => setIsBusListOpen(false)}
+                    selectedRoute={selectedRoute}
+                    runningBuses={runningBuses}
+                    isConnecting={isConnecting}
+                    getDirection={getDirection}
+                    onBusClick={handleDefaultBusClick}
+                    lastUpdated={lastUpdated}
+                    onReconnect={onReconnect}
+                    onRouteChange={onSelectRoute}
+                    dayMode={dayMode}
+                    isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
                 />
             )}
 
@@ -159,51 +226,36 @@ function BottomNavComponent({
                     </div>
                 )}
 
-                {/* 2. Expandable Floating Running Bus List Sheet */}
-                {isBusListOpen && (
-                    <BusListDrawer
-                        isOpen={isBusListOpen}
-                        onClose={() => setIsBusListOpen(false)}
-                        selectedRoute={selectedRoute}
-                        runningBuses={runningBuses}
-                        isConnecting={isConnecting}
-                        getDirection={getDirection}
-                        onBusClick={handleDefaultBusClick}
-                        lastUpdated={lastUpdated}
-                        onReconnect={onReconnect}
-                    />
-                )}
-
                 {/* 3. Unified Bottom Floating Pill Navigation Bar */}
                 <nav
                     aria-label={UI_TEXT.ACCESSIBILITY.MAIN_NAV}
-                    className="flex items-center gap-1 sm:gap-1.5 p-1.5 px-2.5 sm:px-3 bg-white/88 dark:bg-[#111111]/88 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full overflow-x-auto custom-scrollbar-hidden"
+                    className="flex items-center gap-1 sm:gap-1.5 p-1.5 px-2 sm:px-3 bg-white/92 dark:bg-[#111111]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full overflow-x-auto custom-scrollbar-hidden"
                 >
-                    {/* Brand Logo & Title (Click to Recenter on Current City) */}
+                    {/* Brand Logo & Title (Click to Recenter on Current City; hidden on compact mobile to prevent horizontal overflow) */}
                     <button
                         type="button"
                         onClick={handleRecenterCity}
                         title={`${currentCity.name} 중심으로 지도 이동`}
-                        className="flex items-center gap-2 pl-1 pr-1.5 py-0.5 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all select-none shrink-0 cursor-pointer active:scale-95"
+                        className="hidden sm:flex items-center gap-2 pl-1 pr-1.5 py-0.5 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all select-none shrink-0 cursor-pointer active:scale-95"
                     >
                         <div
                             className="flex items-center justify-center w-7.5 h-7.5 rounded-full bg-black dark:bg-white text-white dark:text-black shrink-0 shadow-xs">
                             <MapIcon className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden="true"/>
                         </div>
                         <span
-                            className="hidden sm:inline-block text-sm sm:text-base font-black text-black dark:text-white tracking-tight shrink-0">
+                            className="hidden md:inline-block text-sm sm:text-base font-black text-black dark:text-white tracking-tight shrink-0">
                             {APP_CONFIG.NAME}
                         </span>
                     </button>
 
                     {/* Divider */}
-                    <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+                    <div className="hidden sm:block w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
 
                     {/* Region Selector Button (Replaces old Tab Buttons; shows indicator dot when map panned to new city) */}
                     <button
                         type="button"
                         onClick={() => setIsCityModalOpen(true)}
-                        className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
+                        className={`relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
                             hasPendingRegion
                                 ? "bg-blue-600 text-white shadow-md shadow-blue-600/25 ring-2 ring-blue-400/40"
                                 : "bg-black text-white dark:bg-white dark:text-black shadow-sm shadow-black/10 dark:shadow-white/10 hover:opacity-90"
@@ -236,12 +288,18 @@ function BottomNavComponent({
                         <button
                             type="button"
                             onClick={() => {
+                                const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+                                if (isDesktop) {
+                                    window.dispatchEvent(new CustomEvent("wbus:open-schedule"));
+                                    window.dispatchEvent(new CustomEvent("wbus:open-bus-list"));
+                                    return;
+                                }
                                 setIsBusListOpen(false);
                                 onTabChange(activeTab === "schedule" ? "map" : "schedule");
                             }}
                             title="버스 운행 시간표 열기"
                             aria-label="시간표 열기"
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
+                            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
                                 activeTab === "schedule"
                                     ? "bg-blue-600 text-white shadow-md shadow-blue-600/25"
                                     : "bg-black/[0.05] dark:bg-white/[0.09] hover:bg-black/[0.09] dark:hover:bg-white/[0.14] text-slate-800 dark:text-slate-100 border border-black/8 dark:border-white/10"
@@ -270,7 +328,7 @@ function BottomNavComponent({
                         connectionStatus={connectionStatus}
                         hasFetched={hasFetched}
                         isBusListOpen={isBusListOpen}
-                        onToggleBusList={() => setIsBusListOpen((prev) => !prev)}
+                        onToggleBusList={handleToggleBusList}
                     />
 
                     {/* Divider before Theme Toggle */}

@@ -93,10 +93,36 @@ export function AppShell() {
                     handleRouteChange(cleanRoute, currentCity.code);
                 }
             }
+            if (typeof window !== "undefined" && window.innerWidth >= 768) {
+                window.dispatchEvent(new CustomEvent("wbus:open-schedule"));
+                window.dispatchEvent(new CustomEvent("wbus:open-bus-list"));
+                return;
+            }
             handleTabChange("schedule");
         },
         [isWonju, activeRoute, handleRouteChange, currentCity.code, handleTabChange]
     );
+
+    const [isDesktop, setIsDesktop] = useState(() => {
+        if (typeof window !== "undefined") {
+            return window.innerWidth >= 768;
+        }
+        return false;
+    });
+
+    useEffect(() => {
+        const handleResize = () => setIsDesktop(window.innerWidth >= 768);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
+    useEffect(() => {
+        if (isDesktop && activeTab === "schedule") {
+            window.dispatchEvent(new CustomEvent("wbus:open-schedule"));
+            window.dispatchEvent(new CustomEvent("wbus:open-bus-list"));
+            handleTabChange("map");
+        }
+    }, [isDesktop, activeTab, handleTabChange]);
 
     // Live telemetry for active map route
     const liveBusData = useBusSortedList(activeRoute, isMapActive, currentCity.code);
@@ -153,8 +179,8 @@ export function AppShell() {
                 </MapWrapper>
             </div>
 
-            {/* 2. Route-Focused Timetable Modal (Wonju Only) */}
-            {isWonju && activeTab === "schedule" && (
+            {/* 2. Route-Focused Timetable Modal (Wonju Only - Mobile view only since desktop uses split view) */}
+            {isWonju && activeTab === "schedule" && !isDesktop && (
                 <RouteScheduleModal
                     isOpen={true}
                     routeName={activeRoute}
