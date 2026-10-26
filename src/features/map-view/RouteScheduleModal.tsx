@@ -593,7 +593,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
 
     const modalContent = (
         <div
-            className="fixed inset-0 z-[120] flex flex-col justify-end sm:justify-center items-center bg-black/60 backdrop-blur-xs transition-opacity duration-200 animate-fadeIn pointer-events-auto"
+            className="fixed inset-0 z-120 flex items-center justify-center p-3.5 sm:p-5 bg-black/60 dark:bg-black/75 backdrop-blur-sm transition-opacity duration-200 animate-fadeIn pointer-events-auto"
             onClick={(e) => {
                 if (e.target === e.currentTarget) {
                     onClose();
@@ -604,21 +604,12 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
             aria-label={`${routeName}번 버스 시간표`}
         >
             <div
-                className="relative w-full sm:max-w-2xl max-h-[88dvh] sm:max-h-[82dvh] bg-white/95 dark:bg-[#0e1118]/95 backdrop-blur-3xl rounded-t-[32px] sm:rounded-3xl shadow-[0_-16px_50px_rgba(0,0,0,0.35)] sm:shadow-2xl border border-black/10 dark:border-white/10 flex flex-col overflow-hidden animate-slideUp select-none pb-[calc(env(safe-area-inset-bottom,0)+0.75rem)] sm:pb-0"
+                className="relative flex flex-col w-full max-w-2xl h-[82dvh] sm:h-[82dvh] max-h-[82dvh] sm:max-h-[820px] bg-white/95 dark:bg-[#0e1118]/95 backdrop-blur-3xl rounded-[28px] sm:rounded-[32px] shadow-[0_24px_70px_rgba(0,0,0,0.35)] dark:shadow-[0_24px_70px_rgba(0,0,0,0.85)] border border-black/10 dark:border-white/10 overflow-hidden animate-slideUp select-none"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Mobile Drawer Pull Handle */}
-                <div
-                    className="w-full flex justify-center pt-2.5 pb-1 sm:hidden cursor-pointer shrink-0"
-                    onClick={onClose}
-                    title="닫기"
-                >
-                    <div className="w-11 h-1.2 rounded-full bg-slate-300 dark:bg-slate-700"/>
-                </div>
-
                 {/* Modal Header */}
                 <div
-                    className="px-5 py-4 border-b border-black/5 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] flex items-center justify-between gap-3 shrink-0">
+                    className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-black/5 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] flex items-center justify-between gap-3 shrink-0">
                     <div className="flex items-center gap-2.5 min-w-0">
                         <span
                             className="px-2.5 py-1 rounded-xl text-xs font-black text-white shadow-xs shrink-0"
