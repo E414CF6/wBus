@@ -32,7 +32,12 @@ interface UseBusData {
  */
 export function useBusData(routeName: string, enabled: boolean = true, cityCode: string = "32020"): UseBusData {
     const routeInfo = useRouteInfo(routeName, enabled, cityCode);
-    const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
+    const routeIds = useMemo(() => {
+        const ids = routeInfo?.vehicleRouteIds ?? [];
+        if (cityCode === "32020") return ids.filter((id) => !id.startsWith("WJB258"));
+        if (cityCode === "32320") return ids.filter((id) => id.startsWith("WJB258"));
+        return ids;
+    }, [routeInfo?.vehicleRouteIds, cityCode]);
     const activeRouteIds = useMemo(() => (enabled ? routeIds : []), [enabled, routeIds]);
     const {
         data: busList, connectionStatus, hasFetched, error, lastUpdated, isDegraded, reconnect

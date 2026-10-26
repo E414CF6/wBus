@@ -14,7 +14,7 @@ import {getRouteMeta} from "@entities/route/routeMetadata";
 import {buildSegmentedRouteGeoJson, SHARED_BLUE_COLOR} from "@entities/route/polylineService";
 import type {Feature} from "geojson";
 
-import {BookOpen, BusFront, Info, MapPin, MapPinned, Star, X} from "lucide-react";
+import {BusFront, Clock, Info, MapPin, MapPinned, Star, X} from "lucide-react";
 import {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Marker, Popup} from "react-map-gl/maplibre";
 
@@ -306,10 +306,10 @@ const BusStopMarkerItem = memo(({
                                                     );
                                                 }}
                                                 className="p-1.5 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-xs transition-all cursor-pointer active:scale-90 shrink-0"
-                                                title="노선·정류장 위키 문서 열기"
-                                                aria-label="노선·정류장 위키 문서 열기"
+                                                title="노선 운행 시간표 열기"
+                                                aria-label="노선 운행 시간표 열기"
                                             >
-                                                <BookOpen className="w-3.5 h-3.5"/>
+                                                <Clock className="w-3.5 h-3.5"/>
                                             </button>
                                         )}
                                         <button
@@ -396,7 +396,16 @@ export default ({
 
     // Retrieve polyline data to synchronize stop marker & label colors with route segments
     const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName, true, effectiveCityCode);
-    const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo?.vehicleRouteIds]);
+    const rawRouteIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo?.vehicleRouteIds]);
+    const routeIds = useMemo(() => {
+        if (effectiveCityCode === "32020") {
+            return rawRouteIds.filter((id) => !id.startsWith("WJB258"));
+        }
+        if (effectiveCityCode === "32320") {
+            return rawRouteIds.filter((id) => id.startsWith("WJB258"));
+        }
+        return rawRouteIds;
+    }, [rawRouteIds, effectiveCityCode]);
     const routeMainColor = useMemo(
         () => getRouteMeta(routeName, effectiveCityCode).colorTheme.main,
         [routeName, effectiveCityCode]
@@ -404,18 +413,22 @@ export default ({
 
     const validRouteIds = useMemo(() => {
         const available = routeIds.filter((id) => {
+            if (effectiveCityCode === "32020" && id.startsWith("WJB258")) return false;
+            if (effectiveCityCode === "32320" && !id.startsWith("WJB258")) return false;
             const data = polylineMap.get(id);
             return data && (data.upPolyline.length > 0 || data.downPolyline.length > 0);
         });
         if (available.length > 0) return available;
         if (activeRouteId && polylineMap.has(activeRouteId)) {
+            if (effectiveCityCode === "32020" && activeRouteId.startsWith("WJB258")) return [];
+            if (effectiveCityCode === "32320" && !activeRouteId.startsWith("WJB258")) return [];
             const data = polylineMap.get(activeRouteId);
             if (data && (data.upPolyline.length > 0 || data.downPolyline.length > 0)) {
                 return [activeRouteId];
             }
         }
         return routeIds.slice(0, 1);
-    }, [routeIds, polylineMap, activeRouteId]);
+    }, [routeIds, polylineMap, activeRouteId, effectiveCityCode]);
 
     const activeGeoJson = useMemo(() => {
         return buildSegmentedRouteGeoJson(validRouteIds, polylineMap, routeMainColor);

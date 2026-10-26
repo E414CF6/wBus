@@ -15,7 +15,13 @@ async function getRouteStopsForCity(routeName: string, cityCode: string): Promis
         const rawRoutes = routesResult.data || [];
         const matched = rawRoutes.filter((r) => String(r.routeno) === routeName || r.routeid === routeName);
         if (matched.length === 0) return [];
-        const routeIds = matched.map((r) => r.routeid);
+        let routeIds = matched.map((r) => r.routeid);
+        if (cityCode === "32020") {
+            routeIds = routeIds.filter((id) => !id.startsWith("WJB258"));
+        } else if (cityCode === "32320") {
+            routeIds = routeIds.filter((id) => id.startsWith("WJB258"));
+        }
+        if (routeIds.length === 0) return [];
 
         const stopMap = new Map<string, BusStop>();
 

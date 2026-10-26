@@ -11,6 +11,7 @@ import {CitySelectModal} from "@features/city-select";
 import {MapNavControls} from "./ui/MapNavControls";
 import {NavThemeToggle} from "./ui/NavThemeToggle";
 import {BusListDrawer} from "./ui/BusListDrawer";
+import {DayModeToggleGroup} from "./ui/DayModeToggleGroup";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
@@ -57,6 +58,9 @@ function BottomNavComponent({
                                 activeTab = "map",
                                 onTabChange,
                                 showScheduleTab = true,
+                                dayMode = "AUTO",
+                                onDayModeChange,
+                                isTodayWeekendOrHoliday = false,
                                 allRoutes = [],
                                 selectedRoute = "",
                                 onSelectRoute,
@@ -104,6 +108,7 @@ function BottomNavComponent({
     const isConnecting = !hasFetched || connectionStatus === "connecting";
     const shortCityName = currentCity.name.split("/")[0];
     const hasPendingRegion = Boolean(detectedCity && detectedCity.code !== currentCity.code);
+    const isWonju = currentCity.code === "32020";
 
     return (
         <>
@@ -128,13 +133,15 @@ function BottomNavComponent({
                 {/* 1. Floating Region Switch Prompt Pill (Appears when panning map to another city without auto-switching) */}
                 {hasPendingRegion && detectedCity && !isBusListOpen && (
                     <div
-                        className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-slate-900/92 dark:bg-white/95 backdrop-blur-2xl text-white dark:text-slate-900 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.28)] border border-white/15 dark:border-black/10 animate-fadeIn select-none"
+                        className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-white/92 dark:bg-[#111111]/92 backdrop-blur-2xl text-slate-900 dark:text-white rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.16)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.6)] border border-black/10 dark:border-white/15 animate-fadeIn select-none"
                         role="status"
                         aria-live="polite"
                     >
-                        <Compass className="w-3.5 h-3.5 text-blue-400 dark:text-blue-600 animate-spin shrink-0" style={{animationDuration: "6s"}}/>
+                        <Compass className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-spin shrink-0"
+                                 style={{animationDuration: "6s"}}/>
                         <span className="text-xs font-extrabold tracking-tight whitespace-nowrap">
-                            지도 위치: <strong className="text-blue-300 dark:text-blue-600 font-black">{detectedCity.name}</strong>
+                            지도 위치: <strong
+                            className="text-blue-600 dark:text-blue-400 font-black">{detectedCity.name}</strong>
                         </span>
                         <button
                             type="button"
@@ -146,7 +153,7 @@ function BottomNavComponent({
                         <button
                             type="button"
                             onClick={dismissDetectedCity}
-                            className="p-1 rounded-full text-slate-400 hover:text-white dark:hover:text-slate-900 transition-colors cursor-pointer"
+                            className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
                             aria-label="지역 전환 알림 닫기"
                         >
                             <X className="w-3.5 h-3.5"/>
@@ -226,7 +233,7 @@ function BottomNavComponent({
                         )}
                     </button>
 
-                    {/* Timetable & Campus Transit Sheet Button (Next to City Selector) */}
+                    {/* Timetable Button (Only for Wonju if showScheduleTab is true) */}
                     {showScheduleTab && onTabChange && (
                         <button
                             type="button"
@@ -234,7 +241,7 @@ function BottomNavComponent({
                                 setIsBusListOpen(false);
                                 onTabChange(activeTab === "schedule" ? "map" : "schedule");
                             }}
-                            title="버스 및 셔틀 운행 시간표 열기"
+                            title="버스 운행 시간표 열기"
                             aria-label="시간표 열기"
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
                                 activeTab === "schedule"
@@ -245,6 +252,15 @@ function BottomNavComponent({
                             <Clock className="w-3.5 h-3.5 stroke-[2.2] shrink-0"/>
                             <span className="whitespace-nowrap font-black">시간표</span>
                         </button>
+                    )}
+
+                    {/* Weekday / Holiday selector (Wonju Only) */}
+                    {isWonju && onDayModeChange && (
+                        <DayModeToggleGroup
+                            dayMode={dayMode}
+                            onDayModeChange={onDayModeChange}
+                            isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                        />
                     )}
 
                     {/* Real-time Map Route & Running Bus Controls */}

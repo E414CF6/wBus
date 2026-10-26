@@ -53,4 +53,20 @@ describe("GET /api/polyline/[routeId]", () => {
         const data = await res.json();
         expect(data.error).toContain("Polyline not found");
     });
+
+    it("enforces city boundary: rejects Hoengseong route for Wonju cityCode (32020)", async () => {
+        const req = new NextRequest("http://localhost:3000/api/polyline/WJB258002001?cityCode=32020");
+        const res = await GET(req, {params: Promise.resolve({routeId: "WJB258002001"})});
+        expect(res.status).toBe(404);
+        const data = await res.json();
+        expect(data.error).toContain("Hoengseong");
+    });
+
+    it("enforces city boundary: rejects Wonju route for Hoengseong cityCode (32320)", async () => {
+        const req = new NextRequest("http://localhost:3000/api/polyline/WJB251000036?cityCode=32320");
+        const res = await GET(req, {params: Promise.resolve({routeId: "WJB251000036"})});
+        expect(res.status).toBe(404);
+        const data = await res.json();
+        expect(data.error).toContain("Wonju");
+    });
 });

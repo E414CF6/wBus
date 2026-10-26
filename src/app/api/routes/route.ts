@@ -37,9 +37,16 @@ export async function GET(request: NextRequest) {
             invalidateCacheByPrefix(`routes:${cityCode}`);
         }
 
+        let routes = result.data || [];
+        if (cityCode === "32020") {
+            routes = routes.filter((r) => !String(r.routeid).startsWith("WJB258"));
+        } else if (cityCode === "32320") {
+            routes = routes.filter((r) => String(r.routeid).startsWith("WJB258"));
+        }
+
         // Group into route_numbers mapping { [routeNo]: [routeId1, routeId2, ...] }
         const routeNumbersMap: Record<string, string[]> = {};
-        for (const item of result.data || []) {
+        for (const item of routes) {
             const rNo = String(item.routeno);
             if (!routeNumbersMap[rNo]) {
                 routeNumbersMap[rNo] = [];
@@ -53,8 +60,8 @@ export async function GET(request: NextRequest) {
             {
                 cityCode,
                 route_numbers: routeNumbersMap,
-                routes: result.data || [],
-                count: result.data?.length || 0,
+                routes,
+                count: routes.length,
             },
             {
                 headers: {

@@ -28,17 +28,23 @@ export async function GET(request: NextRequest) {
         );
     }
 
-    const routeIds = routeIdsParam
+    const cityCode = ApiValidators.resolveCityCode(searchParams.get("cityCode"));
+
+    let routeIds = routeIdsParam
         .split(",")
         .map((id) => id.trim())
         .filter((id) => ApiValidators.isValidRouteId(id))
         .slice(0, 15);
 
+    if (cityCode === "32020") {
+        routeIds = routeIds.filter((id) => !id.startsWith("WJB258"));
+    } else if (cityCode === "32320") {
+        routeIds = routeIds.filter((id) => id.startsWith("WJB258"));
+    }
+
     if (routeIds.length === 0) {
         return NextResponse.json({error: "Invalid or empty routeIds parameter"}, {status: 400});
     }
-
-    const cityCode = ApiValidators.resolveCityCode(searchParams.get("cityCode"));
 
     try {
         let hasDegraded = false;

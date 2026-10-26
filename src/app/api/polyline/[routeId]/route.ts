@@ -31,6 +31,21 @@ export async function GET(
     const {searchParams} = request.nextUrl;
     const cityCode = ApiValidators.resolveCityCode(searchParams.get("cityCode"));
     const routeNo = searchParams.get("routeNo") || undefined;
+
+    // Boundary check: Wonju (32020) and Hoengseong (32320)
+    if (cityCode === "32020" && routeId.startsWith("WJB258")) {
+        return NextResponse.json(
+            {error: `Route ${routeId} belongs to Hoengseong (32320), not Wonju (32020)`},
+            {status: 404}
+        );
+    }
+    if (cityCode === "32320" && !routeId.startsWith("WJB258")) {
+        return NextResponse.json(
+            {error: `Route ${routeId} belongs to Wonju (32020), not Hoengseong (32320)`},
+            {status: 404}
+        );
+    }
+
     const cacheKey = `polyline:${cityCode}:${routeId}`;
 
     // 1. Check L1 In-Memory Cache

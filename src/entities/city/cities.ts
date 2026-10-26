@@ -48,11 +48,12 @@ export const NATIONWIDE_CITIES: CityInfo[] = [
     {code: "31370", name: "가평군", province: "경기도", lat: 37.8314, lng: 127.5096, zoom: 12},
     {code: "31380", name: "양평군", province: "경기도", lat: 37.4917, lng: 127.4876, zoom: 12},
 
-    // 강원특별자치도 (6개)
+    // 강원특별자치도 (7개)
     {code: "32010", name: "춘천시", province: "강원특별자치도", lat: 37.8813, lng: 127.7298, zoom: 13, isMajor: true},
-    {code: "32020", name: "원주시/횡성군", province: "강원특별자치도", lat: 37.3421, lng: 127.9198, zoom: 13, isMajor: true},
+    {code: "32020", name: "원주시", province: "강원특별자치도", lat: 37.3421, lng: 127.9198, zoom: 13, isMajor: true},
     {code: "32050", name: "태백시", province: "강원특별자치도", lat: 37.1641, lng: 128.9856, zoom: 13},
     {code: "32310", name: "홍천군", province: "강원특별자치도", lat: 37.6972, lng: 127.8887, zoom: 12},
+    {code: "32320", name: "횡성군", province: "강원특별자치도", lat: 37.4916, lng: 127.9856, zoom: 13},
     {code: "32360", name: "철원군", province: "강원특별자치도", lat: 38.1468, lng: 127.3134, zoom: 12},
     {code: "32410", name: "양양군", province: "강원특별자치도", lat: 38.0754, lng: 128.6189, zoom: 12},
 

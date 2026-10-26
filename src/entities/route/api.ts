@@ -57,8 +57,41 @@ function resolveCityCode(cityCode?: string): string {
 export function getCachedCityRoutesSync(cityCode?: string): CityRoutesPayload | null {
     const cCode = resolveCityCode(cityCode);
     const cached = cityRoutesCache.get(cCode);
-    if (cached && cached.routes?.length) {
-        registerDynamicRouteMeta(cCode, cached.routes);
+    if (cached) {
+        if (cCode === "32020") {
+            const hasContamination =
+                cached.routes?.some((r) => String(r.routeid).startsWith("WJB258")) ||
+                Object.values(cached.route_numbers || {}).some((ids) => ids.some((id) => id.startsWith("WJB258")));
+            if (hasContamination) {
+                cached.routes = (cached.routes || []).filter((r) => !String(r.routeid).startsWith("WJB258"));
+                const cleanedMap: Record<string, string[]> = {};
+                for (const [k, v] of Object.entries(cached.route_numbers || {})) {
+                    const filtered = v.filter((id) => !id.startsWith("WJB258"));
+                    if (filtered.length > 0) cleanedMap[k] = filtered;
+                }
+                cached.route_numbers = cleanedMap;
+                cached.count = cached.routes.length;
+                cityRoutesCache.set(cCode, cached);
+            }
+        } else if (cCode === "32320") {
+            const hasContamination =
+                cached.routes?.some((r) => !String(r.routeid).startsWith("WJB258")) ||
+                Object.values(cached.route_numbers || {}).some((ids) => ids.some((id) => !id.startsWith("WJB258")));
+            if (hasContamination) {
+                cached.routes = (cached.routes || []).filter((r) => String(r.routeid).startsWith("WJB258"));
+                const cleanedMap: Record<string, string[]> = {};
+                for (const [k, v] of Object.entries(cached.route_numbers || {})) {
+                    const filtered = v.filter((id) => id.startsWith("WJB258"));
+                    if (filtered.length > 0) cleanedMap[k] = filtered;
+                }
+                cached.route_numbers = cleanedMap;
+                cached.count = cached.routes.length;
+                cityRoutesCache.set(cCode, cached);
+            }
+        }
+        if (cached.routes?.length) {
+            registerDynamicRouteMeta(cCode, cached.routes);
+        }
     }
     return cached;
 }
@@ -70,13 +103,26 @@ export function getCachedRouteInfoSync(routeName: string, cityCode?: string): Ro
     if (!routeName || routeName === "0") return null;
     const cCode = resolveCityCode(cityCode);
 
-    const cityData = cityRoutesCache.get(cCode);
-    const idsFromCity = cityData?.route_numbers?.[routeName];
+    const cityData = getCachedCityRoutesSync(cCode);
+    let idsFromCity = cityData?.route_numbers?.[routeName];
     if (idsFromCity && idsFromCity.length > 0) {
-        return {routeName, vehicleRouteIds: idsFromCity};
+        if (cCode === "32020") idsFromCity = idsFromCity.filter((id) => !id.startsWith("WJB258"));
+        else if (cCode === "32320") idsFromCity = idsFromCity.filter((id) => id.startsWith("WJB258"));
+        if (idsFromCity.length > 0) {
+            return {routeName, vehicleRouteIds: idsFromCity};
+        }
     }
 
-    return routeInfoCache.get(`${cCode}:${routeName}`);
+    const cached = routeInfoCache.get(`${cCode}:${routeName}`);
+    if (cached?.vehicleRouteIds) {
+        let vIds = cached.vehicleRouteIds;
+        if (cCode === "32020") vIds = vIds.filter((id) => !id.startsWith("WJB258"));
+        else if (cCode === "32320") vIds = vIds.filter((id) => id.startsWith("WJB258"));
+        if (vIds.length > 0) {
+            return {routeName, vehicleRouteIds: vIds};
+        }
+    }
+    return null;
 }
 
 /**
@@ -92,15 +138,34 @@ export function getCachedPolylineSync(routeKey: string, cityCode?: string): GeoP
  */
 export async function fetchCityRoutesData(cityCode?: string): Promise<CityRoutesPayload> {
     const cCode = resolveCityCode(cityCode);
-    const cached = cityRoutesCache.get(cCode);
+    const cached = getCachedCityRoutesSync(cCode);
     if (cached && cached.routes && cached.routes.length > 0) {
         registerDynamicRouteMeta(cCode, cached.routes);
         return cached;
     }
 
     const json = await fetchAPI<Partial<CityRoutesPayload>>(`/api/routes?cityCode=${cCode}`);
-    const routes = Array.isArray(json.routes) ? json.routes : [];
-    const routeNumbers = json.route_numbers || {};
+    let routes = Array.isArray(json.routes) ? json.routes : [];
+    let routeNumbers = json.route_numbers || {};
+
+    if (cCode === "32020") {
+        routes = routes.filter((r) => !String(r.routeid).startsWith("WJB258"));
+        const cleaned: Record<string, string[]> = {};
+        for (const [k, v] of Object.entries(routeNumbers)) {
+            const filtered = v.filter((id) => !id.startsWith("WJB258"));
+            if (filtered.length > 0) cleaned[k] = filtered;
+        }
+        routeNumbers = cleaned;
+    } else if (cCode === "32320") {
+        routes = routes.filter((r) => String(r.routeid).startsWith("WJB258"));
+        const cleaned: Record<string, string[]> = {};
+        for (const [k, v] of Object.entries(routeNumbers)) {
+            const filtered = v.filter((id) => id.startsWith("WJB258"));
+            if (filtered.length > 0) cleaned[k] = filtered;
+        }
+        routeNumbers = cleaned;
+    }
+
     if (routes.length > 0) {
         registerDynamicRouteMeta(cCode, routes);
     }
@@ -155,9 +220,13 @@ export async function getRouteInfo(routeName: string, cityCode?: string): Promis
 
     // 1. Check already-cached full city route map first (0 network calls!)
     const cachedCity = getCachedCityRoutesSync(cCode);
-    const cachedIds = cachedCity?.route_numbers?.[routeName];
+    let cachedIds = cachedCity?.route_numbers?.[routeName];
     if (cachedIds && cachedIds.length > 0) {
-        return {routeName, vehicleRouteIds: cachedIds};
+        if (cCode === "32020") cachedIds = cachedIds.filter((id) => !id.startsWith("WJB258"));
+        else if (cCode === "32320") cachedIds = cachedIds.filter((id) => id.startsWith("WJB258"));
+        if (cachedIds.length > 0) {
+            return {routeName, vehicleRouteIds: cachedIds};
+        }
     }
 
     // 2. Coalesced fetch with routeInfoCache
@@ -167,9 +236,13 @@ export async function getRouteInfo(routeName: string, cityCode?: string): Promis
             const json = await fetchAPI<{route_numbers?: Record<string, string[]>; routes?: Array<{routeid: string}>}>(
                 `/api/routes?cityCode=${cCode}&routeNo=${encodeURIComponent(routeName)}`
             );
-            const ids = json?.route_numbers?.[routeName] || (json?.routes?.[0]?.routeid ? [json.routes[0].routeid] : null);
+            let ids = json?.route_numbers?.[routeName] || (json?.routes?.[0]?.routeid ? [json.routes[0].routeid] : null);
             if (ids && ids.length > 0) {
-                return {routeName, vehicleRouteIds: ids};
+                if (cCode === "32020") ids = ids.filter((id) => !id.startsWith("WJB258"));
+                else if (cCode === "32320") ids = ids.filter((id) => id.startsWith("WJB258"));
+                if (ids.length > 0) {
+                    return {routeName, vehicleRouteIds: ids};
+                }
             }
             return null;
         } catch (err) {
@@ -201,9 +274,13 @@ export async function getRouteVariations(routeName: string, cityCode?: string): 
     return variationsCache.getOrFetch(cacheKey, async () => {
         const routeInfo = await getRouteInfo(routeName, cCode);
         if (!routeInfo || !routeInfo.vehicleRouteIds?.length) return [];
+        let vIds = routeInfo.vehicleRouteIds;
+        if (cCode === "32020") vIds = vIds.filter((id) => !id.startsWith("WJB258"));
+        else if (cCode === "32320") vIds = vIds.filter((id) => id.startsWith("WJB258"));
+        if (vIds.length === 0) return [];
 
         const polylines = await Promise.all(
-            routeInfo.vehicleRouteIds.map(async (id) => {
+            vIds.map(async (id) => {
                 const poly = await getPolyline(id, cCode);
                 return {id, poly};
             })

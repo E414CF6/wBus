@@ -25,24 +25,37 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
     const effectiveCityCode = cityCode || currentCity?.code || "32020";
 
     const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName, true, effectiveCityCode);
-    const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo?.vehicleRouteIds]);
+    const rawRouteIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo?.vehicleRouteIds]);
+    const routeIds = useMemo(() => {
+        if (effectiveCityCode === "32020") {
+            return rawRouteIds.filter((id) => !id.startsWith("WJB258"));
+        }
+        if (effectiveCityCode === "32320") {
+            return rawRouteIds.filter((id) => id.startsWith("WJB258"));
+        }
+        return rawRouteIds;
+    }, [rawRouteIds, effectiveCityCode]);
     const lastBoundsKeyRef = useRef<string | null>(null);
 
     // Filter to render all available route IDs for this route number
     const validRouteIds = useMemo(() => {
         const available = routeIds.filter((id) => {
+            if (effectiveCityCode === "32020" && id.startsWith("WJB258")) return false;
+            if (effectiveCityCode === "32320" && !id.startsWith("WJB258")) return false;
             const data = polylineMap.get(id);
             return data && (data.upPolyline.length > 0 || data.downPolyline.length > 0);
         });
         if (available.length > 0) return available;
         if (activeRouteId && polylineMap.has(activeRouteId)) {
+            if (effectiveCityCode === "32020" && activeRouteId.startsWith("WJB258")) return [];
+            if (effectiveCityCode === "32320" && !activeRouteId.startsWith("WJB258")) return [];
             const data = polylineMap.get(activeRouteId);
             if (data && (data.upPolyline.length > 0 || data.downPolyline.length > 0)) {
                 return [activeRouteId];
             }
         }
         return routeIds.slice(0, 1);
-    }, [routeIds, polylineMap, activeRouteId]);
+    }, [routeIds, polylineMap, activeRouteId, effectiveCityCode]);
 
     const bbox = useMemo(() => {
         let minLat = Infinity,

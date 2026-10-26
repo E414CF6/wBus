@@ -42,11 +42,24 @@ export async function GET(_request: Request, {params}: { params: Promise<{ path:
             );
         };
 
+        const url = new URL(_request.url);
+        const cityCode = ApiValidators.resolveCityCode(url.searchParams.get("cityCode"));
+
         const routeFileName = relativePath.startsWith("routes/")
             ? relativePath.slice(7)
             : relativePath.startsWith("route/")
             ? relativePath.slice(6)
             : null;
+
+        if (routeFileName) {
+            const rId = routeFileName.replace(/\.json$/, "");
+            if (cityCode === "32020" && rId.startsWith("WJB258")) {
+                return NextResponse.json({error: "Route belongs to Hoengseong"}, {status: 404});
+            }
+            if (cityCode === "32320" && !rId.startsWith("WJB258")) {
+                return NextResponse.json({error: "Route belongs to Wonju"}, {status: 404});
+            }
+        }
 
         const localPaths = [
             join(publicRoot, relativePath),

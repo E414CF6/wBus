@@ -188,12 +188,12 @@ const BusPopupContent = memo(
                             {isFollowed ? (
                                 <>
                                     <Navigation className="w-3.5 h-3.5 animate-pulse"/>
-                                    <span>실시간 위치 따라가는 중</span>
+                                    <span>버스 따라가는 중</span>
                                 </>
                             ) : (
                                 <>
                                     <LocateFixed className="w-3.5 h-3.5"/>
-                                    <span>이 버스 실시간 따라가기</span>
+                                    <span>버스 따라가기</span>
                                 </>
                             )}
                         </button>

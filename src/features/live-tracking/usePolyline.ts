@@ -110,7 +110,16 @@ export function getFallbackPolylines(polylineMap: Map<string, BusPolylineSet>, a
  */
 export function useRoutePolylineData(routeName: string, enabled: boolean = true, cityCode: string = "32020") {
     const routeInfo = useRouteInfo(routeName, enabled, cityCode);
-    const routeIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo]);
+    const routeIds = useMemo(() => {
+        const ids = routeInfo?.vehicleRouteIds ?? [];
+        if (cityCode === "32020") {
+            return ids.filter((id) => !id.startsWith("WJB258"));
+        }
+        if (cityCode === "32320") {
+            return ids.filter((id) => id.startsWith("WJB258"));
+        }
+        return ids;
+    }, [routeInfo?.vehicleRouteIds, cityCode]);
     const polylineMap = useBusPolylineMap(routeIds, cityCode);
     const activeRouteId = routeIds[0] ?? null;
 

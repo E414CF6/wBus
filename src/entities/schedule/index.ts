@@ -5,4 +5,5 @@ export * from "./yonseiShuttleSchedule";
 export * from "./yonseiStaticTimetables";
 export * from "./lib/departureUtils";
 export * from "./lib/hourlyTimetable";
+export * from "./lib/scheduleVariant";
 

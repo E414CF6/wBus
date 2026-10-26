@@ -12,7 +12,6 @@ import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
 
 import {isWeekend} from "@shared/lib/timeUtils";
 import {BottomNav} from "@widgets/BottomNav";
-import {TransitWiki} from "@widgets/TransitWiki";
 import {useAppNavigation} from "./hooks/useAppNavigation";
 
 const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
@@ -21,12 +20,14 @@ const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
 const RouteLayer = dynamic(() => import("@widgets/MapContainer/RouteLayer"), {
     ssr: false,
 });
+const RouteScheduleModal = dynamic(() => import("@features/map-view/RouteScheduleModal"), {
+    ssr: false,
+});
 
 export function AppShell() {
     const {
         activeTab,
         timetableSubTab,
-        wikiDocId,
         dayMode,
         setDayMode,
         selectedRoute,
@@ -35,7 +36,6 @@ export function AppShell() {
         handleTabChange,
         handleScheduleSubTabChange,
         handleRouteChange,
-        handleSelectMapRoute,
     } = useAppNavigation();
 
     // Live weekend check for timetable badge
@@ -63,17 +63,6 @@ export function AppShell() {
         return () => window.removeEventListener("keydown", handleKeyDown);
     }, [activeTab, handleTabChange]);
 
-    // Handler for opening the Transit Wiki Drawer directly from Map Pins, Route Header, or Stop Popups
-    const handleOpenWiki = useCallback(
-        (docOrSubTab?: string) => {
-            if (docOrSubTab) {
-                handleScheduleSubTabChange(docOrSubTab);
-            }
-            handleTabChange("schedule");
-        },
-        [handleScheduleSubTabChange, handleTabChange]
-    );
-
     // Fetch route map for current city
     const routeMap = useBusRouteMap(true, currentCity.code);
     const allRoutes = useMemo(
@@ -96,6 +85,21 @@ export function AppShell() {
         }
         return Object.keys(routeMap)[0] ?? selectedRoute;
     }, [routeMap, selectedRoute, isWonju, currentCity.code]);
+
+    // Handler for opening the Route Timetable Modal directly from Map Pins, Route Header, or Stop Popups
+    const handleOpenSchedule = useCallback(
+        (targetRouteOrDoc?: string) => {
+            if (!isWonju) return;
+            if (targetRouteOrDoc) {
+                const cleanRoute = targetRouteOrDoc.replace(/^route:/, "");
+                if (cleanRoute && cleanRoute !== activeRoute) {
+                    handleRouteChange(cleanRoute, currentCity.code);
+                }
+            }
+            handleTabChange("schedule");
+        },
+        [isWonju, activeRoute, handleRouteChange, currentCity.code, handleTabChange]
+    );
 
     // Live telemetry for active map route
     const liveBusData = useBusSortedList(activeRoute, hasVisitedMap && isMapActive, currentCity.code);
@@ -135,31 +139,30 @@ export function AppShell() {
                     onReconnect={liveBusData.reconnect}
                     selectedDirection={selectedDirection}
                     onSelectDirection={handleSelectDirection}
-                    onOpenScheduleModal={handleOpenWiki}
+                    onOpenScheduleModal={handleOpenSchedule}
                 />
 
                 <MapWrapper>
                     <RouteLayer
                         routeName={activeRoute}
                         onRouteChange={handleRouteChange}
-                        onOpenScheduleModal={handleOpenWiki}
+                        onOpenScheduleModal={handleOpenSchedule}
                         enabled={true}
                         selectedDirection={selectedDirection}
                         cityCode={currentCity.code}
+                        dayMode={dayMode}
+                        isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
                     />
                 </MapWrapper>
             </div>
 
-            {/* 2. Interactive Bottom Sheet Transit & Timetable Dashboard */}
-            {activeTab === "schedule" && (
-                <TransitWiki
-                    initialDocId={wikiDocId}
-                    onDocChange={(docId) => handleScheduleSubTabChange(docId)}
+            {/* 2. Route-Focused Timetable Modal (Wonju Only) */}
+            {isWonju && activeTab === "schedule" && (
+                <RouteScheduleModal
+                    isOpen={true}
+                    routeName={activeRoute}
                     onClose={() => handleTabChange("map")}
-                    onSelectMapRoute={handleSelectMapRoute}
-                    allRouteNames={allRoutes}
                     dayMode={dayMode}
-                    onDayModeChange={setDayMode}
                     isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
                 />
             )}
@@ -168,7 +171,7 @@ export function AppShell() {
             <BottomNav
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
-                showScheduleTab={true}
+                showScheduleTab={isWonju}
                 scheduleSubTab={timetableSubTab}
                 onScheduleSubTabChange={handleScheduleSubTabChange}
                 dayMode={dayMode}

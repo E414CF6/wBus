@@ -4,6 +4,8 @@ import React, {memo} from "react";
 import BusMarker from "./BusMarker";
 import BusRoutePolyline from "./BusRoutePolyline";
 import BusStopMarker from "./BusStopMarker";
+import TimetablePinMarker from "./TimetablePinMarker";
+import type {DayMode} from "@shared/types/navigation";
 
 // ----------------------------------------------------------------------
 // Types
@@ -19,6 +21,8 @@ interface RouteLayerProps {
     showNearbyStops?: boolean;
     focusedStopId?: string | null;
     onClearFocusedStop?: () => void;
+    dayMode?: DayMode;
+    isTodayWeekendOrHoliday?: boolean;
 }
 
 // ----------------------------------------------------------------------
@@ -39,6 +43,8 @@ const RouteLayer = memo(({
                              showNearbyStops = true,
                              focusedStopId = null,
                              onClearFocusedStop,
+                             dayMode,
+                             isTodayWeekendOrHoliday,
                          }: RouteLayerProps) => {
     return (<>
         <BusMarker routeName={routeName} enabled={enabled} cityCode={cityCode}/>
@@ -50,6 +56,15 @@ const RouteLayer = memo(({
             showNearbyStops={showNearbyStops}
             focusedStopId={focusedStopId}
             onClearFocusedStop={onClearFocusedStop}
+        />
+        <TimetablePinMarker
+            routeName={routeName}
+            cityCode={cityCode}
+            onRouteChange={onRouteChange}
+            onOpenScheduleModal={onOpenScheduleModal}
+            enabled={enabled}
+            dayMode={dayMode}
+            isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
         />
         <BusRoutePolyline routeName={routeName} selectedDirection={selectedDirection} cityCode={cityCode}/>
     </>);
@@ -63,7 +78,9 @@ const RouteLayer = memo(({
         prev.cityCode === next.cityCode &&
         prev.showNearbyStops === next.showNearbyStops &&
         prev.focusedStopId === next.focusedStopId &&
-        prev.onClearFocusedStop === next.onClearFocusedStop
+        prev.onClearFocusedStop === next.onClearFocusedStop &&
+        prev.dayMode === next.dayMode &&
+        prev.isTodayWeekendOrHoliday === next.isTodayWeekendOrHoliday
     );
 });
 

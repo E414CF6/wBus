@@ -9,8 +9,8 @@ import {
 } from "./cities";
 
 describe("cities entity & nearest city resolution", () => {
-    it("contains 139 nationwide cities/counties including Seoul", () => {
-        expect(NATIONWIDE_CITIES.length).toBe(139);
+    it("contains 140 nationwide cities/counties including Seoul", () => {
+        expect(NATIONWIDE_CITIES.length).toBe(140);
     });
 
     describe("getCityByCode", () => {
@@ -22,8 +22,14 @@ describe("cities entity & nearest city resolution", () => {
 
         it("returns Wonju for code 32020", () => {
             const city = getCityByCode("32020");
-            expect(city.name).toBe("원주시/횡성군");
+            expect(city.name).toBe("원주시");
             expect(city.code).toBe("32020");
+        });
+
+        it("returns Hoengseong for code 32320", () => {
+            const city = getCityByCode("32320");
+            expect(city.name).toBe("횡성군");
+            expect(city.code).toBe("32320");
         });
 
         it("returns Busan for code 21", () => {
@@ -55,7 +61,7 @@ describe("cities entity & nearest city resolution", () => {
             // Wonju City Hall area
             const city = findNearestCity(37.3422, 127.9202);
             expect(city.code).toBe("32020");
-            expect(city.name).toBe("원주시/횡성군");
+            expect(city.name).toBe("원주시");
         });
 
         it("identifies Chuncheon from Chuncheon coordinates", () => {
@@ -103,7 +109,7 @@ describe("cities entity & nearest city resolution", () => {
 
         it("finds cities by province", () => {
             const results = searchCities("강원");
-            expect(results.length).toBe(6);
+            expect(results.length).toBe(7);
             expect(results.every((c) => c.province.includes("강원"))).toBe(true);
         });
 

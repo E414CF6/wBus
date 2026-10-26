@@ -1,31 +1,12 @@
 "use client";
 
 import React, {useMemo, useState} from "react";
-import {
-    AlertTriangle,
-    ArrowRight,
-    MapPin,
-    RefreshCw,
-    Search,
-    Star,
-    X,
-} from "lucide-react";
-import {
-    type BusRoute,
-    type CacheMetadata,
-    getNextDeparture,
-} from "@entities/schedule";
+import {AlertTriangle, ArrowRight, MapPin, RefreshCw, Search, Star, X,} from "lucide-react";
+import {type BusRoute, type CacheMetadata, getNextDeparture,} from "@entities/schedule";
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useNoticeList} from "@entities/notice/hooks";
 import type {CityInfo} from "@entities/city";
-import {
-    WikiCallout,
-    WikiInfobox,
-    WikiLink,
-    WikiSection,
-    WikiToc,
-    type WikiTocItem,
-} from "../WikiPrimitives";
+import {WikiCallout, WikiInfobox, WikiLink, WikiSection, WikiToc, type WikiTocItem,} from "../WikiPrimitives";
 
 interface CityWikiArticleProps {
     city: CityInfo;
@@ -187,7 +168,8 @@ export const CityWikiArticle: React.FC<CityWikiArticleProps> = ({
             <div className="flex flex-col-reverse md:flex-row items-start justify-between gap-4">
                 <div className="w-full md:w-auto space-y-3 flex-1">
                     <WikiCallout tone="blue">
-                        이 문서는 <strong>{city.name}</strong> 관내를 운행하는 시내버스 노선 체계, 시간표, 경유 정류장 및 실시간 교통 정보를 다루는 통합 대중교통 위키 대문 문서입니다. 각 노선 번호를 클릭하면 해당 노선의 상세 위키 문서로 이동합니다.
+                        <strong>{city.name}</strong> 관내를 운행하는 시내버스 노선 체계 및 운행 시간표 종합 안내입니다. 각 노선 번호를 클릭하면 해당 노선의 상세 운행
+                        시간표와 경유 정류장을 확인할 수 있습니다.
                     </WikiCallout>
                     <WikiToc items={tocItems} />
                 </div>

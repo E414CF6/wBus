@@ -534,9 +534,17 @@ export async function fetchBusLocations(routeId: string, options?: {
         return items;
     }
 
+    if (cityCode === "32020" && routeId.startsWith("WJB258")) {
+        return [];
+    }
+    if (cityCode === "32320" && !routeId.startsWith("WJB258")) {
+        return [];
+    }
+
+    const tagoCityCode = cityCode === "32320" ? "32020" : cityCode;
     const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusLocation>>(
         "/BusLcInfoInqireService/getRouteAcctoBusLcList",
-        {routeId, cityCode},
+        {routeId, cityCode: tagoCityCode},
         {priority}
     );
 
@@ -572,9 +580,10 @@ export async function fetchBusArrivals(nodeId: string, cityCode = CITY_CODE): Pr
         return fetchSeoulBusArrivals(nodeId);
     }
 
+    const tagoCityCode = cityCode === "32320" ? "32020" : cityCode;
     const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusArrival>>(
         "/ArvlInfoInqireService/getSttnAcctoArvlPrearngeInfoList",
-        {nodeId, cityCode},
+        {nodeId, cityCode: tagoCityCode},
         {priority: API_PRIORITY.USER_INTERACTIVE}
     );
 
@@ -602,9 +611,17 @@ export async function fetchRouteStops(routeId: string, cityCode = CITY_CODE): Pr
         return fetchSeoulRouteStops(routeId);
     }
 
+    if (cityCode === "32020" && routeId.startsWith("WJB258")) {
+        return [];
+    }
+    if (cityCode === "32320" && !routeId.startsWith("WJB258")) {
+        return [];
+    }
+
+    const tagoCityCode = cityCode === "32320" ? "32020" : cityCode;
     const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusStop>>(
         "/BusRouteInfoInqireService/getRouteAcctoThrghSttnList",
-        {routeId, cityCode},
+        {routeId, cityCode: tagoCityCode},
         {priority: API_PRIORITY.USER_INTERACTIVE}
     );
 
@@ -673,9 +690,10 @@ export async function fetchRoutesByStation(nodeId: string, cityCode = CITY_CODE)
         return fetchSeoulRoutesByStation(nodeId);
     }
 
+    const tagoCityCode = cityCode === "32320" ? "32020" : cityCode;
     const data = await fetchPublicApi<PublicApiResponseEnvelope<RawStationRoute>>(
         "/BusSttnInfoInqireService/getSttnThrghRouteList",
-        {nodeId, cityCode, numOfRows: "200"},
+        {nodeId, cityCode: tagoCityCode, numOfRows: "200"},
         {priority: API_PRIORITY.USER_INTERACTIVE}
     );
 
@@ -701,8 +719,9 @@ export async function fetchCityRoutes(cityCode: string, routeNo?: string): Promi
         return fetchSeoulCityRoutes(routeNo);
     }
 
+    const tagoCityCode = cityCode === "32320" ? "32020" : cityCode;
     const params: Record<string, string> = {
-        cityCode,
+        cityCode: tagoCityCode,
         numOfRows: "2048",
     };
     if (routeNo) {
@@ -716,10 +735,19 @@ export async function fetchCityRoutes(cityCode: string, routeNo?: string): Promi
     );
 
     const items = extractItems(data, `getRouteNoList:${cityCode}:${routeNo ?? "all"}`);
-    return items.map((r) => ({
+    let mapped = items.map((r) => ({
         ...r,
         routeno: String(r.routeno ?? ""),
     }));
+
+    // Split Wonju (WJB251) and Hoengseong (WJB258)
+    if (cityCode === "32020") {
+        mapped = mapped.filter((r) => !String(r.routeid).startsWith("WJB258"));
+    } else if (cityCode === "32320") {
+        mapped = mapped.filter((r) => String(r.routeid).startsWith("WJB258"));
+    }
+
+    return mapped;
 }
 
 const ROUTE_CACHE_OPTIONS = {

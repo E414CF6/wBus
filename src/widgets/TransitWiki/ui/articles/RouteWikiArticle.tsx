@@ -1,28 +1,13 @@
 "use client";
 
 import React, {useCallback, useMemo, useRef, useState} from "react";
-import {
-    LocateFixed,
-    MapPin,
-    Search,
-    Star,
-    X,
-} from "lucide-react";
+import {Clock, LocateFixed, MapPin, RotateCw, Search, Star, X,} from "lucide-react";
 import {type BusRoute, getNextDeparture} from "@entities/schedule";
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useBusStop} from "@entities/station/hooks";
 import type {BusStop} from "@entities/station/types";
 import type {CityInfo} from "@entities/city";
-import {
-    DualHourlyTimetableBlock,
-    WikiCallout,
-    WikiFoldBox,
-    WikiInfobox,
-    WikiLink,
-    WikiSection,
-    WikiToc,
-    type WikiTocItem,
-} from "../WikiPrimitives";
+import {DualHourlyTimetableBlock} from "../WikiPrimitives";
 
 interface RouteWikiArticleProps {
     routeNo: string;
@@ -36,13 +21,15 @@ interface RouteWikiArticleProps {
     now: Date;
 }
 
+type TimetableViewMode = "summary" | "full" | "stops";
+
 export const RouteWikiArticle: React.FC<RouteWikiArticleProps> = ({
     routeNo,
     city,
     routes,
     isRouteBookmarked,
     onToggleBookmark,
-    onNavigate,
+                                                                      onNavigate: _onNavigate,
     onSelectMapRoute,
     onFocusStopOnMap,
     now,
@@ -69,7 +56,10 @@ export const RouteWikiArticle: React.FC<RouteWikiArticleProps> = ({
         return variants[0];
     }, [variants, selectedVariantId]);
 
+    const [viewMode, setViewMode] = useState<TimetableViewMode>("summary");
+    const [hourlyLocation, setHourlyLocation] = useState<"dest" | "origin">("dest");
     const [tableSearch, setTableSearch] = useState("");
+    const [stopSearch, setStopSearch] = useState("");
     const tableRef = useRef<HTMLDivElement>(null);
 
     // Fetch route stops
@@ -93,6 +83,16 @@ export const RouteWikiArticle: React.FC<RouteWikiArticleProps> = ({
         );
     }, [activeVariant, tableSearch]);
 
+    const filteredStops = useMemo(() => {
+        if (!stopSearch.trim()) return routeStops;
+        const q = stopSearch.toLowerCase().trim();
+        return routeStops.filter(
+            (s) =>
+                s.nodenm.toLowerCase().includes(q) ||
+                (s.nodeno && String(s.nodeno).toLowerCase().includes(q))
+        );
+    }, [routeStops, stopSearch]);
+
     const scrollToNextRow = useCallback(() => {
         if (!tableRef.current) return;
         const target = tableRef.current.querySelector<HTMLElement>(
@@ -113,284 +113,283 @@ export const RouteWikiArticle: React.FC<RouteWikiArticleProps> = ({
                 ? "지선·공영버스"
                 : "간선버스";
 
-    const tocItems: WikiTocItem[] = useMemo(() => {
-        if (activeVariant) {
-            return [
-                {id: "overview", number: "1", title: "개요"},
-                {id: "hourly", number: "2", title: "시간대별 요약 시간표"},
-                {id: "full-timetable", number: "3", title: "회차별 전체 상세 시간표"},
-                {id: "stops", number: "4", title: `경유 정류장 일람 (${routeStops.length})`},
-            ];
-        }
-        return [
-            {id: "overview", number: "1", title: "개요"},
-            {id: "stops", number: "2", title: `경유 정류장 일람 (${routeStops.length})`},
-        ];
-    }, [activeVariant, routeStops.length]);
-
     return (
-        <div className="space-y-6">
-            {/* Top Layout: Callout + TOC on Left, Route Infobox on Right */}
-            <div className="flex flex-col-reverse md:flex-row items-start justify-between gap-4">
-                <div className="w-full md:w-auto space-y-3 flex-1">
-                    <WikiCallout tone="blue">
-                        이 문서는{" "}
-                        <WikiLink docId={`city:${city.code}`} onNavigate={onNavigate}>
-                            {shortCity} 시내버스
-                        </WikiLink>{" "}
-                        <strong>{routeNo}번</strong> 노선({originName} ↔ {destName})의 운행 정보, 시간표 및 경유 정류장을 다루는 노선 위키 문서입니다.
-                        {routeMeta.isYonsei && (
-                            <>
-                                {" "}
-                                캠퍼스 환승 및 통합 시간표는{" "}
-                                <WikiLink docId="yonsei" onNavigate={onNavigate}>
-                                    연세대학교 미래캠퍼스/교통
-                                </WikiLink>{" "}
-                                문서에서도 함께 확인할 수 있습니다.
-                            </>
-                        )}
-                    </WikiCallout>
-                    <WikiToc items={tocItems} />
-                </div>
-
-                <WikiInfobox
-                    badge={`${shortCity} ${typeLabel}`}
-                    title={`${shortCity} 버스 ${routeNo}`}
-                    subtitle={`${originName} ↔ ${destName}`}
-                    headerStyle={{backgroundColor: routeMeta.colorTheme.main}}
-                    headerClassName="text-white"
-                    rows={[
-                        {
-                            label: "기점 ↔ 종점",
-                            value: (
-                                <strong>
-                                    {originName} ↔ {destName}
-                                </strong>
-                            ),
-                        },
-                        {
-                            label: "노선 등급",
-                            value: typeLabel,
-                        },
-                        ...(activeVariant
-                            ? [
-                                  {
-                                      label: "운행 요일",
-                                      value: (
-                                          <div className="flex flex-wrap gap-1">
-                                              {variants.map((v) => (
-                                                  <button
-                                                      key={v.id}
-                                                      type="button"
-                                                      onClick={() =>
-                                                          setSelectedVariantId(v.id)
-                                                      }
-                                                      className={`px-2 py-0.5 rounded text-[11px] font-extrabold border transition cursor-pointer ${
-                                                          activeVariant.id === v.id
-                                                              ? "bg-blue-600 text-white border-blue-600"
-                                                              : "bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700"
-                                                      }`}
-                                                  >
-                                                      {v.dayType}
-                                                  </button>
-                                              ))}
-                                          </div>
-                                      ),
-                                  },
-                                  {
-                                      label: "첫차 · 막차",
-                                      value: (
-                                          <span className="font-mono font-bold">
-                                              {activeVariant.firstBus} ~{" "}
-                                              {activeVariant.lastBus}
-                                          </span>
-                                      ),
-                                  },
-                                  {
-                                      label: "운행 횟수",
-                                      value: `${activeVariant.runCount}회 (배차간격 ${activeVariant.interval})`,
-                                  },
-                              ]
-                            : []),
-                    ]}
-                    footer={
-                        <div className="flex items-center justify-between gap-2">
-                            {activeVariant && (
-                                <button
-                                    type="button"
-                                    onClick={() => onToggleBookmark(activeVariant.id)}
-                                    className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-extrabold border transition cursor-pointer ${
-                                        isBookmarked
-                                            ? "bg-amber-500 text-white border-amber-500"
-                                            : "bg-white dark:bg-[#12151e] text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700"
-                                    }`}
-                                >
-                                    <Star
-                                        className={`w-3.5 h-3.5 ${
-                                            isBookmarked ? "fill-white" : "text-amber-500"
-                                        }`}
-                                    />
-                                    <span>{isBookmarked ? "즐겨찾기됨" : "즐겨찾기"}</span>
-                                </button>
-                            )}
-                            {onSelectMapRoute && (
-                                <button
-                                    type="button"
-                                    onClick={() => onSelectMapRoute(routeNo)}
-                                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-extrabold transition cursor-pointer"
-                                >
-                                    <MapPin className="w-3.5 h-3.5" />
-                                    <span>실시간 지도에서 노선·버스 보기</span>
-                                </button>
-                            )}
+        <div className="space-y-4">
+            {/* 1. Modern Route Header Hero Banner */}
+            <div
+                className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-[#131722] dark:via-[#181d2b] dark:to-[#131722] text-white p-4 sm:p-5 shadow-md border border-slate-700/60 dark:border-white/10">
+                <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="space-y-1.5 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                                className="px-2.5 py-1 rounded-xl text-xs font-black shadow-xs shrink-0"
+                                style={{backgroundColor: routeMeta.colorTheme.main}}
+                            >
+                                {routeNo}번
+                            </span>
+                            <span
+                                className="px-2 py-0.5 rounded-lg bg-white/10 text-[11px] font-bold text-slate-300 shrink-0">
+                                {shortCity} {typeLabel}
+                            </span>
                         </div>
-                    }
-                />
+                        <h2 className="text-lg sm:text-xl font-extrabold tracking-tight truncate">
+                            {originName} ↔ {destName}
+                        </h2>
+                        {activeVariant && (
+                            <div className="flex items-center gap-2 text-xs text-slate-300 flex-wrap">
+                                <span className="font-mono font-bold">
+                                    첫차 {activeVariant.firstBus} · 막차 {activeVariant.lastBus}
+                                </span>
+                                <span>•</span>
+                                <span>
+                                    {activeVariant.runCount}회 운행 (배차 {activeVariant.interval})
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 shrink-0 pt-1 sm:pt-0">
+                        {activeVariant && (
+                            <button
+                                type="button"
+                                onClick={() => onToggleBookmark(activeVariant.id)}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black border transition cursor-pointer active:scale-95 ${
+                                    isBookmarked
+                                        ? "bg-amber-500 text-white border-amber-400 shadow-xs"
+                                        : "bg-white/10 hover:bg-white/15 text-slate-200 border-white/10"
+                                }`}
+                            >
+                                <Star
+                                    className={`w-3.5 h-3.5 ${
+                                        isBookmarked ? "fill-white text-white" : "text-amber-400"
+                                    }`}
+                                />
+                                <span>{isBookmarked ? "즐겨찾기됨" : "즐겨찾기"}</span>
+                            </button>
+                        )}
+                        {onSelectMapRoute && (
+                            <button
+                                type="button"
+                                onClick={() => onSelectMapRoute(routeNo)}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-xs transition cursor-pointer active:scale-95"
+                            >
+                                <MapPin className="w-3.5 h-3.5"/>
+                                <span>지도에서 노선·핀 보기</span>
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
 
-            {/* Section 1: 개요 */}
-            <WikiSection id="overview" number="1" title="개요">
-                <p>
-                    <strong>
-                        {shortCity} 시내버스 {routeNo}번
-                    </strong>
-                    은 <strong>{originName}</strong>을(를) 기점으로 하여{" "}
-                    <strong>{destName}</strong>까지 운행하는 {typeLabel} 노선입니다.
-                </p>
+            {/* 2. Next Departure Spotlight (Dual Terminus Cards) */}
+            {activeVariant && nextDepInfo && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {/* Origin Terminus Next Departure */}
+                    <div
+                        className="p-3.5 rounded-2xl bg-blue-50/70 dark:bg-blue-950/25 border border-blue-200 dark:border-blue-900/50 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <div
+                                className="flex items-center gap-1.5 text-[11px] font-bold text-blue-700 dark:text-blue-300">
+                                <Clock className="w-3.5 h-3.5 shrink-0"/>
+                                <span className="truncate">기점 ({originName}) 다음 출발</span>
+                            </div>
+                            <div className="flex items-baseline gap-2 mt-1">
+                                {nextDepInfo.nextOrigin ? (
+                                    <>
+                                        <span className="font-mono text-xl font-black text-blue-900 dark:text-blue-100">
+                                            {nextDepInfo.nextOrigin.originDepTime}
+                                        </span>
+                                        <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400">
+                                            {nextDepInfo.originWaitMins !== null &&
+                                                (nextDepInfo.originWaitMins <= 0
+                                                    ? "곧 출발"
+                                                    : `${nextDepInfo.originWaitMins}분 후`)}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="text-xs font-bold text-slate-400">
+                                        금일 운행 종료
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <span
+                            className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-[10px] font-black text-blue-700 dark:text-blue-300 shrink-0">
+                            {activeVariant.dayType}
+                        </span>
+                    </div>
 
-                {activeVariant && nextDepInfo && (
-                    <div className="overflow-x-auto rounded-lg border border-slate-300 dark:border-slate-700 mt-2">
-                        <table className="w-full border-collapse text-left text-xs">
-                            <thead>
-                                <tr className="bg-slate-100 dark:bg-[#1b202e] text-slate-700 dark:text-slate-200 border-b border-slate-300 dark:border-slate-700 font-extrabold">
-                                    <th className="py-2 px-3 w-28 border-r border-slate-300 dark:border-slate-700">
-                                        현재 기준 요일
-                                    </th>
-                                    <th className="py-2 px-3 border-r border-slate-300 dark:border-slate-700">
-                                        기점 ({originName}) 다음 출발
-                                    </th>
-                                    <th className="py-2 px-3">
-                                        종점 ({destName}) 다음 출발
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-white dark:bg-[#12151e]">
-                                <tr>
-                                    <td className="py-2.5 px-3 font-extrabold border-r border-slate-200 dark:border-slate-800">
-                                        {activeVariant.dayType}
-                                    </td>
-                                    <td className="py-2.5 px-3 font-mono border-r border-slate-200 dark:border-slate-800">
-                                        {nextDepInfo.nextOrigin ? (
-                                            <span className="text-teal-700 dark:text-teal-300 font-black">
-                                                {nextDepInfo.nextOrigin.originDepTime}{" "}
-                                                {nextDepInfo.originWaitMins !== null && (
-                                                    <span className="font-sans text-[11px] font-bold">
-                                                        (
-                                                        {nextDepInfo.originWaitMins <= 0
-                                                            ? "곧 출발"
-                                                            : `${nextDepInfo.originWaitMins}분 후`}
-                                                        )
-                                                    </span>
-                                                )}
-                                            </span>
-                                        ) : (
-                                            <span className="text-slate-400 font-sans">
-                                                금일 운행 종료
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td className="py-2.5 px-3 font-mono">
-                                        {nextDepInfo.nextDest ? (
-                                            <span className="text-indigo-700 dark:text-indigo-300 font-black">
-                                                {nextDepInfo.nextDest.destDepTime}{" "}
-                                                {nextDepInfo.destWaitMins !== null && (
-                                                    <span className="font-sans text-[11px] font-bold">
-                                                        (
-                                                        {nextDepInfo.destWaitMins <= 0
-                                                            ? "곧 출발"
-                                                            : `${nextDepInfo.destWaitMins}분 후`}
-                                                        )
-                                                    </span>
-                                                )}
-                                            </span>
-                                        ) : (
-                                            <span className="text-slate-400 font-sans">
-                                                금일 운행 종료
-                                            </span>
-                                        )}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    {/* Turnaround Terminus Next Departure */}
+                    <div
+                        className="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/25 border border-amber-200 dark:border-amber-900/50 flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                            <div
+                                className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                                <RotateCw className="w-3.5 h-3.5 shrink-0"/>
+                                <span className="truncate">종점/회차지 ({destName}) 다음 출발</span>
+                            </div>
+                            <div className="flex items-baseline gap-2 mt-1">
+                                {nextDepInfo.nextDest ? (
+                                    <>
+                                        <span
+                                            className="font-mono text-xl font-black text-amber-900 dark:text-amber-100">
+                                            {nextDepInfo.nextDest.destDepTime}
+                                        </span>
+                                        <span className="text-xs font-extrabold text-amber-600 dark:text-amber-400">
+                                            {nextDepInfo.destWaitMins !== null &&
+                                                (nextDepInfo.destWaitMins <= 0
+                                                    ? "곧 출발"
+                                                    : `${nextDepInfo.destWaitMins}분 후`)}
+                                        </span>
+                                    </>
+                                ) : (
+                                    <span className="text-xs font-bold text-slate-400">
+                                        금일 운행 종료
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <span
+                            className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-[10px] font-black text-amber-700 dark:text-amber-300 shrink-0">
+                            {activeVariant.dayType}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* 3. View Mode Switcher (Clean Segments instead of Wiki TOC) */}
+            <div className="flex items-center justify-between gap-2 border-b border-black/5 dark:border-white/5 pb-2">
+                <div className="flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-white/5 p-1 shrink-0">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("summary")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                            viewMode === "summary"
+                                ? "bg-white dark:bg-[#1f2433] text-slate-900 dark:text-white shadow-xs"
+                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                    >
+                        시간대별 요약
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("full")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                            viewMode === "full"
+                                ? "bg-white dark:bg-[#1f2433] text-slate-900 dark:text-white shadow-xs"
+                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                    >
+                        전체 회차 시간표
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setViewMode("stops")}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer ${
+                            viewMode === "stops"
+                                ? "bg-white dark:bg-[#1f2433] text-slate-900 dark:text-white shadow-xs"
+                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                        }`}
+                    >
+                        경유 정류장 ({routeStops.length})
+                    </button>
+                </div>
+
+                {/* Day Variant Quick Switcher (when active in any view) */}
+                {variants.length > 1 && (
+                    <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar-hidden">
+                        {variants.map((v) => (
+                            <button
+                                key={v.id}
+                                type="button"
+                                onClick={() => setSelectedVariantId(v.id)}
+                                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition cursor-pointer whitespace-nowrap ${
+                                    activeVariant?.id === v.id
+                                        ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-transparent shadow-xs"
+                                        : "bg-white dark:bg-white/5 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/10"
+                                }`}
+                            >
+                                {v.dayType}
+                            </button>
+                        ))}
                     </div>
                 )}
-            </WikiSection>
+            </div>
 
-            {/* Section 2: 시간대별 요약 시간표 */}
-            {activeVariant && (
-                <WikiSection
-                    id="hourly"
-                    number="2"
-                    title={`시간대별 요약 시간표 (${destName} 출발 기준)`}
-                >
+            {/* 4. Tab Content 1: 시간대별 요약 시간표 */}
+            {viewMode === "summary" && activeVariant && (
+                <div className="space-y-3">
+                    {/* Location Toggle (회차지 vs 기점) */}
+                    <div
+                        className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-black/5 dark:border-white/5">
+                        <span className="text-xs font-extrabold text-slate-600 dark:text-slate-300">
+                            출발 기준 선택:
+                        </span>
+                        <div className="flex items-center gap-1">
+                            <button
+                                type="button"
+                                onClick={() => setHourlyLocation("dest")}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-black transition cursor-pointer ${
+                                    hourlyLocation === "dest"
+                                        ? "bg-amber-600 text-white shadow-xs"
+                                        : "bg-white dark:bg-white/10 text-slate-600 dark:text-slate-300"
+                                }`}
+                            >
+                                회차지 ({destName}) 출발
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setHourlyLocation("origin")}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-black transition cursor-pointer ${
+                                    hourlyLocation === "origin"
+                                        ? "bg-blue-600 text-white shadow-xs"
+                                        : "bg-white dark:bg-white/10 text-slate-600 dark:text-slate-300"
+                                }`}
+                            >
+                                기점 ({originName}) 출발
+                            </button>
+                        </div>
+                    </div>
+
                     <DualHourlyTimetableBlock
                         route={activeVariant}
                         allRoutes={routes}
                         now={now}
-                        locationLabel={`${destName} 종점`}
+                        locationLabel={hourlyLocation === "dest" ? `${destName} 종점` : `${originName} 기점`}
                     />
-                </WikiSection>
+                </div>
             )}
 
-            {/* Section 3: 회차별 전체 상세 시간표 */}
-            {activeVariant && (
-                <WikiSection
-                    id="full-timetable"
-                    number="3"
-                    title={`회차별 전체 상세 시간표 (${activeVariant.dayType})`}
-                    rightBadge={
-                        nextDepInfo && (nextDepInfo.nextOrigin || nextDepInfo.nextDest) ? (
-                            <button
-                                type="button"
-                                onClick={scrollToNextRow}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 text-[11px] font-extrabold border border-blue-200 dark:border-blue-800 cursor-pointer"
-                            >
-                                <LocateFixed className="w-3 h-3" />
-                                <span>다음 출발 행으로</span>
-                            </button>
-                        ) : undefined
-                    }
-                >
-                    {/* Variant Switcher + Search Bar */}
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-50 dark:bg-[#161a25] border border-slate-200 dark:border-slate-800">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-xs font-extrabold text-slate-600 dark:text-slate-300 mr-1">
-                                요일 편성:
+            {/* 5. Tab Content 2: 회차별 전체 상세 시간표 */}
+            {viewMode === "full" && activeVariant && (
+                <div className="space-y-3">
+                    {/* Search & Actions Bar */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200">
+                                {activeVariant.dayType} 전체 운행 회차 ({filteredTimetable.length}회)
                             </span>
-                            {variants.map((v) => (
+                            {nextDepInfo && (nextDepInfo.nextOrigin || nextDepInfo.nextDest) && (
                                 <button
-                                    key={v.id}
                                     type="button"
-                                    onClick={() => setSelectedVariantId(v.id)}
-                                    className={`px-2.5 py-1 rounded text-xs font-bold border transition cursor-pointer ${
-                                        activeVariant.id === v.id
-                                            ? "bg-blue-600 text-white border-blue-600"
-                                            : "bg-white dark:bg-[#12151e] text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700"
-                                    }`}
+                                    onClick={scrollToNextRow}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 text-[11px] font-extrabold border border-blue-200 dark:border-blue-800 cursor-pointer active:scale-95 transition"
                                 >
-                                    {v.dayType} ({v.timetable.length}회)
+                                    <LocateFixed className="w-3 h-3"/>
+                                    <span>다음 출발 행으로</span>
                                 </button>
-                            ))}
+                            )}
                         </div>
 
-                        <div className="relative w-full sm:w-56">
+                        <div className="relative w-full sm:w-60">
                             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input
                                 type="text"
                                 value={tableSearch}
                                 onChange={(e) => setTableSearch(e.target.value)}
                                 placeholder="시각·비고 검색"
-                                className="w-full pl-8 pr-7 py-1 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#11141c] text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
+                                className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11141c] text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
                             {tableSearch && (
                                 <button
@@ -407,29 +406,30 @@ export const RouteWikiArticle: React.FC<RouteWikiArticleProps> = ({
                     {/* Full Sequence Timetable Table */}
                     <div
                         ref={tableRef}
-                        className="max-h-112 overflow-y-auto rounded-lg border border-slate-300 dark:border-slate-700 custom-scrollbar"
+                        className="max-h-120 overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#12151e] shadow-xs custom-scrollbar"
                     >
                         <table className="w-full border-collapse text-left text-xs">
-                            <thead className="sticky top-0 z-10 bg-slate-100 dark:bg-[#1b202e] text-slate-700 dark:text-slate-200 border-b border-slate-300 dark:border-slate-700 font-extrabold">
+                            <thead
+                                className="sticky top-0 z-10 bg-slate-100/95 dark:bg-[#1b202e]/95 backdrop-blur-md text-slate-700 dark:text-slate-200 border-b border-black/5 dark:border-white/10 font-extrabold">
                                 <tr>
-                                    <th className="py-2 px-3 w-14 text-center border-r border-slate-300 dark:border-slate-700">
+                                    <th className="py-2.5 px-3 w-14 text-center border-r border-black/5 dark:border-white/10">
                                         회차
                                     </th>
-                                    <th className="py-2 px-3 border-r border-slate-300 dark:border-slate-700">
+                                    <th className="py-2.5 px-3 border-r border-black/5 dark:border-white/10">
                                         기점 출발 ({originName})
                                     </th>
-                                    <th className="py-2 px-3 border-r border-slate-300 dark:border-slate-700">
-                                        종점 출발 ({destName})
+                                    <th className="py-2.5 px-3 border-r border-black/5 dark:border-white/10">
+                                        종점/회차지 출발 ({destName})
                                     </th>
-                                    <th className="py-2 px-3">비고 / 경유</th>
+                                    <th className="py-2.5 px-3">비고 / 경유</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-200 dark:divide-slate-800 bg-white dark:bg-[#12151e]">
+                            <tbody className="divide-y divide-black/5 dark:divide-white/5">
                                 {filteredTimetable.length === 0 ? (
                                     <tr>
                                         <td
                                             colSpan={4}
-                                            className="py-6 text-center text-slate-400"
+                                            className="py-8 text-center text-slate-400"
                                         >
                                             일치하는 운행 회차가 없습니다.
                                         </td>
@@ -451,46 +451,48 @@ export const RouteWikiArticle: React.FC<RouteWikiArticleProps> = ({
                                                 }
                                                 className={
                                                     isNextOrigin || isNextDest
-                                                        ? "bg-blue-50/70 dark:bg-blue-950/30 font-bold"
+                                                        ? "bg-blue-50/80 dark:bg-blue-950/40 font-bold"
                                                         : "hover:bg-slate-50 dark:hover:bg-white/[0.02]"
                                                 }
                                             >
-                                                <td className="py-2 px-2.5 text-center font-mono text-slate-400 border-r border-slate-200 dark:border-slate-800">
+                                                <td className="py-2.5 px-2.5 text-center font-mono text-slate-400 border-r border-black/5 dark:border-white/10">
                                                     {row.seq}
                                                 </td>
-                                                <td className="py-2 px-3 font-mono border-r border-slate-200 dark:border-slate-800">
+                                                <td className="py-2.5 px-3 font-mono border-r border-black/5 dark:border-white/10">
                                                     <span
                                                         className={
                                                             isNextOrigin
-                                                                ? "px-2 py-0.5 rounded bg-teal-600 text-white font-black"
+                                                                ? "px-2 py-0.5 rounded-md bg-blue-600 text-white font-black"
                                                                 : "font-bold text-slate-900 dark:text-slate-100"
                                                         }
                                                     >
                                                         {row.originDepTime}
                                                     </span>
                                                     {isNextOrigin && (
-                                                        <span className="ml-1.5 text-[10px] font-sans font-extrabold text-teal-600 dark:text-teal-400">
+                                                        <span
+                                                            className="ml-1.5 text-[10px] font-sans font-extrabold text-blue-600 dark:text-blue-400">
                                                             다음 기점 출발
                                                         </span>
                                                     )}
                                                 </td>
-                                                <td className="py-2 px-3 font-mono border-r border-slate-200 dark:border-slate-800">
+                                                <td className="py-2.5 px-3 font-mono border-r border-black/5 dark:border-white/10">
                                                     <span
                                                         className={
                                                             isNextDest
-                                                                ? "px-2 py-0.5 rounded bg-indigo-600 text-white font-black"
+                                                                ? "px-2 py-0.5 rounded-md bg-amber-600 text-white font-black"
                                                                 : "font-bold text-slate-900 dark:text-slate-100"
                                                         }
                                                     >
                                                         {row.destDepTime}
                                                     </span>
                                                     {isNextDest && (
-                                                        <span className="ml-1.5 text-[10px] font-sans font-extrabold text-indigo-600 dark:text-indigo-400">
+                                                        <span
+                                                            className="ml-1.5 text-[10px] font-sans font-extrabold text-amber-600 dark:text-amber-400">
                                                             다음 종점 출발
                                                         </span>
                                                     )}
                                                 </td>
-                                                <td className="py-2 px-3 text-slate-600 dark:text-slate-400">
+                                                <td className="py-2.5 px-3 text-slate-600 dark:text-slate-400">
                                                     {row.notes || "-"}
                                                 </td>
                                             </tr>
@@ -500,54 +502,75 @@ export const RouteWikiArticle: React.FC<RouteWikiArticleProps> = ({
                             </tbody>
                         </table>
                     </div>
-                </WikiSection>
+                </div>
             )}
 
-            {/* Section 4 (or 2): 경유 정류장 일람 */}
-            <WikiSection
-                id="stops"
-                number={activeVariant ? "4" : "2"}
-                title={`경유 정류장 일람 (${routeStops.length}개 정류소)`}
-            >
-                <p>
-                    정류장 이름을 클릭하면 실시간 지도의 해당 정류장 위치로 이동하여 실시간 버스 도착 예정 시각을 확인할 수 있습니다.
-                </p>
+            {/* 6. Tab Content 3: 경유 정류장 일람 */}
+            {viewMode === "stops" && (
+                <div className="space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200">
+                            총 {routeStops.length}개 정류소 (정류장 클릭 시 지도 이동)
+                        </span>
 
-                <WikiFoldBox
-                    title={`${routeNo}번 전체 경유 정류장 목록`}
-                    subtitle={`총 ${routeStops.length}개 정류소`}
-                    defaultOpen={!activeVariant}
-                >
-                    {routeStops.length === 0 ? (
-                        <div className="py-4 text-center text-slate-400 text-xs">
-                            경유 정류장 데이터를 불러오는 중이거나 정보가 없습니다.
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
-                            {routeStops.map((stop, idx) => (
+                        <div className="relative w-full sm:w-60">
+                            <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"/>
+                            <input
+                                type="text"
+                                value={stopSearch}
+                                onChange={(e) => setStopSearch(e.target.value)}
+                                placeholder="정류장 이름·번호 검색"
+                                className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11141c] text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                            {stopSearch && (
                                 <button
-                                    key={`${stop.nodeid}-${idx}`}
                                     type="button"
-                                    onClick={() => onFocusStopOnMap?.(stop, routeNo)}
-                                    className="flex items-center justify-between gap-2 p-2 rounded border border-slate-200 dark:border-slate-800 hover:border-blue-500 bg-slate-50/70 dark:bg-white/[0.02] text-left transition cursor-pointer group"
+                                    onClick={() => setStopSearch("")}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                                 >
-                                    <div className="flex items-center gap-2 min-w-0">
-                                        <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
-                                            {idx + 1}
-                                        </span>
-                                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
-                                            {stop.nodenm}
-                                        </span>
-                                    </div>
-                                    <span className="text-[10px] font-mono text-slate-400 shrink-0">
-                                        {stop.nodeno || ""}
-                                    </span>
+                                    <X className="w-3 h-3"/>
                                 </button>
-                            ))}
+                            )}
                         </div>
-                    )}
-                </WikiFoldBox>
-            </WikiSection>
+                    </div>
+
+                    <div
+                        className="max-h-120 overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#12151e] p-2 custom-scrollbar">
+                        {filteredStops.length === 0 ? (
+                            <div className="py-8 text-center text-slate-400 text-xs">
+                                {stopSearch ? `"${stopSearch}" 검색 결과가 없습니다.` : "경유 정류장 정보가 없습니다."}
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1.5">
+                                {filteredStops.map((stop, idx) => (
+                                    <button
+                                        key={`${stop.nodeid}-${idx}`}
+                                        type="button"
+                                        onClick={() => onFocusStopOnMap?.(stop, routeNo)}
+                                        className="flex items-center justify-between gap-2 p-2.5 rounded-xl border border-black/5 dark:border-white/10 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-950/20 text-left transition cursor-pointer group"
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <span
+                                                className="w-5 h-5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 font-mono text-[10px] font-bold flex items-center justify-center shrink-0">
+                                                {stop.nodeord ?? idx + 1}
+                                            </span>
+                                            <span
+                                                className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
+                                                {stop.nodenm}
+                                            </span>
+                                        </div>
+                                        <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                                            {stop.nodeno || ""}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
+
+export default RouteWikiArticle;
