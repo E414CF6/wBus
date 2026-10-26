@@ -5,6 +5,7 @@ import {ChevronDown, Compass, MapIcon, MapPin, Sparkles, X} from "lucide-react";
 import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useIsDesktop} from "@shared/ui/useIsDesktop";
 import {useCityContext} from "@entities/city";
 import {CitySelectModal} from "@features/city-select";
 
@@ -79,21 +80,18 @@ function BottomNavComponent({
         dismissDetectedCity,
     } = useCityContext();
 
-    // Default open on desktop view (>= 768px), closed on compact mobile
-    const [isBusListOpen, setIsBusListOpen] = useState(() => {
-        if (typeof window !== "undefined") {
-            return window.innerWidth >= 768;
-        }
-        return false;
-    });
+    // SSR-safe desktop breakpoint subscription and mobile drawer state
+    const isDesktop = useIsDesktop();
+    const [isMobileBusListOpen, setIsMobileBusListOpen] = useState(false);
+    const isBusListOpen = isDesktop || isMobileBusListOpen;
     const [isCityModalOpen, setIsCityModalOpen] = useState(false);
 
     const handleToggleBusList = useCallback(() => {
-        if (typeof window !== "undefined" && window.innerWidth >= 768) {
+        if (isDesktop) {
             // Cannot toggle on desktop - always open
             return;
         }
-        setIsBusListOpen((prev) => {
+        setIsMobileBusListOpen((prev) => {
             const next = !prev;
             if (next && typeof window !== "undefined") {
                 window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
@@ -101,34 +99,23 @@ function BottomNavComponent({
             }
             return next;
         });
-    }, []);
+    }, [isDesktop]);
 
     // Listen to close/open bus list custom events
     useEffect(() => {
         if (typeof window === "undefined") return;
         const handleCloseBusList = () => {
-            if (window.innerWidth >= 768) return; // Permanent on desktop
-            setIsBusListOpen(false);
+            setIsMobileBusListOpen(false);
         };
-        const handleOpenBusList = () => setIsBusListOpen(true);
+        const handleOpenBusList = () => {
+            setIsMobileBusListOpen(true);
+        };
         window.addEventListener("wbus:close-bus-list", handleCloseBusList);
         window.addEventListener("wbus:open-bus-list", handleOpenBusList);
         return () => {
             window.removeEventListener("wbus:close-bus-list", handleCloseBusList);
             window.removeEventListener("wbus:open-bus-list", handleOpenBusList);
         };
-    }, []);
-
-    // Ensure permanently open when resized to desktop
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        const handleResize = () => {
-            if (window.innerWidth >= 768) {
-                setIsBusListOpen(true);
-            }
-        };
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
     }, []);
 
     const handleDefaultBusClick = useCallback((lat: number, lng: number) => {
@@ -166,10 +153,10 @@ function BottomNavComponent({
             />
 
             {/* Click-outside Backdrop when BusListDrawer is open (Mobile only) */}
-            {isBusListOpen && (
+            {!isDesktop && isMobileBusListOpen && (
                 <div
                     className="fixed inset-0 z-40 bg-black/15 dark:bg-black/35 backdrop-blur-[1px] transition-opacity animate-fadeIn md:hidden"
-                    onClick={() => setIsBusListOpen(false)}
+                    onClick={() => setIsMobileBusListOpen(false)}
                     aria-hidden="true"
                 />
             )}
@@ -178,7 +165,9 @@ function BottomNavComponent({
             {isBusListOpen && (
                 <BusListDrawer
                     isOpen={isBusListOpen}
-                    onClose={() => setIsBusListOpen(false)}
+                    onClose={() => {
+                        if (!isDesktop) setIsMobileBusListOpen(false);
+                    }}
                     selectedRoute={selectedRoute}
                     runningBuses={runningBuses}
                     isConnecting={isConnecting}

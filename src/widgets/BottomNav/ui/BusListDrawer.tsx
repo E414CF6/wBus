@@ -3,6 +3,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Bus, Loader2, LocateFixed, MapPin, MapPinned, RefreshCw, RotateCw, Search, Star, X} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useIsDesktop} from "@shared/ui/useIsDesktop";
 import {type RouteVariationStop, useRouteVariations} from "@entities/route";
 import type {DirectionCode, RouteVariation} from "@entities/route/types";
 import {getRouteMeta} from "@entities/route/routeMetadata";
@@ -67,20 +68,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const {isFavoriteStop, toggleFavoriteStop} = useFavoriteStops(currentCity.code);
 
     // Desktop view detection (>= 768px: left floating window with 2-column split view support)
-    const [isDesktop, setIsDesktop] = useState(() => {
-        if (typeof window !== "undefined") {
-            return window.innerWidth >= 768;
-        }
-        return false;
-    });
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsDesktop(window.innerWidth >= 768);
-        };
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
+    const isDesktop = useIsDesktop();
 
     const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
     const [selectedStopId, setSelectedStopId] = useState<string | null>(null);

@@ -74,12 +74,27 @@ function BusAnimatedMarker({
         stopCoordIndices,
     });
 
+    const onPositionChangeRef = useRef(onPositionChange);
+    useEffect(() => {
+        onPositionChangeRef.current = onPositionChange;
+    }, [onPositionChange]);
+
+    const prevReportedPosRef = useRef<Coordinate | null>(null);
+
     // Notify parent if live animated position changes (throttled to >=50ms by useAnimatedPosition)
     useEffect(() => {
-        if (onPositionChange) {
-            onPositionChange(animatedPosition);
+        if (!onPositionChangeRef.current) return;
+        const prev = prevReportedPosRef.current;
+        if (
+            prev &&
+            Math.abs(prev[0] - animatedPosition[0]) < 0.00003 &&
+            Math.abs(prev[1] - animatedPosition[1]) < 0.00003
+        ) {
+            return;
         }
-    }, [animatedPosition, onPositionChange]);
+        prevReportedPosRef.current = animatedPosition;
+        onPositionChangeRef.current(animatedPosition);
+    }, [animatedPosition]);
 
     const handleMarkerClick = (e: { originalEvent?: Event }) => {
         if (e.originalEvent) {

@@ -206,6 +206,83 @@ const BusPopupContent = memo(
 
 BusPopupContent.displayName = "BusPopupContent";
 
+interface MarkerItemComponentProps {
+    markerKey: string;
+    bus: BusItem;
+    position: Coordinate;
+    angle?: number;
+    polyline: Coordinate[];
+    snapIndexHint: number | null;
+    stopCoordIndices: number[];
+    refreshKey: string;
+    markerColor: string;
+    isSelected: boolean;
+    isFollowed: boolean;
+    routeName: string;
+    effectiveAnimationDuration: number;
+    effectivePollingIntervalMs: number;
+    effectiveDataDelayMs: number;
+    onPositionChange?: (key: string, pos: Coordinate) => void;
+    onClick: (key: string) => void;
+}
+
+const MarkerItemComponent = memo(function MarkerItemComponent({
+                                                                  markerKey,
+                                                                  bus,
+                                                                  position,
+                                                                  angle,
+                                                                  polyline,
+                                                                  snapIndexHint,
+                                                                  stopCoordIndices,
+                                                                  refreshKey,
+                                                                  markerColor,
+                                                                  isSelected,
+                                                                  isFollowed,
+                                                                  routeName,
+                                                                  effectiveAnimationDuration,
+                                                                  effectivePollingIntervalMs,
+                                                                  effectiveDataDelayMs,
+                                                                  onPositionChange,
+                                                                  onClick,
+                                                              }: MarkerItemComponentProps) {
+    const handlePosChange = useCallback(
+        (pos: Coordinate) => {
+            onPositionChange?.(markerKey, pos);
+        },
+        [markerKey, onPositionChange]
+    );
+
+    const handleClick = useCallback(() => {
+        onClick(markerKey);
+    }, [markerKey, onClick]);
+
+    return (
+        <BusAnimatedMarker
+            position={position}
+            rotationAngle={(angle || 0) % 360}
+            polyline={polyline}
+            snapIndexHint={snapIndexHint}
+            snapIndexRange={SNAP_INDEX_RANGE}
+            animationDuration={effectiveAnimationDuration}
+            pollingIntervalMs={effectivePollingIntervalMs}
+            dataDelayMs={effectiveDataDelayMs}
+            stopCoordIndices={stopCoordIndices}
+            refreshKey={refreshKey}
+            onPositionChange={isSelected || isFollowed ? handlePosChange : undefined}
+            onClick={handleClick}
+        >
+            <BusIconDOM
+                routeNumber={bus.routenm || routeName}
+                color={markerColor}
+                isSelected={isSelected}
+                isFollowed={isFollowed}
+            />
+        </BusAnimatedMarker>
+    );
+});
+
+MarkerItemComponent.displayName = "MarkerItemComponent";
+
 // ----------------------------------------------------------------------
 // Main Component
 // ----------------------------------------------------------------------
@@ -240,10 +317,17 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
     const handleLivePositionChange = useCallback((key: string, pos: Coordinate) => {
         setLivePositions((prev) => {
             const current = prev[key];
-            if (current && current[0] === pos[0] && current[1] === pos[1]) return prev;
+            if (
+                current &&
+                Math.abs(current[0] - pos[0]) < 0.00005 &&
+                Math.abs(current[1] - pos[1]) < 0.00005
+            ) {
+                return prev;
+            }
             return {...prev, [key]: pos};
         });
     }, []);
+
 
     const [prevRouteName, setPrevRouteName] = useState(routeName);
     if (routeName !== prevRouteName) {
@@ -385,6 +469,14 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
         };
     }, [map, followedBusKey]);
 
+    const handleMarkerClick = useCallback(
+        (key: string) => {
+            setSelectedBusKey(key);
+            onPopupOpen?.(routeName);
+        },
+        [routeName, onPopupOpen]
+    );
+
     if (!routeInfo || markers.length === 0) return null;
 
     const selectedMarker = selectedBusKey ? markers.find((m) => m.key === selectedBusKey) : null;
@@ -392,50 +484,28 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
 
     return (
         <>
-            {markers.map(
-                ({
-                     key,
-                     bus,
-                     position,
-                     angle,
-                     polyline,
-                     snapIndexHint,
-                     stopCoordIndices,
-                     refreshKey,
-                     markerColor,
-                 }) => {
-                    const isSelected = selectedBusKey === key;
-                    const isFollowed = followedBusKey === key;
-
-                    return (
-                        <BusAnimatedMarker
-                            key={key}
-                            position={position}
-                            rotationAngle={(angle || 0) % 360}
-                            polyline={polyline}
-                            snapIndexHint={snapIndexHint}
-                            snapIndexRange={SNAP_INDEX_RANGE}
-                            animationDuration={effectiveAnimationDuration}
-                            pollingIntervalMs={effectivePollingIntervalMs}
-                            dataDelayMs={effectiveDataDelayMs}
-                            stopCoordIndices={stopCoordIndices}
-                            refreshKey={refreshKey}
-                            onPositionChange={isSelected || isFollowed ? (pos) => handleLivePositionChange(key, pos) : undefined}
-                            onClick={() => {
-                                setSelectedBusKey(key);
-                                onPopupOpen?.(routeName);
-                            }}
-                        >
-                            <BusIconDOM
-                                routeNumber={bus.routenm || routeName}
-                                color={markerColor}
-                                isSelected={isSelected}
-                                isFollowed={isFollowed}
-                            />
-                        </BusAnimatedMarker>
-                    );
-                }
-            )}
+            {markers.map((marker) => (
+                <MarkerItemComponent
+                    key={marker.key}
+                    markerKey={marker.key}
+                    bus={marker.bus}
+                    position={marker.position}
+                    angle={marker.angle}
+                    polyline={marker.polyline}
+                    snapIndexHint={marker.snapIndexHint}
+                    stopCoordIndices={marker.stopCoordIndices}
+                    refreshKey={marker.refreshKey}
+                    markerColor={marker.markerColor}
+                    isSelected={selectedBusKey === marker.key}
+                    isFollowed={followedBusKey === marker.key}
+                    routeName={routeName}
+                    effectiveAnimationDuration={effectiveAnimationDuration}
+                    effectivePollingIntervalMs={effectivePollingIntervalMs}
+                    effectiveDataDelayMs={effectiveDataDelayMs}
+                    onPositionChange={handleLivePositionChange}
+                    onClick={handleMarkerClick}
+                />
+            ))}
 
             {selectedMarker && selectedPosition && (
                 <Popup

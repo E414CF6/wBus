@@ -707,7 +707,7 @@ export function useAnimatedPosition(
                     const dLat = Math.abs(prev.position[0] - pos[0]);
                     const dLng = Math.abs(prev.position[1] - pos[1]);
                     const dAngle = Math.abs(prev.angle - angle);
-                    if (dLat < 1e-7 && dLng < 1e-7 && dAngle < 0.2) {
+                    if (dLat < 1e-6 && dLng < 1e-6 && dAngle < 0.5) {
                         return prev;
                     }
                     return {position: pos, angle};

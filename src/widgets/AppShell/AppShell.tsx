@@ -11,6 +11,7 @@ import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
 
 import {isWeekend} from "@shared/lib/timeUtils";
+import {useIsDesktop} from "@shared/ui/useIsDesktop";
 import {BottomNav} from "@widgets/BottomNav";
 import {useAppNavigation} from "./hooks/useAppNavigation";
 
@@ -103,18 +104,7 @@ export function AppShell() {
         [isWonju, activeRoute, handleRouteChange, currentCity.code, handleTabChange]
     );
 
-    const [isDesktop, setIsDesktop] = useState(() => {
-        if (typeof window !== "undefined") {
-            return window.innerWidth >= 768;
-        }
-        return false;
-    });
-
-    useEffect(() => {
-        const handleResize = () => setIsDesktop(window.innerWidth >= 768);
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
+    const isDesktop = useIsDesktop();
 
     useEffect(() => {
         if (isDesktop && activeTab === "schedule") {

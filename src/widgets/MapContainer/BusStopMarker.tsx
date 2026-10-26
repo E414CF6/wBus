@@ -6,6 +6,7 @@ import type {BusStop} from "@entities/station/types";
 import {MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useIsDesktop} from "@shared/ui/useIsDesktop";
 import {useCityContext} from "@entities/city";
 
 import {BusStopPopup} from "@entities/station";
@@ -107,32 +108,18 @@ const BusStopMarkerItem = memo(({
                                     initialOpen = false,
                                     onClearInitialOpen,
                                 }: BusStopMarkerItemProps) => {
-    const [isPopupOpen, setIsPopupOpen] = useState(() => {
-        if (typeof window !== "undefined" && window.innerWidth >= 768) {
-            return false;
-        }
-        return initialOpen;
-    });
+    const isDesktop = useIsDesktop();
+    const [isPopupOpen, setIsPopupOpen] = useState(false);
+    const [closedStopId, setClosedStopId] = useState<string | null>(null);
 
-    const [prevInitialOpen, setPrevInitialOpen] = useState(initialOpen);
-    if (initialOpen !== prevInitialOpen) {
-        setPrevInitialOpen(initialOpen);
-        if (initialOpen) {
-            const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
-            if (isDesktop) {
-                window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: stop}));
-                window.dispatchEvent(new CustomEvent("wbus:open-bus-list"));
-            } else {
-                setIsPopupOpen(true);
-            }
-        }
-    }
+    const isUserClosed = closedStopId === stop.nodeid;
+    // Derived open state for mobile bottom sheet without cascading renders
+    const isOpen = !isDesktop && (isPopupOpen || (initialOpen && !isUserClosed));
 
     const handleMarkerClick = useCallback((e: { originalEvent?: Event }) => {
         if (e.originalEvent) {
             e.originalEvent.stopPropagation();
         }
-        const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
         if (isDesktop) {
             // On desktop, dispatch stop to open split view in left floating window
             window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: stop}));
@@ -145,18 +132,21 @@ const BusStopMarkerItem = memo(({
             window.dispatchEvent(new CustomEvent("wbus:close-bus-list"));
             window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
         }
+        setClosedStopId(null);
         setIsPopupOpen(true);
-    }, [stop]);
+    }, [isDesktop, stop]);
 
     const handlePopupClose = useCallback(() => {
+        setClosedStopId(stop.nodeid);
         setIsPopupOpen(false);
         onClearInitialOpen?.();
-    }, [onClearInitialOpen]);
+    }, [stop.nodeid, onClearInitialOpen]);
 
     // Close when other popups or bus list requests closing
     useEffect(() => {
         if (typeof window === "undefined") return;
         const handleClosePopups = () => {
+            setClosedStopId(stop.nodeid);
             setIsPopupOpen(false);
             onClearInitialOpen?.();
         };
@@ -166,11 +156,11 @@ const BusStopMarkerItem = memo(({
             window.removeEventListener("wbus:close-popups", handleClosePopups);
             window.removeEventListener("wbus:close-stop-popup", handleClosePopups);
         };
-    }, [onClearInitialOpen]);
+    }, [stop.nodeid, onClearInitialOpen]);
 
     // Close on Escape key
     useEffect(() => {
-        if (!isPopupOpen) return;
+        if (!isOpen) return;
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
                 handlePopupClose();
@@ -178,15 +168,16 @@ const BusStopMarkerItem = memo(({
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isPopupOpen, handlePopupClose]);
+    }, [isOpen, handlePopupClose]);
 
     const handleSelectRouteFromPopup = useCallback(
         (nextRoute: string) => {
+            setClosedStopId(stop.nodeid);
             setIsPopupOpen(false);
             onClearInitialOpen?.();
             onRouteChange?.(nextRoute);
         },
-        [onRouteChange, onClearInitialOpen]
+        [stop.nodeid, onRouteChange, onClearInitialOpen]
     );
 
     const borderColor = isFavorite ? "#f59e0b" : isRouteStop ? color : "#64748b";
@@ -252,7 +243,7 @@ const BusStopMarkerItem = memo(({
                 </div>
             </Marker>
 
-            {typeof document !== "undefined" && isPopupOpen &&
+            {typeof document !== "undefined" && isOpen &&
                 createPortal(
                     <div
                         className="fixed inset-0 z-[120] flex flex-col justify-end items-center pb-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] pointer-events-none px-3"
@@ -521,7 +512,7 @@ export default ({
         const handleFocusStop = (e: Event) => {
             const detail = (e as CustomEvent<BusStop>).detail;
             if (detail && detail.nodeid) {
-                setEventFocusedStop(detail);
+                setEventFocusedStop((prev) => (prev?.nodeid === detail.nodeid ? prev : detail));
             }
         };
         window.addEventListener("wbus:focus-stop", handleFocusStop);
