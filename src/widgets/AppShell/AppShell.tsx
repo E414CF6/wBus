@@ -49,18 +49,6 @@ export function AppShell() {
     const {currentCity} = useCityContext();
     const isWonju = currentCity.code === "32020";
 
-    // Close schedule modal on Escape key press
-    useEffect(() => {
-        if (activeTab !== "schedule") return;
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                handleTabChange("map");
-            }
-        };
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [activeTab, handleTabChange]);
-
     // Fetch route map for current city
     const routeMap = useBusRouteMap(true, currentCity.code);
     const allRoutes = useMemo(

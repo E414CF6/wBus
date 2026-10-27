@@ -12,7 +12,7 @@ import {CitySelectModal} from "@features/city-select";
 import {MapNavControls} from "./ui/MapNavControls";
 import {NavThemeToggle} from "./ui/NavThemeToggle";
 import {BusListDrawer} from "./ui/BusListDrawer";
-import {DayModeToggle} from "./ui/DayModeToggleGroup";
+import {DayModeToggle} from "./ui/DayModeToggle";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";

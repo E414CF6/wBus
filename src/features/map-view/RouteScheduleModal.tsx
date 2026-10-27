@@ -1,7 +1,6 @@
 "use client";
 
-import React, {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
-import {createPortal} from "react-dom";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Clock, LocateFixed, RotateCw, Search, X} from "lucide-react";
 
 import {
@@ -13,7 +12,7 @@ import {
 } from "@entities/schedule";
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
-import {useBodyScrollLock} from "@shared/ui/useBodyScrollLock";
+import {Modal} from "@shared/ui";
 import type {DayMode} from "@shared/types/navigation";
 
 export interface RouteScheduleModalProps {
@@ -27,9 +26,6 @@ export interface RouteScheduleModalProps {
 
 type TimetableViewMode = "summary" | "full";
 
-const emptySubscribe = () => () => {
-};
-
 export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
     isOpen,
     routeName,
@@ -38,21 +34,6 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
     isTodayWeekendOrHoliday,
                                                                           embedded = false,
 }) => {
-    const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
-    useBodyScrollLock(isOpen && !embedded);
-
-    // Escape key to close
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                onClose();
-            }
-        };
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isOpen, onClose]);
-
     // Live clock for next departure countdown
     const [now, setNow] = useState<Date>(() => new Date());
     useEffect(() => {
@@ -171,8 +152,6 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
             target.scrollIntoView({behavior: "smooth", block: "center"});
         }
     }, []);
-
-    if (!isOpen || !isClient) return null;
 
     const renderBodyContent = () => (
         <div className="p-3.5 sm:p-5 overflow-y-auto space-y-3.5 sm:space-y-4 custom-scrollbar flex-1 min-h-0">
@@ -591,86 +570,69 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
         );
     }
 
-    const modalContent = (
-        <div
-            className="fixed inset-0 z-120 flex items-center justify-center p-3.5 sm:p-5 bg-black/60 dark:bg-black/75 backdrop-blur-sm transition-opacity duration-200 animate-fadeIn pointer-events-auto"
-            onClick={(e) => {
-                if (e.target === e.currentTarget) {
-                    onClose();
-                }
-            }}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`${routeName}번 버스 시간표`}
+    const modalIcon = (
+        <span
+            className="px-2.5 py-1 rounded-xl text-xs font-black text-white shadow-xs shrink-0"
+            style={{backgroundColor: routeMeta.colorTheme.main}}
         >
-            <div
-                className="relative flex flex-col w-full max-w-2xl h-[82dvh] sm:h-[82dvh] max-h-[82dvh] sm:max-h-[820px] bg-white/95 dark:bg-[#0e1118]/95 backdrop-blur-3xl rounded-[28px] sm:rounded-[32px] shadow-[0_24px_70px_rgba(0,0,0,0.35)] dark:shadow-[0_24px_70px_rgba(0,0,0,0.85)] border border-black/10 dark:border-white/10 overflow-hidden animate-slideUp select-none"
-                onClick={(e) => e.stopPropagation()}
+            {routeName}번
+        </span>
+    );
+
+    const modalSubtitle = (
+        <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 truncate">
+                원주시 시내버스 운행 시간표
+            </p>
+            {formattedUpdatedAt && (
+                <span
+                    className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-white/10 px-1.5 py-0.5 rounded-md font-mono">
+                    <Clock className="w-2.5 h-2.5 opacity-70 shrink-0"/>
+                    <span>최근 갱신 {formattedUpdatedAt}</span>
+                </span>
+            )}
+        </div>
+    );
+
+    const modalActions = (
+        <button
+            type="button"
+            onClick={() => refreshSchedule()}
+            disabled={isScheduleRefreshing}
+            className="p-1.5 rounded-full bg-black/5 dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition cursor-pointer active:scale-95 disabled:opacity-40"
+            aria-label="시간표 새로고침"
+            title="시간표 새로고침"
+        >
+            <RotateCw className={`w-4 h-4 ${isScheduleRefreshing ? "animate-spin" : ""}`}/>
+        </button>
+    );
+
+    return (
+        <>
+            <Modal
+                isOpen={isOpen}
+                onClose={onClose}
+                title={`${originName} ↔ ${destName}`}
+                subtitle={modalSubtitle}
+                icon={modalIcon}
+                headerActions={modalActions}
+                maxWidth="2xl"
+                height="default"
+                modalId="schedule"
+                ariaLabel={`${routeName}번 버스 시간표`}
             >
-                {/* Modal Header */}
-                <div
-                    className="px-4 sm:px-6 py-3.5 sm:py-4 border-b border-black/5 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] flex items-center justify-between gap-3 shrink-0">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                        <span
-                            className="px-2.5 py-1 rounded-xl text-xs font-black text-white shadow-xs shrink-0"
-                            style={{backgroundColor: routeMeta.colorTheme.main}}
-                        >
-                            {routeName}번
-                        </span>
-                        <div className="min-w-0">
-                            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
-                                {originName} ↔ {destName}
-                            </h2>
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 truncate">
-                                    원주시 시내버스 운행 시간표
-                                </p>
-                                {formattedUpdatedAt && (
-                                    <span
-                                        className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-white/10 px-1.5 py-0.5 rounded-md font-mono">
-                                        <Clock className="w-2.5 h-2.5 opacity-70 shrink-0"/>
-                                        <span>최근 갱신 {formattedUpdatedAt}</span>
-                                    </span>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                            type="button"
-                            onClick={() => refreshSchedule()}
-                            disabled={isScheduleRefreshing}
-                            className="p-1.5 rounded-full bg-black/5 dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition cursor-pointer active:scale-95 disabled:opacity-40"
-                            aria-label="시간표 새로고침"
-                            title="시간표 새로고침"
-                        >
-                            <RotateCw className={`w-4 h-4 ${isScheduleRefreshing ? "animate-spin" : ""}`}/>
-                        </button>
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="p-1.5 rounded-full bg-black/5 dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition cursor-pointer active:scale-95"
-                            aria-label="시간표 닫기"
-                        >
-                            <X className="w-4 h-4"/>
-                        </button>
-                    </div>
-                </div>
-
                 {renderBodyContent()}
-            </div>
+            </Modal>
 
-            {/* 원주시 교통정보센터 공지사항 상세 모달 */}
+            {/* 원주시 교통정보센터 공지사항 상세 모달 (중첩 모달, z-[120] 기본 지원) */}
             <NoticeModal
                 isOpen={isNoticeModalOpen}
                 onClose={handleCloseNotice}
                 initialNoticeId={selectedNoticeId}
+                zIndex="z-[120]"
             />
-        </div>
+        </>
     );
-
-    return createPortal(modalContent, document.body);
 };
 
 export default RouteScheduleModal;
