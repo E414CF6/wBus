@@ -24,8 +24,6 @@ body {
     padding: 0;
     width: 100%;
     height: 100%;
-    min-height: 100lvh;
-    min-height: -webkit-fill-available;
     overflow: hidden;
     background-color: var(--background);
     color: var(--foreground);
@@ -174,6 +172,11 @@ body {
 .maplibregl-ctrl-top-right {
     top: calc(env(safe-area-inset-top, 0px) + 92px) !important;
     right: max(12px, env(safe-area-inset-right, 12px)) !important;
+}
+
+.maplibregl-ctrl-bottom-right,
+.maplibregl-ctrl-bottom-left {
+    margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 2px) !important;
 }
 
 @media (min-width: 640px) {

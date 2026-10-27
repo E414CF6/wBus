@@ -126,9 +126,10 @@ export function AppShell() {
     }, [routeMap, activeRoute, selectedRoute, currentCity.code, handleRouteChange]);
 
     return (
-        <div className="fixed inset-0 flex flex-col w-full h-full min-h-[100lvh] overflow-hidden bg-slate-50 dark:bg-[#0b0f19]">
+        <div
+            className="fixed inset-0 w-full h-full overflow-hidden bg-slate-50 dark:bg-[#0b0f19]">
             {/* 1. Real-time Map View Container */}
-            <div className="relative flex-1 w-full h-full overflow-hidden">
+            <div className="absolute inset-0 w-full h-full overflow-hidden">
                 <MapRouteHeader
                     selectedRoute={activeRoute}
                     onSelectRoute={handleRouteChange}

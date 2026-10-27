@@ -182,7 +182,7 @@ function BottomNavComponent({
             )}
 
             <div
-                className={`fixed bottom-[calc(env(safe-area-inset-bottom,0)+1rem)] left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-2.5 max-w-[95vw] ${className}`}
+                className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1.125rem)] left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-2.5 max-w-[95vw] ${className}`}
             >
                 {/* 1. Floating Region Switch Prompt Pill (Appears when panning map to another city without auto-switching) */}
                 {hasPendingRegion && detectedCity && !isBusListOpen && (

@@ -174,17 +174,7 @@ export default function Map({onReady, children}: MapProps) {
     }, []);
 
     return (
-        <div
-            className="fixed inset-0 w-full h-full overflow-hidden"
-            style={{
-                top: "calc(-1 * env(safe-area-inset-top, 0px))",
-                bottom: "calc(-1 * env(safe-area-inset-bottom, 0px))",
-                left: "calc(-1 * env(safe-area-inset-left, 0px))",
-                right: "calc(-1 * env(safe-area-inset-right, 0px))",
-                width: "calc(100vw + env(safe-area-inset-left, 0px) + env(safe-area-inset-right, 0px))",
-                height: "calc(100lvh + env(safe-area-inset-top, 0px) + env(safe-area-inset-bottom, 0px))",
-            }}
-        >
+        <div className="absolute inset-0 w-full h-full overflow-hidden">
             <MapGL
                 ref={mapRef}
                 initialViewState={{
@@ -207,7 +197,7 @@ export default function Map({onReady, children}: MapProps) {
                     MAP_SETTINGS.BOUNDS.MAX[1][1],
                 ]}
                 maxCanvasSize={maxCanvasSize}
-                style={{width: "100%", height: "100%", position: "relative"}}
+                style={{width: "100%", height: "100%", position: "absolute", inset: 0}}
                 touchPitch={false}
                 onClick={() => {
                     if (typeof window !== "undefined") {
