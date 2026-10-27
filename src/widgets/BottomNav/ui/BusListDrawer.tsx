@@ -408,7 +408,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                         center: [stop.gpslong, stop.gpslati],
                         zoom: Math.max(map.getZoom(), 15.8),
                         padding: {
-                            left: 420, // Offset map camera so marker is placed nicely beside the left window
+                            left: 460, // Offset map camera so marker is placed nicely beside the left window
                             right: 40,
                             top: 80,
                             bottom: 80,
@@ -451,7 +451,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
     return (
         <div
-            className="flex flex-col backdrop-blur-2xl bg-white/95 dark:bg-[#0c100f]/95 border border-slate-200/80 dark:border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.18)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.7)] rounded-[28px] overflow-hidden transition-all duration-300 animate-fadeIn text-slate-900 dark:text-white select-none pointer-events-auto max-md:fixed max-md:bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] max-md:left-1/2 max-md:-translate-x-1/2 max-md:z-50 max-md:w-[94vw] max-md:max-w-md max-md:max-h-[70vh] md:fixed md:left-5 md:top-20 md:bottom-24 md:z-40 md:h-auto md:max-h-[calc(100vh-11rem)] md:w-[380px] lg:w-[400px]"
+            className="flex flex-col backdrop-blur-2xl bg-white/95 dark:bg-[#0c100f]/95 border border-slate-200/80 dark:border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.18)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.7)] rounded-[28px] overflow-hidden transition-all duration-300 animate-fadeIn text-slate-900 dark:text-white select-none pointer-events-auto max-md:fixed max-md:bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] max-md:left-1/2 max-md:-translate-x-1/2 max-md:z-50 max-md:w-[94vw] max-md:max-w-md max-md:max-h-[70vh] md:fixed md:left-5 md:top-20 md:bottom-20 md:z-40 md:h-auto md:max-h-[calc(100vh-10rem)] md:w-[410px] lg:w-[440px]"
             role="dialog"
             aria-label={`${selectedRoute} 버스 노선 운행 목록`}
         >
@@ -459,7 +459,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             <div
                 className={`w-full flex flex-col overflow-hidden transition-all duration-300 ${
                     hasBottomSplit
-                        ? "h-[50%] min-h-[220px] shrink-0"
+                        ? "h-[38%] min-h-[180px] max-h-[290px] shrink-0"
                         : "flex-1 h-full min-h-0"
                 }`}
             >
@@ -801,7 +801,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             {/* Lower Section: Context-Aware Split View (Stop Details or Route Timetable) */}
             {hasBottomSplit && (
                 <div
-                    className="w-full flex-1 min-h-[220px] max-h-[50%] border-t border-slate-200/80 dark:border-white/10 flex flex-col overflow-hidden bg-white dark:bg-[#11131a] animate-fadeIn select-none">
+                    className="w-full flex-1 min-h-[260px] border-t border-slate-200/80 dark:border-white/10 flex flex-col overflow-hidden bg-white dark:bg-[#11131a] animate-fadeIn select-none">
                     {/* If BOTH a stop is selected AND schedule is open, show quick segmented switch pill */}
                     {selectedStop && isScheduleOpen && (
                         <div

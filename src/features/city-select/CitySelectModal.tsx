@@ -139,7 +139,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
             icon={modalIcon}
             headerBadge={headerBadge}
             footer={modalFooter}
-            maxWidth="xl"
+            maxWidth="2xl"
             height="default"
             modalId="city"
             ariaLabel="서비스 지역 선택"
@@ -174,37 +174,37 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
 
             {/* Search & Quick Action Bar */}
             <div className="px-4 sm:px-6 pt-3 pb-2.5 space-y-2.5 border-b border-black/5 dark:border-white/5 shrink-0">
-                <div className="relative flex items-center">
-                    <Search className="w-4.5 h-4.5 absolute left-3.5 text-slate-400 pointer-events-none"/>
-                    <input
-                        ref={searchInputRef}
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="도시·지역 이름 검색 (예: 원주, 춘천, 수원, 부산)"
-                        className="w-full pl-10 pr-10 py-2.5 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 rounded-2xl text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
-                    />
-                    {searchQuery && (
-                        <button
-                            type="button"
-                            onClick={() => setSearchQuery("")}
-                            className="absolute right-3 p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-                        >
-                            <X className="w-4 h-4"/>
-                        </button>
-                    )}
-                </div>
-
-                {/* Quick Action Button: GPS */}
                 <div className="flex items-center gap-2">
+                    <div className="relative flex-1 flex items-center">
+                        <Search className="w-4.5 h-4.5 absolute left-3.5 text-slate-400 pointer-events-none"/>
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            placeholder="도시·지역 이름 검색 (예: 원주, 춘천, 수원, 부산)"
+                            className="w-full pl-10 pr-10 py-2.5 sm:py-3 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 rounded-2xl text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
+                        />
+                        {searchQuery && (
+                            <button
+                                type="button"
+                                onClick={() => setSearchQuery("")}
+                                className="absolute right-3 p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                                aria-label="검색어 지우기"
+                            >
+                                <X className="w-4 h-4"/>
+                            </button>
+                        )}
+                    </div>
                     <button
                         type="button"
                         onClick={handleGpsDetect}
                         disabled={isDetecting}
-                        className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-blue-500/10 dark:bg-blue-500/15 hover:bg-blue-500/20 dark:hover:bg-blue-500/25 border border-blue-500/25 rounded-xl text-blue-700 dark:text-blue-300 font-extrabold text-xs transition-all duration-200 cursor-pointer active:scale-98 disabled:opacity-50"
+                        title="GPS로 내 주변 지역 찾기"
+                        className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-blue-500/10 dark:bg-blue-500/15 hover:bg-blue-500/20 dark:hover:bg-blue-500/25 border border-blue-500/25 rounded-2xl text-blue-700 dark:text-blue-300 font-extrabold text-xs transition-all duration-200 cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
                     >
                         <Navigation className={`w-3.5 h-3.5 ${isDetecting ? "animate-spin" : ""}`}/>
-                        <span>{isDetecting ? "내 위치 탐색 중..." : "내 주변 지역 찾기 (GPS)"}</span>
+                        <span className="hidden sm:inline">{isDetecting ? "탐색 중..." : "내 위치 (GPS)"}</span>
                     </button>
                 </div>
 
@@ -241,7 +241,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                         <p className="text-xs">다른 시·군 이름으로 검색해 보세요.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                         {filteredCities.map((city) => {
                             const isSelected = currentCity.code === city.code;
                             const isDetected = detectedCity?.code === city.code && !isSelected;
@@ -254,10 +254,10 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                     onClick={() => handleSelectCity(city)}
                                     className={`flex items-center justify-between p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer active:scale-[0.98] ${
                                         isSelected
-                                            ? "bg-blue-600/10 dark:bg-blue-500/20 border-blue-500/50 ring-2 ring-blue-500/20 shadow-sm"
+                                            ? "bg-blue-50 dark:bg-blue-950/40 border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20 shadow-xs"
                                             : isDetected
                                                 ? "bg-amber-500/10 dark:bg-amber-500/15 border-amber-500/40"
-                                                : "bg-black/[0.02] dark:bg-white/[0.03] border-black/5 dark:border-white/5 hover:bg-black/[0.05] dark:hover:bg-white/[0.06] hover:border-black/15 dark:hover:border-white/15"
+                                                : "bg-black/[0.02] dark:bg-white/[0.03] border-black/5 dark:border-white/5 hover:border-blue-500/40 hover:bg-blue-500/[0.04] dark:hover:border-blue-400/40 dark:hover:bg-blue-400/[0.08]"
                                     }`}
                                 >
                                     <div className="min-w-0 pr-1">

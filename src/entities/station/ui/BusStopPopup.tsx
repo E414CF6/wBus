@@ -78,7 +78,7 @@ function ArrivalItem({
         <button
             type="button"
             onClick={() => onRouteChange?.(routeName)}
-            className={`w-full group relative flex items-center justify-between p-3.5 rounded-[20px] border transition-all duration-200 cursor-pointer ${
+            className={`w-full group relative flex items-center justify-between p-2.5 sm:p-3 rounded-2xl border transition-all duration-200 cursor-pointer ${
                 isCurrentRoute
                     ? "bg-blue-50/90 dark:bg-blue-500/15 border-blue-400/60 dark:border-blue-400/40 ring-1 ring-blue-500/20 shadow-xs"
                     : `${theme.bg} ${theme.border}`
@@ -222,7 +222,7 @@ function ArrivalList({
                 </button>
             </div>
 
-            <div className="max-h-76 overflow-y-auto custom-scrollbar p-3 sm:p-3.5 pt-1.5 space-y-2">
+            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-2.5 sm:p-3 pt-1.5 space-y-2">
                 {arrivalData.map((bus, idx) => {
                     const rName = String(bus.routeno ?? "").trim();
                     const isCurrentRoute = Boolean(currentRouteName && rName === currentRouteName);

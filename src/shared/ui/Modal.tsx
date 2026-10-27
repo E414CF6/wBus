@@ -11,11 +11,11 @@ export type ModalHeight = "default" | "tall" | "auto" | "full";
 const MAX_WIDTH_CLASSES: Record<ModalMaxWidth, string> = {
     sm: "max-w-sm",
     md: "max-w-md",
-    lg: "max-w-lg",
-    xl: "max-w-xl",
-    "2xl": "max-w-2xl",
-    "3xl": "max-w-3xl",
-    full: "max-w-[calc(100vw-1.5rem)] sm:max-w-4xl",
+    lg: "max-w-lg lg:max-w-xl",
+    xl: "max-w-xl lg:max-w-3xl",
+    "2xl": "max-w-2xl lg:max-w-4xl xl:max-w-5xl",
+    "3xl": "max-w-3xl lg:max-w-5xl xl:max-w-6xl",
+    full: "max-w-[calc(100vw-1.5rem)] sm:max-w-5xl lg:max-w-6xl",
 };
 
 const HEIGHT_CLASSES: Record<ModalHeight, string> = {

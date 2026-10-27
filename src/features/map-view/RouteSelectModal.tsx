@@ -377,32 +377,30 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             {/* Quick Access Section */}
             {!searchQuery && validRecentRoutes.length > 0 && (
                 <div
-                    className="px-4 sm:px-6 py-1.5 flex flex-col gap-2 shrink-0 border-b border-black/5 dark:border-white/5 bg-black/[0.015] dark:bg-white/[0.015]">
-                    <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar-hidden py-0.5">
-                        <div
-                            className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">
-                            <Clock className="w-3.5 h-3.5"/>
-                            <span>{UI_TEXT.ROUTE_SELECT.RECENT_SEARCH_LABEL}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            {validRecentRoutes.map((r) => {
-                                const isCurrent = r === selectedRoute;
-                                return (
-                                    <button
-                                        key={`recent-${r}`}
-                                        type="button"
-                                        onClick={() => handleSelect(r)}
-                                        className={`px-2 py-0.5 rounded-lg text-[11px] font-extrabold transition-all cursor-pointer active:scale-95 ${
-                                            isCurrent
-                                                ? "bg-blue-600 text-white shadow-xs"
-                                                : "bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] text-slate-700 dark:text-slate-300 border border-black/5 dark:border-white/5"
-                                        }`}
-                                    >
-                                        {UI_TEXT.COMMON.ROUTE_LABEL(r)}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                    className="px-4 sm:px-6 py-2 flex items-center gap-2 overflow-x-auto custom-scrollbar-hidden shrink-0 border-b border-black/5 dark:border-white/5 bg-slate-50/60 dark:bg-white/[0.02]">
+                    <div
+                        className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 whitespace-nowrap shrink-0">
+                        <Clock className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400"/>
+                        <span>{UI_TEXT.ROUTE_SELECT.RECENT_SEARCH_LABEL}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        {validRecentRoutes.map((r) => {
+                            const isCurrent = r === selectedRoute;
+                            return (
+                                <button
+                                    key={`recent-${r}`}
+                                    type="button"
+                                    onClick={() => handleSelect(r)}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer active:scale-95 ${
+                                        isCurrent
+                                            ? "bg-blue-600 text-white shadow-xs"
+                                            : "bg-white dark:bg-white/10 hover:bg-slate-100 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 border border-black/5 dark:border-white/10 shadow-2xs"
+                                    }`}
+                                >
+                                    {UI_TEXT.COMMON.ROUTE_LABEL(r)}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -535,7 +533,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                         )}
                     </div>
                 ) : filteredRoutes.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
                         {filteredRoutes.map((route) => {
                             const meta = routeMetaMap.get(route) || getRouteMeta(route, currentCity.code);
                             const isSelected = route === selectedRoute;
@@ -562,29 +560,32 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
 
                                         {/* Route Info / Origins & Dest */}
                                         <div className="flex flex-col min-w-0 flex-1 pr-1">
-                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                            <div className="flex items-center gap-1.5 flex-wrap mb-1">
                                                 <span
-                                                    className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white truncate">
-                                                    {meta.origin} ↔ {meta.destination}
-                                                </span>
-                                                <span
-                                                    className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${meta.colorTheme.badgeBg} ${meta.colorTheme.text}`}>
+                                                    className={`px-1.5 py-0.5 rounded-md text-[9px] font-black ${meta.colorTheme.badgeBg} ${meta.colorTheme.text}`}>
                                                     {meta.routeType || (meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : "간선")}
                                                 </span>
                                                 {isYonsei && (
                                                     <span
-                                                        className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
+                                                        className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
                                                         {UI_TEXT.ROUTE_SELECT.YONSEI_BADGE}
                                                     </span>
                                                 )}
                                             </div>
+                                            <div
+                                                className="font-extrabold text-xs sm:text-[13px] text-slate-900 dark:text-white leading-snug break-keep line-clamp-2"
+                                                title={`${meta.origin} ↔ ${meta.destination}`}
+                                            >
+                                                {meta.origin} <span
+                                                className="text-slate-400 font-normal">↔</span> {meta.destination}
+                                            </div>
                                             {meta.description && (
-                                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate mt-1">
                                                     {meta.description}
                                                 </p>
                                             )}
                                             {(meta.firstTime || meta.lastTime) && (
-                                                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-0.5 flex items-center gap-1">
+                                                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1">
                                                     <Clock className="w-3 h-3 text-slate-400 shrink-0"/>
                                                     <span>첫차 {meta.firstTime || "--:--"} · 막차 {meta.lastTime || "--:--"}</span>
                                                 </p>
