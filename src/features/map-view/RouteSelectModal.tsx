@@ -346,7 +346,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             footer={modalFooter}
             maxWidth="2xl"
             height="default"
-            modalId="route"
+            enableHistory={false}
             ariaLabel={UI_TEXT.ROUTE_SELECT.MODAL_ARIA}
         >
             {/* Search Bar Input */}

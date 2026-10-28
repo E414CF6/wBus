@@ -13,12 +13,14 @@ import {MapNavControls} from "./ui/MapNavControls";
 import {NavThemeToggle} from "./ui/NavThemeToggle";
 import {BusListDrawer} from "./ui/BusListDrawer";
 import {DayModeToggle} from "./ui/DayModeToggle";
+import {NavTabButtons} from "./ui/NavTabButtons";
+import {ScheduleNavControls} from "./ui/ScheduleNavControls";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
-import type {DayMode, NavTab} from "@shared/types/navigation";
+import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
 
-export type {DayMode, NavTab};
+export type {DayMode, NavTab, TimetableSubTab};
 
 export interface BottomNavProps {
     activeTab?: NavTab;
@@ -26,6 +28,8 @@ export interface BottomNavProps {
     showScheduleTab?: boolean;
 
     // Timetable options (Wonju only)
+    scheduleSubTab?: TimetableSubTab;
+    onScheduleSubTabChange?: (subTab: TimetableSubTab) => void;
     dayMode?: DayMode;
     onDayModeChange?: (mode: DayMode) => void;
     isTodayWeekendOrHoliday?: boolean;
@@ -54,9 +58,11 @@ export interface BottomNavProps {
  * - Theme Switcher
  */
 function BottomNavComponent({
-                                activeTab: _activeTab = "map",
-                                onTabChange: _onTabChange,
-                                showScheduleTab: _showScheduleTab = true,
+                                activeTab = "map",
+                                onTabChange,
+                                showScheduleTab = true,
+                                scheduleSubTab = "yonsei",
+                                onScheduleSubTabChange,
                                 dayMode = "AUTO",
                                 onDayModeChange,
                                 isTodayWeekendOrHoliday = false,
@@ -272,29 +278,56 @@ function BottomNavComponent({
                         )}
                     </button>
 
-                    {/* Real-time Map Route & Running Bus Controls (Placed right next to City Selector) */}
-                    <MapNavControls
-                        allRoutes={allRoutes}
-                        selectedRoute={selectedRoute}
-                        onSelectRoute={onSelectRoute}
-                        runningBuses={runningBuses}
-                        connectionStatus={connectionStatus}
-                        hasFetched={hasFetched}
-                        isBusListOpen={isBusListOpen}
-                        onToggleBusList={handleToggleBusList}
-                    />
+                    {/* Main Navigation Tabs (Wonju only: Timetable & Real-time Map switch) */}
+                    {isWonju && showScheduleTab && onTabChange && (
+                        <>
+                            <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+                            <NavTabButtons
+                                activeTab={activeTab}
+                                onTabChange={onTabChange}
+                            />
+                        </>
+                    )}
 
-                    {/* Divider before Toggles */}
-                    <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
-
-                    {/* 3-state Day Mode Toggle (Wonju Only) */}
-                    {isWonju && onDayModeChange && (
-                        <DayModeToggle
+                    {/* Dynamic Controls for Schedule View (Yonsei vs All, DayMode toggles) */}
+                    {isWonju && activeTab === "schedule" && (
+                        <ScheduleNavControls
+                            scheduleSubTab={scheduleSubTab}
+                            onScheduleSubTabChange={onScheduleSubTabChange}
                             dayMode={dayMode}
                             onDayModeChange={onDayModeChange}
                             isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
                         />
                     )}
+
+                    {/* Real-time Map Route & Running Bus Controls (Map Tab or Non-Wonju cities) */}
+                    {activeTab === "map" && (
+                        <MapNavControls
+                            allRoutes={allRoutes}
+                            selectedRoute={selectedRoute}
+                            onSelectRoute={onSelectRoute}
+                            runningBuses={runningBuses}
+                            connectionStatus={connectionStatus}
+                            hasFetched={hasFetched}
+                            isBusListOpen={isBusListOpen}
+                            onToggleBusList={handleToggleBusList}
+                        />
+                    )}
+
+                    {/* 3-state Day Mode Toggle (Wonju Map view only, since Schedule view has inline toggle group) */}
+                    {isWonju && activeTab === "map" && onDayModeChange && (
+                        <>
+                            <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+                            <DayModeToggle
+                                dayMode={dayMode}
+                                onDayModeChange={onDayModeChange}
+                                isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                            />
+                        </>
+                    )}
+
+                    {/* Divider before Theme Switcher */}
+                    <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
 
                     {/* Theme Toggle Button */}
                     <NavThemeToggle/>

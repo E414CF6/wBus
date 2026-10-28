@@ -4,7 +4,7 @@ import {useCallback, useEffect, useRef, useState} from "react";
 import {usePathname, useSearchParams} from "next/navigation";
 import {APP_CONFIG, getRecentRoutesStorageKey, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 import {useCityContext} from "@entities/city";
-import type {DayMode, NavTab} from "@shared/types/navigation";
+import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
 
 export function resolveTabFromPathname(path: string): NavTab {
     if (path.startsWith("/schedule")) return "schedule";
@@ -23,10 +23,13 @@ export function buildMapUrl(route: string | null | undefined, cityCode?: string)
     return qs ? `/?${qs}` : "/";
 }
 
-export function buildScheduleUrl(cityCode?: string): string {
+export function buildScheduleUrl(cityCode?: string, subTab?: TimetableSubTab): string {
     const params = new URLSearchParams();
     if (cityCode && cityCode !== "32020") {
         params.set("cityCode", cityCode);
+    }
+    if (subTab === "all") {
+        params.set("subTab", "all");
     }
     const qs = params.toString();
     return qs ? `/schedule?${qs}` : "/schedule";
@@ -46,6 +49,13 @@ export function useAppNavigation() {
         setActiveTab(resolveTabFromPathname(pathname));
     }
 
+    // Timetable Sub-tab (Yonsei vs All Wonju routes)
+    const [timetableSubTab, setTimetableSubTab] = useState<TimetableSubTab>(() => {
+        const querySubTab = searchParams.get("subTab");
+        if (querySubTab === "yonsei" || querySubTab === "all") return querySubTab;
+        return "yonsei";
+    });
+
     const [dayMode, setDayMode] = useState<DayMode>("AUTO");
 
     // Route & Map Activation State
@@ -57,13 +67,17 @@ export function useAppNavigation() {
 
     const isMapActive = activeTab === "map";
 
-    // Synchronize route when searchParams change
+    // Synchronize route & subtab when searchParams change
     const [prevSearchParams, setPrevSearchParams] = useState(searchParams);
     if (searchParams !== prevSearchParams) {
         setPrevSearchParams(searchParams);
         const queryRoute = searchParams.get("route");
         if (queryRoute !== null && queryRoute !== "" && queryRoute !== selectedRoute) {
             setSelectedRoute(queryRoute);
+        }
+        const querySubTab = searchParams.get("subTab");
+        if (querySubTab === "yonsei" || querySubTab === "all") {
+            setTimetableSubTab(querySubTab);
         }
     }
 
@@ -76,6 +90,10 @@ export function useAppNavigation() {
             const search = new URLSearchParams(window.location.search);
             const queryRoute = search.get("route");
             if (queryRoute !== null && queryRoute !== "") setSelectedRoute(queryRoute);
+            const querySubTab = search.get("subTab");
+            if (querySubTab === "yonsei" || querySubTab === "all") {
+                setTimetableSubTab(querySubTab);
+            }
         };
 
         window.addEventListener("popstate", handlePopState);
@@ -94,6 +112,15 @@ export function useAppNavigation() {
                 if (savedRoute && !search.get("route")) {
                     setSelectedRoute(savedRoute);
                 }
+
+                const savedSubTab = localStorage.getItem(
+                    STORAGE_KEYS.TIMETABLE_SUBTAB
+                ) as TimetableSubTab | null;
+                if (savedSubTab && !search.get("subTab")) {
+                    if (savedSubTab === "yonsei" || savedSubTab === "all") {
+                        setTimetableSubTab(savedSubTab);
+                    }
+                }
             } catch (e) {
                 if (APP_CONFIG.IS_DEV) {
                     console.warn("[AppShell] Failed to load preferences from localStorage", e);
@@ -103,19 +130,35 @@ export function useAppNavigation() {
         return () => cancelAnimationFrame(frameId);
     }, []);
 
+    const handleScheduleSubTabChange = useCallback(
+        (subTab: TimetableSubTab) => {
+            setTimetableSubTab(subTab);
+            try {
+                localStorage.setItem(STORAGE_KEYS.TIMETABLE_SUBTAB, subTab);
+            } catch {
+                // Ignore
+            }
+            if (typeof window !== "undefined" && activeTab === "schedule") {
+                const targetUrl = buildScheduleUrl(currentCityCode, subTab);
+                window.history.replaceState(null, "", targetUrl);
+            }
+        },
+        [activeTab, currentCityCode]
+    );
+
     const handleTabChange = useCallback(
         (tab: NavTab) => {
             setActiveTab(tab);
             const targetUrl =
                 tab === "map"
                     ? buildMapUrl(selectedRoute, currentCityCode)
-                    : buildScheduleUrl(currentCityCode);
+                    : buildScheduleUrl(currentCityCode, timetableSubTab);
 
             if (typeof window !== "undefined") {
                 window.history.pushState(null, "", targetUrl);
             }
         },
-        [selectedRoute, currentCityCode]
+        [selectedRoute, currentCityCode, timetableSubTab]
     );
 
     const handleRouteChange = useCallback(
@@ -159,6 +202,8 @@ export function useAppNavigation() {
 
     return {
         activeTab,
+        timetableSubTab,
+        handleScheduleSubTabChange,
         dayMode,
         setDayMode,
         selectedRoute,

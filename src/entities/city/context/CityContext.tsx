@@ -151,6 +151,7 @@ export function CityContextProvider({children}: CityContextProviderProps) {
                     if (url.searchParams.get("cityCode") !== nextCity.code) {
                         url.searchParams.set("cityCode", nextCity.code);
                         url.searchParams.delete("city");
+                        url.searchParams.delete("route");
                         window.history.replaceState(null, "", `${url.pathname}${url.search}`);
                     }
                 } catch {
@@ -222,7 +223,10 @@ export function CityContextProvider({children}: CityContextProviderProps) {
             const params = new URLSearchParams(window.location.search);
             const queryCity = params.get("cityCode") || params.get("city");
             if (queryCity && queryCity !== currentCityRef.current.code) {
-                setCity(queryCity, {skipFlyTo: true});
+                const found = getCityByCode(queryCity);
+                if (found && found.code !== currentCityRef.current.code) {
+                    setCity(found, {skipFlyTo: true});
+                }
             }
         };
         window.addEventListener("popstate", handlePopState);

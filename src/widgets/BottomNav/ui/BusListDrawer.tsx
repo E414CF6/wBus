@@ -145,7 +145,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         return [
             {
                 routeId: selectedRoute,
-                label: `${selectedRoute}번`,
+                label: `${selectedRoute}`,
                 stops: nationwideStops as RouteVariationStop[],
                 stopCount: nationwideStops.length,
                 turningStop: null,
@@ -459,38 +459,40 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             <div
                 className={`w-full flex flex-col overflow-hidden transition-all duration-300 ${
                     hasBottomSplit
-                        ? "h-[38%] min-h-[180px] max-h-[290px] shrink-0"
+                        ? "flex-[52] h-[52%] min-h-[280px]"
                         : "flex-1 h-full min-h-0"
                 }`}
             >
                 {/* 1. Header Section */}
             <div
                 className={`flex items-start justify-between border-b border-slate-200/80 dark:border-white/10 shrink-0 bg-slate-50/50 dark:bg-white/[0.02] transition-all duration-200 ${
-                    hasBottomSplit ? "px-4 pt-3.5 pb-2.5" : "px-5 pt-5 pb-4"
+                    hasBottomSplit ? "px-4 pt-3 pb-2" : "px-5 pt-5 pb-4"
                 }`}
             >
-                <div className="flex items-start gap-3 min-w-0">
+                <div className="flex items-start gap-2.5 min-w-0">
                     {/* Blue Accent Vertical Bar */}
-                    <div className="w-1.5 h-11 rounded-full bg-blue-600 dark:bg-blue-500 shrink-0 mt-0.5"/>
+                    <div
+                        className={`w-1.5 rounded-full bg-blue-600 dark:bg-blue-500 shrink-0 mt-0.5 ${hasBottomSplit ? "h-9" : "h-11"}`}/>
 
                     <div className="flex flex-col min-w-0">
-                        <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 tracking-tight">
+                        <span
+                            className="text-[10px] sm:text-[11px] font-bold text-blue-600 dark:text-blue-400 tracking-tight">
                             버스 노선
                         </span>
                         <h2
                             className={`font-black text-slate-900 dark:text-white tracking-tight leading-none mt-0.5 transition-all duration-200 ${
-                                hasBottomSplit ? "text-2xl" : "text-3xl"
+                                hasBottomSplit ? "text-xl sm:text-2xl" : "text-3xl"
                             }`}
                         >
                             {selectedRoute}
                         </h2>
                         <p
-                            className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[210px] sm:max-w-[260px] mt-1.5"
+                            className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[210px] sm:max-w-[260px] mt-1"
                             title={routeSubInfo}
                         >
                             {routeSubInfo}
                         </p>
-                        <div className="flex items-center gap-2 mt-1.5 text-xs flex-wrap">
+                        <div className="flex items-center gap-2 mt-1 text-xs flex-wrap">
                             <span className="font-bold text-blue-600 dark:text-blue-400">
                                 {isConnecting
                                     ? "실시간 연결 중..."
@@ -652,7 +654,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             {/* 3. Bus Stop Timeline List Body */}
             <div
                 ref={listRef}
-                className="flex-1 overflow-y-auto custom-scrollbar relative min-h-[220px]"
+                className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0"
             >
                 {currentStops.length === 0 ? (<div
                         className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
@@ -801,7 +803,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             {/* Lower Section: Context-Aware Split View (Stop Details or Route Timetable) */}
             {hasBottomSplit && (
                 <div
-                    className="w-full flex-1 min-h-[260px] border-t border-slate-200/80 dark:border-white/10 flex flex-col overflow-hidden bg-white dark:bg-[#11131a] animate-fadeIn select-none">
+                    className="w-full flex-[48] h-[48%] min-h-[260px] border-t border-slate-200/80 dark:border-white/10 flex flex-col overflow-hidden bg-white dark:bg-[#11131a] animate-fadeIn select-none">
                     {/* If BOTH a stop is selected AND schedule is open, show quick segmented switch pill */}
                     {selectedStop && isScheduleOpen && (
                         <div

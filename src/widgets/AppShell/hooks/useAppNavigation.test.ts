@@ -55,6 +55,11 @@ describe("buildScheduleUrl", () => {
     it("preserves non-Wonju cityCode when building schedule URL", () => {
         expect(buildScheduleUrl("32010")).toBe("/schedule?cityCode=32010");
     });
+
+    it("appends subTab=all parameter when subTab is all", () => {
+        expect(buildScheduleUrl("32020", "all")).toBe("/schedule?subTab=all");
+        expect(buildScheduleUrl("32010", "all")).toBe("/schedule?cityCode=32010&subTab=all");
+    });
 });
 
 describe("storage key helpers", () => {

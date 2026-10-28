@@ -11,7 +11,6 @@ import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
 
 import {isWeekend} from "@shared/lib/timeUtils";
-import {useIsDesktop} from "@shared/ui/useIsDesktop";
 import {BottomNav} from "@widgets/BottomNav";
 import {useAppNavigation} from "./hooks/useAppNavigation";
 
@@ -21,19 +20,25 @@ const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
 const RouteLayer = dynamic(() => import("@widgets/MapContainer/RouteLayer"), {
     ssr: false,
 });
-const RouteScheduleModal = dynamic(() => import("@features/map-view/RouteScheduleModal"), {
+const TimetableWidget = dynamic(() => import("@widgets/TimetableWidget"), {
+    ssr: false,
+});
+const YonseiTimetableWidget = dynamic(() => import("@widgets/YonseiTimetableWidget"), {
     ssr: false,
 });
 
 export function AppShell() {
     const {
         activeTab,
+        timetableSubTab,
+        handleScheduleSubTabChange,
         dayMode,
         setDayMode,
         selectedRoute,
         isMapActive,
         handleTabChange,
         handleRouteChange,
+        handleSelectMapRoute,
     } = useAppNavigation();
 
     // Live weekend check for timetable badge
@@ -72,7 +77,7 @@ export function AppShell() {
         return Object.keys(routeMap)[0] ?? selectedRoute;
     }, [routeMap, selectedRoute, isWonju, currentCity.code]);
 
-    // Handler for opening the Route Timetable Modal directly from Map Pins, Route Header, or Stop Popups
+    // Handler for opening the Route Timetable directly from Map Pins, Route Header, or Stop Popups
     const handleOpenSchedule = useCallback(
         (targetRouteOrDoc?: string) => {
             if (!isWonju) return;
@@ -82,25 +87,17 @@ export function AppShell() {
                     handleRouteChange(cleanRoute, currentCity.code);
                 }
             }
-            if (typeof window !== "undefined" && window.innerWidth >= 768) {
-                window.dispatchEvent(new CustomEvent("wbus:open-schedule"));
-                window.dispatchEvent(new CustomEvent("wbus:open-bus-list"));
-                return;
-            }
             handleTabChange("schedule");
         },
         [isWonju, activeRoute, handleRouteChange, currentCity.code, handleTabChange]
     );
 
-    const isDesktop = useIsDesktop();
-
+    // Auto-switch to map tab if current city is not Wonju while on schedule view
     useEffect(() => {
-        if (isDesktop && activeTab === "schedule") {
-            window.dispatchEvent(new CustomEvent("wbus:open-schedule"));
-            window.dispatchEvent(new CustomEvent("wbus:open-bus-list"));
+        if (!isWonju && activeTab === "schedule") {
             handleTabChange("map");
         }
-    }, [isDesktop, activeTab, handleTabChange]);
+    }, [isWonju, activeTab, handleTabChange]);
 
     // Live telemetry for active map route
     const liveBusData = useBusSortedList(activeRoute, isMapActive, currentCity.code);
@@ -125,11 +122,18 @@ export function AppShell() {
         handleRouteChange(activeRoute, currentCity.code);
     }, [routeMap, activeRoute, selectedRoute, currentCity.code, handleRouteChange]);
 
+    const isSchedulePage = isWonju && activeTab === "schedule";
+
     return (
         <div
-            className="fixed inset-0 w-full h-full overflow-hidden bg-slate-50 dark:bg-[#0b0f19]">
+            className={
+                isSchedulePage
+                    ? "relative min-h-[100dvh] w-full flex flex-col bg-slate-50 dark:bg-[#0b0f19] overflow-y-auto"
+                    : "fixed inset-0 w-full h-full overflow-hidden bg-slate-50 dark:bg-[#0b0f19]"
+            }
+        >
             {/* 1. Real-time Map View Container */}
-            <div className="absolute inset-0 w-full h-full overflow-hidden">
+            <div className={`absolute inset-0 w-full h-full overflow-hidden ${isSchedulePage ? "hidden" : "block"}`}>
                 <MapRouteHeader
                     selectedRoute={activeRoute}
                     onSelectRoute={handleRouteChange}
@@ -149,7 +153,7 @@ export function AppShell() {
                         routeName={activeRoute}
                         onRouteChange={handleRouteChange}
                         onOpenScheduleModal={handleOpenSchedule}
-                        enabled={true}
+                        enabled={!isSchedulePage}
                         selectedDirection={selectedDirection}
                         cityCode={currentCity.code}
                         dayMode={dayMode}
@@ -158,15 +162,24 @@ export function AppShell() {
                 </MapWrapper>
             </div>
 
-            {/* 2. Route-Focused Timetable Modal (Wonju Only - Mobile view only since desktop uses split view) */}
-            {isWonju && activeTab === "schedule" && !isDesktop && (
-                <RouteScheduleModal
-                    isOpen={true}
-                    routeName={activeRoute}
-                    onClose={() => handleTabChange("map")}
-                    dayMode={dayMode}
-                    isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-                />
+            {/* 2. Wonju Bus Timetable Separate Page View (Yonsei 30,34,34-1 & All Wonju routes) */}
+            {isSchedulePage && (
+                <main
+                    className="relative z-10 w-full min-h-dvh px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-32 sm:pb-36 flex flex-col items-center">
+                    <div className="w-full max-w-6xl flex-1 flex flex-col">
+                        {timetableSubTab === "yonsei" ? (
+                            <YonseiTimetableWidget
+                                onSelectMapRoute={handleSelectMapRoute}
+                                dayMode={dayMode}
+                                onDayModeChange={setDayMode}
+                            />
+                        ) : (
+                            <TimetableWidget
+                                onSelectMapRoute={handleSelectMapRoute}
+                            />
+                        )}
+                    </div>
+                </main>
             )}
 
             {/* 3. Unified Bottom Floating Pill Navigation Bar */}
@@ -174,6 +187,8 @@ export function AppShell() {
                 activeTab={activeTab}
                 onTabChange={handleTabChange}
                 showScheduleTab={isWonju}
+                scheduleSubTab={timetableSubTab}
+                onScheduleSubTabChange={handleScheduleSubTabChange}
                 dayMode={dayMode}
                 onDayModeChange={setDayMode}
                 isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}

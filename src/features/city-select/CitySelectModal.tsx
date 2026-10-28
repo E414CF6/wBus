@@ -141,7 +141,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
             footer={modalFooter}
             maxWidth="2xl"
             height="default"
-            modalId="city"
+            enableHistory={false}
             ariaLabel="서비스 지역 선택"
         >
             {/* Detected Viewport City Banner (if user panned to another city) */}
