@@ -24,8 +24,8 @@ export function resolveActiveScheduleVariant(
         dayMode === "WEEKDAY"
             ? false
             : dayMode === "VACATION"
-            ? true
-            : (isTodayWeekendOrHoliday ?? isWeekend());
+                ? true
+                : (isTodayWeekendOrHoliday ?? isWeekend());
     if (isHol) {
         const hol = variants.find(
             (r) =>

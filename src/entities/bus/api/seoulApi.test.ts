@@ -251,7 +251,7 @@ describe("Seoul Bus OpenAPI (ws.bus.go.kr / TOPIS) parser & normalizer", () => {
         });
 
         it("parses Seoul city routes from TOPIS selectVApiTotalstr payload", async () => {
-            const { fetchSeoulCityRoutes } = await import("./seoulApi");
+            const {fetchSeoulCityRoutes} = await import("./seoulApi");
             const originalFetch = global.fetch;
             global.fetch = async () =>
                 new Response(
@@ -283,7 +283,7 @@ describe("Seoul Bus OpenAPI (ws.bus.go.kr / TOPIS) parser & normalizer", () => {
                             },
                         },
                     }),
-                    { status: 200, headers: { "Content-Type": "application/json" } }
+                    {status: 200, headers: {"Content-Type": "application/json"}}
                 );
 
             try {

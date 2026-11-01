@@ -20,11 +20,11 @@ export interface DualHourlyTimetableBlockProps {
 }
 
 function MinuteBadge({
-    item,
-    variant,
-    selectedFootnote,
-    onSelectFootnote,
-}: {
+                         item,
+                         variant,
+                         selectedFootnote,
+                         onSelectFootnote,
+                     }: {
     item: MinuteItem;
     variant: "weekday" | "vacation";
     selectedFootnote: number | null;
@@ -78,12 +78,12 @@ function MinuteBadge({
 }
 
 export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> = ({
-    route,
-    allRoutes,
-    now,
-    locationLabel = "종점 출발 시각",
+                                                                                      route,
+                                                                                      allRoutes,
+                                                                                      now,
+                                                                                      locationLabel = "종점 출발 시각",
                                                                                       compact = false,
-}) => {
+                                                                                  }) => {
     const [tableSearch, setTableSearch] = useState("");
     const [selectedFootnote, setSelectedFootnote] = useState<number | null>(null);
 
@@ -129,13 +129,13 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
                 className={`flex ${compact ? "flex-col" : "flex-col sm:flex-row sm:items-center"} justify-between gap-2 bg-slate-50 dark:bg-[#171b26] p-2.5 rounded-lg border border-slate-200 dark:border-slate-800`}>
                 <div
                     className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-semibold leading-snug">
-                    <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0"/>
                     <span>
                         기준: <strong>{locationLabel}</strong> (시각 뒤 기호는 경유지·행선지 각주)
                     </span>
                 </div>
                 <div className={`relative w-full ${compact ? "" : "sm:w-52"}`}>
-                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"/>
                     <input
                         type="text"
                         value={tableSearch}
@@ -149,7 +149,7 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
                             onClick={() => setTableSearch("")}
                             className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
                         >
-                            <X className="w-3 h-3" />
+                            <X className="w-3 h-3"/>
                         </button>
                     )}
                 </div>
@@ -157,10 +157,12 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
 
             {/* Footnote Interactive Legend */}
             {footnoteMap.size > 0 && (
-                <div className="p-2.5 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/40 space-y-1.5">
-                    <div className="flex items-center justify-between text-[11px] font-extrabold text-amber-800 dark:text-amber-300">
+                <div
+                    className="p-2.5 rounded-lg bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/40 space-y-1.5">
+                    <div
+                        className="flex items-center justify-between text-[11px] font-extrabold text-amber-800 dark:text-amber-300">
                         <span className="flex items-center gap-1">
-                            <Hash className="w-3 h-3" />
+                            <Hash className="w-3 h-3"/>
                             각주 안내 (클릭하면 해당 경유 시간만 강조됩니다)
                         </span>
                         {selectedFootnote !== null && (
@@ -204,60 +206,79 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
             <div className="overflow-x-auto rounded-lg border border-slate-300 dark:border-slate-700 custom-scrollbar">
                 <table className="w-full border-collapse text-left text-xs min-w-[280px]">
                     <thead>
-                        <tr className="bg-slate-100 dark:bg-[#1b202e] text-slate-700 dark:text-slate-200 border-b border-slate-300 dark:border-slate-700 font-extrabold">
-                            <th className="py-2 px-3 w-16 text-center border-r border-slate-300 dark:border-slate-700">
-                                시각
+                    <tr className="bg-slate-100 dark:bg-[#1b202e] text-slate-700 dark:text-slate-200 border-b border-slate-300 dark:border-slate-700 font-extrabold">
+                        <th className="py-2 px-3 w-16 text-center border-r border-slate-300 dark:border-slate-700">
+                            시각
+                        </th>
+                        <th className="py-2 px-3 border-r border-slate-300 dark:border-slate-700">
+                            {isSingleSchedule
+                                ? "운행 시각 (연중·매일 동일)"
+                                : "평일 (학기중) 출발 분"}
+                        </th>
+                        {!isSingleSchedule && (
+                            <th className="py-2 px-3">
+                                방학 · 토요일 · 공휴일 출발 분
                             </th>
-                            <th className="py-2 px-3 border-r border-slate-300 dark:border-slate-700">
-                                {isSingleSchedule
-                                    ? "운행 시각 (연중·매일 동일)"
-                                    : "평일 (학기중) 출발 분"}
-                            </th>
-                            {!isSingleSchedule && (
-                                <th className="py-2 px-3">
-                                    방학 · 토요일 · 공휴일 출발 분
-                                </th>
-                            )}
-                        </tr>
+                        )}
+                    </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                        {dualHourlyTimetable.length === 0 ? (
-                            <tr>
-                                <td
-                                    colSpan={isSingleSchedule ? 2 : 3}
-                                    className="py-6 text-center text-slate-400"
-                                >
-                                    검색 조건에 일치하는 출발 시각이 없습니다.
-                                </td>
-                            </tr>
-                        ) : (
-                            dualHourlyTimetable.map((row) => (
-                                <tr
-                                    key={row.hourStr}
-                                    className={
-                                        row.isCurrentHour
-                                            ? "bg-blue-50/60 dark:bg-blue-950/25"
-                                            : "bg-white dark:bg-[#12151e]"
-                                    }
-                                >
-                                    <td className="py-2 px-2.5 text-center font-mono font-black text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-800 align-middle">
-                                        <span>{row.displayHour}시</span>
-                                        {row.isCurrentHour && (
-                                            <span className="block text-[9px] font-sans font-extrabold text-blue-600 dark:text-blue-400">
+                    {dualHourlyTimetable.length === 0 ? (
+                        <tr>
+                            <td
+                                colSpan={isSingleSchedule ? 2 : 3}
+                                className="py-6 text-center text-slate-400"
+                            >
+                                검색 조건에 일치하는 출발 시각이 없습니다.
+                            </td>
+                        </tr>
+                    ) : (
+                        dualHourlyTimetable.map((row) => (
+                            <tr
+                                key={row.hourStr}
+                                className={
+                                    row.isCurrentHour
+                                        ? "bg-blue-50/60 dark:bg-blue-950/25"
+                                        : "bg-white dark:bg-[#12151e]"
+                                }
+                            >
+                                <td className="py-2 px-2.5 text-center font-mono font-black text-slate-700 dark:text-slate-200 border-r border-slate-200 dark:border-slate-800 align-middle">
+                                    <span>{row.displayHour}시</span>
+                                    {row.isCurrentHour && (
+                                        <span
+                                            className="block text-[9px] font-sans font-extrabold text-blue-600 dark:text-blue-400">
                                                 현재
                                             </span>
+                                    )}
+                                </td>
+                                <td className="py-2 px-3 border-r border-slate-200 dark:border-slate-800 align-middle">
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {row.weekdayMinutes.length === 0 ? (
+                                            <span className="text-slate-300 dark:text-slate-600">-</span>
+                                        ) : (
+                                            row.weekdayMinutes.map((m) => (
+                                                <MinuteBadge
+                                                    key={`w-${m.seq}`}
+                                                    item={m}
+                                                    variant="weekday"
+                                                    selectedFootnote={selectedFootnote}
+                                                    onSelectFootnote={setSelectedFootnote}
+                                                />
+                                            ))
                                         )}
-                                    </td>
-                                    <td className="py-2 px-3 border-r border-slate-200 dark:border-slate-800 align-middle">
+                                    </div>
+                                </td>
+                                {!isSingleSchedule && (
+                                    <td className="py-2 px-3 align-middle">
                                         <div className="flex flex-wrap gap-1.5">
-                                            {row.weekdayMinutes.length === 0 ? (
+                                            {row.vacationMinutes.length === 0 ? (
                                                 <span className="text-slate-300 dark:text-slate-600">-</span>
                                             ) : (
-                                                row.weekdayMinutes.map((m) => (
+                                                row.vacationMinutes.map((m) => (
                                                     <MinuteBadge
-                                                        key={`w-${m.seq}`}
+                                                        key={`v-${m.seq}`}
                                                         item={m}
-                                                        variant="weekday"
+                                                        variant="vacation"
                                                         selectedFootnote={selectedFootnote}
                                                         onSelectFootnote={setSelectedFootnote}
                                                     />
@@ -265,28 +286,10 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
                                             )}
                                         </div>
                                     </td>
-                                    {!isSingleSchedule && (
-                                        <td className="py-2 px-3 align-middle">
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {row.vacationMinutes.length === 0 ? (
-                                                    <span className="text-slate-300 dark:text-slate-600">-</span>
-                                                ) : (
-                                                    row.vacationMinutes.map((m) => (
-                                                        <MinuteBadge
-                                                            key={`v-${m.seq}`}
-                                                            item={m}
-                                                            variant="vacation"
-                                                            selectedFootnote={selectedFootnote}
-                                                            onSelectFootnote={setSelectedFootnote}
-                                                        />
-                                                    ))
-                                                )}
-                                            </div>
-                                        </td>
-                                    )}
-                                </tr>
-                            ))
-                        )}
+                                )}
+                            </tr>
+                        ))
+                    )}
                     </tbody>
                 </table>
             </div>

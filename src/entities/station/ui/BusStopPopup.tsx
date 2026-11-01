@@ -113,7 +113,8 @@ function ArrivalItem({
 
             <div className="flex flex-col items-end shrink-0 ml-3">
                 <div className={`flex items-baseline gap-1 font-black ${theme.text}`}>
-                    <Clock className={`w-3.5 h-3.5 opacity-80 self-center ${countdown.isImminent ? "animate-pulse" : ""}`}/>
+                    <Clock
+                        className={`w-3.5 h-3.5 opacity-80 self-center ${countdown.isImminent ? "animate-pulse" : ""}`}/>
                     <span className="text-lg sm:text-xl leading-none tracking-tight font-mono">
                         {countdown.mainText}
                     </span>
@@ -126,7 +127,8 @@ function ArrivalItem({
                 <div
                     className="flex items-center text-[10px] text-slate-400 dark:text-slate-500 font-bold group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors mt-1.5">
                     {isCurrentRoute ? "현재 노선" : UI_TEXT.BUS_ITEM.SHOW_ROUTE}
-                    <ChevronRight className="w-3 h-3 ml-0.5 opacity-60 group-hover:translate-x-0.5 transition-transform"/>
+                    <ChevronRight
+                        className="w-3 h-3 ml-0.5 opacity-60 group-hover:translate-x-0.5 transition-transform"/>
                 </div>
             </div>
         </button>
@@ -206,10 +208,12 @@ function ArrivalList({
     return (
         <div className="flex flex-col">
             {/* Sub-header with live status & manual refresh */}
-            <div className="flex items-center justify-between px-4 pt-2.5 pb-1 text-[11px] text-slate-500 dark:text-slate-400">
+            <div
+                className="flex items-center justify-between px-4 pt-2.5 pb-1 text-[11px] text-slate-500 dark:text-slate-400">
                 <span className="font-bold flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/>
-                    도착 예정 <strong className="text-slate-900 dark:text-white font-extrabold">{arrivalData.length}개</strong> 노선
+                    도착 예정 <strong
+                    className="text-slate-900 dark:text-white font-extrabold">{arrivalData.length}개</strong> 노선
                 </span>
                 <button
                     type="button"
@@ -252,7 +256,14 @@ export default function BusStopPopup({
     currentRouteName?: string;
     onRouteChange?: (routeName: string) => void;
 }) {
-    const {data: arrivalRawData, loading, isValidating, error, lastUpdated, refresh} = useBusArrivalInfo(stopId, cityCode);
+    const {
+        data: arrivalRawData,
+        loading,
+        isValidating,
+        error,
+        lastUpdated,
+        refresh
+    } = useBusArrivalInfo(stopId, cityCode);
     const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
     // 1-second live ticker for real-time arrival countdown

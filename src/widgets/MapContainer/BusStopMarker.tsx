@@ -204,7 +204,8 @@ const BusStopMarkerItem = memo(({
                         >
                             <BusFront className="w-3.5 h-3.5 fill-current"/>
                             {isFavorite && (
-                                <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow-xs border border-white">
+                                <span
+                                    className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow-xs border border-white">
                                     <Star className="w-2 h-2 fill-current"/>
                                 </span>
                             )}

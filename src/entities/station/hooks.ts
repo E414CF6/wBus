@@ -211,16 +211,16 @@ export function useFavoriteStops(cityCode: string = "32020") {
             const next: FavoriteStop[] = exists
                 ? current.filter((s) => s.nodeid !== stop.nodeid)
                 : [
-                      {
-                          nodeid: stop.nodeid,
-                          nodenm: stop.nodenm,
-                          nodeno: stop.nodeno ?? "",
-                          gpslati: stop.gpslati,
-                          gpslong: stop.gpslong,
-                          cityCode,
-                      },
-                      ...current,
-                  ].slice(0, 20);
+                    {
+                        nodeid: stop.nodeid,
+                        nodenm: stop.nodenm,
+                        nodeno: stop.nodeno ?? "",
+                        gpslati: stop.gpslati,
+                        gpslong: stop.gpslong,
+                        cityCode,
+                    },
+                    ...current,
+                ].slice(0, 20);
 
             setFavoriteStops(next);
             try {

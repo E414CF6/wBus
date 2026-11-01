@@ -27,13 +27,13 @@ export interface RouteScheduleModalProps {
 type TimetableViewMode = "summary" | "full";
 
 export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
-    isOpen,
-    routeName,
-    onClose,
-    dayMode = "AUTO",
-    isTodayWeekendOrHoliday,
+                                                                          isOpen,
+                                                                          routeName,
+                                                                          onClose,
+                                                                          dayMode = "AUTO",
+                                                                          isTodayWeekendOrHoliday,
                                                                           embedded = false,
-}) => {
+                                                                      }) => {
     // Live clock for next departure countdown
     const [now, setNow] = useState<Date>(() => new Date());
     useEffect(() => {

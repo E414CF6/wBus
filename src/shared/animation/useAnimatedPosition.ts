@@ -130,7 +130,8 @@ export function useAnimatedPosition(
 
     // ---- Animation Loop Lifecycle ----
     const isLoopRunningRef = useRef(false);
-    const startLoopRef = useRef<() => void>(() => {});
+    const startLoopRef = useRef<() => void>(() => {
+    });
 
     // ----------------------------------------------------------------
     // Direct MapLibre marker update (bypasses React for silky 60fps)

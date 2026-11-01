@@ -101,14 +101,14 @@ export function resolveWeekdayAndVacationRoutes(
 }
 
 export function computeDualHourlyTimetable({
-    route,
-    weekdayRoute,
-    vacationRoute,
-    tableSearch,
-    now,
-    footnoteMap,
-    currentHourStr,
-}: {
+                                               route,
+                                               weekdayRoute,
+                                               vacationRoute,
+                                               tableSearch,
+                                               now,
+                                               footnoteMap,
+                                               currentHourStr,
+                                           }: {
     route: BusRoute | null;
     weekdayRoute: BusRoute | null;
     vacationRoute: BusRoute | null;

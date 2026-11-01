@@ -10,7 +10,8 @@ describe("Modal component exports", () => {
     it("creates a React element without errors with modalId and queryKey", () => {
         const element = React.createElement(Modal, {
             isOpen: false,
-            onClose: () => {},
+            onClose: () => {
+            },
             title: "Test Modal",
             modalId: "city",
             queryKey: "modal",

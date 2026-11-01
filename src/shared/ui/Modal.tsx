@@ -64,35 +64,36 @@ export interface ModalProps {
     enableHistory?: boolean;
 }
 
-const emptySubscribe = () => () => {};
+const emptySubscribe = () => () => {
+};
 
 export function Modal({
-    isOpen,
-    onClose,
-    title,
-    subtitle,
-    icon,
-    headerBadge,
-    headerLeading,
-    headerActions,
-    footer,
-    maxWidth = "2xl",
-    height = "default",
-    className = "",
-    bodyClassName = "",
-    headerClassName = "",
-    footerClassName = "",
-    closeOnBackdropClick = true,
-    closeOnEscape = true,
-    hideCloseButton = false,
-    zIndex = "z-[100]",
-    ariaLabel,
-    ariaLabelledby,
-    modalId,
-    queryKey = "modal",
-    enableHistory = true,
-    children,
-}: ModalProps) {
+                          isOpen,
+                          onClose,
+                          title,
+                          subtitle,
+                          icon,
+                          headerBadge,
+                          headerLeading,
+                          headerActions,
+                          footer,
+                          maxWidth = "2xl",
+                          height = "default",
+                          className = "",
+                          bodyClassName = "",
+                          headerClassName = "",
+                          footerClassName = "",
+                          closeOnBackdropClick = true,
+                          closeOnEscape = true,
+                          hideCloseButton = false,
+                          zIndex = "z-[100]",
+                          ariaLabel,
+                          ariaLabelledby,
+                          modalId,
+                          queryKey = "modal",
+                          enableHistory = true,
+                          children,
+                      }: ModalProps) {
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
     useBodyScrollLock(isOpen);
@@ -222,7 +223,8 @@ export function Modal({
                         <div className="flex items-center gap-3 min-w-0">
                             {headerLeading}
                             {!headerLeading && icon && (
-                                <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl shrink-0">
+                                <div
+                                    className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl shrink-0">
                                     {icon}
                                 </div>
                             )}
@@ -241,7 +243,8 @@ export function Modal({
                                     {headerBadge}
                                 </div>
                                 {subtitle && (
-                                    <div className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                    <div
+                                        className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                                         {subtitle}
                                     </div>
                                 )}

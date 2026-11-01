@@ -12,11 +12,11 @@ export interface DayModeToggleProps {
 }
 
 export const DayModeToggle = memo(function DayModeToggle({
-    dayMode = "AUTO",
-    onDayModeChange,
-    isTodayWeekendOrHoliday = false,
-    className = "",
-}: DayModeToggleProps) {
+                                                             dayMode = "AUTO",
+                                                             onDayModeChange,
+                                                             isTodayWeekendOrHoliday = false,
+                                                             className = "",
+                                                         }: DayModeToggleProps) {
     const handleToggle = useCallback(() => {
         if (!onDayModeChange) return;
         if (dayMode === "AUTO") {

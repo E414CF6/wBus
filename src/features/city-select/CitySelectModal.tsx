@@ -17,7 +17,10 @@ const PROVINCE_GROUPS: { label: string; match: (city: CityInfo) => boolean }[] =
     {label: "수도권", match: (c) => c.province.includes("경기") || c.province.includes("인천")},
     {label: "광역시·세종", match: (c) => c.isMajor === true && c.code.length === 2 && c.code !== "39"},
     {label: "충청", match: (c) => c.province.includes("충청") || c.province.includes("대전") || c.province.includes("세종")},
-    {label: "경상", match: (c) => c.province.includes("경상") || c.province.includes("부산") || c.province.includes("대구") || c.province.includes("울산")},
+    {
+        label: "경상",
+        match: (c) => c.province.includes("경상") || c.province.includes("부산") || c.province.includes("대구") || c.province.includes("울산")
+    },
     {label: "전라", match: (c) => c.province.includes("전라") || c.province.includes("광주")},
     {label: "제주", match: (c) => c.province.includes("제주")},
 ];

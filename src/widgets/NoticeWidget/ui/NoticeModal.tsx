@@ -359,9 +359,11 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
         <div className="flex flex-col h-full overflow-hidden">
             <div className="flex-1 overflow-y-auto p-4 sm:p-5 custom-scrollbar space-y-4">
                 {/* Meta Header */}
-                <div className="p-4 rounded-2xl bg-amber-500/5 dark:bg-amber-400/5 border border-amber-500/20 space-y-2.5">
+                <div
+                    className="p-4 rounded-2xl bg-amber-500/5 dark:bg-amber-400/5 border border-amber-500/20 space-y-2.5">
                     <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-xs">
+                        <span
+                            className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-xs">
                             공지 #{id}
                         </span>
                     </div>
@@ -370,7 +372,8 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
                         {notice.title}
                     </h1>
 
-                    <div className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500 dark:text-slate-400 font-medium pt-1 border-t border-black/5 dark:border-white/5">
+                    <div
+                        className="flex flex-wrap items-center gap-y-1 gap-x-4 text-xs text-slate-500 dark:text-slate-400 font-medium pt-1 border-t border-black/5 dark:border-white/5">
                         <div className="flex items-center gap-1.5">
                             <span className="font-bold">{UI_TEXT.NOTICE.WRITER}:</span>
                             <span>{notice.writer || UI_TEXT.NOTICE.DEFAULT_WRITER}</span>
@@ -424,14 +427,17 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
 
                 {/* Prev / Next Notice Links */}
                 {(notice.prevId || notice.nextId) && (
-                    <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-black/5 dark:border-white/5 space-y-2 text-xs">
+                    <div
+                        className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-black/5 dark:border-white/5 space-y-2 text-xs">
                         {notice.prevId && (
                             <div
                                 onClick={() => onSelectNotice(notice.prevId!)}
                                 className="flex items-center gap-2 p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer transition-colors"
                             >
-                                <span className="shrink-0 font-bold text-amber-600 dark:text-amber-400">{UI_TEXT.NOTICE.PREV_NOTICE}</span>
-                                <span className="truncate text-slate-700 dark:text-slate-300">{notice.prevTitle || notice.prevId}</span>
+                                <span
+                                    className="shrink-0 font-bold text-amber-600 dark:text-amber-400">{UI_TEXT.NOTICE.PREV_NOTICE}</span>
+                                <span
+                                    className="truncate text-slate-700 dark:text-slate-300">{notice.prevTitle || notice.prevId}</span>
                             </div>
                         )}
                         {notice.nextId && (
@@ -439,8 +445,10 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
                                 onClick={() => onSelectNotice(notice.nextId!)}
                                 className="flex items-center gap-2 p-2 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer transition-colors"
                             >
-                                <span className="shrink-0 font-bold text-amber-600 dark:text-amber-400">{UI_TEXT.NOTICE.NEXT_NOTICE}</span>
-                                <span className="truncate text-slate-700 dark:text-slate-300">{notice.nextTitle || notice.nextId}</span>
+                                <span
+                                    className="shrink-0 font-bold text-amber-600 dark:text-amber-400">{UI_TEXT.NOTICE.NEXT_NOTICE}</span>
+                                <span
+                                    className="truncate text-slate-700 dark:text-slate-300">{notice.nextTitle || notice.nextId}</span>
                             </div>
                         )}
                     </div>
@@ -448,7 +456,8 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
             </div>
 
             {/* Bottom Actions */}
-            <footer className="flex items-center justify-between px-5 py-3 border-t border-black/5 dark:border-white/5 bg-white/40 dark:bg-white/[0.02] shrink-0">
+            <footer
+                className="flex items-center justify-between px-5 py-3 border-t border-black/5 dark:border-white/5 bg-white/40 dark:bg-white/[0.02] shrink-0">
                 <button
                     type="button"
                     onClick={onBack}

@@ -464,340 +464,340 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                 }`}
             >
                 {/* 1. Header Section */}
-            <div
-                className={`flex items-start justify-between border-b border-slate-200/80 dark:border-white/10 shrink-0 bg-slate-50/50 dark:bg-white/[0.02] transition-all duration-200 ${
-                    hasBottomSplit ? "px-4 pt-3 pb-2" : "px-5 pt-5 pb-4"
-                }`}
-            >
-                <div className="flex items-start gap-2.5 min-w-0">
-                    {/* Blue Accent Vertical Bar */}
-                    <div
-                        className={`w-1.5 rounded-full bg-blue-600 dark:bg-blue-500 shrink-0 mt-0.5 ${hasBottomSplit ? "h-9" : "h-11"}`}/>
+                <div
+                    className={`flex items-start justify-between border-b border-slate-200/80 dark:border-white/10 shrink-0 bg-slate-50/50 dark:bg-white/[0.02] transition-all duration-200 ${
+                        hasBottomSplit ? "px-4 pt-3 pb-2" : "px-5 pt-5 pb-4"
+                    }`}
+                >
+                    <div className="flex items-start gap-2.5 min-w-0">
+                        {/* Blue Accent Vertical Bar */}
+                        <div
+                            className={`w-1.5 rounded-full bg-blue-600 dark:bg-blue-500 shrink-0 mt-0.5 ${hasBottomSplit ? "h-9" : "h-11"}`}/>
 
-                    <div className="flex flex-col min-w-0">
+                        <div className="flex flex-col min-w-0">
                         <span
                             className="text-[10px] sm:text-[11px] font-bold text-blue-600 dark:text-blue-400 tracking-tight">
                             버스 노선
                         </span>
-                        <h2
-                            className={`font-black text-slate-900 dark:text-white tracking-tight leading-none mt-0.5 transition-all duration-200 ${
-                                hasBottomSplit ? "text-xl sm:text-2xl" : "text-3xl"
-                            }`}
-                        >
-                            {selectedRoute}
-                        </h2>
-                        <p
-                            className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[210px] sm:max-w-[260px] mt-1"
-                            title={routeSubInfo}
-                        >
-                            {routeSubInfo}
-                        </p>
-                        <div className="flex items-center gap-2 mt-1 text-xs flex-wrap">
+                            <h2
+                                className={`font-black text-slate-900 dark:text-white tracking-tight leading-none mt-0.5 transition-all duration-200 ${
+                                    hasBottomSplit ? "text-xl sm:text-2xl" : "text-3xl"
+                                }`}
+                            >
+                                {selectedRoute}
+                            </h2>
+                            <p
+                                className="text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[210px] sm:max-w-[260px] mt-1"
+                                title={routeSubInfo}
+                            >
+                                {routeSubInfo}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1 text-xs flex-wrap">
                             <span className="font-bold text-blue-600 dark:text-blue-400">
                                 {isConnecting
                                     ? "실시간 연결 중..."
                                     : `실시간 ${runningBuses.length}대 운행중`}
                             </span>
-                            <span className="text-slate-400 dark:text-slate-500 font-medium">{timeAgo}</span>
-                            {busesByStopKey.size > 0 && (
-                                <button
-                                    type="button"
-                                    onClick={scrollToActiveBus}
-                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold border border-blue-500/25 transition cursor-pointer active:scale-95"
-                                    title="현재 운행 중인 버스 정류장 위치로 스크롤"
-                                >
-                                    <LocateFixed className="w-2.5 h-2.5"/>
-                                    <span>버스 위치로</span>
-                                </button>
-                            )}
+                                <span className="text-slate-400 dark:text-slate-500 font-medium">{timeAgo}</span>
+                                {busesByStopKey.size > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={scrollToActiveBus}
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold border border-blue-500/25 transition cursor-pointer active:scale-95"
+                                        title="현재 운행 중인 버스 정류장 위치로 스크롤"
+                                    >
+                                        <LocateFixed className="w-2.5 h-2.5"/>
+                                        <span>버스 위치로</span>
+                                    </button>
+                                )}
+                            </div>
                         </div>
+                    </div>
+
+                    {/* Right Top Action Buttons */}
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                        <button
+                            type="button"
+                            onClick={handleRefresh}
+                            className="w-8 h-8 rounded-full border border-slate-200/80 dark:border-white/15 bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 dark:hover:bg-white/15 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer active:scale-90"
+                            title="실시간 위치 새로고침"
+                            aria-label="실시간 위치 새로고침"
+                        >
+                            <RefreshCw
+                                className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-600 dark:text-blue-400" : ""}`}
+                            />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="w-8 h-8 rounded-full border border-slate-200/80 dark:border-white/15 bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 dark:hover:bg-white/15 flex md:hidden items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer active:scale-90"
+                            title="닫기"
+                            aria-label="닫기"
+                        >
+                            <X className="w-4 h-4"/>
+                        </button>
                     </div>
                 </div>
 
-                {/* Right Top Action Buttons */}
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                    <button
-                        type="button"
-                        onClick={handleRefresh}
-                        className="w-8 h-8 rounded-full border border-slate-200/80 dark:border-white/15 bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 dark:hover:bg-white/15 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer active:scale-90"
-                        title="실시간 위치 새로고침"
-                        aria-label="실시간 위치 새로고침"
-                    >
-                        <RefreshCw
-                            className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-600 dark:text-blue-400" : ""}`}
-                        />
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="w-8 h-8 rounded-full border border-slate-200/80 dark:border-white/15 bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 dark:hover:bg-white/15 flex md:hidden items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer active:scale-90"
-                        title="닫기"
-                        aria-label="닫기"
-                    >
-                        <X className="w-4 h-4"/>
-                    </button>
-                </div>
-            </div>
-
-            {/* 1.5 Variation Selector (if route has multiple variations) */}
-            {effectiveVariations.length > 1 && (<div
-                className="flex items-center gap-1.5 px-4 py-2 border-b border-slate-200/80 dark:border-white/10 bg-slate-100/60 dark:bg-white/[0.02] text-xs shrink-0 overflow-x-auto custom-scrollbar-hidden"
-                role="tablist"
-                aria-label="노선 종류 선택"
-            >
+                {/* 1.5 Variation Selector (if route has multiple variations) */}
+                {effectiveVariations.length > 1 && (<div
+                    className="flex items-center gap-1.5 px-4 py-2 border-b border-slate-200/80 dark:border-white/10 bg-slate-100/60 dark:bg-white/[0.02] text-xs shrink-0 overflow-x-auto custom-scrollbar-hidden"
+                    role="tablist"
+                    aria-label="노선 종류 선택"
+                >
                     <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0 mr-1">
                         노선:
                     </span>
-                {effectiveVariations.map((variant) => {
-                    const isSelectedVariant = variant.routeId === currentVariant?.routeId;
-                    const busCountOnVariant = busesPerVariation.get(variant.routeId) ?? 0;
+                    {effectiveVariations.map((variant) => {
+                        const isSelectedVariant = variant.routeId === currentVariant?.routeId;
+                        const busCountOnVariant = busesPerVariation.get(variant.routeId) ?? 0;
 
-                    return (<button
-                        key={variant.routeId}
-                        type="button"
-                        role="tab"
-                        aria-selected={isSelectedVariant}
-                        onClick={() => {
-                            setSelectedVariantId(variant.routeId);
-                            setDirectionFilter("all");
-                        }}
-                        className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${isSelectedVariant ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 border border-slate-200/60 dark:border-white/5"}`}
-                    >
-                        <span>{variant.label}</span>
-                        {busCountOnVariant > 0 && (<span
-                            className={`px-1.5 py-0.2 rounded-full text-[10px] font-black leading-none ${isSelectedVariant ? "bg-blue-600 text-white dark:bg-blue-400 dark:text-black" : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"}`}
+                        return (<button
+                            key={variant.routeId}
+                            type="button"
+                            role="tab"
+                            aria-selected={isSelectedVariant}
+                            onClick={() => {
+                                setSelectedVariantId(variant.routeId);
+                                setDirectionFilter("all");
+                            }}
+                            className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${isSelectedVariant ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 border border-slate-200/60 dark:border-white/5"}`}
                         >
+                            <span>{variant.label}</span>
+                            {busCountOnVariant > 0 && (<span
+                                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black leading-none ${isSelectedVariant ? "bg-blue-600 text-white dark:bg-blue-400 dark:text-black" : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"}`}
+                            >
                                         {busCountOnVariant}대
                                     </span>)}
-                    </button>);
-                })}
-            </div>)}
+                        </button>);
+                    })}
+                </div>)}
 
-            {/* 2. Direction Filter & Stop Quick Search Bar */}
-            <div
-                className="flex flex-col gap-2 px-4 py-2.5 border-b border-slate-200/80 dark:border-white/5 bg-slate-100/40 dark:bg-black/20 shrink-0">
-                {(hasDirections || favoriteStopsCountInRoute > 0) && (
-                    <div className="flex items-center gap-1.5 text-xs overflow-x-auto custom-scrollbar-hidden">
-                        <button
-                            type="button"
-                            onClick={() => setDirectionFilter("all")}
-                            className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                directionFilter === "all" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
-                            }`}
-                        >
-                            전체 ({currentStops.length})
-                        </button>
-                        {favoriteStopsCountInRoute > 0 && (
+                {/* 2. Direction Filter & Stop Quick Search Bar */}
+                <div
+                    className="flex flex-col gap-2 px-4 py-2.5 border-b border-slate-200/80 dark:border-white/5 bg-slate-100/40 dark:bg-black/20 shrink-0">
+                    {(hasDirections || favoriteStopsCountInRoute > 0) && (
+                        <div className="flex items-center gap-1.5 text-xs overflow-x-auto custom-scrollbar-hidden">
                             <button
                                 type="button"
-                                onClick={() => setDirectionFilter("fav")}
-                                className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                    directionFilter === "fav"
-                                        ? "bg-amber-500/20 dark:bg-amber-500/30 text-amber-800 dark:text-amber-300 border border-amber-500/40 shadow-xs"
-                                        : "text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
+                                onClick={() => setDirectionFilter("all")}
+                                className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                    directionFilter === "all" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
                                 }`}
                             >
-                                <Star className="w-3 h-3 fill-amber-500 text-amber-500"/>
-                                <span>즐겨찾기 ({favoriteStopsCountInRoute})</span>
+                                전체 ({currentStops.length})
                             </button>
-                        )}
-                        {hasDirections && (
-                            <>
+                            {favoriteStopsCountInRoute > 0 && (
                                 <button
                                     type="button"
-                                    onClick={() => setDirectionFilter("up")}
-                                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                        directionFilter === "up" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
+                                    onClick={() => setDirectionFilter("fav")}
+                                    className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                        directionFilter === "fav"
+                                            ? "bg-amber-500/20 dark:bg-amber-500/30 text-amber-800 dark:text-amber-300 border border-amber-500/40 shadow-xs"
+                                            : "text-amber-700 dark:text-amber-400 hover:bg-amber-500/10"
                                     }`}
                                 >
-                                    {meta.destination || "종점"} 방면 (상행)
+                                    <Star className="w-3 h-3 fill-amber-500 text-amber-500"/>
+                                    <span>즐겨찾기 ({favoriteStopsCountInRoute})</span>
                                 </button>
+                            )}
+                            {hasDirections && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDirectionFilter("up")}
+                                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                            directionFilter === "up" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
+                                        }`}
+                                    >
+                                        {meta.destination || "종점"} 방면 (상행)
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setDirectionFilter("down")}
+                                        className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                            directionFilter === "down" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
+                                        }`}
+                                    >
+                                        {meta.origin || "기점"} 방면 (하행)
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {currentStops.length > 5 && (
+                        <div className="relative flex items-center">
+                            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none"/>
+                            <input
+                                type="text"
+                                value={stopSearchQuery}
+                                onChange={(e) => setStopSearchQuery(e.target.value)}
+                                placeholder="정류장 이름 또는 번호 검색..."
+                                aria-label="정류장 검색"
+                                className="w-full pl-8 pr-7 py-1.5 rounded-xl bg-white/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
+                            />
+                            {stopSearchQuery && (
                                 <button
                                     type="button"
-                                    onClick={() => setDirectionFilter("down")}
-                                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                        directionFilter === "down" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
-                                    }`}
+                                    onClick={() => setStopSearchQuery("")}
+                                    className="absolute right-2 p-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
+                                    aria-label="검색어 지우기"
                                 >
-                                    {meta.origin || "기점"} 방면 (하행)
+                                    <X className="w-3.5 h-3.5"/>
                                 </button>
-                            </>
-                        )}
-                    </div>
-                )}
+                            )}
+                        </div>
+                    )}
+                </div>
 
-                {currentStops.length > 5 && (
-                    <div className="relative flex items-center">
-                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none"/>
-                        <input
-                            type="text"
-                            value={stopSearchQuery}
-                            onChange={(e) => setStopSearchQuery(e.target.value)}
-                            placeholder="정류장 이름 또는 번호 검색..."
-                            aria-label="정류장 검색"
-                            className="w-full pl-8 pr-7 py-1.5 rounded-xl bg-white/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-xs font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition"
-                        />
-                        {stopSearchQuery && (
-                            <button
-                                type="button"
-                                onClick={() => setStopSearchQuery("")}
-                                className="absolute right-2 p-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-                                aria-label="검색어 지우기"
-                            >
-                                <X className="w-3.5 h-3.5"/>
-                            </button>
-                        )}
-                    </div>
-                )}
-            </div>
-
-            {/* 3. Bus Stop Timeline List Body */}
-            <div
-                ref={listRef}
-                className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0"
-            >
-                {currentStops.length === 0 ? (<div
-                        className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
-                        <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400"/>
-                        <span className="text-xs font-semibold">
+                {/* 3. Bus Stop Timeline List Body */}
+                <div
+                    ref={listRef}
+                    className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0"
+                >
+                    {currentStops.length === 0 ? (<div
+                            className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
+                            <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400"/>
+                            <span className="text-xs font-semibold">
                             정류장 목록을 불러오고 있습니다...
                         </span>
-                    </div>
-                ) : filteredStops.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
-                        {stopSearchQuery ? `"${stopSearchQuery}" 검색 결과가 없습니다.` : "해당 방향의 정류장 정보가 없습니다."}
-                    </div>
-                ) : (
-                    filteredStops.map((stop, index) => {
-                        const stopKey = `${stop.nodeid}-${stop.nodeord ?? ""}`;
-                        const busesHere = busesByStopKey.get(stopKey) || [];
-                        const isFirst = index === 0;
-                        const isLast = index === filteredStops.length - 1;
-                        const isSelected = selectedStopId === stop.nodeid;
-                        const isTurningStop = Boolean(turningStop && turningStop.nodeid === stop.nodeid && turningStop.nodeord === stop.nodeord);
-                        const isFavStop = isFavoriteStop(stop.nodeid);
+                        </div>
+                    ) : filteredStops.length === 0 ? (
+                        <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
+                            {stopSearchQuery ? `"${stopSearchQuery}" 검색 결과가 없습니다.` : "해당 방향의 정류장 정보가 없습니다."}
+                        </div>
+                    ) : (
+                        filteredStops.map((stop, index) => {
+                            const stopKey = `${stop.nodeid}-${stop.nodeord ?? ""}`;
+                            const busesHere = busesByStopKey.get(stopKey) || [];
+                            const isFirst = index === 0;
+                            const isLast = index === filteredStops.length - 1;
+                            const isSelected = selectedStopId === stop.nodeid;
+                            const isTurningStop = Boolean(turningStop && turningStop.nodeid === stop.nodeid && turningStop.nodeord === stop.nodeord);
+                            const isFavStop = isFavoriteStop(stop.nodeid);
 
-                        return (
-                            <div
-                                key={stopKey}
-                                data-has-bus={busesHere.length > 0 ? "true" : undefined}
-                                data-selected-stop={isSelected ? "true" : undefined}
-                                className={`relative flex items-center min-h-[58px] py-3 transition-colors cursor-pointer group border-b border-slate-100 dark:border-white/5 ${
-                                    isSelected ? isTurningStop ? "bg-amber-100/70 dark:bg-amber-950/30" : "bg-blue-50/80 dark:bg-blue-950/40" : isTurningStop ? "bg-amber-50/70 hover:bg-amber-100/60 dark:bg-amber-500/[0.06] dark:hover:bg-amber-500/[0.12]" : "hover:bg-slate-50 dark:hover:bg-white/[0.04]"
-                                }`}
-                                onClick={() => handleStopClick(stop)}
-                            >
-                                {/* Left Selection/Turning Indicator Bar (zero layout shift - fixes line alignment issue!) */}
-                                {isSelected ? (<div
-                                    className={`absolute left-0 top-0 bottom-0 w-1 rounded-r z-20 pointer-events-none ${isTurningStop ? "bg-amber-500" : "bg-blue-600 dark:bg-blue-500"}`}
-                                />) : isTurningStop ? (<div
-                                    className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500/70 rounded-r z-20 pointer-events-none"/>) : null}
-
-                                {/* Vertical Timeline Connecting Track */}
+                            return (
                                 <div
-                                    className={`absolute left-[74px] w-[2px] pointer-events-none ${isTurningStop ? "bg-gradient-to-b from-blue-600/70 via-amber-500 to-blue-600/70 dark:from-blue-500/80 dark:via-amber-400 dark:to-blue-500/80" : "bg-blue-600/70 dark:bg-blue-500/80"} ${
-                                        isFirst
-                                            ? "top-1/2 bottom-0"
-                                            : isLast
-                                                ? "top-0 bottom-1/2"
-                                                : "top-0 bottom-0"
+                                    key={stopKey}
+                                    data-has-bus={busesHere.length > 0 ? "true" : undefined}
+                                    data-selected-stop={isSelected ? "true" : undefined}
+                                    className={`relative flex items-center min-h-[58px] py-3 transition-colors cursor-pointer group border-b border-slate-100 dark:border-white/5 ${
+                                        isSelected ? isTurningStop ? "bg-amber-100/70 dark:bg-amber-950/30" : "bg-blue-50/80 dark:bg-blue-950/40" : isTurningStop ? "bg-amber-50/70 hover:bg-amber-100/60 dark:bg-amber-500/[0.06] dark:hover:bg-amber-500/[0.12]" : "hover:bg-slate-50 dark:hover:bg-white/[0.04]"
                                     }`}
-                                />
-
-                                {/* Station Timeline Node (Donut Circle) */}
-                                {isTurningStop ? (<div
-                                    className="absolute left-[65px] top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-[2.5px] border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-[#0c100f] z-10 shadow-[0_0_12px_rgba(245,158,11,0.35)] flex items-center justify-center pointer-events-none"
-                                    title="회차지 정류장"
+                                    onClick={() => handleStopClick(stop)}
                                 >
-                                    <RotateCw
-                                        className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 stroke-[2.5]"/>
-                                </div>) : (<div
-                                    className="absolute left-[68px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-[2.5px] border-blue-600 dark:border-blue-400 bg-white dark:bg-[#0c100f] z-10 shadow-xs pointer-events-none"
-                                />)}
+                                    {/* Left Selection/Turning Indicator Bar (zero layout shift - fixes line alignment issue!) */}
+                                    {isSelected ? (<div
+                                        className={`absolute left-0 top-0 bottom-0 w-1 rounded-r z-20 pointer-events-none ${isTurningStop ? "bg-amber-500" : "bg-blue-600 dark:bg-blue-500"}`}
+                                    />) : isTurningStop ? (<div
+                                        className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500/70 rounded-r z-20 pointer-events-none"/>) : null}
 
-                                {/* Live Bus Markers if arriving/located at this station */}
-                                {busesHere.length > 0 && (
+                                    {/* Vertical Timeline Connecting Track */}
                                     <div
-                                        className="absolute left-2 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1">
-                                        {busesHere.map((bus) => {
-                                            const plateDigits =
-                                                bus.vehicleno.replace(/[^0-9]/g, "").slice(-4) ||
-                                                bus.vehicleno.slice(-4);
+                                        className={`absolute left-[74px] w-[2px] pointer-events-none ${isTurningStop ? "bg-gradient-to-b from-blue-600/70 via-amber-500 to-blue-600/70 dark:from-blue-500/80 dark:via-amber-400 dark:to-blue-500/80" : "bg-blue-600/70 dark:bg-blue-500/80"} ${
+                                            isFirst
+                                                ? "top-1/2 bottom-0"
+                                                : isLast
+                                                    ? "top-0 bottom-1/2"
+                                                    : "top-0 bottom-0"
+                                        }`}
+                                    />
 
-                                            return (
-                                                <button
-                                                    key={`${bus.vehicleno}-${bus.nodeord}`}
-                                                    type="button"
-                                                    onClick={(e) => handleBusBadgeClick(e, bus.gpslati, bus.gpslong)}
-                                                    className="flex items-center gap-1 group/bus cursor-pointer active:scale-95 transition-transform"
-                                                    title={`${bus.vehicleno} 실시간 위치로 이동`}
-                                                >
-                                                    {/* Badge: Vehicle Number */}
-                                                    <span
-                                                        className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-900 dark:bg-[#142238] border border-slate-700 dark:border-blue-500/40 text-blue-200 dark:text-blue-300 tracking-tight whitespace-nowrap select-none shadow-xs">
+                                    {/* Station Timeline Node (Donut Circle) */}
+                                    {isTurningStop ? (<div
+                                        className="absolute left-[65px] top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-[2.5px] border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-[#0c100f] z-10 shadow-[0_0_12px_rgba(245,158,11,0.35)] flex items-center justify-center pointer-events-none"
+                                        title="회차지 정류장"
+                                    >
+                                        <RotateCw
+                                            className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 stroke-[2.5]"/>
+                                    </div>) : (<div
+                                        className="absolute left-[68px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-[2.5px] border-blue-600 dark:border-blue-400 bg-white dark:bg-[#0c100f] z-10 shadow-xs pointer-events-none"
+                                    />)}
+
+                                    {/* Live Bus Markers if arriving/located at this station */}
+                                    {busesHere.length > 0 && (
+                                        <div
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1">
+                                            {busesHere.map((bus) => {
+                                                const plateDigits =
+                                                    bus.vehicleno.replace(/[^0-9]/g, "").slice(-4) ||
+                                                    bus.vehicleno.slice(-4);
+
+                                                return (
+                                                    <button
+                                                        key={`${bus.vehicleno}-${bus.nodeord}`}
+                                                        type="button"
+                                                        onClick={(e) => handleBusBadgeClick(e, bus.gpslati, bus.gpslong)}
+                                                        className="flex items-center gap-1 group/bus cursor-pointer active:scale-95 transition-transform"
+                                                        title={`${bus.vehicleno} 실시간 위치로 이동`}
+                                                    >
+                                                        {/* Badge: Vehicle Number */}
+                                                        <span
+                                                            className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-900 dark:bg-[#142238] border border-slate-700 dark:border-blue-500/40 text-blue-200 dark:text-blue-300 tracking-tight whitespace-nowrap select-none shadow-xs">
                                                         {plateDigits}
                                                     </span>
 
-                                                    {/* Blue Bus Icon Box */}
-                                                    <div
-                                                        className="w-6 h-6 rounded-md bg-blue-600 dark:bg-blue-500 text-white flex items-center justify-center shadow-md shadow-blue-600/25 shrink-0">
-                                                        <Bus className="w-3.5 h-3.5 fill-current"/>
-                                                    </div>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-                                )}
+                                                        {/* Blue Bus Icon Box */}
+                                                        <div
+                                                            className="w-6 h-6 rounded-md bg-blue-600 dark:bg-blue-500 text-white flex items-center justify-center shadow-md shadow-blue-600/25 shrink-0">
+                                                            <Bus className="w-3.5 h-3.5 fill-current"/>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
 
-                                {/* Station Name & Metadata */}
-                                <div className="ml-[92px] flex-1 flex flex-col justify-center min-w-0 pr-2">
-                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                    {/* Station Name & Metadata */}
+                                    <div className="ml-[92px] flex-1 flex flex-col justify-center min-w-0 pr-2">
+                                        <div className="flex items-center gap-1.5 flex-wrap">
                                         <span
                                             className={`text-[14px] sm:text-[15px] font-bold truncate transition-colors ${isSelected ? isTurningStop ? "text-amber-800 dark:text-amber-300 font-black" : "text-blue-700 dark:text-blue-300 font-black" : isTurningStop ? "text-amber-900 dark:text-amber-200 font-extrabold group-hover:text-amber-950 dark:group-hover:text-amber-100" : "text-slate-800 dark:text-slate-100 group-hover:text-slate-950 dark:group-hover:text-white"}`}
                                         >
                                             {stop.nodenm}
                                         </span>
-                                        {isTurningStop && (<span
-                                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-xs shrink-0 select-none">
+                                            {isTurningStop && (<span
+                                                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-xs shrink-0 select-none">
                                                 <RotateCw className="w-2.5 h-2.5 stroke-[2.5]"/>
                                                 회차지
                                             </span>)}
-                                    </div>
-                                    {stop.nodeno && (
-                                        <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+                                        </div>
+                                        {stop.nodeno && (
+                                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                                             {stop.nodeno}
                                         </span>
-                                    )}
-                                </div>
+                                        )}
+                                    </div>
 
-                                {/* Stop Favorite Star Button */}
-                                <button
-                                    type="button"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        toggleFavoriteStop({
-                                            nodeid: stop.nodeid,
-                                            nodenm: stop.nodenm,
-                                            nodeno: stop.nodeno,
-                                            gpslati: stop.gpslati,
-                                            gpslong: stop.gpslong,
-                                        });
-                                    }}
-                                    className={`mr-3 p-1.5 rounded-full transition-colors cursor-pointer shrink-0 ${
-                                        isFavStop
-                                            ? "text-amber-500 hover:text-amber-600"
-                                            : "text-slate-300 dark:text-slate-600 opacity-60 group-hover:opacity-100 hover:text-amber-500 dark:hover:text-amber-400"
-                                    }`}
-                                    title={isFavStop ? "정류장 즐겨찾기 해제" : "정류장 즐겨찾기 추가"}
-                                    aria-label={isFavStop ? "정류장 즐겨찾기 해제" : "정류장 즐겨찾기 추가"}
-                                >
-                                    <Star className={`w-4 h-4 ${isFavStop ? "fill-amber-500" : ""}`}/>
-                                </button>
-                            </div>
-                        );
-                    })
-                )}
-            </div>
+                                    {/* Stop Favorite Star Button */}
+                                    <button
+                                        type="button"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            toggleFavoriteStop({
+                                                nodeid: stop.nodeid,
+                                                nodenm: stop.nodenm,
+                                                nodeno: stop.nodeno,
+                                                gpslati: stop.gpslati,
+                                                gpslong: stop.gpslong,
+                                            });
+                                        }}
+                                        className={`mr-3 p-1.5 rounded-full transition-colors cursor-pointer shrink-0 ${
+                                            isFavStop
+                                                ? "text-amber-500 hover:text-amber-600"
+                                                : "text-slate-300 dark:text-slate-600 opacity-60 group-hover:opacity-100 hover:text-amber-500 dark:hover:text-amber-400"
+                                        }`}
+                                        title={isFavStop ? "정류장 즐겨찾기 해제" : "정류장 즐겨찾기 추가"}
+                                        aria-label={isFavStop ? "정류장 즐겨찾기 해제" : "정류장 즐겨찾기 추가"}
+                                    >
+                                        <Star className={`w-4 h-4 ${isFavStop ? "fill-amber-500" : ""}`}/>
+                                    </button>
+                                </div>
+                            );
+                        })
+                    )}
+                </div>
             </div>
 
             {/* Lower Section: Context-Aware Split View (Stop Details or Route Timetable) */}

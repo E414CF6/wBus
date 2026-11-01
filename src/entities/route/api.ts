@@ -222,7 +222,10 @@ export async function getRouteInfo(routeName: string, cityCode?: string): Promis
     const cacheKey = `${cCode}:${routeName}`;
     const result = await routeInfoCache.getOrFetch(cacheKey, async () => {
         try {
-            const json = await fetchAPI<{route_numbers?: Record<string, string[]>; routes?: Array<{routeid: string}>}>(
+            const json = await fetchAPI<{
+                route_numbers?: Record<string, string[]>;
+                routes?: Array<{ routeid: string }>
+            }>(
                 `/api/routes?cityCode=${cCode}&routeNo=${encodeURIComponent(routeName)}`
             );
             let ids = json?.route_numbers?.[routeName] || (json?.routes?.[0]?.routeid ? [json.routes[0].routeid] : null);

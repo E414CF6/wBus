@@ -277,7 +277,8 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                         aria-label="노선 선택 모달 열기"
                     >
                         <Bus className="w-3.5 h-3.5 shrink-0"/>
-                        <span suppressHydrationWarning className="whitespace-nowrap font-extrabold">{selectedRoute || "노선"}번</span>
+                        <span suppressHydrationWarning
+                              className="whitespace-nowrap font-extrabold">{selectedRoute || "노선"}번</span>
                         <ChevronDown className="w-3.5 h-3.5 opacity-80 shrink-0"/>
                     </button>
 
@@ -298,7 +299,8 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                     >
                         <div className="flex flex-col min-w-0">
                             <div className="flex items-center gap-1.5 truncate">
-                                <span suppressHydrationWarning className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
+                                <span suppressHydrationWarning
+                                      className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
                                     {selectedDirection === "all" && `${meta.origin} ↔ ${meta.destination}`}
                                     {selectedDirection === "up" && `→ ${meta.destination}`}
                                     {selectedDirection === "down" && `→ ${meta.origin}`}

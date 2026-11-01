@@ -279,8 +279,10 @@ function BottomNavComponent({
 
                         {hasPendingRegion && (
                             <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"/>
-                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500 border border-white dark:border-black"/>
+                                <span
+                                    className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"/>
+                                <span
+                                    className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500 border border-white dark:border-black"/>
                             </span>
                         )}
                     </button>

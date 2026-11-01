@@ -367,15 +367,15 @@ async function getSeoulRouteBundle(routeId: string): Promise<{
                 downCoords.length >= 2
                     ? downCoords
                     : stops
-                          .filter((s) => s.updowncd === 0 && s.gpslong > 0 && s.gpslati > 0)
-                          .map((s) => [s.gpslong, s.gpslati]);
+                        .filter((s) => s.updowncd === 0 && s.gpslong > 0 && s.gpslati > 0)
+                        .map((s) => [s.gpslong, s.gpslati]);
 
             let finalUp: [number, number][] =
                 upCoords.length >= 2
                     ? upCoords
                     : stops
-                          .filter((s) => s.updowncd === 1 && s.gpslong > 0 && s.gpslati > 0)
-                          .map((s) => [s.gpslong, s.gpslati]);
+                        .filter((s) => s.updowncd === 1 && s.gpslong > 0 && s.gpslati > 0)
+                        .map((s) => [s.gpslong, s.gpslati]);
 
             if (finalUp.length < 2) {
                 finalUp = finalDown;
@@ -390,7 +390,7 @@ async function getSeoulRouteBundle(routeId: string): Promise<{
 
             const totalDist = Math.round(
                 calculatePolylineMeters(finalDown) +
-                    (finalUp !== finalDown ? calculatePolylineMeters(finalUp) : 0)
+                (finalUp !== finalDown ? calculatePolylineMeters(finalUp) : 0)
             );
 
             const polyline: GeoPolyline = {

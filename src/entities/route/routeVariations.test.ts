@@ -4,11 +4,13 @@ import {getRouteVariations} from "./api";
 const {MockHttpError} = vi.hoisted(() => {
     class MockHttpError extends Error {
         status: number;
+
         constructor(msg: string, status: number) {
             super(msg);
             this.status = status;
         }
     }
+
     return {MockHttpError};
 });
 

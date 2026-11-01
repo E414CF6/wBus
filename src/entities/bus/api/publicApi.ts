@@ -762,7 +762,7 @@ export async function getCachedCityRoutes(cityCode: string, routeNo?: string) {
             ROUTE_CACHE_OPTIONS
         );
     } catch {
-        allResult = { data: [], timestamp: Date.now() };
+        allResult = {data: [], timestamp: Date.now()};
     }
 
     if (!routeNo) {

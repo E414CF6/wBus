@@ -16,7 +16,8 @@ import {APP_CONFIG} from "@shared/config/env";
 import {useMemo, useSyncExternalStore} from "react";
 import useSWR from "swr";
 
-const emptySubscribe = () => () => {};
+const emptySubscribe = () => () => {
+};
 
 function useIsHydrated(): boolean {
     return useSyncExternalStore(

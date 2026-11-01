@@ -185,7 +185,7 @@ export async function connectTurningPoint(
     fetchConnector: (pair: [Coordinate, Coordinate]) => Promise<Coordinate[] | null>
 ): Promise<{ upPolyline: Coordinate[]; downPolyline: Coordinate[] }> {
     if (!turningDir || upPolyline.length < 2 || downPolyline.length < 2) {
-        return { upPolyline, downPolyline };
+        return {upPolyline, downPolyline};
     }
 
     if (turningDir === "down_to_up") {
@@ -232,6 +232,6 @@ export async function connectTurningPoint(
         }
     }
 
-    return { upPolyline, downPolyline };
+    return {upPolyline, downPolyline};
 }
 

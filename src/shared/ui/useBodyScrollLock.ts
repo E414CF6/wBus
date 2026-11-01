@@ -8,7 +8,8 @@ import {useEffect} from "react";
  */
 export function lockBodyScroll(): () => void {
     if (typeof document === "undefined" || !document.body) {
-        return () => {};
+        return () => {
+        };
     }
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
