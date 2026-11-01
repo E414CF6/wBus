@@ -89,8 +89,15 @@ function BottomNavComponent({
     // SSR-safe desktop breakpoint subscription and mobile drawer state
     const isDesktop = useIsDesktop();
     const [isMobileBusListOpen, setIsMobileBusListOpen] = useState(false);
-    const isBusListOpen = isDesktop || isMobileBusListOpen;
+    const isBusListOpen = activeTab === "map" && (isDesktop || isMobileBusListOpen);
     const [isCityModalOpen, setIsCityModalOpen] = useState(false);
+
+    const handleTabChange = useCallback((tab: NavTab) => {
+        if (tab !== "map") {
+            setIsMobileBusListOpen(false);
+        }
+        onTabChange?.(tab);
+    }, [onTabChange]);
 
     const handleToggleBusList = useCallback(() => {
         if (isDesktop) {
@@ -284,7 +291,7 @@ function BottomNavComponent({
                             <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
                             <NavTabButtons
                                 activeTab={activeTab}
-                                onTabChange={onTabChange}
+                                onTabChange={handleTabChange}
                             />
                         </>
                     )}
@@ -339,4 +346,3 @@ function BottomNavComponent({
 
 export const BottomNav = memo(BottomNavComponent);
 export default BottomNav;
-

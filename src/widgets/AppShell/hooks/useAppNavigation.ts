@@ -8,6 +8,12 @@ import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
 
 export function resolveTabFromPathname(path: string): NavTab {
     if (path.startsWith("/schedule")) return "schedule";
+    if (path === "/" || path.startsWith("/?")) {
+        const query = path.includes("?") ? new URLSearchParams(path.slice(path.indexOf("?"))) : null;
+        return query?.has("route") || query?.has("cityCode") || query?.has("city")
+            ? "map"
+            : "schedule";
+    }
     return "map";
 }
 
@@ -40,13 +46,14 @@ export function useAppNavigation() {
     const searchParams = useSearchParams();
     const {currentCity} = useCityContext();
     const currentCityCode = currentCity.code;
+    const locationKey = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
 
-    // Derive active tab with client-side state preservation across tab switches (Map-first default)
-    const [activeTab, setActiveTab] = useState<NavTab>(() => resolveTabFromPathname(pathname));
-    const [prevPathname, setPrevPathname] = useState(pathname);
-    if (pathname !== prevPathname) {
-        setPrevPathname(pathname);
-        setActiveTab(resolveTabFromPathname(pathname));
+    // Derive active tab with client-side state preservation across tab switches (schedule-first default)
+    const [activeTab, setActiveTab] = useState<NavTab>(() => resolveTabFromPathname(locationKey));
+    const [prevLocationKey, setPrevLocationKey] = useState(locationKey);
+    if (locationKey !== prevLocationKey) {
+        setPrevLocationKey(locationKey);
+        setActiveTab(resolveTabFromPathname(locationKey));
     }
 
     // Timetable Sub-tab (Yonsei vs All Wonju routes)
@@ -85,7 +92,9 @@ export function useAppNavigation() {
     useEffect(() => {
         const handlePopState = () => {
             if (typeof window === "undefined") return;
-            const nextTab = resolveTabFromPathname(window.location.pathname);
+            const nextTab = resolveTabFromPathname(
+                `${window.location.pathname}${window.location.search}`
+            );
             setActiveTab(nextTab);
             const search = new URLSearchParams(window.location.search);
             const queryRoute = search.get("route");

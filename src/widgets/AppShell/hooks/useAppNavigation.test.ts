@@ -3,16 +3,25 @@ import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/e
 import {buildMapUrl, buildScheduleUrl, resolveTabFromPathname} from "./useAppNavigation";
 
 describe("resolveTabFromPathname", () => {
-    it("maps root, /live, and /map to map tab", () => {
-        expect(resolveTabFromPathname("/")).toBe("map");
+    it("maps /live and /map to map tab", () => {
         expect(resolveTabFromPathname("/live")).toBe("map");
         expect(resolveTabFromPathname("/map")).toBe("map");
         expect(resolveTabFromPathname("/live/30")).toBe("map");
     });
 
-    it("maps /schedule to schedule tab", () => {
+    it("maps root and /schedule to schedule tab", () => {
+        expect(resolveTabFromPathname("/")).toBe("schedule");
         expect(resolveTabFromPathname("/schedule")).toBe("schedule");
         expect(resolveTabFromPathname("/schedule?subTab=all")).toBe("schedule");
+    });
+
+    it("keeps map URLs at the root on the map tab", () => {
+        expect(resolveTabFromPathname("/?route=30")).toBe("map");
+        expect(resolveTabFromPathname("/?cityCode=32020&route=34")).toBe("map");
+    });
+
+    it("keeps modal URLs at the root on the schedule tab", () => {
+        expect(resolveTabFromPathname("/?modal=notice-214")).toBe("schedule");
     });
 
     it("defaults unknown paths to map tab (map-centric architecture)", () => {
@@ -70,4 +79,3 @@ describe("storage key helpers", () => {
         expect(getRecentRoutesStorageKey("11")).toBe("wbus_recent_routes_11");
     });
 });
-
