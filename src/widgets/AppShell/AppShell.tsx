@@ -128,7 +128,7 @@ export function AppShell() {
         <div
             className={
                 isSchedulePage
-                    ? "relative min-h-[100dvh] w-full flex flex-col bg-slate-50 dark:bg-[#0b0f19] overflow-y-auto"
+                    ? "relative h-dvh w-full flex flex-col bg-slate-50 dark:bg-[#0b0f19] overflow-y-auto"
                     : "fixed inset-0 w-full h-full overflow-hidden bg-slate-50 dark:bg-[#0b0f19]"
             }
         >
