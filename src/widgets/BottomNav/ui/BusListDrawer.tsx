@@ -346,6 +346,45 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         return map;
     }, [runningBuses, currentStops, effectiveVariations.length, currentVariant, getDirection]);
 
+    // Keep the route timeline aligned with the bus nearest to the current map center.
+    const syncNearestBusToMapCenter = useCallback(() => {
+        if (!map || runningBuses.length === 0 || busesByStopKey.size === 0) return;
+
+        const center = map.getCenter();
+        let nearestBus: BusItem | null = null;
+        let nearestDistance = Infinity;
+
+        for (const bus of runningBuses) {
+            const distance = getDistanceKm(center.lat, center.lng, bus.gpslati, bus.gpslong);
+            if (distance < nearestDistance) {
+                nearestDistance = distance;
+                nearestBus = bus;
+            }
+        }
+
+        if (!nearestBus) return;
+
+        for (const [stopKey, buses] of busesByStopKey) {
+            if (buses.includes(nearestBus)) {
+                const matchedStop = currentStops.find(
+                    (stop) => `${stop.nodeid}-${stop.nodeord ?? ""}` === stopKey
+                );
+                if (matchedStop) setSelectedStopId(matchedStop.nodeid);
+                return;
+            }
+        }
+    }, [map, runningBuses, busesByStopKey, currentStops]);
+
+    useEffect(() => {
+        if (!isOpen || !map) return;
+
+        syncNearestBusToMapCenter();
+        map.on("moveend", syncNearestBusToMapCenter);
+        return () => {
+            map.off("moveend", syncNearestBusToMapCenter);
+        };
+    }, [isOpen, map, syncNearestBusToMapCenter]);
+
     // Auto-scroll timeline to selected stop when selectedStopId changes
     useEffect(() => {
         if (!selectedStopId || !listRef.current) return;
@@ -370,7 +409,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
     // Auto-scroll to first active bus once when drawer opens & stops are ready
     useEffect(() => {
-        if (!isOpen || currentStops.length === 0 || busesByStopKey.size === 0) return;
+        if (!isOpen || selectedStopId || currentStops.length === 0 || busesByStopKey.size === 0) return;
         const scrollKey = `${currentCity.code}:${selectedRoute}:${currentVariant?.routeId ?? ""}`;
         if (hasAutoScrolledRef.current === scrollKey) return;
         hasAutoScrolledRef.current = scrollKey;
@@ -379,7 +418,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             scrollToActiveBus();
         }, 120);
         return () => clearTimeout(timer);
-    }, [isOpen, currentStops.length, busesByStopKey.size, currentCity.code, selectedRoute, currentVariant?.routeId, scrollToActiveBus]);
+    }, [isOpen, selectedStopId, currentStops.length, busesByStopKey.size, currentCity.code, selectedRoute, currentVariant?.routeId, scrollToActiveBus]);
 
     // Trigger manual telemetry refresh
     const handleRefresh = useCallback(() => {
