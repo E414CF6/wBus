@@ -9,9 +9,16 @@ export const subscribeDesktop = (onStoreChange: () => void) => {
     return () => window.removeEventListener("resize", onStoreChange);
 };
 
-export const getDesktopSnapshot = () => {
+export const isDesktopViewport = () => {
     if (typeof window === "undefined") return false;
-    return window.innerWidth >= 768;
+    if (typeof window.matchMedia === "function") {
+        return window.matchMedia("(min-width: 1024px) and (hover: hover) and (pointer: fine)").matches;
+    }
+    return window.innerWidth >= 1024;
+};
+
+export const getDesktopSnapshot = () => {
+    return isDesktopViewport();
 };
 
 export const getServerDesktopSnapshot = () => false;

@@ -4,6 +4,7 @@ import {buildSegmentedRouteGeoJson} from "@entities/route/polylineService";
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useRoutePolylineData} from "@features/live-tracking";
 import {MAP_SETTINGS} from "@shared/config/env";
+import {isDesktopViewport} from "@shared/ui/useIsDesktop";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useCityContext} from "@entities/city";
 import {useTheme} from "next-themes";
@@ -91,7 +92,7 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
             if (!map || !bbox) return;
             const [[s, w], [n, e]] = bbox;
             const isCompact = typeof window !== "undefined" && window.innerWidth < 640;
-            const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+            const isDesktop = isDesktopViewport();
             map.fitBounds(
                 [
                     [w, s],

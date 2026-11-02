@@ -8,6 +8,7 @@ import {ArrowRight, Calendar, Clock, RotateCw, X} from "lucide-react";
 import {type RouteVariation, type RouteVariationStop, useRouteVariations} from "@entities/route";
 import {type BusRoute, getUpcomingDepartures, resolveActiveScheduleVariant, useSchedule} from "@entities/schedule";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {isDesktopViewport} from "@shared/ui/useIsDesktop";
 import type {DayMode} from "@shared/types/navigation";
 
 // ----------------------------------------------------------------------
@@ -191,7 +192,7 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
     // Handler to smoothly switch between Origin and Turnaround in popup & center in visible map view
     const handleOpenRole = useCallback(
         (targetRole: TerminalRole) => {
-            const isDesktop = typeof window !== "undefined" && window.innerWidth >= 768;
+            const isDesktop = isDesktopViewport();
             const targetStop = targetRole === "ORIGIN" ? originStop : turningStop;
 
             if (isDesktop) {

@@ -23,7 +23,7 @@ describe("useIsDesktop helpers in browser environment", () => {
         vi.unstubAllGlobals();
     });
 
-    it("getDesktopSnapshot returns true when innerWidth >= 768", () => {
+    it("getDesktopSnapshot falls back to a 1024px desktop breakpoint", () => {
         vi.stubGlobal("window", {
             innerWidth: 1024, addEventListener: vi.fn(), removeEventListener: vi.fn(),
         });
@@ -32,10 +32,20 @@ describe("useIsDesktop helpers in browser environment", () => {
         vi.stubGlobal("window", {
             innerWidth: 768, addEventListener: vi.fn(), removeEventListener: vi.fn(),
         });
-        expect(getDesktopSnapshot()).toBe(true);
+        expect(getDesktopSnapshot()).toBe(false);
     });
 
-    it("getDesktopSnapshot returns false when innerWidth < 768", () => {
+    it("getDesktopSnapshot returns false when a wide viewport is touch-oriented", () => {
+        vi.stubGlobal("window", {
+            innerWidth: 1092,
+            matchMedia: vi.fn(() => ({matches: false})),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+        });
+        expect(getDesktopSnapshot()).toBe(false);
+    });
+
+    it("getDesktopSnapshot returns false when innerWidth < 1024", () => {
         vi.stubGlobal("window", {
             innerWidth: 767, addEventListener: vi.fn(), removeEventListener: vi.fn(),
         });

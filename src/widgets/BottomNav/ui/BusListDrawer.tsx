@@ -3,7 +3,7 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Bus, Loader2, LocateFixed, MapPin, MapPinned, RefreshCw, RotateCw, Search, Star, X} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {useIsDesktop} from "@shared/ui/useIsDesktop";
+import {isDesktopViewport, useIsDesktop} from "@shared/ui/useIsDesktop";
 import {type RouteVariationStop, useRouteVariations} from "@entities/route";
 import type {DirectionCode, RouteVariation} from "@entities/route/types";
 import {getRouteMeta} from "@entities/route/routeMetadata";
@@ -112,7 +112,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     useEffect(() => {
         if (typeof window === "undefined") return;
         const handleDeselectStop = () => {
-            if (window.innerWidth >= 768) {
+            if (isDesktopViewport()) {
                 setSelectedStop(null);
                 setSelectedStopId(null);
                 setIsScheduleOpen(false);
@@ -397,10 +397,9 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     // Station selection: on desktop, expands context-aware split pane; on mobile, flies to stop and opens mobile popup
     const handleStopClick = useCallback(
         (stop: BusStop) => {
-            const desktopView = typeof window !== "undefined" && window.innerWidth >= 768;
             setSelectedStopId(stop.nodeid);
 
-            if (desktopView) {
+            if (isDesktop) {
                 setSelectedStop(stop);
                 setActiveBottomTab("stop");
                 if (map && stop.gpslong && stop.gpslati) {
@@ -431,18 +430,18 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                 onClose();
             }
         },
-        [map, onClose]
+        [isDesktop, map, onClose]
     );
 
     const handleBusBadgeClick = useCallback(
         (e: React.MouseEvent, lat: number, lng: number) => {
             e.stopPropagation();
             onBusClick(lat, lng);
-            if (typeof window !== "undefined" && window.innerWidth < 768) {
+            if (!isDesktop) {
                 onClose();
             }
         },
-        [onBusClick, onClose]
+        [isDesktop, onBusClick, onClose]
     );
 
     const hasBottomSplit = isDesktop && (Boolean(selectedStop) || isScheduleOpen);
@@ -451,7 +450,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
     return (
         <div
-            className="flex flex-col backdrop-blur-2xl bg-white/95 dark:bg-[#0c100f]/95 border border-slate-200/80 dark:border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.18)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.7)] rounded-[28px] overflow-hidden transition-all duration-300 animate-fadeIn text-slate-900 dark:text-white select-none pointer-events-auto max-md:fixed max-md:bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] max-md:left-1/2 max-md:-translate-x-1/2 max-md:z-50 max-md:w-[94vw] max-md:max-w-md max-md:max-h-[70vh] md:fixed md:left-5 md:top-20 md:bottom-20 md:z-40 md:h-auto md:max-h-[calc(100vh-10rem)] md:w-[410px] lg:w-[440px]"
+            className={`flex flex-col fixed bottom-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] left-1/2 -translate-x-1/2 z-50 w-[94vw] max-w-md max-h-[70vh] backdrop-blur-2xl bg-white/95 dark:bg-[#0c100f]/95 border border-slate-200/80 dark:border-white/15 shadow-[0_20px_50px_rgba(0,0,0,0.18)] dark:shadow-[0_24px_60px_rgba(0,0,0,0.7)] rounded-[28px] overflow-hidden transition-all duration-300 animate-fadeIn text-slate-900 dark:text-white select-none pointer-events-auto ${isDesktop ? "left-5 top-20 bottom-20 translate-x-0 z-40 w-[410px] max-w-none max-h-[calc(100vh-10rem)]" : ""}`}
             role="dialog"
             aria-label={`${selectedRoute} 버스 노선 운행 목록`}
         >
