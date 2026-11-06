@@ -216,7 +216,7 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                 longitude={originStop.gpslong}
                 latitude={originStop.gpslati}
                 anchor="bottom"
-                style={{zIndex: 24, pointerEvents: "auto", cursor: "pointer"}}
+                style={{zIndex: 26, pointerEvents: "auto", cursor: "pointer"}}
                 onClick={(e) => {
                     e.originalEvent?.stopPropagation();
                     handleOpenPinSchedule("ORIGIN");
@@ -275,7 +275,7 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                     longitude={turningStop.gpslong}
                     latitude={turningStop.gpslati}
                     anchor="bottom"
-                    style={{zIndex: 24, pointerEvents: "auto", cursor: "pointer"}}
+                    style={{zIndex: 26, pointerEvents: "auto", cursor: "pointer"}}
                     onClick={(e) => {
                         e.originalEvent?.stopPropagation();
                         handleOpenPinSchedule("DEST");

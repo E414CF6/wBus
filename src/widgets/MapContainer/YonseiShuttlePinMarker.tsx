@@ -190,16 +190,17 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
         return () => window.removeEventListener("wbus:close-timetable", handleClose);
     }, [isPopupOpen]);
 
-    if (!enabled) return null;
+    // If disabled or all shuttle operations for the day have finished, do not show the pin on the map
+    if (!enabled || (!nextOutbound && !isPopupOpen)) return null;
 
     return (
         <>
-            {/* 1. Yonsei Shuttle Pin Marker on Map */}
+            {/* 1. Yonsei Shuttle Pin Marker on Map (Layered below city bus timetable pins) */}
             <Marker
                 longitude={YONSEI_CAMPUS_LNG}
                 latitude={YONSEI_CAMPUS_LAT}
                 anchor="bottom"
-                style={{zIndex: 25, pointerEvents: "auto", cursor: "pointer"}}
+                style={{zIndex: 20, pointerEvents: "auto", cursor: "pointer"}}
                 onClick={(e) => {
                     e.originalEvent?.stopPropagation();
                     if (typeof window !== "undefined") {

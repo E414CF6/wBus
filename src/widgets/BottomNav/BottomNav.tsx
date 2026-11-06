@@ -349,7 +349,7 @@ function BottomNavComponent({
                     <button
                         type="button"
                         onClick={handleToggleBusList}
-                        className={`flex md:hidden items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn ${
+                        className={`flex md:hidden items-center justify-center p-2 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 animate-fadeIn ${
                             isBusListOpen
                                 ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
                                 : isConnecting
@@ -358,17 +358,10 @@ function BottomNavComponent({
                                         ? "bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
                                         : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200 border border-black/5 dark:border-white/10"
                         }`}
-                        title={UI_TEXT.NAV.BUS_LIST_LABEL}
-                        aria-label="노선 정류장 목록 및 운행 버스 보기"
+                        title={runningBuses.length > 0 ? UI_TEXT.BOTTOM_NAV.RUNNING_LIST_TITLE(selectedRoute, runningBuses.length) : UI_TEXT.NAV.BUS_LIST_LABEL}
+                        aria-label={runningBuses.length > 0 ? UI_TEXT.BOTTOM_NAV.RUNNING_LIST_TITLE(selectedRoute, runningBuses.length) : UI_TEXT.NAV.BUS_LIST_LABEL}
                     >
-                        <Bus className="w-3.5 h-3.5 shrink-0"/>
-                        <span className="whitespace-nowrap">
-                            {isConnecting
-                                ? "연결 중..."
-                                : runningBuses.length > 0
-                                    ? UI_TEXT.BOTTOM_NAV.RUNNING_LIST_BTN(runningBuses.length)
-                                    : "운행 종료 (0)"}
-                        </span>
+                        <Bus className="w-4 h-4 shrink-0 stroke-[2.2]"/>
                     </button>
 
                     {/* 3-state Day Mode Toggle (Wonju only: Auto / Weekday / Holiday for pin timetables) */}

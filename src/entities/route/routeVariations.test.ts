@@ -116,7 +116,7 @@ describe("getRouteVariations", () => {
         const variations = await getRouteVariations("4");
         expect(variations.length).toBe(1);
         const v = variations[0];
-        expect(v.label).toBe("관설동 - 단구동");
+        expect(v.label).toBe("관설동 ↔ 단구동");
         expect(v.stops.length).toBeGreaterThan(0);
 
         // Sequence must be strictly sorted by nodeord
@@ -129,9 +129,9 @@ describe("getRouteVariations", () => {
         const variations = await getRouteVariations("30");
         expect(variations.length).toBeGreaterThan(1);
 
-        // First variation must be the base route formatted as {기점} - {회차지}
+        // First variation must be the base route formatted as {기점} ↔ {회차지}
         const base = variations[0];
-        expect(base.label).toBe("장양리 - 연세대미래캠퍼스");
+        expect(base.label).toBe("장양리 ↔ 연세대미래캠퍼스");
         expect(base.turningStop).not.toBeNull();
         expect(base.turningStop?.nodenm).toContain("연세대");
 
@@ -165,7 +165,7 @@ describe("getRouteVariations", () => {
         expect(variations.length).toBeGreaterThanOrEqual(4);
 
         const labels = variations.map((v) => v.label);
-        expect(labels[0]).toBe("관설동 - 삼일광장");
+        expect(labels[0]).toBe("관설동 ↔ 삼일광장");
 
         // Turning stop in Route 2 base route
         const base = variations[0];
