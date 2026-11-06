@@ -183,6 +183,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         const expressCount = sortedAllRoutes.filter((r) => routeMetaMap.get(r)?.genericType === "EXPRESS").length;
         const mainCount = sortedAllRoutes.filter((r) => routeMetaMap.get(r)?.genericType === "MAIN").length;
         const branchCount = sortedAllRoutes.filter((r) => routeMetaMap.get(r)?.genericType === "BRANCH").length;
+        const villageCount = sortedAllRoutes.filter((r) => routeMetaMap.get(r)?.genericType === "VILLAGE").length;
 
         const list: {
             id: string;
@@ -214,6 +215,9 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         }
         if (branchCount > 0) {
             list.push({id: "BRANCH", label: `지선 (${branchCount})`, dotClass: "bg-emerald-500"});
+        }
+        if (villageCount > 0) {
+            list.push({id: "VILLAGE", label: `마을 (${villageCount})`, dotClass: "bg-lime-500"});
         }
 
         return list;
@@ -274,6 +278,8 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             list = list.filter((r) => routeMetaMap.get(r)?.genericType === "MAIN");
         } else if (selectedCategory === "BRANCH") {
             list = list.filter((r) => routeMetaMap.get(r)?.genericType === "BRANCH");
+        } else if (selectedCategory === "VILLAGE") {
+            list = list.filter((r) => routeMetaMap.get(r)?.genericType === "VILLAGE");
         }
 
         // Apply Search Query (Matches routeNo, origin, destination, description, routeType)
@@ -425,11 +431,13 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                 ? "bg-blue-600 text-white shadow-md shadow-blue-500/30 scale-[1.02]"
                                                 : cat.id === "BRANCH"
                                                     ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/30 scale-[1.02]"
-                                                    : cat.id === "YONSEI"
-                                                        ? "bg-[#003876] text-white shadow-md shadow-[#003876]/30 scale-[1.02]"
-                                                        : cat.id === "BOOKMARKS" || cat.id === "FAV_STOPS"
-                                                            ? "bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-[1.02]"
-                                                            : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]"
+                                                    : cat.id === "VILLAGE"
+                                                        ? "bg-lime-600 text-white shadow-md shadow-lime-500/30 scale-[1.02]"
+                                                        : cat.id === "YONSEI"
+                                                            ? "bg-[#003876] text-white shadow-md shadow-[#003876]/30 scale-[1.02]"
+                                                            : cat.id === "BOOKMARKS" || cat.id === "FAV_STOPS"
+                                                                ? "bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-[1.02]"
+                                                                : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]"
                                         : "bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.07] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300 border border-black/5 dark:border-white/5"
                                 }`}
                             >
@@ -563,7 +571,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                             <div className="flex items-center gap-1.5 flex-wrap mb-1">
                                                 <span
                                                     className={`px-1.5 py-0.5 rounded-md text-[9px] font-black ${meta.colorTheme.badgeBg} ${meta.colorTheme.text}`}>
-                                                    {meta.routeType || (meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : "간선")}
+                                                    {meta.routeType || (meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : meta.genericType === "VILLAGE" ? "마을" : "간선")}
                                                 </span>
                                                 {isYonsei && (
                                                     <span

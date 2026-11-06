@@ -1,7 +1,7 @@
 import type {Coordinate} from "@entities/route/types";
 import {BRANCH_PALETTE, isPointNearPolyline, type PolylineData} from "@entities/route/polylineService";
 
-export type GenericRouteType = "EXPRESS" | "MAIN" | "BRANCH";
+export type GenericRouteType = "EXPRESS" | "MAIN" | "BRANCH" | "VILLAGE";
 
 export interface RouteColorConfig {
     main: string;
@@ -16,7 +16,7 @@ export interface RouteColorConfig {
 
 export const ROUTE_TYPE_COLORS: Record<GenericRouteType, RouteColorConfig> = {
     EXPRESS: {
-        main: "#dc2626",      // Red (급행)
+        main: "#dc2626",      // Red (급행 / 광역)
         downMain: "#b91c1c",
         bg: "bg-red-600",
         text: "text-red-600 dark:text-red-400",
@@ -26,7 +26,7 @@ export const ROUTE_TYPE_COLORS: Record<GenericRouteType, RouteColorConfig> = {
         shadow: "shadow-red-600/30",
     },
     MAIN: {
-        main: "#2563eb",      // Blue (간선)
+        main: "#2563eb",      // Blue (간선 / 일반)
         downMain: "#1d4ed8",
         bg: "bg-blue-600",
         text: "text-blue-600 dark:text-blue-400",
@@ -36,7 +36,7 @@ export const ROUTE_TYPE_COLORS: Record<GenericRouteType, RouteColorConfig> = {
         shadow: "shadow-blue-600/30",
     },
     BRANCH: {
-        main: "#16a34a",      // Green (지선)
+        main: "#16a34a",      // Green (지선 / 순환)
         downMain: "#15803d",
         bg: "bg-emerald-600",
         text: "text-emerald-600 dark:text-emerald-400",
@@ -45,62 +45,47 @@ export const ROUTE_TYPE_COLORS: Record<GenericRouteType, RouteColorConfig> = {
         ring: "ring-emerald-500/40 dark:ring-emerald-400/40",
         shadow: "shadow-emerald-600/30",
     },
+    VILLAGE: {
+        main: "#65a30d",      // Lime (마을버스)
+        downMain: "#4d7c0f",
+        bg: "bg-lime-600",
+        text: "text-lime-700 dark:text-lime-400",
+        border: "border-lime-500/30",
+        badgeBg: "bg-lime-500/10 dark:bg-lime-400/15",
+        ring: "ring-lime-500/40 dark:ring-lime-400/40",
+        shadow: "shadow-lime-600/30",
+    },
 };
 
 /**
- * Classifies a route into EXPRESS (red), MAIN (blue), or BRANCH (green)
+ * Classifies a route into EXPRESS (red), MAIN (blue), BRANCH (green), or VILLAGE (lime)
+ * strictly driven by official transit dataset route type (routetp / routeType).
+ * No heuristic number guessing.
  */
-export function classifyRouteType(routeName: string, routeTp?: string): GenericRouteType {
+export function classifyRouteType(routeName?: string, routeTp?: string): GenericRouteType {
     const tp = (routeTp || "").trim().toLowerCase();
-    const no = (routeName || "").trim();
 
-    // 1. Explicit routetp from TAGO / API
+    // Data-driven classification based on official route type from TAGO / Seoul TOPIS
     if (tp) {
-        if (/급행|광역|직행좌석|좌석|공항|시외|express/i.test(tp)) {
+        // 1. Village / Town buses (마을버스)
+        if (/마을|village|town/i.test(tp)) {
+            return "VILLAGE";
+        }
+        // 2. Express / Wide-Area / Airport / Night buses (급행/광역/직행좌석/좌석/심야/공항)
+        if (/급행|광역|직행좌석|좌석|공항|시외|심야|express/i.test(tp)) {
             return "EXPRESS";
         }
-        if (/지선|마을|순환|공영|맞춤|따복|농어촌|feeder|village|branch|circuit/i.test(tp)) {
+        // 3. Feeder / Branch / Circular / Rural / Public / Tailored buses (지선/순환/공영/농어촌/맞춤형/따복)
+        if (/지선|순환|공영|맞춤|따복|농어촌|feeder|branch|circuit/i.test(tp)) {
             return "BRANCH";
         }
-        if (/간선|일반|main|trunk/i.test(tp)) {
+        // 4. Trunk / Main / General city buses (간선/일반/시내)
+        if (/간선|일반|시내|trunk|main/i.test(tp)) {
             return "MAIN";
         }
     }
 
-    // 2. Route Number / Name heuristic patterns
-    if (/^[MG]\d|^P\d|급행/i.test(no)) {
-        return "EXPRESS";
-    }
-    // Seoul & Metropolitan Red Express routes: 9xxx (4 digits starting with 9)
-    if (/^9\d{3}$/.test(no)) {
-        return "EXPRESS";
-    }
-    // Seoul Night bus: Nxx (e.g. N13, N16, N62)
-    if (/^N\d+$/i.test(no)) {
-        return "EXPRESS";
-    }
-    if (/마을|공영|순환|조조|통학|따복|희망|누리/i.test(no)) {
-        return "BRANCH";
-    }
-    // Seoul & Metropolitan Green Feeder/Branch routes: 4 digits starting with 1~8 (e.g. 7016, 5511)
-    if (/^[1-8]\d{3}$/.test(no)) {
-        return "BRANCH";
-    }
-    // Seoul Circular routes: 2 digits starting with 0 (e.g. 01, 02, 04)
-    if (/^0\d$/.test(no)) {
-        return "BRANCH";
-    }
-    // Town/Village buses with district names (e.g. 종로01, 서초02, 마포09, 강남01)
-    if (/^[가-힣]{2}\d+$/.test(no)) {
-        return "BRANCH";
-    }
-
-    // 3. Known circular / branch routes in Wonju (3, 4, 16 series)
-    if (["3", "3-1", "4", "4-1", "16", "16-1"].includes(no)) {
-        return "BRANCH";
-    }
-
-    // Default general city bus is MAIN (간선)
+    // Default standard city transit type when unspecified
     return "MAIN";
 }
 

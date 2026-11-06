@@ -433,7 +433,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                             suppressHydrationWarning
                                             className={`px-1.5 py-0.5 rounded-md text-[9px] font-black shrink-0 ${meta.colorTheme.badgeBg} ${meta.colorTheme.text}`}
                                         >
-                                            {meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : "간선"}
+                                            {meta.routeType || (meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : meta.genericType === "VILLAGE" ? "마을" : "간선")}
                                         </span>
                                     )}
 

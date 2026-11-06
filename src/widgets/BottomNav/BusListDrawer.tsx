@@ -361,9 +361,12 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     useEffect(() => {
         if (!isOpen || !map) return;
 
-        syncNearestBusToMapCenter();
+        const rafId = requestAnimationFrame(() => {
+            syncNearestBusToMapCenter();
+        });
         map.on("moveend", syncNearestBusToMapCenter);
         return () => {
+            cancelAnimationFrame(rafId);
             map.off("moveend", syncNearestBusToMapCenter);
         };
     }, [isOpen, map, syncNearestBusToMapCenter]);
