@@ -18,6 +18,7 @@ interface RouteLayerProps {
     onOpenScheduleModal?: (docOrSubTab?: string) => void;
     enabled?: boolean;
     selectedDirection?: "all" | "up" | "down";
+    selectedVariantId?: string | null;
     cityCode?: string;
     showNearbyStops?: boolean;
     focusedStopId?: string | null;
@@ -43,6 +44,7 @@ const RouteLayer = memo(({
                              onOpenScheduleModal,
                              enabled = true,
                              selectedDirection = "all",
+                             selectedVariantId = null,
                              cityCode,
                              showNearbyStops = true,
                              focusedStopId = null,
@@ -76,7 +78,12 @@ const RouteLayer = memo(({
                 isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
             />
         )}
-        <BusRoutePolyline routeName={routeName} selectedDirection={selectedDirection} cityCode={cityCode}/>
+        <BusRoutePolyline
+            routeName={routeName}
+            selectedDirection={selectedDirection}
+            selectedVariantId={selectedVariantId}
+            cityCode={cityCode}
+        />
     </>);
 }, (prev, next) => {
     return (
@@ -85,6 +92,7 @@ const RouteLayer = memo(({
         prev.onOpenScheduleModal === next.onOpenScheduleModal &&
         prev.enabled === next.enabled &&
         prev.selectedDirection === next.selectedDirection &&
+        prev.selectedVariantId === next.selectedVariantId &&
         prev.cityCode === next.cityCode &&
         prev.showNearbyStops === next.showNearbyStops &&
         prev.focusedStopId === next.focusedStopId &&

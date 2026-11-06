@@ -3,32 +3,16 @@ import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/e
 import {buildMapUrl, buildScheduleUrl, resolveTabFromPathname} from "./useAppNavigation";
 
 describe("resolveTabFromPathname", () => {
-    it("maps /live and /map to map tab", () => {
+    it("maps all routes to map tab in map-centric architecture", () => {
+        expect(resolveTabFromPathname("/")).toBe("map");
         expect(resolveTabFromPathname("/live")).toBe("map");
         expect(resolveTabFromPathname("/map")).toBe("map");
         expect(resolveTabFromPathname("/live/30")).toBe("map");
-    });
-
-    it("maps root and /schedule to schedule tab", () => {
-        expect(resolveTabFromPathname("/")).toBe("schedule");
-        expect(resolveTabFromPathname("/schedule")).toBe("schedule");
-        expect(resolveTabFromPathname("/schedule?subTab=all")).toBe("schedule");
-    });
-
-    it("keeps map URLs at the root on the map tab", () => {
+        expect(resolveTabFromPathname("/schedule")).toBe("map");
         expect(resolveTabFromPathname("/?route=30")).toBe("map");
         expect(resolveTabFromPathname("/?cityCode=32020&route=34")).toBe("map");
-    });
-
-    it("keeps modal URLs at the root on the schedule tab", () => {
-        expect(resolveTabFromPathname("/?modal=notice-214")).toBe("schedule");
-    });
-
-    it("defaults unknown paths to map tab (map-centric architecture)", () => {
+        expect(resolveTabFromPathname("/?modal=notice-214")).toBe("map");
         expect(resolveTabFromPathname("/unknown")).toBe("map");
-        expect(resolveTabFromPathname("/bus")).toBe("map");
-        expect(resolveTabFromPathname("/chat")).toBe("map");
-        expect(resolveTabFromPathname("/square")).toBe("map");
     });
 });
 

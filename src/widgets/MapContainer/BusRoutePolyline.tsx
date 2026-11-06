@@ -14,10 +14,16 @@ import {Layer, Source} from "react-map-gl/maplibre";
 export interface BusRoutePolylineProps {
     routeName: string;
     selectedDirection?: "all" | "up" | "down";
+    selectedVariantId?: string | null;
     cityCode?: string;
 }
 
-export default function BusRoutePolyline({routeName, selectedDirection = "all", cityCode}: BusRoutePolylineProps) {
+export default function BusRoutePolyline({
+                                             routeName,
+                                             selectedDirection = "all",
+                                             selectedVariantId = null,
+                                             cityCode,
+                                         }: BusRoutePolylineProps) {
     const {map} = useAppMapContext();
     const {resolvedTheme} = useTheme();
     const isDark = resolvedTheme === "dark";
@@ -39,7 +45,7 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
     const lastBoundsKeyRef = useRef<string | null>(null);
     const needsVisibleFitRef = useRef(false);
 
-    // Filter to render all available route IDs for this route number
+    // Filter to render available route IDs for this route number, respecting selectedVariantId if provided
     const validRouteIds = useMemo(() => {
         const available = routeIds.filter((id) => {
             if (effectiveCityCode === "32020" && id.startsWith("WJB258")) return false;
@@ -47,6 +53,17 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
             const data = polylineMap.get(id);
             return data && (data.upPolyline.length > 0 || data.downPolyline.length > 0);
         });
+
+        // If a specific variant is selected and available, render only that variant's polyline
+        if (selectedVariantId && selectedVariantId !== "all") {
+            if (available.includes(selectedVariantId)) {
+                return [selectedVariantId];
+            }
+            if (polylineMap.has(selectedVariantId)) {
+                return [selectedVariantId];
+            }
+        }
+
         if (available.length > 0) return available;
         if (activeRouteId && polylineMap.has(activeRouteId)) {
             if (effectiveCityCode === "32020" && activeRouteId.startsWith("WJB258")) return [];
@@ -57,7 +74,7 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
             }
         }
         return routeIds.slice(0, 1);
-    }, [routeIds, polylineMap, activeRouteId, effectiveCityCode]);
+    }, [routeIds, polylineMap, activeRouteId, selectedVariantId, effectiveCityCode]);
 
     const bbox = useMemo(() => {
         let minLat = Infinity,

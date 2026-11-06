@@ -9,6 +9,7 @@ import {useCityContext} from "@entities/city";
 
 import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
+import {RouteScheduleModal} from "@features/map-view/RouteScheduleModal";
 
 import {isWeekend} from "@shared/lib/timeUtils";
 import {BottomNav} from "@widgets/BottomNav";
@@ -20,25 +21,13 @@ const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
 const RouteLayer = dynamic(() => import("@widgets/MapContainer/RouteLayer"), {
     ssr: false,
 });
-const TimetableWidget = dynamic(() => import("@widgets/TimetableWidget"), {
-    ssr: false,
-});
-const YonseiTimetableWidget = dynamic(() => import("@widgets/YonseiTimetableWidget"), {
-    ssr: false,
-});
 
 export function AppShell() {
     const {
-        activeTab,
-        timetableSubTab,
-        handleScheduleSubTabChange,
         dayMode,
         setDayMode,
         selectedRoute,
-        isMapActive,
-        handleTabChange,
         handleRouteChange,
-        handleSelectMapRoute,
     } = useAppNavigation();
 
     // Live weekend check for timetable badge
@@ -77,7 +66,10 @@ export function AppShell() {
         return Object.keys(routeMap)[0] ?? selectedRoute;
     }, [routeMap, selectedRoute, isWonju, currentCity.code]);
 
-    // Handler for opening the Route Timetable directly from Map Pins, Route Header, or Stop Popups
+    // Centered floating RouteScheduleModal state (Wonju only)
+    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+
+    // Handler for opening the centered Route Timetable Modal from Map Pins or Route Header
     const handleOpenSchedule = useCallback(
         (targetRouteOrDoc?: string) => {
             if (!isWonju) return;
@@ -87,26 +79,19 @@ export function AppShell() {
                     handleRouteChange(cleanRoute, currentCity.code);
                 }
             }
-            handleTabChange("schedule");
+            setIsScheduleModalOpen(true);
         },
-        [isWonju, activeRoute, handleRouteChange, currentCity.code, handleTabChange]
+        [isWonju, activeRoute, handleRouteChange, currentCity.code]
     );
 
-    // Auto-switch to map tab if current city is not Wonju while on schedule view
-    useEffect(() => {
-        if (!isWonju && activeTab === "schedule") {
-            handleTabChange("map");
-        }
-    }, [isWonju, activeTab, handleTabChange]);
-
     // Live telemetry for active map route
-    const liveBusData = useBusSortedList(activeRoute, isMapActive, currentCity.code);
+    const liveBusData = useBusSortedList(activeRoute, true, currentCity.code);
 
-    // Direction filter for map polyline rendering (all, up, down) scoped per active route
-    const [directionMap, setDirectionMap] = useState<Record<string, "all" | "up" | "down">>({});
-    const selectedDirection = directionMap[activeRoute] || "all";
-    const handleSelectDirection = useCallback((dir: "all" | "up" | "down") => {
-        setDirectionMap((prev) => ({...prev, [activeRoute]: dir}));
+    // Route Variation state scoped per active route (e.g. 30 base route vs via-Sangji)
+    const [variantMap, setVariantMap] = useState<Record<string, string | null>>({});
+    const selectedVariantId = variantMap[activeRoute] || null;
+    const handleSelectVariant = useCallback((variantId: string | null) => {
+        setVariantMap((prev) => ({...prev, [activeRoute]: variantId}));
     }, [activeRoute]);
 
     useEffect(() => {
@@ -122,18 +107,10 @@ export function AppShell() {
         handleRouteChange(activeRoute, currentCity.code);
     }, [routeMap, activeRoute, selectedRoute, currentCity.code, handleRouteChange]);
 
-    const isSchedulePage = isWonju && activeTab === "schedule";
-
     return (
-        <div
-            className={
-                isSchedulePage
-                    ? "relative h-dvh w-full flex flex-col bg-slate-50 dark:bg-[#0b0f19] overflow-y-auto"
-                    : "fixed inset-0 w-full h-full overflow-hidden bg-slate-50 dark:bg-[#0b0f19]"
-            }
-        >
-            {/* 1. Real-time Map View Container */}
-            <div className={`absolute inset-0 w-full h-full overflow-hidden ${isSchedulePage ? "hidden" : "block"}`}>
+        <div className="fixed inset-0 w-full h-full overflow-hidden bg-slate-50 dark:bg-[#0b0f19]">
+            {/* 1. Real-time Map View Container (Main View) */}
+            <div className="absolute inset-0 w-full h-full overflow-hidden block">
                 <MapRouteHeader
                     selectedRoute={activeRoute}
                     onSelectRoute={handleRouteChange}
@@ -143,8 +120,8 @@ export function AppShell() {
                     hasFetched={liveBusData.hasFetched}
                     isDegraded={liveBusData.isDegraded}
                     onReconnect={liveBusData.reconnect}
-                    selectedDirection={selectedDirection}
-                    onSelectDirection={handleSelectDirection}
+                    selectedVariantId={selectedVariantId}
+                    onSelectVariant={handleSelectVariant}
                     onOpenScheduleModal={handleOpenSchedule}
                 />
 
@@ -153,8 +130,8 @@ export function AppShell() {
                         routeName={activeRoute}
                         onRouteChange={handleRouteChange}
                         onOpenScheduleModal={handleOpenSchedule}
-                        enabled={!isSchedulePage}
-                        selectedDirection={selectedDirection}
+                        enabled={true}
+                        selectedVariantId={selectedVariantId}
                         cityCode={currentCity.code}
                         dayMode={dayMode}
                         isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
@@ -162,39 +139,27 @@ export function AppShell() {
                 </MapWrapper>
             </div>
 
-            {/* 2. Wonju Bus Timetable Separate Page View (Yonsei 30,34,34-1 & All Wonju routes) */}
-            {isSchedulePage && (
-                <main
-                    className="relative z-10 w-full min-h-dvh px-3 sm:px-6 lg:px-8 py-6 sm:py-10 pb-32 sm:pb-36 flex flex-col items-center">
-                    <div className="w-full max-w-6xl flex-1 flex flex-col">
-                        {timetableSubTab === "yonsei" ? (
-                            <YonseiTimetableWidget
-                                onSelectMapRoute={handleSelectMapRoute}
-                                dayMode={dayMode}
-                                onDayModeChange={setDayMode}
-                            />
-                        ) : (
-                            <TimetableWidget
-                                onSelectMapRoute={handleSelectMapRoute}
-                            />
-                        )}
-                    </div>
-                </main>
+            {/* 2. Centered Floating Full Route Timetable Modal (Wonju only) */}
+            {isWonju && (
+                <RouteScheduleModal
+                    isOpen={isWonju && isScheduleModalOpen}
+                    routeName={activeRoute}
+                    onClose={() => setIsScheduleModalOpen(false)}
+                    dayMode={dayMode}
+                    isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                />
             )}
 
             {/* 3. Unified Bottom Floating Pill Navigation Bar */}
             <BottomNav
-                activeTab={activeTab}
-                onTabChange={handleTabChange}
-                showScheduleTab={isWonju}
-                scheduleSubTab={timetableSubTab}
-                onScheduleSubTabChange={handleScheduleSubTabChange}
                 dayMode={dayMode}
                 onDayModeChange={setDayMode}
                 isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
                 allRoutes={allRoutes}
                 selectedRoute={activeRoute}
                 onSelectRoute={handleRouteChange}
+                selectedVariantId={selectedVariantId}
+                onSelectVariant={handleSelectVariant}
                 runningBuses={liveBusData.sortedList}
                 getDirection={liveBusData.getDirection}
                 connectionStatus={liveBusData.connectionStatus}

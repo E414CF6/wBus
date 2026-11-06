@@ -1,7 +1,17 @@
 "use client";
 
-import React, {useCallback, useEffect, useMemo, useState, useSyncExternalStore} from "react";
-import {AlertTriangle, Bus, CalendarClock, ChevronDown, GraduationCap, RefreshCw, Star} from "lucide-react";
+import React, {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
+import {
+    AlertTriangle,
+    Bus,
+    CalendarClock,
+    Check,
+    ChevronDown,
+    GitFork,
+    GraduationCap,
+    RefreshCw,
+    Star
+} from "lucide-react";
 
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useCityContext} from "@entities/city";
@@ -10,6 +20,7 @@ import type {FavoriteStop} from "@entities/station/types";
 import {getNextDeparture, useSchedule} from "@entities/schedule";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
+import {useRouteVariations} from "@entities/route/hooks";
 import {RouteSelectModal} from "./RouteSelectModal";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
@@ -27,7 +38,11 @@ interface MapRouteHeaderProps {
     hasFetched?: boolean;
     isDegraded?: boolean;
     onReconnect?: () => void;
+    selectedVariantId?: string | null;
+    onSelectVariant?: (variantId: string | null) => void;
+    /** @deprecated Use selectedVariantId / onSelectVariant instead */
     selectedDirection?: "all" | "up" | "down";
+    /** @deprecated Use selectedVariantId / onSelectVariant instead */
     onSelectDirection?: (dir: "all" | "up" | "down") => void;
     onOpenScheduleModal?: (docOrSubTab?: string) => void;
 }
@@ -45,8 +60,8 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                                   hasFetched = true,
                                                                   isDegraded = false,
                                                                   onReconnect,
-                                                                  selectedDirection = "all",
-                                                                  onSelectDirection,
+                                                                  selectedVariantId = null,
+                                                                  onSelectVariant,
                                                                   onOpenScheduleModal,
                                                               }) => {
     const {currentCity} = useCityContext();
@@ -54,17 +69,35 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const isWonju = currentCity.code === "32020";
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isVariantMenuOpen, setIsVariantMenuOpen] = useState(false);
+    const variantMenuRef = useRef<HTMLDivElement>(null);
 
     const {favoriteStops} = useFavoriteStops(currentCity.code);
     const {routes: scheduleRoutes} = useSchedule(isWonju);
+
+    // Fetch variations for current route (e.g. 30 has basic, via-Sangji, etc.)
+    const {variations} = useRouteVariations(selectedRoute, true, currentCity.code);
 
     const handleSelectFromModal = useCallback(
         (route: string) => {
             onSelectRoute(route);
             setIsModalOpen(false);
+            setIsVariantMenuOpen(false);
         },
         [onSelectRoute]
     );
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        if (!isVariantMenuOpen) return;
+        const handleClickOutside = (e: MouseEvent) => {
+            if (variantMenuRef.current && !variantMenuRef.current.contains(e.target as Node)) {
+                setIsVariantMenuOpen(false);
+            }
+        };
+        window.addEventListener("mousedown", handleClickOutside);
+        return () => window.removeEventListener("mousedown", handleClickOutside);
+    }, [isVariantMenuOpen]);
 
     // Tick every 30s to keep next departure countdown fresh when 0 buses are running
     const [now, setNow] = useState<Date>(() => new Date());
@@ -80,6 +113,74 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
         [selectedRoute, currentCity.code, allRoutes.length]
     );
     const runningCount = runningBuses.length;
+
+    // Running buses count per variation
+    const busesPerVariation = useMemo(() => {
+        const counts = new Map<string, number>();
+        for (const b of runningBuses) {
+            if (b.routeid) {
+                counts.set(b.routeid, (counts.get(b.routeid) ?? 0) + 1);
+            }
+        }
+        return counts;
+    }, [runningBuses]);
+
+    // Effective variations list
+    const effectiveVariations = useMemo(() => {
+        if (variations && variations.length > 0) {
+            return variations;
+        }
+        return [];
+    }, [variations]);
+
+    const hasMultipleVariants = effectiveVariations.length > 1;
+
+    // Currently active variation object (or null for 'all')
+    const activeVariant = useMemo(() => {
+        if (effectiveVariations.length === 0) return null;
+        if (selectedVariantId && selectedVariantId !== "all") {
+            const matched = effectiveVariations.find((v) => v.routeId === selectedVariantId);
+            if (matched) return matched;
+        }
+        if (selectedVariantId === "all") return null;
+        return effectiveVariations[0];
+    }, [effectiveVariations, selectedVariantId]);
+
+    // Current index of variation for indicator (e.g. 1/3)
+    const currentVariantIndex = useMemo(() => {
+        if (!hasMultipleVariants) return 0;
+        if (selectedVariantId === "all") return -1;
+        if (!activeVariant) return 0;
+        const idx = effectiveVariations.findIndex((v) => v.routeId === activeVariant.routeId);
+        return idx >= 0 ? idx : 0;
+    }, [hasMultipleVariants, selectedVariantId, activeVariant, effectiveVariations]);
+
+    // Cycle through variants on click
+    const handleCycleVariant = useCallback(
+        (e: React.MouseEvent) => {
+            e.stopPropagation();
+            if (!onSelectVariant || effectiveVariations.length <= 1) return;
+
+            // Cycle order: [v0, v1, ..., 'all']
+            const options: (string | null)[] = [
+                ...effectiveVariations.map((v) => v.routeId),
+                "all",
+            ];
+            const currentVal = selectedVariantId === "all" ? "all" : (activeVariant?.routeId ?? options[0]);
+            const currIdx = options.indexOf(currentVal);
+            const nextIdx = (currIdx + 1) % options.length;
+            onSelectVariant(options[nextIdx]);
+        },
+        [onSelectVariant, effectiveVariations, selectedVariantId, activeVariant]
+    );
+
+    const handleSelectSpecificVariant = useCallback(
+        (vId: string | null) => {
+            onSelectVariant?.(vId);
+            setIsVariantMenuOpen(false);
+        },
+        [onSelectVariant]
+    );
 
     // Next scheduled departure for Wonju routes when no buses are currently running
     const nextScheduleInfo = useMemo(() => {
@@ -144,17 +245,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
         return list;
     }, [isClient, isWonju, allRoutes, currentCity.code, selectedRoute]);
 
-    const handleToggleDirection = useCallback(() => {
-        if (!onSelectDirection) return;
-        if (selectedDirection === "all") {
-            onSelectDirection("up");
-        } else if (selectedDirection === "up") {
-            onSelectDirection("down");
-        } else {
-            onSelectDirection("all");
-        }
-    }, [selectedDirection, onSelectDirection]);
-
     const handleJumpToFavoriteStop = useCallback(
         (fav: FavoriteStop) => {
             if (map && fav.gpslong && fav.gpslati) {
@@ -183,7 +273,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
 
     // Determine status badge appearance & copy
     const statusConfig = useMemo(() => {
-        // 1. Still connecting or waiting for initial API response
         if (!hasFetched || connectionStatus === "connecting") {
             return {
                 label: "연결 중...",
@@ -195,7 +284,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             };
         }
 
-        // 2. Suspended in background
         if (connectionStatus === "suspended") {
             return {
                 label: "대기 상태",
@@ -207,7 +295,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             };
         }
 
-        // 3. API responded & Buses are running
         if (runningCount > 0) {
             if (isDegraded) {
                 return {
@@ -229,7 +316,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             };
         }
 
-        // 4. API responded with 0 running buses, but next scheduled departure is available
         if (nextScheduleInfo) {
             const waitText = nextScheduleInfo.waitMins <= 0 ? "곧 출발" : `${nextScheduleInfo.waitMins}분 후`;
             return {
@@ -242,7 +328,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             };
         }
 
-        // 5. API responded and 0 buses running with no upcoming departure
         return {
             label: "운행 종료",
             badgeClass: "bg-slate-500/10 dark:bg-slate-400/10 border-slate-400/20 text-slate-600 dark:text-slate-400",
@@ -252,6 +337,9 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             tooltip: "현재 운행 중인 버스가 없습니다 (운행 종료 또는 배차 대기)",
         };
     }, [hasFetched, connectionStatus, runningCount, isDegraded, nextScheduleInfo]);
+
+    // Active variant bus count
+    const activeVariantBusCount = activeVariant ? (busesPerVariation.get(activeVariant.routeId) ?? 0) : runningCount;
 
     return (
         <>
@@ -264,10 +352,13 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             />
 
             <header
-                className="absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-col items-center gap-1.5 max-w-[95vw] w-full sm:w-auto animate-fadeIn select-none">
+                className="absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-col items-center gap-1.5 max-w-[95vw] w-full sm:w-auto animate-fadeIn select-none"
+            >
                 {/* 1. Main Route Overview Glass Card */}
                 <div
-                    className="flex items-center gap-1 sm:gap-1.5 p-1.5 pr-2.5 sm:p-2 sm:pr-3 bg-white/92 dark:bg-[#111218]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full">
+                    ref={variantMenuRef}
+                    className="relative flex items-center gap-1 sm:gap-1.5 p-1.5 pr-2.5 sm:p-2 sm:pr-3 bg-white/92 dark:bg-[#111218]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full"
+                >
                     {/* Route Selector Button (Far Left, Triggers Modal) */}
                     <button
                         type="button"
@@ -277,59 +368,184 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                         aria-label="노선 선택 모달 열기"
                     >
                         <Bus className="w-3.5 h-3.5 shrink-0"/>
-                        <span suppressHydrationWarning
-                              className="whitespace-nowrap font-extrabold">{selectedRoute || "노선"}번</span>
+                        <span suppressHydrationWarning className="whitespace-nowrap font-extrabold">
+                            {selectedRoute || "노선"}번
+                        </span>
                         <ChevronDown className="w-3.5 h-3.5 opacity-80 shrink-0"/>
                     </button>
 
-                    {/* Route Direction & Focus Switcher */}
-                    <button
-                        type="button"
-                        suppressHydrationWarning
-                        onClick={handleToggleDirection}
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-all duration-200 cursor-pointer overflow-hidden max-w-[44vw] sm:max-w-[300px] text-left select-none active:scale-95"
-                        title={`경로 표시 방향: ${
-                            selectedDirection === "all"
-                                ? "양방향 전체"
-                                : selectedDirection === "up"
-                                    ? `${meta.destination || "종점"} 방면 (상행)`
-                                    : `${meta.origin || "기점"} 방면 (하행)`
-                        } (클릭하여 상행/하행/전체 전환)`}
-                        aria-label="경로 표시 방향 전환"
-                    >
-                        <div className="flex flex-col min-w-0">
-                            <div className="flex items-center gap-1.5 truncate">
-                                <span suppressHydrationWarning
-                                      className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
-                                    {selectedDirection === "all" && `${meta.origin} ↔ ${meta.destination}`}
-                                    {selectedDirection === "up" && `→ ${meta.destination}`}
-                                    {selectedDirection === "down" && `→ ${meta.origin}`}
-                                </span>
-                                <span
-                                    suppressHydrationWarning
-                                    className={`px-1.5 py-0.5 rounded-md text-[9px] font-black shrink-0 transition-colors ${
-                                        selectedDirection === "all"
-                                            ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                                            : meta.colorTheme.badgeBg + " " + meta.colorTheme.text
-                                    }`}
-                                >
-                                    {selectedDirection === "all" ? "전체" : selectedDirection === "up" ? "상행" : "하행"}
-                                </span>
-                                <span
-                                    suppressHydrationWarning
-                                    className={`px-1.5 py-0.5 rounded-md text-[9px] font-black shrink-0 ${meta.colorTheme.badgeBg} ${meta.colorTheme.text}`}
-                                >
-                                    {meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : "간선"}
-                                </span>
-                                {meta.isYonsei && selectedDirection === "all" && (
+                    {/* Route Variation Toggle & Focus Switcher (Replaces old UP/DOWN Direction Switcher) */}
+                    <div className="relative flex items-center">
+                        <button
+                            type="button"
+                            suppressHydrationWarning
+                            onClick={hasMultipleVariants ? handleCycleVariant : undefined}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200 cursor-pointer overflow-hidden max-w-[46vw] sm:max-w-[320px] text-left select-none active:scale-95 ${
+                                hasMultipleVariants
+                                    ? "hover:bg-black/5 dark:hover:bg-white/5"
+                                    : "cursor-default"
+                            }`}
+                            title={
+                                hasMultipleVariants
+                                    ? `클릭하여 노선 종류(경유지) 전환 (현재: ${selectedVariantId === "all" ? "전체 경로" : (activeVariant?.label ?? "기본 노선")})`
+                                    : `${meta.origin} ↔ ${meta.destination}`
+                            }
+                            aria-label="노선 종류 및 경유지 전환"
+                        >
+                            <div className="flex flex-col min-w-0">
+                                <div className="flex items-center gap-1.5 truncate">
+                                    {/* Main destination / origin path or variant title */}
                                     <span
-                                        className="hidden xs:inline-flex px-1.5 py-0.2 rounded-full text-[9px] font-black bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 shrink-0">
-                                        연세대
+                                        suppressHydrationWarning
+                                        className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate"
+                                    >
+                                        {selectedVariantId === "all"
+                                            ? `${meta.origin} ↔ ${meta.destination}`
+                                            : (activeVariant?.label ?? `${meta.origin} ↔ ${meta.destination}`)}
                                     </span>
-                                )}
+
+                                    {/* Variant Pill Badge */}
+                                    {hasMultipleVariants && (
+                                        <span
+                                            suppressHydrationWarning
+                                            className={`px-1.5 py-0.5 rounded-md text-[9px] font-black shrink-0 transition-colors flex items-center gap-0.5 ${
+                                                selectedVariantId === "all"
+                                                    ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                                                    : "bg-blue-600 text-white dark:bg-blue-500 shadow-xs"
+                                            }`}
+                                        >
+                                            <GitFork className="w-2.5 h-2.5 shrink-0"/>
+                                            <span>
+                                                {selectedVariantId === "all"
+                                                    ? "전체"
+                                                    : `${currentVariantIndex + 1}/${effectiveVariations.length}`}
+                                            </span>
+                                            {activeVariantBusCount > 0 && selectedVariantId !== "all" && (
+                                                <span
+                                                    className="ml-0.5 opacity-90 font-mono">({activeVariantBusCount}대)</span>
+                                            )}
+                                        </span>
+                                    )}
+
+                                    {/* Single variant fallback: route type badge */}
+                                    {!hasMultipleVariants && (
+                                        <span
+                                            suppressHydrationWarning
+                                            className={`px-1.5 py-0.5 rounded-md text-[9px] font-black shrink-0 ${meta.colorTheme.badgeBg} ${meta.colorTheme.text}`}
+                                        >
+                                            {meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : "간선"}
+                                        </span>
+                                    )}
+
+                                    {meta.isYonsei && (
+                                        <span
+                                            className="hidden xs:inline-flex px-1.5 py-0.2 rounded-full text-[9px] font-black bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 shrink-0">
+                                            연세대
+                                        </span>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                    </button>
+                        </button>
+
+                        {/* Dropdown open trigger button for multi-variant routes */}
+                        {hasMultipleVariants && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsVariantMenuOpen((prev) => !prev);
+                                }}
+                                className="p-1 rounded-full text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
+                                title="전체 경유지/노선 종류 목록 보기"
+                                aria-label="노선 종류 목록 열기"
+                            >
+                                <ChevronDown
+                                    className={`w-3.5 h-3.5 transition-transform ${isVariantMenuOpen ? "rotate-180" : ""}`}/>
+                            </button>
+                        )}
+
+                        {/* Floating Variant Selector Dropdown Popover */}
+                        {hasMultipleVariants && isVariantMenuOpen && (
+                            <div
+                                className="absolute top-full left-0 mt-2 z-50 w-64 sm:w-72 bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-2xl rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.25)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.7)] border border-black/10 dark:border-white/15 p-1.5 space-y-1 animate-scaleUp select-none">
+                                <div
+                                    className="px-3 py-1.5 border-b border-black/5 dark:border-white/5 flex items-center justify-between text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
+                                    <span>노선 종류 및 경유지 선택</span>
+                                    <span className="font-mono text-[10px]">총 {effectiveVariations.length}개</span>
+                                </div>
+
+                                <div className="max-h-60 overflow-y-auto custom-scrollbar p-0.5 space-y-0.5">
+                                    {/* Option: View All Variations combined */}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSelectSpecificVariant("all")}
+                                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-black transition cursor-pointer text-left ${
+                                            selectedVariantId === "all"
+                                                ? "bg-blue-600 text-white shadow-xs"
+                                                : "text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5"
+                                        }`}
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <GitFork className="w-3.5 h-3.5 shrink-0 opacity-80"/>
+                                            <div className="truncate">
+                                                <p className="truncate">전체 경로 (모든 경유지)</p>
+                                                <p className={`text-[10px] font-semibold truncate ${selectedVariantId === "all" ? "text-blue-100" : "text-slate-400"}`}>
+                                                    {meta.origin} ↔ {meta.destination}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {selectedVariantId === "all" && <Check className="w-4 h-4 shrink-0 ml-2"/>}
+                                    </button>
+
+                                    {/* Individual Variation Options */}
+                                    {effectiveVariations.map((variant, idx) => {
+                                        const isSelected = selectedVariantId !== "all" && (activeVariant?.routeId === variant.routeId);
+                                        const count = busesPerVariation.get(variant.routeId) ?? 0;
+                                        const turningStopName = variant.turningStop?.nodenm;
+
+                                        return (
+                                            <button
+                                                key={variant.routeId}
+                                                type="button"
+                                                onClick={() => handleSelectSpecificVariant(variant.routeId)}
+                                                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-black transition cursor-pointer text-left ${
+                                                    isSelected
+                                                        ? "bg-blue-600 text-white shadow-xs"
+                                                        : "text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5"
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <span
+                                                        className={`w-5 text-center font-mono text-[11px] font-bold shrink-0 ${isSelected ? "text-blue-200" : "text-slate-400"}`}>
+                                                        {idx + 1}
+                                                    </span>
+                                                    <div className="truncate">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span className="truncate">{variant.label}</span>
+                                                            {count > 0 && (
+                                                                <span
+                                                                    className={`px-1.5 py-0.2 rounded-full text-[9px] font-black ${
+                                                                        isSelected
+                                                                            ? "bg-white/20 text-white"
+                                                                            : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                                                                    }`}>
+                                                                    {count}대 운행
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className={`text-[10px] font-semibold truncate ${isSelected ? "text-blue-100" : "text-slate-400"}`}>
+                                                            {turningStopName ? `회차: ${turningStopName}` : `${variant.stops.length}개 정류장`}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {isSelected && <Check className="w-4 h-4 shrink-0 ml-2"/>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Detailed Real-Time Status Pill */}
                     <div
@@ -421,4 +637,3 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
         </>
     );
 };
-

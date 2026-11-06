@@ -6,14 +6,7 @@ import {APP_CONFIG, getRecentRoutesStorageKey, MAP_SETTINGS, STORAGE_KEYS} from 
 import {useCityContext} from "@entities/city";
 import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
 
-export function resolveTabFromPathname(path: string): NavTab {
-    if (path.startsWith("/schedule")) return "schedule";
-    if (path === "/" || path.startsWith("/?")) {
-        const query = path.includes("?") ? new URLSearchParams(path.slice(path.indexOf("?"))) : null;
-        return query?.has("route") || query?.has("cityCode") || query?.has("city")
-            ? "map"
-            : "schedule";
-    }
+export function resolveTabFromPathname(_path: string): NavTab {
     return "map";
 }
 

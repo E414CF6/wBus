@@ -11,8 +11,6 @@ import {useSchedule} from "@entities/schedule/hooks";
 import {useCityContext} from "@entities/city";
 import {useBusStop, useFavoriteStops} from "@entities/station/hooks";
 import {BusStopPopup} from "@entities/station";
-import RouteScheduleModal from "@features/map-view/RouteScheduleModal";
-import type {DayMode} from "@shared/types/navigation";
 import type {BusItem} from "@entities/bus/types";
 import type {BusStop} from "@entities/station/types";
 
@@ -27,8 +25,8 @@ interface BusListDrawerProps {
     lastUpdated?: number | null;
     onReconnect?: () => void;
     onRouteChange?: (routeName: string) => void;
-    dayMode?: DayMode;
-    isTodayWeekendOrHoliday?: boolean;
+    selectedVariantId?: string | null;
+    onSelectVariant?: (variantId: string | null) => void;
 }
 
 function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -55,8 +53,8 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                                                 lastUpdated,
                                                                 onReconnect,
                                                                 onRouteChange,
-                                                                dayMode = "AUTO",
-                                                                isTodayWeekendOrHoliday,
+                                                                selectedVariantId: controlledVariantId,
+                                                                onSelectVariant,
                                                             }) => {
     const {map} = useAppMapContext();
     const {currentCity} = useCityContext();
@@ -67,14 +65,14 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const {routes: scheduleRoutes} = useSchedule(isOpen && isWonju);
     const {isFavoriteStop, toggleFavoriteStop} = useFavoriteStops(currentCity.code);
 
-    // Desktop view detection (>= 768px: left floating window with 2-column split view support)
+    // Desktop view detection (>= 768px: left floating window with split stop details support)
     const isDesktop = useIsDesktop();
 
-    const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+    const [internalVariantId, setInternalVariantId] = useState<string | null>(null);
+    const selectedVariantId = controlledVariantId !== undefined ? controlledVariantId : internalVariantId;
+    const setSelectedVariantId = onSelectVariant ?? setInternalVariantId;
     const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
     const [selectedStop, setSelectedStop] = useState<BusStop | null>(null);
-    const [isScheduleOpen, setIsScheduleOpen] = useState(false);
-    const [activeBottomTab, setActiveBottomTab] = useState<"stop" | "schedule">("stop");
     const [directionFilter, setDirectionFilter] = useState<"all" | "up" | "down" | "fav">("all");
     const [stopSearchQuery, setStopSearchQuery] = useState("");
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -90,22 +88,10 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             if (detail && detail.nodeid) {
                 setSelectedStop(detail);
                 setSelectedStopId(detail.nodeid);
-                setActiveBottomTab("stop");
             }
         };
         window.addEventListener("wbus:focus-stop", handleFocusStop);
         return () => window.removeEventListener("wbus:focus-stop", handleFocusStop);
-    }, []);
-
-    // Listen to external open schedule event (from timetable pin, schedule button, or nav)
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        const handleOpenSchedule = () => {
-            setIsScheduleOpen(true);
-            setActiveBottomTab("schedule");
-        };
-        window.addEventListener("wbus:open-schedule", handleOpenSchedule);
-        return () => window.removeEventListener("wbus:open-schedule", handleOpenSchedule);
     }, []);
 
     // Deselect stop or close split on desktop when empty map area is clicked or deselected
@@ -115,7 +101,6 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             if (isDesktopViewport()) {
                 setSelectedStop(null);
                 setSelectedStopId(null);
-                setIsScheduleOpen(false);
             }
         };
         window.addEventListener("wbus:close-popups", handleDeselectStop);
@@ -133,7 +118,6 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         setDirectionFilter("all");
         setSelectedStop(null);
         setSelectedStopId(null);
-        setIsScheduleOpen(false);
     }
 
     // Route Metadata & Schedule info
@@ -195,7 +179,6 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                     // On desktop, drawer is permanent; Escape closes the split view if open
                     setSelectedStop(null);
                     setSelectedStopId(null);
-                    setIsScheduleOpen(false);
                     return;
                 }
                 onClose();
@@ -440,7 +423,6 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
             if (isDesktop) {
                 setSelectedStop(stop);
-                setActiveBottomTab("stop");
                 if (map && stop.gpslong && stop.gpslati) {
                     map.flyTo({
                         center: [stop.gpslong, stop.gpslati],
@@ -483,7 +465,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         [isDesktop, onBusClick, onClose]
     );
 
-    const hasBottomSplit = isDesktop && (Boolean(selectedStop) || isScheduleOpen);
+    const hasBottomSplit = isDesktop && Boolean(selectedStop);
 
     if (!isOpen) return null;
 
@@ -838,177 +820,112 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                 </div>
             </div>
 
-            {/* Lower Section: Context-Aware Split View (Stop Details or Route Timetable) */}
-            {hasBottomSplit && (
+            {/* Lower Section: Context-Aware Split View (Selected Stop Details) */}
+            {hasBottomSplit && selectedStop && (
                 <div
                     className="w-full flex-[48] h-[48%] min-h-[260px] border-t border-slate-200/80 dark:border-white/10 flex flex-col overflow-hidden bg-white dark:bg-[#11131a] animate-fadeIn select-none">
-                    {/* If BOTH a stop is selected AND schedule is open, show quick segmented switch pill */}
-                    {selectedStop && isScheduleOpen && (
+                    <div className="w-full h-full flex flex-col overflow-hidden">
+                        {/* Stop Header */}
                         <div
-                            className="px-4 py-1.5 bg-slate-100/90 dark:bg-white/[0.04] border-b border-slate-200/60 dark:border-white/5 flex items-center justify-between text-xs shrink-0">
-                            <div className="flex items-center gap-1">
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveBottomTab("stop")}
-                                    className={`px-2.5 py-0.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                                        activeBottomTab === "stop"
-                                            ? "bg-white dark:bg-[#1e2330] text-blue-600 dark:text-blue-400 shadow-xs"
-                                            : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
-                                    }`}
+                            className="flex items-start justify-between px-4 py-3 border-b border-slate-200/80 dark:border-white/10 shrink-0 bg-slate-50/70 dark:bg-white/[0.03]">
+                            <div className="flex items-start gap-3 min-w-0">
+                                <div
+                                    className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-xs"
+                                    style={{
+                                        backgroundColor: isSelectedStopRouteStop
+                                            ? (meta?.colorTheme?.main || "#2563eb")
+                                            : (isFavoriteStop(selectedStop.nodeid) ? "#f59e0b" : "#475569")
+                                    }}
                                 >
-                                    정류장 실시간 정보
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveBottomTab("schedule")}
-                                    className={`px-2.5 py-0.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                                        activeBottomTab === "schedule"
-                                            ? "bg-white dark:bg-[#1e2330] text-blue-600 dark:text-blue-400 shadow-xs"
-                                            : "text-slate-500 hover:text-slate-800 dark:hover:text-white"
-                                    }`}
-                                >
-                                    노선 운행 시간표
-                                </button>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setSelectedStop(null);
-                                    setSelectedStopId(null);
-                                    setIsScheduleOpen(false);
-                                }}
-                                className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition cursor-pointer"
-                                title="분할 닫기"
-                            >
-                                <X className="w-3.5 h-3.5"/>
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Tab 1: Selected Stop Details */}
-                    {selectedStop && (!isScheduleOpen || activeBottomTab === "stop") && (
-                        <div className="w-full h-full flex flex-col overflow-hidden">
-                            {/* Stop Header */}
-                            <div
-                                className="flex items-start justify-between px-4 py-3 border-b border-slate-200/80 dark:border-white/10 shrink-0 bg-slate-50/70 dark:bg-white/[0.03]">
-                                <div className="flex items-start gap-3 min-w-0">
-                                    <div
-                                        className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-xs"
-                                        style={{
-                                            backgroundColor: isSelectedStopRouteStop
-                                                ? (meta?.colorTheme?.main || "#2563eb")
-                                                : (isFavoriteStop(selectedStop.nodeid) ? "#f59e0b" : "#475569")
-                                        }}
-                                    >
-                                        {isSelectedStopRouteStop ? (
-                                            <MapPinned size={18} strokeWidth={2.5}/>
-                                        ) : (
-                                            <MapPin size={18} strokeWidth={2.5}/>
+                                    {isSelectedStopRouteStop ? (
+                                        <MapPinned size={18} strokeWidth={2.5}/>
+                                    ) : (
+                                        <MapPin size={18} strokeWidth={2.5}/>
+                                    )}
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                        <span
+                                            className="px-1.5 py-0.2 rounded-md text-[9px] font-black text-white"
+                                            style={{
+                                                backgroundColor: isSelectedStopRouteStop
+                                                    ? (meta?.colorTheme?.main || "#2563eb")
+                                                    : "#64748b"
+                                            }}
+                                        >
+                                            {isSelectedStopRouteStop ? "현재 노선" : "주변 정류장"}
+                                        </span>
+                                        {isWonju && (
+                                            <span
+                                                className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400">
+                                                원주시
+                                            </span>
                                         )}
                                     </div>
-                                    <div className="flex flex-col min-w-0">
-                                        <div className="flex items-center gap-1.5 flex-wrap">
-                                            <span
-                                                className="px-1.5 py-0.2 rounded-md text-[9px] font-black text-white"
-                                                style={{
-                                                    backgroundColor: isSelectedStopRouteStop
-                                                        ? (meta?.colorTheme?.main || "#2563eb")
-                                                        : "#64748b"
-                                                }}
-                                            >
-                                                {isSelectedStopRouteStop ? "현재 노선" : "주변 정류장"}
-                                            </span>
-                                            {isWonju && (
-                                                <span
-                                                    className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400">
-                                                    원주시
-                                                </span>
-                                            )}
-                                        </div>
-                                        <h3
-                                            className="truncate text-lg font-black text-slate-900 dark:text-white mt-0.5 leading-tight"
-                                            title={selectedStop.nodenm}
-                                        >
-                                            {selectedStop.nodenm}
-                                        </h3>
-                                        <div
-                                            className="flex items-center gap-1.5 mt-1 text-slate-500 dark:text-slate-400 text-xs">
-                                            <span
-                                                className="text-[10px] font-bold uppercase tracking-widest text-slate-400">ID</span>
-                                            <span
-                                                className="font-mono font-bold text-[11px]">{selectedStop.nodeno || "미부여"}</span>
-                                        </div>
+                                    <h3
+                                        className="truncate text-lg font-black text-slate-900 dark:text-white mt-0.5 leading-tight"
+                                        title={selectedStop.nodenm}
+                                    >
+                                        {selectedStop.nodenm}
+                                    </h3>
+                                    <div
+                                        className="flex items-center gap-1.5 mt-1 text-slate-500 dark:text-slate-400 text-xs">
+                                        <span
+                                            className="text-[10px] font-bold uppercase tracking-widest text-slate-400">ID</span>
+                                        <span
+                                            className="font-mono font-bold text-[11px]">{selectedStop.nodeno || "미부여"}</span>
                                     </div>
                                 </div>
-
-                                {/* Action Buttons: Favorite, Schedule, Close Pane */}
-                                <div className="flex items-center gap-1 shrink-0 ml-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => toggleFavoriteStop(selectedStop)}
-                                        className={`p-1.5 rounded-full border transition cursor-pointer active:scale-90 ${
-                                            isFavoriteStop(selectedStop.nodeid)
-                                                ? "bg-amber-500/15 border-amber-500/40 text-amber-500"
-                                                : "bg-slate-100 dark:bg-white/10 border-transparent text-slate-400 hover:text-amber-500"
-                                        }`}
-                                        title={isFavoriteStop(selectedStop.nodeid) ? "즐겨찾기 해제" : "즐겨찾기 등록"}
-                                        aria-label="즐겨찾기"
-                                    >
-                                        <Star
-                                            className={`w-3.5 h-3.5 ${isFavoriteStop(selectedStop.nodeid) ? "fill-amber-400" : ""}`}/>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSelectedStop(null);
-                                            setSelectedStopId(null);
-                                        }}
-                                        className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer active:scale-90"
-                                        title="정류장 정보 닫기 (분할 해제)"
-                                        aria-label="정류장 정보 닫기"
-                                    >
-                                        <X className="w-3.5 h-3.5"/>
-                                    </button>
-                                </div>
                             </div>
 
-                            {/* Live Arrivals Body */}
-                            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1">
-                                <BusStopPopup
-                                    stopId={selectedStop.nodeid}
-                                    cityCode={currentCity.code}
-                                    currentRouteName={selectedRoute}
-                                    onRouteChange={onRouteChange}
-                                />
-                            </div>
-
-                            {/* Footer Info Note */}
-                            <div
-                                className="px-4 py-2 border-t border-slate-200/80 dark:border-white/10 bg-slate-100/50 dark:bg-white/[0.02] text-[11px] text-slate-400 dark:text-slate-500 flex items-center justify-between shrink-0">
-                                <span>실시간 도착 정보</span>
-                                <span className="text-[10px]">노선 클릭 시 경로 전환</span>
+                            {/* Action Buttons: Favorite & Close Pane */}
+                            <div className="flex items-center gap-1 shrink-0 ml-2">
+                                <button
+                                    type="button"
+                                    onClick={() => toggleFavoriteStop(selectedStop)}
+                                    className={`p-1.5 rounded-full border transition cursor-pointer active:scale-90 ${
+                                        isFavoriteStop(selectedStop.nodeid)
+                                            ? "bg-amber-500/15 border-amber-500/40 text-amber-500"
+                                            : "bg-slate-100 dark:bg-white/10 border-transparent text-slate-400 hover:text-amber-500"
+                                    }`}
+                                    title={isFavoriteStop(selectedStop.nodeid) ? "즐겨찾기 해제" : "즐겨찾기 등록"}
+                                    aria-label="즐겨찾기"
+                                >
+                                    <Star
+                                        className={`w-3.5 h-3.5 ${isFavoriteStop(selectedStop.nodeid) ? "fill-amber-400" : ""}`}/>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSelectedStop(null);
+                                        setSelectedStopId(null);
+                                    }}
+                                    className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer active:scale-90"
+                                    title="정류장 정보 닫기 (분할 해제)"
+                                    aria-label="정류장 정보 닫기"
+                                >
+                                    <X className="w-3.5 h-3.5"/>
+                                </button>
                             </div>
                         </div>
-                    )}
 
-                    {/* Tab 2: Embedded Route Schedule Timetable */}
-                    {isScheduleOpen && (activeBottomTab === "schedule" || !selectedStop) && (
-                        <div className="w-full h-full flex flex-col overflow-hidden">
-                            <RouteScheduleModal
-                                embedded={true}
-                                isOpen={true}
-                                routeName={selectedRoute}
-                                onClose={() => {
-                                    setIsScheduleOpen(false);
-                                    if (selectedStop) {
-                                        setActiveBottomTab("stop");
-                                    }
-                                }}
-                                dayMode={dayMode}
-                                isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                        {/* Live Arrivals Body */}
+                        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1">
+                            <BusStopPopup
+                                stopId={selectedStop.nodeid}
+                                cityCode={currentCity.code}
+                                currentRouteName={selectedRoute}
+                                onRouteChange={onRouteChange}
                             />
                         </div>
-                    )}
+
+                        {/* Footer Info Note */}
+                        <div
+                            className="px-4 py-2 border-t border-slate-200/80 dark:border-white/10 bg-slate-100/50 dark:bg-white/[0.02] text-[11px] text-slate-400 dark:text-slate-500 flex items-center justify-between shrink-0">
+                            <span>실시간 도착 정보</span>
+                            <span className="text-[10px]">노선 클릭 시 경로 전환</span>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

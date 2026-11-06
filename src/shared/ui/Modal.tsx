@@ -195,9 +195,9 @@ export function Modal({
             aria-label={ariaLabel}
             aria-labelledby={ariaLabelledby}
         >
-            {/* Backdrop Blur Overlay */}
+            {/* Backdrop Shaded Overlay */}
             <div
-                className="fixed inset-0 bg-black/60 dark:bg-black/75 backdrop-blur-md transition-opacity duration-200 animate-fadeIn"
+                className="fixed inset-0 bg-black/45 dark:bg-black/65 backdrop-blur-[2px] transition-opacity duration-200 animate-fadeIn"
                 onClick={closeOnBackdropClick ? onClose : undefined}
                 aria-hidden="true"
             />

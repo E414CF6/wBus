@@ -8,7 +8,6 @@ import {ArrowRight, Calendar, Clock, RotateCw, X} from "lucide-react";
 import {type RouteVariation, type RouteVariationStop, useRouteVariations} from "@entities/route";
 import {type BusRoute, getUpcomingDepartures, resolveActiveScheduleVariant, useSchedule} from "@entities/schedule";
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {isDesktopViewport} from "@shared/ui/useIsDesktop";
 import type {DayMode} from "@shared/types/navigation";
 
 // ----------------------------------------------------------------------
@@ -189,49 +188,19 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
         return null;
     }, [activePopupRole, originDepartures, destDepartures]);
 
-    // Handler to smoothly switch between Origin and Turnaround in popup & center in visible map view
+    // Handler to smoothly switch between Origin and Turnaround in centered modal & center in visible map view
     const handleOpenRole = useCallback(
         (targetRole: TerminalRole) => {
-            const isDesktop = isDesktopViewport();
             const targetStop = targetRole === "ORIGIN" ? originStop : turningStop;
-
-            if (isDesktop) {
-                if (targetStop) {
-                    window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: targetStop}));
-                }
-                window.dispatchEvent(new CustomEvent("wbus:open-schedule", {detail: {role: targetRole}}));
-                window.dispatchEvent(new CustomEvent("wbus:open-bus-list"));
-                if (map && targetStop && targetStop.gpslati && targetStop.gpslong) {
-                    map.flyTo({
-                        center: [targetStop.gpslong, targetStop.gpslati],
-                        zoom: Math.max(map.getZoom(), 15.2),
-                        padding: {
-                            left: 420,
-                            right: 40,
-                            top: 80,
-                            bottom: 80,
-                        },
-                        duration: 650,
-                    });
-                }
-                return;
-            }
 
             setActivePopupRole(targetRole);
             if (typeof window !== "undefined") {
                 window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
             }
             if (map && targetStop && targetStop.gpslati && targetStop.gpslong) {
-                const isCompact = typeof window !== "undefined" && window.innerWidth < 640;
                 map.flyTo({
                     center: [targetStop.gpslong, targetStop.gpslati],
                     zoom: Math.max(map.getZoom(), 15.2),
-                    padding: {
-                        top: 120,
-                        bottom: isCompact ? Math.round(window.innerHeight * 0.45) : 180,
-                        left: 32,
-                        right: 32,
-                    },
                     duration: 650,
                 });
             }
@@ -409,14 +378,14 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                 </Marker>
             )}
 
-            {/* 3. Interactive Timetable Sheet (Floating Window above all map controls and bottom nav) */}
+            {/* 3. Interactive Centered Floating Timetable Modal */}
             {typeof document !== "undefined" && activePopupRole && activePopupStop &&
                 createPortal(
                     <div
-                        className="fixed inset-0 z-[120] flex flex-col justify-end sm:justify-center items-center pb-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] sm:pb-0 pointer-events-none px-3">
-                        {/* Click-outside backdrop */}
+                        className="fixed inset-0 z-[120] flex items-center justify-center p-4 pointer-events-none">
+                        {/* Click-outside shaded backdrop */}
                         <div
-                            className="fixed inset-0 bg-black/30 dark:bg-black/60 backdrop-blur-[2px] transition-opacity animate-fadeIn pointer-events-auto"
+                            className="fixed inset-0 bg-black/45 dark:bg-black/65 backdrop-blur-[2px] transition-opacity animate-fadeIn pointer-events-auto"
                             onClick={() => setActivePopupRole(null)}
                             aria-hidden="true"
                         />
@@ -424,14 +393,9 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                             role="dialog"
                             aria-modal="true"
                             aria-label={`${routeName}번 ${activePopupRole === "ORIGIN" ? "기점" : "회차지"} 출발 시간표`}
-                            className="relative z-10 pointer-events-auto flex flex-col w-[94vw] sm:w-[420px] max-w-md max-h-[70vh] sm:max-h-[640px] bg-white dark:bg-[#11131a] sm:bg-white/98 sm:dark:bg-[#11131a]/98 backdrop-blur-3xl overflow-hidden rounded-[28px] shadow-[0_16px_48px_rgba(0,0,0,0.35)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] border border-black/10 dark:border-white/12 animate-fadeIn select-none"
+                            className="relative z-10 pointer-events-auto flex flex-col w-full sm:w-[440px] max-w-md max-h-[82dvh] sm:max-h-[660px] bg-white dark:bg-[#11131a] sm:bg-white/98 sm:dark:bg-[#11131a]/98 backdrop-blur-3xl overflow-hidden rounded-[28px] shadow-[0_24px_64px_rgba(0,0,0,0.38)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.72)] border border-black/10 dark:border-white/12 animate-scaleUp select-none"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            {/* Mobile Drawer Grab Indicator */}
-                            <div className="pt-2 pb-0.5 flex justify-center sm:hidden shrink-0">
-                                <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700"/>
-                            </div>
-
                             {/* Popup Header */}
                             <div className="p-4 border-b border-black/5 dark:border-white/5 space-y-2.5 shrink-0">
                                 <div className="flex items-start justify-between gap-2">

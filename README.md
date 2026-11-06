@@ -69,10 +69,11 @@ excessive background network polling.
   - Matches 10-second TAGO/TOPIS telemetry updates against high-precision OSRM road polylines.
   - Projects continuous forward motion factoring in stop dwell-time weighting and network latency compensation.
   - Prevents coordinate teleportation, filters backward GPS jitter, and smoothly interpolates vehicle heading angles.
-- **Directional Filtering & Route Trajectories**:
-  - Automatically classifies vehicles and stops into Inbound/Up (`UP`, Origin ➔ Terminal) and Outbound/Down (`DOWN`,
-    Terminal ➔ Origin) directions.
-  - Interactive header controls for filtering route polylines and live bus markers by direction (`ALL`, `UP`, `DOWN`).
+- **Route Variation & Via-Point Toggle**:
+  - Automatically identifies sub-route variations and via-point deviations (e.g. base routes vs. campus/terminal bypass
+    variants).
+  - Interactive header toggle and dropdown popover allowing riders to switch between individual route variations (with
+    live operating bus count per branch) or view all combined paths.
   - Active bus list drawer that automatically synchronizes the route timeline with the vehicle nearest to the map
     center.
 - **High-Precision GPS Tracking**:

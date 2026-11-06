@@ -1,43 +1,41 @@
 "use client";
 
-import React, {memo, useCallback, useEffect, useState} from "react";
-import {ChevronDown, Compass, MapIcon, MapPin, Sparkles, X} from "lucide-react";
+import React, {memo, useCallback, useEffect, useState, useSyncExternalStore} from "react";
+import {Bus, Calendar, ChevronDown, Coffee, Compass, MapIcon, MapPin, Moon, Sparkles, Sun, X,} from "lucide-react";
+import {useTheme} from "next-themes";
+
 import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useIsDesktop} from "@shared/ui/useIsDesktop";
 import {useCityContext} from "@entities/city";
+import {YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
 import {CitySelectModal} from "@features/city-select";
+import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
 
-import {MapNavControls} from "./ui/MapNavControls";
-import {NavThemeToggle} from "./ui/NavThemeToggle";
-import {BusListDrawer} from "./ui/BusListDrawer";
-import {DayModeToggle} from "./ui/DayModeToggle";
-import {NavTabButtons} from "./ui/NavTabButtons";
-import {ScheduleNavControls} from "./ui/ScheduleNavControls";
+import {BusListDrawer} from "./BusListDrawer";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
-import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
+import type {DayMode} from "@shared/types/navigation";
 
-export type {DayMode, NavTab, TimetableSubTab};
+export type {DayMode};
+
+const emptySubscribe = () => () => {
+};
 
 export interface BottomNavProps {
-    activeTab?: NavTab;
-    onTabChange?: (tab: NavTab) => void;
-    showScheduleTab?: boolean;
-
-    // Timetable options (Wonju only)
-    scheduleSubTab?: TimetableSubTab;
-    onScheduleSubTabChange?: (subTab: TimetableSubTab) => void;
+    // Timetable day mode options (Wonju only)
     dayMode?: DayMode;
     onDayModeChange?: (mode: DayMode) => void;
     isTodayWeekendOrHoliday?: boolean;
 
-    // Dynamic Map options
+    // Real-time Map & Route options
     allRoutes?: string[];
     selectedRoute?: string;
     onSelectRoute?: (route: string) => void;
+    selectedVariantId?: string | null;
+    onSelectVariant?: (variantId: string | null) => void;
     runningBuses?: BusItem[];
     getDirection?: (nodeId: string | null | undefined, nodeOrd: number, routeId?: string | null) => DirectionCode;
     onBusClick?: (lat: number, lng: number) => void;
@@ -49,26 +47,22 @@ export interface BottomNavProps {
 }
 
 /**
- * Unified Floating Pill Navigation Bar.
- * Redesigned around Map-Centric Philosophy:
+ * Unified Floating Pill Navigation Bar (Map-Centric Architecture):
  * - Brand Identity (Click to recenter current city)
- * - Region Selector Button (Manual confirmation when panning to new region + 138-city modal)
- * - Timetable Button (Wonju Only)
+ * - Region Selector Button (139-city modal + detected city indicator)
  * - Route Selector & Running Bus List Drawer Toggle
- * - Theme Switcher
+ * - Wonju Timetable DayMode Switcher (Auto / Weekday / Holiday)
+ * - Theme Switcher (Light / Dark)
  */
 function BottomNavComponent({
-                                activeTab = "map",
-                                onTabChange,
-                                showScheduleTab = true,
-                                scheduleSubTab = "yonsei",
-                                onScheduleSubTabChange,
                                 dayMode = "AUTO",
                                 onDayModeChange,
                                 isTodayWeekendOrHoliday = false,
                                 allRoutes = [],
                                 selectedRoute = "",
                                 onSelectRoute,
+                                selectedVariantId = null,
+                                onSelectVariant,
                                 runningBuses = [],
                                 getDirection,
                                 onBusClick,
@@ -86,22 +80,37 @@ function BottomNavComponent({
         dismissDetectedCity,
     } = useCityContext();
 
-    // SSR-safe desktop breakpoint subscription and mobile drawer state
+    // Theme state
+    const {setTheme, resolvedTheme} = useTheme();
+    const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
+    const isDark = mounted
+        ? resolvedTheme === "dark" ||
+        (typeof document !== "undefined" && document.documentElement.classList.contains("dark"))
+        : false;
+
+    const handleToggleTheme = useCallback(() => {
+        const nextTheme = isDark ? "light" : "dark";
+        setTheme(nextTheme);
+        if (typeof document !== "undefined") {
+            if (nextTheme === "dark") {
+                document.documentElement.classList.add("dark");
+                document.documentElement.style.colorScheme = "dark";
+            } else {
+                document.documentElement.classList.remove("dark");
+                document.documentElement.style.colorScheme = "light";
+            }
+        }
+    }, [isDark, setTheme]);
+
+    // SSR-safe desktop breakpoint subscription and modal/drawer states
     const isDesktop = useIsDesktop();
     const [isMobileBusListOpen, setIsMobileBusListOpen] = useState(false);
-    const isBusListOpen = activeTab === "map" && (isDesktop || isMobileBusListOpen);
+    const isBusListOpen = isDesktop || isMobileBusListOpen;
     const [isCityModalOpen, setIsCityModalOpen] = useState(false);
-
-    const handleTabChange = useCallback((tab: NavTab) => {
-        if (tab !== "map") {
-            setIsMobileBusListOpen(false);
-        }
-        onTabChange?.(tab);
-    }, [onTabChange]);
+    const [isRoutePickerOpen, setIsRoutePickerOpen] = useState(false);
 
     const handleToggleBusList = useCallback(() => {
         if (isDesktop) {
-            // Cannot toggle on desktop - always open
             return;
         }
         const next = !isMobileBusListOpen;
@@ -115,12 +124,8 @@ function BottomNavComponent({
     // Listen to close/open bus list custom events
     useEffect(() => {
         if (typeof window === "undefined") return;
-        const handleCloseBusList = () => {
-            setIsMobileBusListOpen(false);
-        };
-        const handleOpenBusList = () => {
-            setIsMobileBusListOpen(true);
-        };
+        const handleCloseBusList = () => setIsMobileBusListOpen(false);
+        const handleOpenBusList = () => setIsMobileBusListOpen(true);
         window.addEventListener("wbus:close-bus-list", handleCloseBusList);
         window.addEventListener("wbus:open-bus-list", handleOpenBusList);
         return () => {
@@ -129,17 +134,20 @@ function BottomNavComponent({
         };
     }, []);
 
-    const handleDefaultBusClick = useCallback((lat: number, lng: number) => {
-        if (onBusClick) {
-            onBusClick(lat, lng);
-        } else if (map) {
-            map.flyTo({
-                center: [lng, lat],
-                zoom: map.getZoom(),
-                duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
-            });
-        }
-    }, [onBusClick, map]);
+    const handleDefaultBusClick = useCallback(
+        (lat: number, lng: number) => {
+            if (onBusClick) {
+                onBusClick(lat, lng);
+            } else if (map) {
+                map.flyTo({
+                    center: [lng, lat],
+                    zoom: map.getZoom(),
+                    duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
+                });
+            }
+        },
+        [onBusClick, map]
+    );
 
     const handleRecenterCity = useCallback(() => {
         if (!map) return;
@@ -150,20 +158,51 @@ function BottomNavComponent({
         });
     }, [map, currentCity]);
 
+    const handleCycleDayMode = useCallback(() => {
+        if (!onDayModeChange) return;
+        if (dayMode === "AUTO") {
+            onDayModeChange("WEEKDAY");
+        } else if (dayMode === "WEEKDAY") {
+            onDayModeChange("VACATION");
+        } else {
+            onDayModeChange("AUTO");
+        }
+    }, [dayMode, onDayModeChange]);
+
     const isConnecting = !hasFetched || connectionStatus === "connecting";
     const shortCityName = currentCity.name.split("/")[0];
     const hasPendingRegion = Boolean(detectedCity && detectedCity.code !== currentCity.code);
     const isWonju = currentCity.code === "32020";
+    const isYonseiSelected = isWonju && YONSEI_ROUTE_SET.has(selectedRoute);
+
+    const dayModeTitle =
+        dayMode === "AUTO"
+            ? `시간표 기준: 자동 (오늘: ${isTodayWeekendOrHoliday ? "휴일" : "평일"}) · 클릭 시 평일로 변경`
+            : dayMode === "WEEKDAY"
+                ? "시간표 기준: 평일 · 클릭 시 휴일로 변경"
+                : "시간표 기준: 휴일 · 클릭 시 자동으로 변경";
 
     return (
         <>
-            {/* Region Selection Modal (138 Nationwide Cities) */}
+            {/* 1. Region Selection Modal (139 Nationwide Cities) */}
             <CitySelectModal
                 isOpen={isCityModalOpen}
                 onClose={() => setIsCityModalOpen(false)}
             />
 
-            {/* Click-outside Backdrop when BusListDrawer is open (Mobile only) */}
+            {/* 2. Route Selection Modal (Search, Categories, Grid) */}
+            <RouteSelectModal
+                isOpen={isRoutePickerOpen}
+                onClose={() => setIsRoutePickerOpen(false)}
+                allRoutes={allRoutes}
+                selectedRoute={selectedRoute}
+                onSelectRoute={(route) => {
+                    onSelectRoute?.(route);
+                    setIsRoutePickerOpen(false);
+                }}
+            />
+
+            {/* 3. Click-outside Backdrop when BusListDrawer is open (Mobile only) */}
             {!isDesktop && isMobileBusListOpen && (
                 <div
                     className="fixed inset-0 z-40 bg-black/15 dark:bg-black/35 backdrop-blur-[1px] transition-opacity animate-fadeIn md:hidden"
@@ -172,7 +211,7 @@ function BottomNavComponent({
                 />
             )}
 
-            {/* Expandable Floating Running Bus List & Split Stop Details Drawer */}
+            {/* 4. Expandable Floating Running Bus List & Stop Details Drawer */}
             {isBusListOpen && (
                 <BusListDrawer
                     isOpen={isBusListOpen}
@@ -187,26 +226,30 @@ function BottomNavComponent({
                     lastUpdated={lastUpdated}
                     onReconnect={onReconnect}
                     onRouteChange={onSelectRoute}
-                    dayMode={dayMode}
-                    isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                    selectedVariantId={selectedVariantId}
+                    onSelectVariant={onSelectVariant}
                 />
             )}
 
             <div
                 className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1.125rem)] left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-2.5 max-w-[95vw] ${className}`}
             >
-                {/* 1. Floating Region Switch Prompt Pill (Appears when panning map to another city without auto-switching) */}
+                {/* Floating Region Switch Prompt Pill */}
                 {hasPendingRegion && detectedCity && !isBusListOpen && (
                     <div
                         className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-white/92 dark:bg-[#111111]/92 backdrop-blur-2xl text-slate-900 dark:text-white rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.16)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.6)] border border-black/10 dark:border-white/15 animate-fadeIn select-none"
                         role="status"
                         aria-live="polite"
                     >
-                        <Compass className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-spin shrink-0"
-                                 style={{animationDuration: "6s"}}/>
+                        <Compass
+                            className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-spin shrink-0"
+                            style={{animationDuration: "6s"}}
+                        />
                         <span className="text-xs font-extrabold tracking-tight whitespace-nowrap">
-                            지도 위치: <strong
-                            className="text-blue-600 dark:text-blue-400 font-black">{detectedCity.name}</strong>
+                            지도 위치:{" "}
+                            <strong className="text-blue-600 dark:text-blue-400 font-black">
+                                {detectedCity.name}
+                            </strong>
                         </span>
                         <button
                             type="button"
@@ -226,12 +269,12 @@ function BottomNavComponent({
                     </div>
                 )}
 
-                {/* 3. Unified Bottom Floating Pill Navigation Bar */}
+                {/* Unified Bottom Floating Pill Navigation Bar */}
                 <nav
                     aria-label={UI_TEXT.ACCESSIBILITY.MAIN_NAV}
                     className="flex items-center justify-start gap-1 sm:gap-1.5 p-1.5 px-2 sm:px-3 bg-white/92 dark:bg-[#111111]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 w-[calc(100vw-1rem)] sm:w-auto max-w-full overflow-x-auto custom-scrollbar-hidden"
                 >
-                    {/* Brand Logo & Title (Click to Recenter on Current City; hidden on compact mobile to prevent horizontal overflow) */}
+                    {/* Brand Logo & Title (Recenter on Current City) */}
                     <button
                         type="button"
                         onClick={handleRecenterCity}
@@ -248,10 +291,9 @@ function BottomNavComponent({
                         </span>
                     </button>
 
-                    {/* Divider */}
                     <div className="hidden sm:block w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
 
-                    {/* Region Selector Button (Replaces old Tab Buttons; shows indicator dot when map panned to new city) */}
+                    {/* Region Selector Button */}
                     <button
                         type="button"
                         onClick={() => setIsCityModalOpen(true)}
@@ -285,51 +327,71 @@ function BottomNavComponent({
                         )}
                     </button>
 
-                    {/* Main Navigation Tabs (Wonju only: Timetable & Real-time Map switch) */}
-                    {isWonju && showScheduleTab && onTabChange && (
+                    {/* Route Selector Button */}
+                    <button
+                        type="button"
+                        onClick={() => setIsRoutePickerOpen(true)}
+                        className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${
+                            isYonseiSelected
+                                ? "bg-[#003876]/15 dark:bg-[#003876]/35 hover:bg-[#003876]/25 border border-[#003876]/40 text-[#003876] dark:text-blue-300"
+                                : "bg-blue-600/10 dark:bg-blue-500/15 hover:bg-blue-600/20 dark:hover:bg-blue-500/25 border border-blue-500/30 text-blue-700 dark:text-blue-300"
+                        }`}
+                        title="노선 선택 (검색/목록)"
+                    >
+                        <Bus className="w-3.5 h-3.5"/>
+                        <span className="whitespace-nowrap font-black">{selectedRoute || "노선"}번</span>
+                        <ChevronDown className="w-3.5 h-3.5 opacity-70"/>
+                    </button>
+
+                    {/* Running Bus List Toggle Button (Mobile Only: on desktop the left panel is always displayed) */}
+                    <button
+                        type="button"
+                        onClick={handleToggleBusList}
+                        className={`flex md:hidden items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs font-extrabold transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn ${
+                            isBusListOpen
+                                ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+                                : isConnecting
+                                    ? "bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30"
+                                    : runningBuses.length > 0
+                                        ? "bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30"
+                                        : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200 border border-black/5 dark:border-white/10"
+                        }`}
+                        title={UI_TEXT.NAV.BUS_LIST_LABEL}
+                    >
+                        <Bus className="w-3.5 h-3.5 shrink-0"/>
+                        <span className="whitespace-nowrap">
+                            {isConnecting
+                                ? "연결 중..."
+                                : runningBuses.length > 0
+                                    ? UI_TEXT.BOTTOM_NAV.RUNNING_LIST_BTN(runningBuses.length)
+                                    : "운행 종료 (0)"}
+                        </span>
+                    </button>
+
+                    {/* 3-state Day Mode Toggle (Wonju only: Auto / Weekday / Holiday for pin timetables) */}
+                    {isWonju && onDayModeChange && (
                         <>
                             <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
-                            <NavTabButtons
-                                activeTab={activeTab}
-                                onTabChange={handleTabChange}
-                            />
-                        </>
-                    )}
-
-                    {/* Dynamic Controls for Schedule View (Yonsei vs All, DayMode toggles) */}
-                    {isWonju && activeTab === "schedule" && (
-                        <ScheduleNavControls
-                            scheduleSubTab={scheduleSubTab}
-                            onScheduleSubTabChange={onScheduleSubTabChange}
-                            dayMode={dayMode}
-                            onDayModeChange={onDayModeChange}
-                            isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-                        />
-                    )}
-
-                    {/* Real-time Map Route & Running Bus Controls (Map Tab or Non-Wonju cities) */}
-                    {activeTab === "map" && (
-                        <MapNavControls
-                            allRoutes={allRoutes}
-                            selectedRoute={selectedRoute}
-                            onSelectRoute={onSelectRoute}
-                            runningBuses={runningBuses}
-                            connectionStatus={connectionStatus}
-                            hasFetched={hasFetched}
-                            isBusListOpen={isBusListOpen}
-                            onToggleBusList={handleToggleBusList}
-                        />
-                    )}
-
-                    {/* 3-state Day Mode Toggle (Wonju Map view only, since Schedule view has inline toggle group) */}
-                    {isWonju && activeTab === "map" && onDayModeChange && (
-                        <>
-                            <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
-                            <DayModeToggle
-                                dayMode={dayMode}
-                                onDayModeChange={onDayModeChange}
-                                isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-                            />
+                            <button
+                                type="button"
+                                onClick={handleCycleDayMode}
+                                title={dayModeTitle}
+                                aria-label={dayModeTitle}
+                                className="p-2 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0"
+                            >
+                                {dayMode === "AUTO" && (
+                                    <Sparkles
+                                        className="w-4 h-4 text-blue-600 dark:text-blue-400 stroke-[2.2] animate-fadeIn"/>
+                                )}
+                                {dayMode === "WEEKDAY" && (
+                                    <Calendar
+                                        className="w-4 h-4 text-amber-600 dark:text-amber-400 stroke-[2.2] animate-fadeIn"/>
+                                )}
+                                {dayMode === "VACATION" && (
+                                    <Coffee
+                                        className="w-4 h-4 text-emerald-600 dark:text-emerald-400 stroke-[2.2] animate-fadeIn"/>
+                                )}
+                            </button>
                         </>
                     )}
 
@@ -337,7 +399,18 @@ function BottomNavComponent({
                     <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
 
                     {/* Theme Toggle Button */}
-                    <NavThemeToggle/>
+                    <button
+                        type="button"
+                        onClick={handleToggleTheme}
+                        aria-label={UI_TEXT.NAV.THEME_TOGGLE_LABEL}
+                        className="p-2 rounded-full text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0"
+                    >
+                        {isDark ? (
+                            <Moon className="w-4 h-4 text-blue-400 stroke-[2.2] animate-fadeIn"/>
+                        ) : (
+                            <Sun className="w-4 h-4 text-amber-500 stroke-[2.2] animate-fadeIn"/>
+                        )}
+                    </button>
                 </nav>
             </div>
         </>

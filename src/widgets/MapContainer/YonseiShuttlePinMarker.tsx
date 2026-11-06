@@ -281,14 +281,14 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
                 </div>
             </Marker>
 
-            {/* 2. Interactive Shuttle Timetable Sheet (Floating Window above all map controls and bottom nav) */}
+            {/* 2. Interactive Centered Floating Shuttle Timetable Modal */}
             {typeof document !== "undefined" && isPopupOpen &&
                 createPortal(
                     <div
-                        className="fixed inset-0 z-[120] flex flex-col justify-end sm:justify-center items-center pb-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] sm:pb-0 pointer-events-none px-3">
-                        {/* Click-outside backdrop */}
+                        className="fixed inset-0 z-[120] flex items-center justify-center p-4 pointer-events-none">
+                        {/* Click-outside shaded backdrop */}
                         <div
-                            className="fixed inset-0 bg-black/30 dark:bg-black/60 backdrop-blur-[2px] transition-opacity animate-fadeIn pointer-events-auto"
+                            className="fixed inset-0 bg-black/45 dark:bg-black/65 backdrop-blur-[2px] transition-opacity animate-fadeIn pointer-events-auto"
                             onClick={() => setIsPopupOpen(false)}
                             aria-hidden="true"
                         />
@@ -296,14 +296,9 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
                             role="dialog"
                             aria-modal="true"
                             aria-label="연세대학교 미래캠퍼스 무료 셔틀버스 시간표"
-                            className="relative z-10 pointer-events-auto flex flex-col w-[94vw] sm:w-[420px] max-w-md max-h-[70vh] sm:max-h-[640px] bg-white dark:bg-[#11131a] sm:bg-white/98 sm:dark:bg-[#11131a]/98 backdrop-blur-3xl overflow-hidden rounded-[28px] shadow-[0_16px_48px_rgba(0,0,0,0.35)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] border border-black/10 dark:border-white/12 animate-fadeIn select-none"
+                            className="relative z-10 pointer-events-auto flex flex-col w-full sm:w-[440px] max-w-md max-h-[82dvh] sm:max-h-[660px] bg-white dark:bg-[#11131a] sm:bg-white/98 sm:dark:bg-[#11131a]/98 backdrop-blur-3xl overflow-hidden rounded-[28px] shadow-[0_24px_64px_rgba(0,0,0,0.38)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.72)] border border-black/10 dark:border-white/12 animate-scaleUp select-none"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            {/* Mobile Drawer Grab Indicator */}
-                            <div className="pt-2 pb-0.5 flex justify-center sm:hidden shrink-0">
-                                <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700"/>
-                            </div>
-
                             {/* Popup Header */}
                             <div className="p-4 border-b border-black/5 dark:border-white/5 space-y-3 shrink-0">
                                 <div className="flex items-start justify-between gap-2">
