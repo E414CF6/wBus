@@ -347,12 +347,14 @@ body {
 
 /* Utilities & Animations */
 @layer utilities {
-    .scrollbar-hide {
+    .scrollbar-hide,
+    .custom-scrollbar-hidden {
         -ms-overflow-style: none;
         scrollbar-width: none;
     }
 
-    .scrollbar-hide::-webkit-scrollbar {
+    .scrollbar-hide::-webkit-scrollbar,
+    .custom-scrollbar-hidden::-webkit-scrollbar {
         display: none;
     }
 
