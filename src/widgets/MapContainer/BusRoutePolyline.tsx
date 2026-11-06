@@ -37,6 +37,7 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
         return rawRouteIds;
     }, [rawRouteIds, effectiveCityCode]);
     const lastBoundsKeyRef = useRef<string | null>(null);
+    const needsVisibleFitRef = useRef(false);
 
     // Filter to render all available route IDs for this route number
     const validRouteIds = useMemo(() => {
@@ -90,9 +91,17 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
     const fitToRouteBounds = useMemo(() => {
         return () => {
             if (!map || !bbox) return;
+            const container = map.getContainer();
+            if (container.clientWidth === 0 || container.clientHeight === 0) {
+                needsVisibleFitRef.current = true;
+                return;
+            }
+
             const [[s, w], [n, e]] = bbox;
             const isCompact = typeof window !== "undefined" && window.innerWidth < 640;
             const isDesktop = isDesktopViewport();
+            needsVisibleFitRef.current = false;
+            map.resize();
             map.fitBounds(
                 [
                     [w, s],
@@ -119,6 +128,27 @@ export default function BusRoutePolyline({routeName, selectedDirection = "all", 
         lastBoundsKeyRef.current = key;
 
         fitToRouteBounds();
+    }, [map, bbox, fitToRouteBounds]);
+
+    // The map is mounted while the timetable view is hidden. Re-fit after its
+    // container gets a real size instead of fitting against a zero-sized canvas.
+    useEffect(() => {
+        if (!map || !bbox || typeof ResizeObserver === "undefined") return;
+
+        const container = map.getContainer();
+        const observer = new ResizeObserver(() => {
+            if (
+                needsVisibleFitRef.current &&
+                container.clientWidth > 0 &&
+                container.clientHeight > 0
+            ) {
+                map.resize();
+                fitToRouteBounds();
+            }
+        });
+        observer.observe(container);
+
+        return () => observer.disconnect();
     }, [map, bbox, fitToRouteBounds]);
 
     useEffect(() => {

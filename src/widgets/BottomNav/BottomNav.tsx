@@ -104,15 +104,13 @@ function BottomNavComponent({
             // Cannot toggle on desktop - always open
             return;
         }
-        setIsMobileBusListOpen((prev) => {
-            const next = !prev;
-            if (next && typeof window !== "undefined") {
-                window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
-                window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
-            }
-            return next;
-        });
-    }, [isDesktop]);
+        const next = !isMobileBusListOpen;
+        setIsMobileBusListOpen(next);
+        if (next && typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
+            window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
+        }
+    }, [isDesktop, isMobileBusListOpen]);
 
     // Listen to close/open bus list custom events
     useEffect(() => {
@@ -231,7 +229,7 @@ function BottomNavComponent({
                 {/* 3. Unified Bottom Floating Pill Navigation Bar */}
                 <nav
                     aria-label={UI_TEXT.ACCESSIBILITY.MAIN_NAV}
-                    className="flex items-center gap-1 sm:gap-1.5 p-1.5 px-2 sm:px-3 bg-white/92 dark:bg-[#111111]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full overflow-x-auto custom-scrollbar-hidden"
+                    className="flex items-center justify-start gap-1 sm:gap-1.5 p-1.5 px-2 sm:px-3 bg-white/92 dark:bg-[#111111]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 w-[calc(100vw-1rem)] sm:w-auto max-w-full overflow-x-auto custom-scrollbar-hidden"
                 >
                     {/* Brand Logo & Title (Click to Recenter on Current City; hidden on compact mobile to prevent horizontal overflow) */}
                     <button
