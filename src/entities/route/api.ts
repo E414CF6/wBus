@@ -17,36 +17,23 @@ const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 // Caches (L1 Memory + L2 Persistent localStorage)
 const cityRoutesCache = new CacheManager<CityRoutesPayload>({
-    maxSize: 30,
-    ttlMs: ONE_DAY_MS,
-    storagePrefix: STORAGE_KEYS.CITY_ROUTES_PREFIX,
-    maxStorageEntries: 15,
+    maxSize: 30, ttlMs: ONE_DAY_MS, storagePrefix: STORAGE_KEYS.CITY_ROUTES_PREFIX, maxStorageEntries: 15,
 });
 
 const routeInfoCache = new CacheManager<RouteInfo | null>({
-    maxSize: 300,
-    ttlMs: ONE_DAY_MS,
+    maxSize: 300, ttlMs: ONE_DAY_MS,
 });
 
 const polylineCache = new CacheManager<GeoPolyline | null>({
-    maxSize: 150,
-    ttlMs: ONE_DAY_MS,
-    storagePrefix: STORAGE_KEYS.POLYLINE_PREFIX,
-    maxStorageEntries: 35,
+    maxSize: 150, ttlMs: ONE_DAY_MS, storagePrefix: STORAGE_KEYS.POLYLINE_PREFIX, maxStorageEntries: 35,
 });
 
 const variationsCache = new CacheManager<RouteVariation[]>({
-    maxSize: 100,
-    ttlMs: ONE_DAY_MS,
+    maxSize: 100, ttlMs: ONE_DAY_MS,
 });
 
 function resolveCityCode(cityCode?: string): string {
-    return (
-        cityCode ||
-        (typeof window !== "undefined"
-            ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020"
-            : "32020")
-    );
+    return (cityCode || (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020" : "32020"));
 }
 
 /**
@@ -57,9 +44,7 @@ export function getCachedCityRoutesSync(cityCode?: string): CityRoutesPayload | 
     const cached = cityRoutesCache.get(cCode);
     if (cached) {
         if (cCode === "32020") {
-            const hasContamination =
-                cached.routes?.some((r) => String(r.routeid).startsWith("WJB258")) ||
-                Object.values(cached.route_numbers || {}).some((ids) => ids.some((id) => id.startsWith("WJB258")));
+            const hasContamination = cached.routes?.some((r) => String(r.routeid).startsWith("WJB258")) || Object.values(cached.route_numbers || {}).some((ids) => ids.some((id) => id.startsWith("WJB258")));
             if (hasContamination) {
                 cached.routes = (cached.routes || []).filter((r) => !String(r.routeid).startsWith("WJB258"));
                 const cleanedMap: Record<string, string[]> = {};
@@ -72,9 +57,7 @@ export function getCachedCityRoutesSync(cityCode?: string): CityRoutesPayload | 
                 cityRoutesCache.set(cCode, cached);
             }
         } else if (cCode === "32320") {
-            const hasContamination =
-                cached.routes?.some((r) => !String(r.routeid).startsWith("WJB258")) ||
-                Object.values(cached.route_numbers || {}).some((ids) => ids.some((id) => !id.startsWith("WJB258")));
+            const hasContamination = cached.routes?.some((r) => !String(r.routeid).startsWith("WJB258")) || Object.values(cached.route_numbers || {}).some((ids) => ids.some((id) => !id.startsWith("WJB258")));
             if (hasContamination) {
                 cached.routes = (cached.routes || []).filter((r) => String(r.routeid).startsWith("WJB258"));
                 const cleanedMap: Record<string, string[]> = {};
@@ -104,8 +87,7 @@ export function getCachedRouteInfoSync(routeName: string, cityCode?: string): Ro
     const cityData = getCachedCityRoutesSync(cCode);
     let idsFromCity = cityData?.route_numbers?.[routeName];
     if (idsFromCity && idsFromCity.length > 0) {
-        if (cCode === "32020") idsFromCity = idsFromCity.filter((id) => !id.startsWith("WJB258"));
-        else if (cCode === "32320") idsFromCity = idsFromCity.filter((id) => id.startsWith("WJB258"));
+        if (cCode === "32020") idsFromCity = idsFromCity.filter((id) => !id.startsWith("WJB258")); else if (cCode === "32320") idsFromCity = idsFromCity.filter((id) => id.startsWith("WJB258"));
         if (idsFromCity.length > 0) {
             return {routeName, vehicleRouteIds: idsFromCity};
         }
@@ -114,8 +96,7 @@ export function getCachedRouteInfoSync(routeName: string, cityCode?: string): Ro
     const cached = routeInfoCache.get(`${cCode}:${routeName}`);
     if (cached?.vehicleRouteIds) {
         let vIds = cached.vehicleRouteIds;
-        if (cCode === "32020") vIds = vIds.filter((id) => !id.startsWith("WJB258"));
-        else if (cCode === "32320") vIds = vIds.filter((id) => id.startsWith("WJB258"));
+        if (cCode === "32020") vIds = vIds.filter((id) => !id.startsWith("WJB258")); else if (cCode === "32320") vIds = vIds.filter((id) => id.startsWith("WJB258"));
         if (vIds.length > 0) {
             return {routeName, vehicleRouteIds: vIds};
         }
@@ -168,10 +149,7 @@ export async function fetchCityRoutesData(cityCode?: string): Promise<CityRoutes
         registerDynamicRouteMeta(cCode, routes);
     }
     const payload: CityRoutesPayload = {
-        cityCode: cCode,
-        route_numbers: routeNumbers,
-        routes,
-        count: json.count ?? routes.length,
+        cityCode: cCode, route_numbers: routeNumbers, routes, count: json.count ?? routes.length,
     };
     if (routes.length > 0) {
         cityRoutesCache.set(cCode, payload);
@@ -211,8 +189,7 @@ export async function getRouteInfo(routeName: string, cityCode?: string): Promis
     const cachedCity = getCachedCityRoutesSync(cCode);
     let cachedIds = cachedCity?.route_numbers?.[routeName];
     if (cachedIds && cachedIds.length > 0) {
-        if (cCode === "32020") cachedIds = cachedIds.filter((id) => !id.startsWith("WJB258"));
-        else if (cCode === "32320") cachedIds = cachedIds.filter((id) => id.startsWith("WJB258"));
+        if (cCode === "32020") cachedIds = cachedIds.filter((id) => !id.startsWith("WJB258")); else if (cCode === "32320") cachedIds = cachedIds.filter((id) => id.startsWith("WJB258"));
         if (cachedIds.length > 0) {
             return {routeName, vehicleRouteIds: cachedIds};
         }
@@ -223,15 +200,11 @@ export async function getRouteInfo(routeName: string, cityCode?: string): Promis
     const result = await routeInfoCache.getOrFetch(cacheKey, async () => {
         try {
             const json = await fetchAPI<{
-                route_numbers?: Record<string, string[]>;
-                routes?: Array<{ routeid: string }>
-            }>(
-                `/api/routes?cityCode=${cCode}&routeNo=${encodeURIComponent(routeName)}`
-            );
+                route_numbers?: Record<string, string[]>; routes?: Array<{ routeid: string }>
+            }>(`/api/routes?cityCode=${cCode}&routeNo=${encodeURIComponent(routeName)}`);
             let ids = json?.route_numbers?.[routeName] || (json?.routes?.[0]?.routeid ? [json.routes[0].routeid] : null);
             if (ids && ids.length > 0) {
-                if (cCode === "32020") ids = ids.filter((id) => !id.startsWith("WJB258"));
-                else if (cCode === "32320") ids = ids.filter((id) => id.startsWith("WJB258"));
+                if (cCode === "32020") ids = ids.filter((id) => !id.startsWith("WJB258")); else if (cCode === "32320") ids = ids.filter((id) => id.startsWith("WJB258"));
                 if (ids.length > 0) {
                     return {routeName, vehicleRouteIds: ids};
                 }
@@ -267,20 +240,17 @@ export async function getRouteVariations(routeName: string, cityCode?: string): 
         const routeInfo = await getRouteInfo(routeName, cCode);
         if (!routeInfo || !routeInfo.vehicleRouteIds?.length) return [];
         let vIds = routeInfo.vehicleRouteIds;
-        if (cCode === "32020") vIds = vIds.filter((id) => !id.startsWith("WJB258"));
-        else if (cCode === "32320") vIds = vIds.filter((id) => id.startsWith("WJB258"));
+        if (cCode === "32020") vIds = vIds.filter((id) => !id.startsWith("WJB258")); else if (cCode === "32320") vIds = vIds.filter((id) => id.startsWith("WJB258"));
         if (vIds.length === 0) return [];
 
-        const polylines = await Promise.all(
-            vIds.map(async (id) => {
-                const poly = await getPolyline(id, cCode);
-                return {id, poly};
-            })
-        );
+        const polylines = await Promise.all(vIds.map(async (id) => {
+            const poly = await getPolyline(id, cCode);
+            return {id, poly};
+        }));
 
-        const validPolylines = polylines.filter(
-            (p): p is { id: string; poly: GeoPolyline } => Boolean(p.poly && p.poly.stops?.length)
-        );
+        const validPolylines = polylines.filter((p): p is {
+            id: string; poly: GeoPolyline
+        } => Boolean(p.poly && p.poly.stops?.length));
         if (validPolylines.length === 0) return [];
 
         const baseStops = validPolylines[0].poly.stops;
@@ -336,10 +306,9 @@ export async function getRouteVariations(routeName: string, cityCode?: string): 
             const meta = getRouteMeta(routeName, cCode);
             const turnaroundName = cleanTurning || (cleanLast && cleanLast !== cleanOrigin ? cleanLast : "") || meta.destination || "회차지";
             const originName = cleanOrigin || meta.origin || "기점";
-            const baseRouteLabel = `${originName} - ${turnaroundName}`;
 
-            // Generate user-friendly variation label (formatted as "{기점} - {회차지}" for the base variation)
-            let label = baseRouteLabel;
+            let label = `${originName} ↔ ${turnaroundName}`;
+
             if (index > 0) {
                 const first = poly.stops[0]?.name ?? "";
                 const last = poly.stops[poly.stops.length - 1]?.name ?? "";
@@ -370,11 +339,7 @@ export async function getRouteVariations(routeName: string, cityCode?: string): 
             const finalLabel = count > 1 ? `${label} (${count})` : label;
 
             return {
-                routeId: id,
-                label: finalLabel,
-                stops,
-                stopCount: stops.length,
-                turningStop,
+                routeId: id, label: finalLabel, stops, stopCount: stops.length, turningStop,
             };
         });
     });
