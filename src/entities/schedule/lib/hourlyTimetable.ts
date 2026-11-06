@@ -108,6 +108,7 @@ export function computeDualHourlyTimetable({
                                                now,
                                                footnoteMap,
                                                currentHourStr,
+                                               departureLocation = "dest",
                                            }: {
     route: BusRoute | null;
     weekdayRoute: BusRoute | null;
@@ -116,6 +117,7 @@ export function computeDualHourlyTimetable({
     now: Date;
     footnoteMap: Map<string, number>;
     currentHourStr: string;
+    departureLocation?: "origin" | "dest";
 }): HourlyRow[] {
     if (!route || !weekdayRoute || !vacationRoute) return [];
 
@@ -123,16 +125,20 @@ export function computeDualHourlyTimetable({
 
     const getValidEntries = (r: BusRoute) => {
         return (r.timetable || [])
+            .map((item) => ({
+                ...item,
+                targetTime: departureLocation === "origin" ? item.originDepTime : item.destDepTime,
+            }))
             .filter(
                 (item) =>
-                    item.destDepTime &&
-                    item.destDepTime !== "-" &&
-                    item.destDepTime !== ""
+                    item.targetTime &&
+                    item.targetTime !== "-" &&
+                    item.targetTime !== ""
             )
             .slice()
             .sort((a, b) => {
-                const aMins = parseTimeToMinutes(a.destDepTime) ?? 9999;
-                const bMins = parseTimeToMinutes(b.destDepTime) ?? 9999;
+                const aMins = parseTimeToMinutes(a.targetTime) ?? 9999;
+                const bMins = parseTimeToMinutes(b.targetTime) ?? 9999;
                 if (aMins !== bMins) return aMins - bMins;
                 return a.seq - b.seq;
             });
@@ -146,7 +152,7 @@ export function computeDualHourlyTimetable({
         const q = tableSearch.toLowerCase();
         return entries.filter(
             (item) =>
-                item.destDepTime.includes(q) ||
+                item.targetTime.includes(q) ||
                 (item.type && item.type.toLowerCase().includes(q)) ||
                 (item.notes && item.notes.toLowerCase().includes(q))
         );
@@ -165,7 +171,7 @@ export function computeDualHourlyTimetable({
 
     const addEntriesToMap = (entries: typeof wEntries, isVacation: boolean) => {
         for (const item of entries) {
-            const parts = item.destDepTime.trim().split(":");
+            const parts = item.targetTime.trim().split(":");
             if (parts.length < 2) continue;
 
             const hourStr = parts[0].padStart(2, "0");
@@ -181,7 +187,7 @@ export function computeDualHourlyTimetable({
 
             const minuteItem: MinuteItem = {
                 seq: item.seq,
-                destDepTime: item.destDepTime,
+                destDepTime: item.targetTime,
                 minuteStr,
                 type: item.type || "",
                 notes: noteTrimmed,
@@ -204,7 +210,7 @@ export function computeDualHourlyTimetable({
     let nextWeekdaySeq = -1;
     let minWeekdayMins = Infinity;
     for (const item of wEntries) {
-        const mins = parseTimeToMinutes(item.destDepTime);
+        const mins = parseTimeToMinutes(item.targetTime);
         if (mins !== null && mins >= currentMins && mins < minWeekdayMins) {
             minWeekdayMins = mins;
             nextWeekdaySeq = item.seq;
@@ -214,7 +220,7 @@ export function computeDualHourlyTimetable({
     let nextVacationSeq = -1;
     let minVacationMins = Infinity;
     for (const item of vEntries) {
-        const mins = parseTimeToMinutes(item.destDepTime);
+        const mins = parseTimeToMinutes(item.targetTime);
         if (mins !== null && mins >= currentMins && mins < minVacationMins) {
             minVacationMins = mins;
             nextVacationSeq = item.seq;

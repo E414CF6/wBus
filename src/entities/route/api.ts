@@ -1,6 +1,6 @@
 import type {GeoPolyline, RouteDetail, RouteInfo, RouteVariation, RouteVariationStop} from "@entities/route/types";
 import type {RawCityRoute} from "@entities/bus/api/publicApi";
-import {registerDynamicRouteMeta} from "@entities/route/routeMetadata";
+import {getRouteMeta, registerDynamicRouteMeta} from "@entities/route/routeMetadata";
 
 import {fetchAPI, HttpError} from "@shared/api/fetchAPI";
 import {CacheManager} from "@shared/cache/CacheManager";
@@ -315,8 +315,31 @@ export async function getRouteVariations(routeName: string, cityCode?: string): 
                 turningStop = stops.find((s) => s.nodenm.includes("회차")) ?? null;
             }
 
-            // Generate user-friendly variation label
-            let label = "기본 노선";
+            // Derive origin and turnaround names for "{기점} - {회차지}" formatting
+            const rawOrigin = stops[0]?.nodenm ?? poly.stops[0]?.name ?? "";
+            const cleanOrigin = rawOrigin
+                .replace(/\s*(차고지|종점|승강장)$/, "")
+                .trim() || rawOrigin;
+
+            const rawTurning = turningStop?.nodenm ?? "";
+            const cleanTurning = rawTurning
+                .replace(/\s*(차고지|종점|승강장)$/, "")
+                .replace(/\s*\((시내방면|교내|종점|회차)\)$/, "")
+                .trim() || rawTurning;
+
+            const lastStop = stops[stops.length - 1]?.nodenm ?? poly.stops[poly.stops.length - 1]?.name ?? "";
+            const cleanLast = lastStop
+                .replace(/\s*(차고지|종점|승강장)$/, "")
+                .replace(/\s*\((시내방면|교내|종점|회차)\)$/, "")
+                .trim() || lastStop;
+
+            const meta = getRouteMeta(routeName, cCode);
+            const turnaroundName = cleanTurning || (cleanLast && cleanLast !== cleanOrigin ? cleanLast : "") || meta.destination || "회차지";
+            const originName = cleanOrigin || meta.origin || "기점";
+            const baseRouteLabel = `${originName} - ${turnaroundName}`;
+
+            // Generate user-friendly variation label (formatted as "{기점} - {회차지}" for the base variation)
+            let label = baseRouteLabel;
             if (index > 0) {
                 const first = poly.stops[0]?.name ?? "";
                 const last = poly.stops[poly.stops.length - 1]?.name ?? "";
@@ -366,4 +389,6 @@ export function invalidateRouteCaches(): void {
     polylineCache.clear();
     variationsCache.clear();
 }
+
+export const clearRouteCaches = invalidateRouteCaches;
 

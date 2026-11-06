@@ -17,6 +17,7 @@ export interface DualHourlyTimetableBlockProps {
     now: Date;
     locationLabel?: string;
     compact?: boolean;
+    departureLocation?: "origin" | "dest";
 }
 
 function MinuteBadge({
@@ -83,6 +84,7 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
                                                                                       now,
                                                                                       locationLabel = "종점 출발 시각",
                                                                                       compact = false,
+                                                                                      departureLocation = "dest",
                                                                                   }) => {
     const [tableSearch, setTableSearch] = useState("");
     const [selectedFootnote, setSelectedFootnote] = useState<number | null>(null);
@@ -112,8 +114,9 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
                 now,
                 footnoteMap,
                 currentHourStr,
+                departureLocation,
             }),
-        [route, weekdayRoute, vacationRoute, tableSearch, now, footnoteMap, currentHourStr]
+        [route, weekdayRoute, vacationRoute, tableSearch, now, footnoteMap, currentHourStr, departureLocation]
     );
 
     const isSingleSchedule =

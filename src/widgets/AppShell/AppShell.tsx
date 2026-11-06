@@ -68,16 +68,24 @@ export function AppShell() {
 
     // Centered floating RouteScheduleModal state (Wonju only)
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+    const [scheduleLocation, setScheduleLocation] = useState<"origin" | "dest">("dest");
 
     // Handler for opening the centered Route Timetable Modal from Map Pins or Route Header
     const handleOpenSchedule = useCallback(
-        (targetRouteOrDoc?: string) => {
+        (targetRouteOrDoc?: string, location?: "origin" | "dest") => {
             if (!isWonju) return;
             if (targetRouteOrDoc) {
                 const cleanRoute = targetRouteOrDoc.replace(/^route:/, "");
-                if (cleanRoute && cleanRoute !== activeRoute) {
-                    handleRouteChange(cleanRoute, currentCity.code);
+                const [targetRoute, routeLoc] = cleanRoute.split(":");
+                if (targetRoute && targetRoute !== activeRoute) {
+                    handleRouteChange(targetRoute, currentCity.code);
                 }
+                const parsedLoc = location || (routeLoc === "origin" || routeLoc === "dest" ? routeLoc : undefined);
+                if (parsedLoc) {
+                    setScheduleLocation(parsedLoc);
+                }
+            } else if (location) {
+                setScheduleLocation(location);
             }
             setIsScheduleModalOpen(true);
         },
@@ -147,6 +155,7 @@ export function AppShell() {
                     onClose={() => setIsScheduleModalOpen(false)}
                     dayMode={dayMode}
                     isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                    initialLocation={scheduleLocation}
                 />
             )}
 

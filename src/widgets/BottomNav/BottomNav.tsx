@@ -269,35 +269,37 @@ function BottomNavComponent({
                     </div>
                 )}
 
-                {/* Unified Bottom Floating Pill Navigation Bar */}
+                {/* Unified Bottom Floating Pill Navigation Bar (Identical on Desktop and Mobile) */}
                 <nav
                     aria-label={UI_TEXT.ACCESSIBILITY.MAIN_NAV}
-                    className="flex items-center justify-start gap-1 sm:gap-1.5 p-1.5 px-2 sm:px-3 bg-white/92 dark:bg-[#111111]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 w-[calc(100vw-1rem)] sm:w-auto max-w-full overflow-x-auto custom-scrollbar-hidden"
+                    className="flex items-center gap-1.5 p-1.5 px-3 bg-white/92 dark:bg-[#111111]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 select-none shrink-0"
                 >
                     {/* Brand Logo & Title (Recenter on Current City) */}
                     <button
                         type="button"
                         onClick={handleRecenterCity}
                         title={`${currentCity.name} 중심으로 지도 이동`}
-                        className="hidden sm:flex items-center gap-2 pl-1 pr-1.5 py-0.5 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all select-none shrink-0 cursor-pointer active:scale-95"
+                        className="flex items-center gap-2 pl-1 pr-1.5 py-0.5 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all select-none shrink-0 cursor-pointer active:scale-95"
                     >
                         <div
-                            className="flex items-center justify-center w-7.5 h-7.5 rounded-full bg-black dark:bg-white text-white dark:text-black shrink-0 shadow-xs">
+                            className="flex items-center justify-center w-7.5 h-7.5 rounded-full bg-black dark:bg-white text-white dark:text-black shrink-0 shadow-xs"
+                        >
                             <MapIcon className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden="true"/>
                         </div>
                         <span
-                            className="hidden md:inline-block text-sm sm:text-base font-black text-black dark:text-white tracking-tight shrink-0">
+                            className="text-sm sm:text-base font-black text-black dark:text-white tracking-tight shrink-0"
+                        >
                             {APP_CONFIG.NAME}
                         </span>
                     </button>
 
-                    <div className="hidden sm:block w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+                    <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
 
                     {/* Region Selector Button */}
                     <button
                         type="button"
                         onClick={() => setIsCityModalOpen(true)}
-                        className={`relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
+                        className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
                             hasPendingRegion
                                 ? "bg-blue-600 text-white shadow-md shadow-blue-600/25 ring-2 ring-blue-400/40"
                                 : "bg-black text-white dark:bg-white dark:text-black shadow-sm shadow-black/10 dark:shadow-white/10 hover:opacity-90"
@@ -331,7 +333,7 @@ function BottomNavComponent({
                     <button
                         type="button"
                         onClick={() => setIsRoutePickerOpen(true)}
-                        className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${
                             isYonseiSelected
                                 ? "bg-[#003876]/15 dark:bg-[#003876]/35 hover:bg-[#003876]/25 border border-[#003876]/40 text-[#003876] dark:text-blue-300"
                                 : "bg-blue-600/10 dark:bg-blue-500/15 hover:bg-blue-600/20 dark:hover:bg-blue-500/25 border border-blue-500/30 text-blue-700 dark:text-blue-300"
@@ -343,7 +345,7 @@ function BottomNavComponent({
                         <ChevronDown className="w-3.5 h-3.5 opacity-70"/>
                     </button>
 
-                    {/* Running Bus List Toggle Button (Mobile Only: on desktop the left panel is always displayed) */}
+                    {/* Running Bus List & Stop Timeline Toggle Button (Mobile Only: on desktop the left panel is always displayed) */}
                     <button
                         type="button"
                         onClick={handleToggleBusList}
@@ -357,6 +359,7 @@ function BottomNavComponent({
                                         : "bg-black/[0.04] dark:bg-white/[0.08] hover:bg-black/[0.08] dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200 border border-black/5 dark:border-white/10"
                         }`}
                         title={UI_TEXT.NAV.BUS_LIST_LABEL}
+                        aria-label="노선 정류장 목록 및 운행 버스 보기"
                     >
                         <Bus className="w-3.5 h-3.5 shrink-0"/>
                         <span className="whitespace-nowrap">

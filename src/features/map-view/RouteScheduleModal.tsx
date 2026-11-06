@@ -22,6 +22,7 @@ export interface RouteScheduleModalProps {
     dayMode?: DayMode;
     isTodayWeekendOrHoliday?: boolean;
     embedded?: boolean;
+    initialLocation?: "origin" | "dest";
 }
 
 type TimetableViewMode = "summary" | "full";
@@ -33,6 +34,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                                           dayMode = "AUTO",
                                                                           isTodayWeekendOrHoliday,
                                                                           embedded = false,
+                                                                          initialLocation,
                                                                       }) => {
     // Live clock for next departure countdown
     const [now, setNow] = useState<Date>(() => new Date());
@@ -128,7 +130,15 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
 
     // View states
     const [viewMode, setViewMode] = useState<TimetableViewMode>("summary");
-    const [hourlyLocation, setHourlyLocation] = useState<"dest" | "origin">("dest");
+    const [hourlyLocation, setHourlyLocation] = useState<"dest" | "origin">(initialLocation ?? "dest");
+
+    // Sync hourlyLocation with initialLocation when modal opens or initialLocation changes
+    useEffect(() => {
+        if (isOpen && initialLocation) {
+            setHourlyLocation(initialLocation);
+        }
+    }, [isOpen, initialLocation]);
+
     const [tableSearch, setTableSearch] = useState("");
     const tableRef = useRef<HTMLDivElement>(null);
 
@@ -147,7 +157,9 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
 
     const scrollToNextRow = useCallback(() => {
         if (!tableRef.current) return;
-        const target = tableRef.current.querySelector<HTMLElement>('[data-next-departure="true"]');
+        const target =
+            tableRef.current.querySelector<HTMLElement>('[data-target-next="true"]') ||
+            tableRef.current.querySelector<HTMLElement>('[data-next-departure="true"]');
         if (target && typeof target.scrollIntoView === "function") {
             target.scrollIntoView({behavior: "smooth", block: "center"});
         }
@@ -173,12 +185,25 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                         <div className={`grid ${embedded ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"} gap-2.5`}>
                             {/* Origin Next Departure */}
                             <div
-                                className="p-3 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 flex items-center justify-between gap-2">
+                                onClick={() => setHourlyLocation("origin")}
+                                className={`p-3 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 border transition-all duration-200 cursor-pointer ${
+                                    hourlyLocation === "origin"
+                                        ? "border-blue-500 dark:border-blue-500 ring-2 ring-blue-500/50 shadow-md"
+                                        : "border-blue-200 dark:border-blue-900/60 opacity-80 hover:opacity-100"
+                                } flex items-center justify-between gap-2`}
+                                title={`기점(${originName}) 기준으로 시간표 보기`}
+                            >
                                 <div className="min-w-0 flex-1">
                                     <div
                                         className="flex items-center gap-1.5 text-[11px] font-bold text-blue-700 dark:text-blue-300">
                                         <Clock className="w-3 h-3 shrink-0"/>
                                         <span className="truncate">기점 ({originName}) 출발</span>
+                                        {hourlyLocation === "origin" && (
+                                            <span
+                                                className="px-1.5 py-0.2 rounded-md bg-blue-600 text-[9px] font-black text-white shrink-0">
+                                                기준 정류장
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="flex items-baseline gap-1.5 mt-0.5 flex-wrap">
                                         {nextDepInfo.nextOrigin ? (
@@ -218,12 +243,25 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
 
                             {/* Turnaround Next Departure */}
                             <div
-                                className="p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/60 flex items-center justify-between gap-2">
+                                onClick={() => setHourlyLocation("dest")}
+                                className={`p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border transition-all duration-200 cursor-pointer ${
+                                    hourlyLocation === "dest"
+                                        ? "border-amber-500 dark:border-amber-500 ring-2 ring-amber-500/50 shadow-md"
+                                        : "border-amber-200 dark:border-amber-900/60 opacity-80 hover:opacity-100"
+                                } flex items-center justify-between gap-2`}
+                                title={`회차지(${destName}) 기준으로 시간표 보기`}
+                            >
                                 <div className="min-w-0 flex-1">
                                     <div
                                         className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
                                         <RotateCw className="w-3 h-3 shrink-0"/>
                                         <span className="truncate">회차지 ({destName}) 출발</span>
+                                        {hourlyLocation === "dest" && (
+                                            <span
+                                                className="px-1.5 py-0.2 rounded-md bg-amber-600 text-[9px] font-black text-white shrink-0">
+                                                기준 정류장
+                                            </span>
+                                        )}
                                     </div>
                                     <div className="flex items-baseline gap-1.5 mt-0.5 flex-wrap">
                                         {nextDepInfo.nextDest ? (
@@ -358,6 +396,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                         : `${originName} 기점`
                                 }
                                 compact={embedded}
+                                departureLocation={hourlyLocation}
                             />
                         </div>
                     )}
@@ -419,11 +458,39 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                         <th className="py-2 px-2.5 w-12 text-center border-r border-black/5 dark:border-white/10">
                                             회차
                                         </th>
-                                        <th className="py-2 px-3 border-r border-black/5 dark:border-white/10">
-                                            기점 출발 ({originName})
+                                        <th
+                                            className={`py-2 px-3 border-r border-black/5 dark:border-white/10 transition-colors ${
+                                                hourlyLocation === "origin"
+                                                    ? "bg-blue-100/70 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100"
+                                                    : ""
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                <span>기점 출발 ({originName})</span>
+                                                {hourlyLocation === "origin" && (
+                                                    <span
+                                                        className="px-1 py-0.2 rounded text-[9px] font-black bg-blue-600 text-white shrink-0">
+                                                        기준
+                                                    </span>
+                                                )}
+                                            </div>
                                         </th>
-                                        <th className="py-2 px-3 border-r border-black/5 dark:border-white/10">
-                                            회차지 출발 ({destName})
+                                        <th
+                                            className={`py-2 px-3 border-r border-black/5 dark:border-white/10 transition-colors ${
+                                                hourlyLocation === "dest"
+                                                    ? "bg-amber-100/70 dark:bg-amber-900/40 text-amber-900 dark:text-amber-100"
+                                                    : ""
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-1">
+                                                <span>회차지 출발 ({destName})</span>
+                                                {hourlyLocation === "dest" && (
+                                                    <span
+                                                        className="px-1 py-0.2 rounded text-[9px] font-black bg-amber-600 text-white shrink-0">
+                                                        기준
+                                                    </span>
+                                                )}
+                                            </div>
                                         </th>
                                         <th className="py-2 px-3">비고</th>
                                     </tr>
@@ -444,6 +511,8 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                 nextDepInfo?.nextOrigin?.seq === row.seq;
                                             const isNextDest =
                                                 nextDepInfo?.nextDest?.seq === row.seq;
+                                            const isTargetNext =
+                                                hourlyLocation === "origin" ? isNextOrigin : isNextDest;
 
                                             return (
                                                 <tr
@@ -453,6 +522,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                             ? "true"
                                                             : undefined
                                                     }
+                                                    data-target-next={isTargetNext ? "true" : undefined}
                                                     className={
                                                         isNextOrigin || isNextDest
                                                             ? "bg-blue-50/80 dark:bg-blue-950/40 font-bold"
@@ -462,7 +532,13 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                     <td className="py-2 px-2.5 text-center font-mono text-slate-400 border-r border-black/5 dark:border-white/10">
                                                         {row.seq}
                                                     </td>
-                                                    <td className="py-2 px-3 font-mono border-r border-black/5 dark:border-white/10">
+                                                    <td
+                                                        className={`py-2 px-3 font-mono border-r border-black/5 dark:border-white/10 ${
+                                                            hourlyLocation === "origin"
+                                                                ? "bg-blue-50/40 dark:bg-blue-950/20"
+                                                                : ""
+                                                        }`}
+                                                    >
                                                             <span
                                                                 className={
                                                                     isNextOrigin
@@ -473,7 +549,13 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                                 {row.originDepTime}
                                                             </span>
                                                     </td>
-                                                    <td className="py-2 px-3 font-mono border-r border-black/5 dark:border-white/10">
+                                                    <td
+                                                        className={`py-2 px-3 font-mono border-r border-black/5 dark:border-white/10 ${
+                                                            hourlyLocation === "dest"
+                                                                ? "bg-amber-50/40 dark:bg-amber-950/20"
+                                                                : ""
+                                                        }`}
+                                                    >
                                                             <span
                                                                 className={
                                                                     isNextDest

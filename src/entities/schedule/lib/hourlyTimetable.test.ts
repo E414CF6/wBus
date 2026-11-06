@@ -145,6 +145,41 @@ describe("computeDualHourlyTimetable", () => {
             }
         }
     });
+
+    it("computes timetable and next bus based on origin departure times when departureLocation is 'origin'", () => {
+        const morning = new Date("2026-10-06T06:30:00");
+        const rows = computeDualHourlyTimetable({
+            route: mockWeekdayRoute,
+            weekdayRoute: mockWeekdayRoute,
+            vacationRoute: mockVacationRoute,
+            tableSearch: "",
+            now: morning,
+            footnoteMap: emptyFootnoteMap,
+            currentHourStr: "06",
+            departureLocation: "origin",
+        });
+
+        // In mockWeekdayRoute, origin times are:
+        // seq 4: 06:25 (already passed 06:30)
+        // seq 5: 06:45 (next upcoming bus at 06:30)
+        // seq 6: 07:15
+        // seq 7: 08:15
+        // (seq 1 "통학1번", seq 2 "통학11번", seq 3 "-" are filtered out)
+        const hour6 = rows.find((r) => r.hourStr === "06");
+        expect(hour6).toBeDefined();
+
+        const w6_25 = hour6?.weekdayMinutes.find((m) => m.destDepTime === "6:25");
+        expect(w6_25).toBeDefined();
+        expect(w6_25?.isNextBus).toBe(false);
+
+        const w6_45 = hour6?.weekdayMinutes.find((m) => m.destDepTime === "6:45");
+        expect(w6_45).toBeDefined();
+        expect(w6_45?.isNextBus).toBe(true);
+
+        const hour7 = rows.find((r) => r.hourStr === "07");
+        expect(hour7).toBeDefined();
+        expect(hour7?.weekdayMinutes.map((m) => m.destDepTime)).toEqual(["7:15"]);
+    });
 });
 
 describe("DayMode toggle resolution", () => {

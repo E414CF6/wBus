@@ -15,7 +15,7 @@ import type {DayMode} from "@shared/types/navigation";
 interface RouteLayerProps {
     routeName: string;
     onRouteChange?: (routeName: string) => void;
-    onOpenScheduleModal?: (docOrSubTab?: string) => void;
+    onOpenScheduleModal?: (docOrSubTab?: string, initialLocation?: "origin" | "dest") => void;
     enabled?: boolean;
     selectedDirection?: "all" | "up" | "down";
     selectedVariantId?: string | null;
@@ -32,7 +32,7 @@ interface RouteLayerProps {
 // ----------------------------------------------------------------------
 
 // Routes passing through Yonsei University Mirae Campus that show the shuttle bus pin
-const YONSEI_SHUTTLE_ROUTES = new Set(["30", "34", "34-1"]);
+export const YONSEI_SHUTTLE_ROUTES = new Set(["30", "34", "34-1"]);
 
 /**
  * Renders all map layers for a single route (markers, stops, and polyline).

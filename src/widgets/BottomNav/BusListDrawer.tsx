@@ -1,7 +1,19 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Bus, Loader2, LocateFixed, MapPin, MapPinned, RefreshCw, RotateCw, Search, Star, X} from "lucide-react";
+import {
+    ArrowLeftRight,
+    Bus,
+    Loader2,
+    LocateFixed,
+    MapPin,
+    MapPinned,
+    RefreshCw,
+    RotateCw,
+    Search,
+    Star,
+    X
+} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {isDesktopViewport, useIsDesktop} from "@shared/ui/useIsDesktop";
 import {type RouteVariationStop, useRouteVariations} from "@entities/route";
@@ -13,6 +25,7 @@ import {useBusStop, useFavoriteStops} from "@entities/station/hooks";
 import {BusStopPopup} from "@entities/station";
 import type {BusItem} from "@entities/bus/types";
 import type {BusStop} from "@entities/station/types";
+import {findPairedOppositeStop} from "@widgets/MapContainer/busStopMarkerUtils";
 
 interface BusListDrawerProps {
     isOpen: boolean;
@@ -417,6 +430,11 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const isSelectedStopRouteStop = useMemo(() => {
         if (!selectedStop) return false;
         return currentStops.some((s) => s.nodeid === selectedStop.nodeid);
+    }, [selectedStop, currentStops]);
+
+    const pairedOppositeStop = useMemo(() => {
+        if (!selectedStop || !currentStops.length) return null;
+        return findPairedOppositeStop(selectedStop, currentStops);
     }, [selectedStop, currentStops]);
 
     // Station selection: on desktop, expands context-aware split pane; on mobile, flies to stop and opens mobile popup
@@ -911,6 +929,47 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                 </button>
                             </div>
                         </div>
+
+                        {/* Paired Opposite Stop Switcher */}
+                        {pairedOppositeStop && (
+                            <div
+                                className="px-4 py-1.5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setSelectedStop(pairedOppositeStop);
+                                        setSelectedStopId(pairedOppositeStop.nodeid);
+                                        window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: pairedOppositeStop}));
+                                        if (map && pairedOppositeStop.gpslong && pairedOppositeStop.gpslati) {
+                                            map.flyTo({
+                                                center: [pairedOppositeStop.gpslong, pairedOppositeStop.gpslati],
+                                                duration: 400,
+                                            });
+                                        }
+                                    }}
+                                    className="w-full inline-flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold border border-black/5 dark:border-white/10 transition-all cursor-pointer active:scale-98 group/opp"
+                                    title={`건너편 정류장(${pairedOppositeStop.nodenm}) 실시간 정보 보기`}
+                                >
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <ArrowLeftRight
+                                            className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0"/>
+                                        <span className="text-slate-500 dark:text-slate-400 font-medium">건너편</span>
+                                        <span className="font-extrabold truncate text-slate-900 dark:text-white">
+                                            {pairedOppositeStop.nodenm}
+                                        </span>
+                                        {pairedOppositeStop.nodeno && (
+                                            <span className="font-mono text-[10px] text-slate-400 shrink-0">
+                                                ({pairedOppositeStop.nodeno})
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span
+                                        className="text-[10px] font-black text-blue-600 dark:text-blue-400 shrink-0 group-hover/opp:translate-x-0.5 transition-transform">
+                                        전환 →
+                                    </span>
+                                </button>
+                            </div>
+                        )}
 
                         {/* Live Arrivals Body */}
                         <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1">

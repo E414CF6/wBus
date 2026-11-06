@@ -21,6 +21,7 @@ import {getNextDeparture, useSchedule} from "@entities/schedule";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
 import {useRouteVariations} from "@entities/route/hooks";
+import {MarqueeText} from "@shared/ui/MarqueeText";
 import {RouteSelectModal} from "./RouteSelectModal";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
@@ -44,7 +45,7 @@ interface MapRouteHeaderProps {
     selectedDirection?: "all" | "up" | "down";
     /** @deprecated Use selectedVariantId / onSelectVariant instead */
     onSelectDirection?: (dir: "all" | "up" | "down") => void;
-    onOpenScheduleModal?: (docOrSubTab?: string) => void;
+    onOpenScheduleModal?: (docOrSubTab?: string, initialLocation?: "origin" | "dest") => void;
 }
 
 const DEFAULT_QUICK_ROUTES = ["30", "34", "34-1"];
@@ -352,12 +353,16 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             />
 
             <header
-                className="absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 -translate-x-1/2 z-30 pointer-events-auto flex flex-col items-center gap-1.5 max-w-[95vw] w-full sm:w-auto animate-fadeIn select-none"
+                className={`absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 -translate-x-1/2 ${
+                    isVariantMenuOpen ? "z-[80]" : "z-50"
+                } pointer-events-auto flex flex-col items-center gap-1.5 max-w-[95vw] w-full sm:w-auto animate-fadeIn select-none`}
             >
                 {/* 1. Main Route Overview Glass Card */}
                 <div
                     ref={variantMenuRef}
-                    className="relative flex items-center gap-1 sm:gap-1.5 p-1.5 pr-2.5 sm:p-2 sm:pr-3 bg-white/92 dark:bg-[#111218]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full"
+                    className={`relative ${
+                        isVariantMenuOpen ? "z-30" : "z-20"
+                    } flex items-center gap-1 sm:gap-1.5 p-1.5 pr-2.5 sm:p-2 sm:pr-3 bg-white/92 dark:bg-[#111218]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full`}
                 >
                     {/* Route Selector Button (Far Left, Triggers Modal) */}
                     <button
@@ -375,7 +380,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                     </button>
 
                     {/* Route Variation Toggle & Focus Switcher (Replaces old UP/DOWN Direction Switcher) */}
-                    <div className="relative flex items-center">
+                    <div className={`relative flex items-center ${isVariantMenuOpen ? "z-50" : ""}`}>
                         <button
                             type="button"
                             suppressHydrationWarning
@@ -387,22 +392,25 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                             }`}
                             title={
                                 hasMultipleVariants
-                                    ? `클릭하여 노선 종류(경유지) 전환 (현재: ${selectedVariantId === "all" ? "전체 경로" : (activeVariant?.label ?? "기본 노선")})`
+                                    ? `클릭하여 노선 종류(경유지) 전환 (현재: ${selectedVariantId === "all" ? "전체 경로" : (activeVariant?.label ?? `${meta.origin} - ${meta.destination}`)})`
                                     : `${meta.origin} ↔ ${meta.destination}`
                             }
                             aria-label="노선 종류 및 경유지 전환"
                         >
-                            <div className="flex flex-col min-w-0">
-                                <div className="flex items-center gap-1.5 truncate">
-                                    {/* Main destination / origin path or variant title */}
-                                    <span
-                                        suppressHydrationWarning
-                                        className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate"
-                                    >
-                                        {selectedVariantId === "all"
-                                            ? `${meta.origin} ↔ ${meta.destination}`
-                                            : (activeVariant?.label ?? `${meta.origin} ↔ ${meta.destination}`)}
-                                    </span>
+                            <div className="flex flex-col min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5 min-w-0 max-w-full">
+                                    {/* Main destination / origin path or variant title (Slowly marquees when overflowing on mobile instead of cutting with ellipsis) */}
+                                    <MarqueeText
+                                        text={
+                                            selectedVariantId === "all"
+                                                ? `${meta.origin} ↔ ${meta.destination}`
+                                                : (activeVariant?.label ?? `${meta.origin} ↔ ${meta.destination}`)
+                                        }
+                                        className="text-xs sm:text-sm font-black text-slate-900 dark:text-white"
+                                        containerClassName="min-w-0 flex-1"
+                                        durationSeconds={14}
+                                        fadeEdges
+                                    />
 
                                     {/* Variant Pill Badge */}
                                     {hasMultipleVariants && (
@@ -467,7 +475,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                         {/* Floating Variant Selector Dropdown Popover */}
                         {hasMultipleVariants && isVariantMenuOpen && (
                             <div
-                                className="absolute top-full left-0 mt-2 z-50 w-64 sm:w-72 bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-2xl rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.25)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.7)] border border-black/10 dark:border-white/15 p-1.5 space-y-1 animate-scaleUp select-none">
+                                className="absolute top-full left-0 mt-2 z-50 w-64 sm:w-72 max-w-[calc(100vw-2rem)] bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-2xl rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.25)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.7)] border border-black/10 dark:border-white/15 p-1.5 space-y-1 animate-scaleUp select-none">
                                 <div
                                     className="px-3 py-1.5 border-b border-black/5 dark:border-white/5 flex items-center justify-between text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
                                     <span>노선 종류 및 경유지 선택</span>
@@ -584,7 +592,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                 {/* Degraded External API Status Notice Banner */}
                 {isDegraded && (
                     <div
-                        className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/95 dark:bg-amber-600/95 text-white rounded-full text-[11px] font-extrabold shadow-sm backdrop-blur-md animate-fadeIn"
+                        className="relative z-0 flex items-center gap-1.5 px-3 py-1 bg-amber-500/95 dark:bg-amber-600/95 text-white rounded-full text-[11px] font-extrabold shadow-sm backdrop-blur-md animate-fadeIn"
                         role="status"
                         aria-live="polite"
                     >
@@ -595,7 +603,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
 
                 {/* 2. Fast Route & Favorite Stop Switcher Bar (Horizontal Swipeable Quick Pills) */}
                 <div
-                    className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden max-w-full px-1 py-0.5">
+                    className="relative z-0 flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden max-w-full px-1 py-0.5">
                     {quickRoutes.map((route) => {
                         const isCurrent = route === selectedRoute;
                         const isYonsei = isWonju && DEFAULT_QUICK_ROUTES.includes(route);

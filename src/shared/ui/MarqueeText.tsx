@@ -1,51 +1,113 @@
-import {useEffect, useRef, useState} from "react";
+"use client";
 
-type PopupMarqueeProps = {
-    text: string; maxWidthClass?: string;
-};
+import React, {useEffect, useRef, useState} from "react";
+
+export interface MarqueeTextProps {
+    text: string;
+    className?: string;
+    containerClassName?: string;
+    durationSeconds?: number;
+    fadeEdges?: boolean;
+}
 
 /**
- * A text component that scrolls horizontally (marquee) only when the content
- * overflows its container. Includes:
- * - Pause-scroll-pause cycle for readability (not a constant infinite scroll)
- * - `prefers-reduced-motion` support (falls back to truncation)
- * - ResizeObserver-based overflow detection
+ * A text component that continuously and smoothly scrolls (marquee) horizontally
+ * only when the content overflows its container. If it fits, it remains static.
  */
-const PopupMarquee = ({text, maxWidthClass = "max-w-full"}: PopupMarqueeProps) => {
+export const MarqueeText: React.FC<MarqueeTextProps> = ({
+                                                            text,
+                                                            className = "",
+                                                            containerClassName = "",
+                                                            durationSeconds = 14,
+                                                            fadeEdges = true,
+                                                        }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const textRef = useRef<HTMLSpanElement>(null);
-    const [shouldMarquee, setShouldMarquee] = useState(false);
+    const measureRef = useRef<HTMLSpanElement>(null);
+    const [isOverflowing, setIsOverflowing] = useState(false);
 
     useEffect(() => {
         const container = containerRef.current;
-        const textEl = textRef.current;
-        if (!container || !textEl || typeof ResizeObserver === "undefined") return;
+        const measure = measureRef.current;
+        if (!container || !measure) return;
 
         const checkOverflow = () => {
-            setShouldMarquee(textEl.scrollWidth > container.clientWidth);
+            const hasOverflow = measure.scrollWidth > container.clientWidth + 1;
+            setIsOverflowing(hasOverflow);
         };
 
         checkOverflow();
 
-        const observer = new ResizeObserver(checkOverflow);
-        observer.observe(container);
-
-        return () => observer.disconnect();
+        if (typeof ResizeObserver !== "undefined") {
+            const observer = new ResizeObserver(checkOverflow);
+            observer.observe(container);
+            return () => observer.disconnect();
+        }
     }, [text]);
 
-    return (<div
-        ref={containerRef}
-        className={`marquee-container overflow-hidden inline-block align-middle ${maxWidthClass}`}
-    >
-        {shouldMarquee ? (<div className="marquee-scroll flex-nowrap">
-                    <span ref={textRef} className="pr-2 font-medium whitespace-nowrap shrink-0">
+    return (
+        <div
+            ref={containerRef}
+            className={`overflow-hidden relative min-w-0 ${
+                isOverflowing && fadeEdges
+                    ? "[mask-image:linear-gradient(to_right,transparent,black_8px,black_calc(100%-8px),transparent)] [-webkit-mask-image:linear-gradient(to_right,transparent,black_8px,black_calc(100%-8px),transparent)]"
+                    : ""
+            } ${containerClassName}`}
+        >
+            {/* Measuring element (hidden when overflowing so it does not affect layout) */}
+            <span
+                ref={measureRef}
+                className={`whitespace-nowrap ${
+                    isOverflowing
+                        ? "absolute opacity-0 pointer-events-none -z-50"
+                        : "inline-block"
+                } ${className}`}
+                aria-hidden={isOverflowing}
+            >
+                {text}
+            </span>
+
+            {/* Seamless marquee track when overflowing */}
+            {isOverflowing && (
+                <div
+                    className="flex items-center whitespace-nowrap will-change-transform hover:[animation-play-state:paused]"
+                    style={{
+                        width: "max-content",
+                        animation: `marquee ${durationSeconds}s linear infinite`,
+                    }}
+                >
+                    <span className={`pr-8 shrink-0 ${className}`}>
                         {text}
                     </span>
-            <span className="pr-2 font-medium whitespace-nowrap shrink-0" aria-hidden="true">
+                    <span className={`pr-8 shrink-0 ${className}`} aria-hidden="true">
                         {text}
                     </span>
-        </div>) : (<span ref={textRef} className="whitespace-nowrap block font-medium">{text}</span>)}
-    </div>);
+                </div>
+            )}
+        </div>
+    );
+};
+
+export type PopupMarqueeProps = {
+    text: string;
+    maxWidthClass?: string;
+};
+
+/**
+ * Backward compatibility component for BusMarker popup labels
+ */
+export const PopupMarquee: React.FC<PopupMarqueeProps> = ({
+                                                              text,
+                                                              maxWidthClass = "max-w-full",
+                                                          }) => {
+    return (
+        <MarqueeText
+            text={text}
+            containerClassName={maxWidthClass}
+            durationSeconds={6}
+            fadeEdges={false}
+            className="font-medium"
+        />
+    );
 };
 
 export default PopupMarquee;

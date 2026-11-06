@@ -15,10 +15,11 @@ import {getRouteMeta} from "@entities/route/routeMetadata";
 import {buildSegmentedRouteGeoJson, SHARED_BLUE_COLOR} from "@entities/route/polylineService";
 import type {Feature} from "geojson";
 
-import {BusFront, Info, MapPin, MapPinned, Star, X} from "lucide-react";
+import {ArrowLeftRight, BusFront, Info, MapPin, MapPinned, Star, X} from "lucide-react";
 import {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import {Marker} from "react-map-gl/maplibre";
+import {computeOptimalLabelPlacements, type LabelPlacement,} from "./busStopMarkerUtils";
 
 type BusStopMarkerItemProps = {
     stop: BusStop;
@@ -29,6 +30,10 @@ type BusStopMarkerItemProps = {
     onToggleFavorite?: (stop: BusStop) => void;
     onRouteChange?: (routeName: string) => void;
     showLabel?: boolean;
+    labelPlacement?: LabelPlacement;
+    disambiguationLabel?: string | null;
+    pairedOppositeStop?: BusStop | null;
+    onSelectOppositeStop?: (stop: BusStop) => void;
     color?: string;
     initialOpen?: boolean;
     onClearInitialOpen?: () => void;
@@ -104,6 +109,10 @@ const BusStopMarkerItem = memo(({
                                     onToggleFavorite,
                                     onRouteChange,
                                     showLabel = true,
+                                    labelPlacement = "right",
+                                    disambiguationLabel = null,
+                                    pairedOppositeStop = null,
+                                    onSelectOppositeStop,
                                     color = "#059669",
                                     initialOpen = false,
                                     onClearInitialOpen,
@@ -111,6 +120,7 @@ const BusStopMarkerItem = memo(({
     const isDesktop = useIsDesktop();
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [closedStopId, setClosedStopId] = useState<string | null>(null);
+    const [isHovered, setIsHovered] = useState(false);
 
     const isUserClosed = closedStopId === stop.nodeid;
     // Derived open state for mobile bottom sheet without cascading renders
@@ -181,6 +191,21 @@ const BusStopMarkerItem = memo(({
     );
 
     const borderColor = isFavorite ? "#f59e0b" : isRouteStop ? color : "#64748b";
+    const effectiveZIndex = isHovered || isOpen ? 50 : isFavorite ? 22 : isRouteStop ? 18 : 12;
+
+    const placementClasses = useMemo(() => {
+        switch (labelPlacement) {
+            case "left":
+                return "right-full mr-1.5 top-1/2 -translate-y-1/2";
+            case "top":
+                return "bottom-full mb-1.5 left-1/2 -translate-x-1/2";
+            case "bottom":
+                return "top-full mt-1.5 left-1/2 -translate-x-1/2";
+            case "right":
+            default:
+                return "left-full ml-1.5 top-1/2 -translate-y-1/2";
+        }
+    }, [labelPlacement]);
 
     return (
         <>
@@ -189,15 +214,19 @@ const BusStopMarkerItem = memo(({
                 latitude={stop.gpslati}
                 onClick={handleMarkerClick}
                 anchor="center"
-                style={{pointerEvents: "auto", cursor: "pointer", zIndex: isFavorite ? 22 : isRouteStop ? 18 : 12}}
+                style={{pointerEvents: "auto", cursor: "pointer", zIndex: effectiveZIndex}}
             >
                 {/* Bus Stop Marker Icon & Name Label */}
-                <div className="relative flex items-center select-none group">
+                <div
+                    className="relative flex items-center justify-center select-none group"
+                    onMouseEnter={() => setIsHovered(true)}
+                    onMouseLeave={() => setIsHovered(false)}
+                >
                     {/* Bus Stop Marker Icon with Dynamic Polyline Color or Favorite Highlight */}
                     {isRouteStop ? (
                         <div
                             title={`${stop.nodenm} (현재 노선 정류장)`}
-                            className={`relative flex items-center justify-center w-6 h-6 rounded-lg text-white shadow-md border-2 group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 ${
+                            className={`relative flex items-center justify-center w-6 h-6 rounded-lg text-white shadow-md border-2 group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 before:absolute before:-inset-2 before:content-[''] ${
                                 isFavorite ? "border-amber-300 ring-2 ring-amber-400/60" : "border-white/90"
                             }`}
                             style={{backgroundColor: color}}
@@ -213,23 +242,23 @@ const BusStopMarkerItem = memo(({
                     ) : isFavorite ? (
                         <div
                             title={`${stop.nodenm} (즐겨찾는 정류장)`}
-                            className="relative flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500 text-white shadow-md border-2 border-white group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 ring-2 ring-amber-400/50"
+                            className="relative flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500 text-white shadow-md border-2 border-white group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 ring-2 ring-amber-400/50 before:absolute before:-inset-2 before:content-['']"
                         >
                             <Star className="w-3.5 h-3.5 fill-current"/>
                         </div>
                     ) : (
                         <div
                             title={`${stop.nodenm} (주변 정류장 · 클릭하여 도착정보 확인)`}
-                            className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-700/90 dark:bg-slate-600/90 text-white shadow-sm border-[1.5px] border-white/85 opacity-85 group-hover:opacity-100 group-hover:scale-125 group-hover:bg-blue-600 transition-all cursor-pointer shrink-0 z-10"
+                            className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-700/90 dark:bg-slate-600/90 text-white shadow-sm border-[1.5px] border-white/85 opacity-85 group-hover:opacity-100 group-hover:scale-125 group-hover:bg-blue-600 transition-all cursor-pointer shrink-0 z-10 before:absolute before:-inset-2 before:content-['']"
                         >
                             <div className="w-1.5 h-1.5 rounded-full bg-white"/>
                         </div>
                     )}
 
                     {/* Bus Stop Name Label Badge with Matching Border & Accent Color */}
-                    {(showLabel || isFavorite) && (
+                    {(showLabel || isFavorite || isHovered || isOpen) && (
                         <div
-                            className="absolute left-full ml-1.5 px-2 py-0.5 rounded-md bg-[#18191c]/95 shadow-md backdrop-blur-md pointer-events-auto whitespace-nowrap group-hover:scale-105 transition-all z-20 flex items-center gap-1"
+                            className={`absolute px-2 py-0.5 rounded-md bg-[#18191c]/95 shadow-md backdrop-blur-md pointer-events-auto whitespace-nowrap group-hover:scale-105 transition-all z-20 flex items-center gap-1.5 ${placementClasses}`}
                             style={{
                                 border: `1.2px solid ${borderColor}`,
                             }}
@@ -239,6 +268,12 @@ const BusStopMarkerItem = memo(({
                                 className="text-white font-bold text-[11px] sm:text-[12px] tracking-tight leading-none">
                                 {stop.nodenm}
                             </span>
+                            {disambiguationLabel && (
+                                <span
+                                    className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-white/15 text-slate-300">
+                                    {disambiguationLabel}
+                                </span>
+                            )}
                         </div>
                     )}
                 </div>
@@ -346,6 +381,39 @@ const BusStopMarkerItem = memo(({
                                             </button>
                                         </div>
                                     </div>
+
+                                    {/* Paired Opposite Stop Quick-Switcher Banner */}
+                                    {pairedOppositeStop && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                handlePopupClose();
+                                                onSelectOppositeStop?.(pairedOppositeStop);
+                                            }}
+                                            className="mt-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold border border-black/5 dark:border-white/10 transition-all cursor-pointer active:scale-98 group/opp"
+                                            title={`건너편 정류장(${pairedOppositeStop.nodenm}) 실시간 정보 보기`}
+                                        >
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                                <ArrowLeftRight
+                                                    className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0"/>
+                                                <span
+                                                    className="text-slate-500 dark:text-slate-400 font-medium">건너편</span>
+                                                <span
+                                                    className="font-extrabold truncate text-slate-900 dark:text-white">
+                                                    {pairedOppositeStop.nodenm}
+                                                </span>
+                                                {pairedOppositeStop.nodeno && (
+                                                    <span className="font-mono text-[10px] text-slate-400 shrink-0">
+                                                        ({pairedOppositeStop.nodeno})
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span
+                                                className="text-[10px] font-black text-blue-600 dark:text-blue-400 shrink-0 group-hover/opp:translate-x-0.5 transition-transform">
+                                                전환 →
+                                            </span>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -619,12 +687,41 @@ export default ({
         return stopsInView;
     }, [routeStops, favoriteStops, nearbyStops, showNearbyStops, bounds, zoom, stopColorMap, routeMainColor, activeFocusedStopId, eventFocusedStop]);
 
+    const handleSelectOppositeStop = useCallback(
+        (targetStop: BusStop) => {
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: targetStop}));
+            }
+            if (map && targetStop.gpslong && targetStop.gpslati) {
+                map.flyTo({
+                    center: [targetStop.gpslong, targetStop.gpslati],
+                    duration: 450,
+                });
+            }
+        },
+        [map]
+    );
+
+    const placementsMap = useMemo(() => {
+        return computeOptimalLabelPlacements(
+            visibleStops,
+            map,
+            centerCoords,
+            activeFocusedStopId
+        );
+    }, [visibleStops, map, centerCoords, activeFocusedStopId]);
+
     return (
         <>
             {visibleStops.map((stop, index) => {
                 const key = stop.nodeid ? `${stop.nodeid}-${stop.updowncd ?? "na"}` : `stop-${index}`;
                 const isFav = isFavoriteStop(stop.nodeid);
                 const isFocused = Boolean(activeFocusedStopId && stop.nodeid === activeFocusedStopId);
+                const placementInfo = placementsMap.get(stop.nodeid) || {
+                    placement: "right" as const,
+                    showLabel: stop.showLabel,
+                };
+
                 return (
                     <BusStopMarkerItem
                         key={key}
@@ -634,7 +731,11 @@ export default ({
                         isRouteStop={stop.isRouteStop}
                         isFavorite={isFav}
                         onToggleFavorite={toggleFavoriteStop}
-                        showLabel={stop.showLabel}
+                        showLabel={placementInfo.showLabel}
+                        labelPlacement={placementInfo.placement}
+                        disambiguationLabel={placementInfo.disambiguationLabel}
+                        pairedOppositeStop={placementInfo.pairedOppositeStop}
+                        onSelectOppositeStop={handleSelectOppositeStop}
                         color={stop.color}
                         onRouteChange={onRouteChange}
                         initialOpen={isFocused}

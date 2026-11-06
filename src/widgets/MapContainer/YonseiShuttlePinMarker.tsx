@@ -8,7 +8,6 @@ import {Clock, ExternalLink, GraduationCap, MapPin, RotateCw, X,} from "lucide-r
 import {type ShuttleInboundItem, type ShuttleOutboundItem, YONSEI_SHUTTLE_SCHEDULE,} from "@entities/schedule";
 import {getKakaoRoadviewUrl} from "@entities/station";
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {MAP_SETTINGS} from "@shared/config/env";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 import type {DayMode} from "@shared/types/navigation";
 
@@ -20,8 +19,8 @@ import type {DayMode} from "@shared/types/navigation";
 const YONSEI_CAMPUS_LAT = 37.283476;
 const YONSEI_CAMPUS_LNG = 127.900657;
 
-// Minimum zoom level required to show the campus shuttle pinpoint marker on map
-export const MIN_YONSEI_SHUTTLE_PIN_ZOOM = 14.0;
+// Shuttle pins are displayed matching city bus timetable pins without zoom restriction
+export const MIN_YONSEI_SHUTTLE_PIN_ZOOM = 0;
 
 export interface YonseiShuttlePinMarkerProps {
     enabled?: boolean;
@@ -42,23 +41,6 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
                                                                                isTodayWeekendOrHoliday: _isTodayWeekendOrHoliday,
                                                                            }: YonseiShuttlePinMarkerProps) {
     const {map} = useAppMapContext();
-
-    // Track map zoom level to only show pin when zoomed in closely
-    const [zoom, setZoom] = useState<number>(() => map?.getZoom() ?? MAP_SETTINGS.ZOOM.DEFAULT);
-
-    useEffect(() => {
-        if (!map) return;
-        setZoom(map.getZoom());
-        const updateZoom = () => {
-            setZoom(map.getZoom());
-        };
-        map.on("zoom", updateZoom);
-        map.on("zoomend", updateZoom);
-        return () => {
-            map.off("zoom", updateZoom);
-            map.off("zoomend", updateZoom);
-        };
-    }, [map]);
 
     // 1. Live clock for countdown calculation (updates every 15s)
     const [now, setNow] = useState<Date>(() => new Date());
@@ -208,8 +190,7 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
         return () => window.removeEventListener("wbus:close-timetable", handleClose);
     }, [isPopupOpen]);
 
-    const isZoomVisible = zoom >= MIN_YONSEI_SHUTTLE_PIN_ZOOM;
-    if (!enabled || (!isZoomVisible && !isPopupOpen)) return null;
+    if (!enabled) return null;
 
     return (
         <>

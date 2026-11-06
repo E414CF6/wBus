@@ -3,6 +3,7 @@ import {YONSEI_SHUTTLE_SCHEDULE} from "@entities/schedule";
 import {YONSEI_SHUTTLE_STOPS} from "@entities/station";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
 import {MIN_YONSEI_SHUTTLE_PIN_ZOOM} from "./YonseiShuttlePinMarker";
+import {YONSEI_SHUTTLE_ROUTES} from "./RouteLayer";
 
 describe("YonseiShuttlePinMarker data & logic", () => {
     it("has valid Mirae Hall stop coordinates in YONSEI_SHUTTLE_STOPS", () => {
@@ -66,10 +67,11 @@ describe("YonseiShuttlePinMarker data & logic", () => {
     });
 
     it("verifies Yonsei campus shuttle pin is restricted to routes 30, 34, 34-1", () => {
-        const YONSEI_SHUTTLE_ROUTES = new Set(["30", "34", "34-1"]);
         expect(YONSEI_SHUTTLE_ROUTES.has("30")).toBe(true);
         expect(YONSEI_SHUTTLE_ROUTES.has("34")).toBe(true);
         expect(YONSEI_SHUTTLE_ROUTES.has("34-1")).toBe(true);
+
+        expect(YONSEI_SHUTTLE_ROUTES.has("31")).toBe(false);
 
         expect(YONSEI_SHUTTLE_ROUTES.has("2")).toBe(false);
         expect(YONSEI_SHUTTLE_ROUTES.has("16")).toBe(false);
@@ -77,8 +79,7 @@ describe("YonseiShuttlePinMarker data & logic", () => {
         expect(YONSEI_SHUTTLE_ROUTES.has("100")).toBe(false);
     });
 
-    it("verifies MIN_YONSEI_SHUTTLE_PIN_ZOOM is defined and requires close zoom", () => {
-        expect(MIN_YONSEI_SHUTTLE_PIN_ZOOM).toBeGreaterThanOrEqual(14.0);
-        expect(MIN_YONSEI_SHUTTLE_PIN_ZOOM).toBeLessThanOrEqual(16.0);
+    it("verifies MIN_YONSEI_SHUTTLE_PIN_ZOOM has no minimum zoom restriction (0)", () => {
+        expect(MIN_YONSEI_SHUTTLE_PIN_ZOOM).toBe(0);
     });
 });
