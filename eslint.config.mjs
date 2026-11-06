@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(// Ignored paths
     {
-        ignores: [".next/", "node_modules/", "public/", "next-env.d.ts", "scripts/osrm-assets/", "scripts/"],
+        ignores: [".next/", "node_modules/", "public/", "next-env.d.ts"],
     },
 
     // Base JS recommended rules

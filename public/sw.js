@@ -1,8 +1,7 @@
-// wBus Lightweight Offline & Static Asset Service Worker (v1)
-const CACHE_NAME = "wbus-v1";
+// wBus Lightweight Offline & Static Asset Service Worker (v2)
+const CACHE_NAME = "wbus-v2";
 
 const PRECACHE_ASSETS = [
-    "/",
     "/favicon.ico",
     "/apple-touch-icon.png",
     "/workers/maplibre-gl-worker.mjs",
@@ -39,19 +38,18 @@ self.addEventListener("fetch", (event) => {
     const {request} = event;
     const url = new URL(request.url);
 
-    // 1. Skip non-GET and chrome-extension/external requests
-    if (request.method !== "GET" || !url.protocol.startsWith("http")) {
+    // 1. Skip non-GET, non-HTTP, and local development servers
+    if (request.method !== "GET" || !url.protocol.startsWith("http") || url.hostname === "localhost" || url.hostname === "127.0.0.1") {
         return;
     }
 
-    // 2. Real-time telemetry API routes are strictly Network-Only to ensure live data freshness
-    if (url.pathname.startsWith("/api/bus")) {
+    // 2. Real-time telemetry API routes and Next.js runtime/chunk bundles use native browser HTTP caching
+    if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/_next/")) {
         return;
     }
 
-    // 3. Static assets, tiles, workers, schedules: Stale-While-Revalidate
+    // 3. Static public assets (map workers, map styles, icons, fonts, schedule): Stale-While-Revalidate
     const isStaticAsset =
-        url.pathname.startsWith("/_next/static") ||
         url.pathname.startsWith("/workers/") ||
         url.pathname.startsWith("/styles/") ||
         url.pathname.endsWith(".json") ||
@@ -76,7 +74,7 @@ self.addEventListener("fetch", (event) => {
         return;
     }
 
-    // 4. HTML document navigation: Network First, fallback to cached App Shell
+    // 4. HTML document navigation: Network First, fallback to cached page when offline
     if (request.mode === "navigate") {
         event.respondWith(
             fetch(request).then((response) => {
