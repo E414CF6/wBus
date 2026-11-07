@@ -4,7 +4,7 @@ import React, {useCallback, useEffect, useMemo, useState} from "react";
 import type {BusRoute} from "@entities/schedule";
 import {CacheInfoBanner} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
-import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
+import {NoticeBanner, NoticeModal} from "@entities/notice";
 import {Footer} from "@shared/ui/Footer";
 import {BookmarkedDeparturesBanner} from "./BookmarkedDeparturesBanner";
 import {RouteFilter} from "./RouteFilter";

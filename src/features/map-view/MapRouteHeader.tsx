@@ -4,13 +4,12 @@ import React, {useCallback, useEffect, useMemo, useRef, useState, useSyncExterna
 import {AlertTriangle, CalendarClock, Check, ChevronDown, GitFork, GraduationCap, RefreshCw, Star} from "lucide-react";
 
 import {getRouteMeta} from "@entities/route/routeMetadata";
-import {useCityContext} from "@entities/city";
+import {useCityContext, useCityFeatures} from "@entities/city";
 import {useFavoriteStops} from "@entities/station/hooks";
 import type {FavoriteStop} from "@entities/station/types";
 import {getNextDeparture, useSchedule} from "@entities/schedule";
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
-import {useRouteVariations} from "@entities/route/hooks";
+import {useRecentRoutes, useRouteBookmarks, useRouteVariations} from "@entities/route";
 import {MarqueeText} from "@shared/ui/MarqueeText";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
@@ -55,14 +54,16 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                                   onOpenScheduleModal,
                                                               }) => {
     const {currentCity} = useCityContext();
+    const {hasDetailedTimetable, hasUniversityShuttle, defaultQuickRoutes} = useCityFeatures();
     const {map} = useAppMapContext();
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
-    const isWonju = currentCity.code === "32020";
     const [isVariantMenuOpen, setIsVariantMenuOpen] = useState(false);
     const variantMenuRef = useRef<HTMLDivElement>(null);
 
     const {favoriteStops} = useFavoriteStops(currentCity.code);
-    const {routes: scheduleRoutes} = useSchedule(isWonju);
+    const {bookmarks} = useRouteBookmarks(currentCity.code);
+    const {recentRoutes} = useRecentRoutes(currentCity.code);
+    const {routes: scheduleRoutes} = useSchedule(hasDetailedTimetable);
 
     // Fetch variations for current route (e.g. 30 has basic, via-Sangji, etc.)
     const {variations} = useRouteVariations(selectedRoute, true, currentCity.code);
@@ -162,9 +163,9 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
         [onSelectVariant]
     );
 
-    // Next scheduled departure for Wonju routes when no buses are currently running
+    // Next scheduled departure when no buses are currently running
     const nextScheduleInfo = useMemo(() => {
-        if (!isWonju || scheduleRoutes.length === 0) return null;
+        if (!hasDetailedTimetable || scheduleRoutes.length === 0) return null;
         const matched = scheduleRoutes.find((r) => r.routeNo === selectedRoute);
         if (!matched || !matched.timetable || matched.timetable.length === 0) return null;
         const {nextOrigin, nextDest, originWaitMins, destWaitMins} = getNextDeparture(matched.timetable, now);
@@ -183,35 +184,19 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             };
         }
         return null;
-    }, [isWonju, scheduleRoutes, selectedRoute, now]);
+    }, [hasDetailedTimetable, scheduleRoutes, selectedRoute, now]);
 
     // Derive recent & bookmarked routes for quick switch bar (SSR-safe via useSyncExternalStore)
     const quickRoutes = useMemo<string[]>(() => {
         if (!isClient) {
-            return isWonju ? DEFAULT_QUICK_ROUTES : [];
+            return defaultQuickRoutes;
         }
 
         const set = new Set<string>();
-        const bookmarkKey = getBookmarkStorageKey(currentCity.code);
-        const recentKey = getRecentRoutesStorageKey(currentCity.code);
 
-        if (isWonju) {
-            DEFAULT_QUICK_ROUTES.forEach((r) => set.add(r));
-        }
-        try {
-            const savedBookmarks = localStorage.getItem(bookmarkKey);
-            if (savedBookmarks) {
-                const bms: string[] = JSON.parse(savedBookmarks);
-                bms.slice(0, 4).forEach((r) => set.add(r));
-            }
-            const savedRecent = localStorage.getItem(recentKey);
-            if (savedRecent) {
-                const recents: string[] = JSON.parse(savedRecent);
-                recents.slice(0, 3).forEach((r) => set.add(r));
-            }
-        } catch {
-            // Ignore
-        }
+        defaultQuickRoutes.forEach((r) => set.add(r));
+        bookmarks.slice(0, 4).forEach((r) => set.add(r));
+        recentRoutes.slice(0, 3).forEach((r) => set.add(r));
 
         if (selectedRoute) {
             set.add(selectedRoute);
@@ -223,7 +208,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             list = allRoutes.slice(0, 4);
         }
         return list;
-    }, [isClient, isWonju, allRoutes, currentCity.code, selectedRoute]);
+    }, [isClient, defaultQuickRoutes, bookmarks, recentRoutes, allRoutes, selectedRoute]);
 
     const handleJumpToFavoriteStop = useCallback(
         (fav: FavoriteStop) => {
@@ -572,7 +557,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                     className="relative z-0 flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden max-w-full px-1 py-0.5">
                     {quickRoutes.map((route) => {
                         const isCurrent = route === selectedRoute;
-                        const isYonsei = isWonju && DEFAULT_QUICK_ROUTES.includes(route);
+                        const isYonsei = hasUniversityShuttle && defaultQuickRoutes.includes(route);
 
                         return (
                             <button

@@ -11,7 +11,7 @@ import {
     useSchedule
 } from "@entities/schedule";
 import {getRouteMeta} from "@entities/route/routeMetadata";
-import {NoticeBanner, NoticeModal} from "@widgets/NoticeWidget";
+import {NoticeBanner, NoticeModal} from "@entities/notice";
 import {Modal} from "@shared/ui";
 import type {DayMode} from "@shared/types/navigation";
 

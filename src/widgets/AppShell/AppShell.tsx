@@ -5,7 +5,7 @@ import React, {useCallback, useEffect, useMemo, useState} from "react";
 
 import {MAP_SETTINGS} from "@shared/config/env";
 import {useBusRouteMap} from "@entities/route/hooks";
-import {useCityContext} from "@entities/city";
+import {useCityContext, useCityFeatures} from "@entities/city";
 
 import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
@@ -41,13 +41,13 @@ export function AppShell() {
     }, []);
 
     const {currentCity} = useCityContext();
-    const isWonju = currentCity.code === "32020";
+    const {hasDetailedTimetable, defaultQuickRoutes, defaultRoute} = useCityFeatures();
 
     // Fetch route map for current city
     const routeMap = useBusRouteMap(true, currentCity.code);
     const allRoutes = useMemo(
-        () => (routeMap ? Object.keys(routeMap) : isWonju ? ["30", "34", "34-1"] : []),
-        [routeMap, isWonju]
+        () => (routeMap ? Object.keys(routeMap) : defaultQuickRoutes),
+        [routeMap, defaultQuickRoutes]
     );
     const activeRoute = useMemo(() => {
         if (!routeMap || Object.keys(routeMap).length === 0) return selectedRoute;
@@ -60,20 +60,20 @@ export function AppShell() {
         }
         if (routeMap[selectedRoute]) return selectedRoute;
 
-        if (isWonju && routeMap[MAP_SETTINGS.DEFAULT_ROUTE]) {
-            return MAP_SETTINGS.DEFAULT_ROUTE;
+        if (defaultRoute && routeMap[defaultRoute]) {
+            return defaultRoute;
         }
         return Object.keys(routeMap)[0] ?? selectedRoute;
-    }, [routeMap, selectedRoute, isWonju, currentCity.code]);
+    }, [routeMap, selectedRoute, defaultRoute, currentCity.code]);
 
-    // Centered floating RouteScheduleModal state (Wonju only)
+    // Centered floating RouteScheduleModal state (for cities with detailed timetable)
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
     const [scheduleLocation, setScheduleLocation] = useState<"origin" | "dest">("dest");
 
     // Handler for opening the centered Route Timetable Modal from Map Pins or Route Header
     const handleOpenSchedule = useCallback(
         (targetRouteOrDoc?: string, location?: "origin" | "dest") => {
-            if (!isWonju) return;
+            if (!hasDetailedTimetable) return;
             if (targetRouteOrDoc) {
                 const cleanRoute = targetRouteOrDoc.replace(/^route:/, "");
                 const [targetRoute, routeLoc] = cleanRoute.split(":");
@@ -89,7 +89,7 @@ export function AppShell() {
             }
             setIsScheduleModalOpen(true);
         },
-        [isWonju, activeRoute, handleRouteChange, currentCity.code]
+        [hasDetailedTimetable, activeRoute, handleRouteChange, currentCity.code]
     );
 
     // Live telemetry for active map route
@@ -147,10 +147,10 @@ export function AppShell() {
                 </MapWrapper>
             </div>
 
-            {/* 2. Centered Floating Full Route Timetable Modal (Wonju only) */}
-            {isWonju && (
+            {/* 2. Centered Floating Full Route Timetable Modal (Cities with detailed timetable) */}
+            {hasDetailedTimetable && (
                 <RouteScheduleModal
-                    isOpen={isWonju && isScheduleModalOpen}
+                    isOpen={isScheduleModalOpen}
                     routeName={activeRoute}
                     onClose={() => setIsScheduleModalOpen(false)}
                     dayMode={dayMode}

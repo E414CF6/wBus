@@ -2,11 +2,18 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Bus, Clock, GraduationCap, MapPin, Navigation, Search, Star, X} from "lucide-react";
-import {getRouteMeta, resolveRouteCategory, type RouteCategoryInfo, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route";
-import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
+import {
+    getRouteMeta,
+    resolveRouteCategory,
+    type RouteCategoryInfo,
+    RouteMeta,
+    YONSEI_ROUTE_SET,
+    useRouteBookmarks,
+    useRecentRoutes,
+} from "@entities/route";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {useCityContext} from "@entities/city";
+import {useCityContext, useCityFeatures} from "@entities/city";
 import {useCityRoutes} from "@entities/route/hooks";
 import {useBusStop, useFavoriteStops} from "@entities/station/hooks";
 import type {BusStop} from "@entities/station/types";
@@ -35,9 +42,6 @@ function sortRoutes(routes: string[]): string[] {
 // Main Component
 // ----------------------------------------------------------------------
 
-const WONJU_DEFAULT_BOOKMARKS = ["30", "34", "34-1"];
-const EMPTY_DEFAULT_BOOKMARKS: string[] = [];
-
 export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                                       isOpen,
                                                                       onClose,
@@ -46,8 +50,8 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                                       onSelectRoute,
                                                                   }) => {
     const {currentCity} = useCityContext();
+    const {hasUniversityShuttle} = useCityFeatures();
     const {map} = useAppMapContext();
-    const isWonju = currentCity.code === "32020";
 
     // Direct nationwide route list fetch for current city
     const {routes: cityRoutes = []} = useCityRoutes(currentCity.code);
@@ -57,32 +61,9 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
 
-    // City-scoped bookmarks & recent history keys
-    const bookmarkKey = getBookmarkStorageKey(currentCity.code);
-    const recentKey = getRecentRoutesStorageKey(currentCity.code);
-    const defaultBookmarks = isWonju ? WONJU_DEFAULT_BOOKMARKS : EMPTY_DEFAULT_BOOKMARKS;
-
-    const [bookmarks, setBookmarks] = useState<string[]>(defaultBookmarks);
-    const [recentRoutes, setRecentRoutes] = useState<string[]>([]);
-
-    // Re-sync bookmarks and recents when currentCity changes or modal opens
-    useEffect(() => {
-        const frameId = requestAnimationFrame(() => {
-            try {
-                const savedBookmarks = localStorage.getItem(bookmarkKey);
-                const nextBookmarks: string[] = savedBookmarks ? JSON.parse(savedBookmarks) : defaultBookmarks;
-                setBookmarks((prev) => (JSON.stringify(prev) === JSON.stringify(nextBookmarks) ? prev : nextBookmarks));
-
-                const savedRecent = localStorage.getItem(recentKey);
-                const nextRecent: string[] = savedRecent ? JSON.parse(savedRecent) : [];
-                setRecentRoutes((prev) => (JSON.stringify(prev) === JSON.stringify(nextRecent) ? prev : nextRecent));
-            } catch {
-                setBookmarks(defaultBookmarks);
-                setRecentRoutes([]);
-            }
-        });
-        return () => cancelAnimationFrame(frameId);
-    }, [bookmarkKey, recentKey, defaultBookmarks, isOpen]);
+    // City-scoped bookmarks & recent history
+    const {bookmarks, toggleBookmark: toggleRouteBookmark} = useRouteBookmarks(currentCity.code);
+    const {recentRoutes, addRecentRoute} = useRecentRoutes(currentCity.code);
 
     const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -99,35 +80,17 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     // Toggle bookmark helper
     const toggleBookmark = useCallback((e: React.MouseEvent, route: string) => {
         e.stopPropagation();
-        setBookmarks((prev) => {
-            const exists = prev.includes(route);
-            const next = exists ? prev.filter((r) => r !== route) : [...prev, route];
-            try {
-                localStorage.setItem(bookmarkKey, JSON.stringify(next));
-            } catch {
-                // Ignore
-            }
-            return next;
-        });
-    }, [bookmarkKey]);
+        toggleRouteBookmark(route);
+    }, [toggleRouteBookmark]);
 
     // Select route & update recent routes history
     const handleSelect = useCallback(
         (route: string) => {
             onSelectRoute(route);
-            setRecentRoutes((prev) => {
-                const filtered = prev.filter((r) => r !== route);
-                const next = [route, ...filtered].slice(0, 6);
-                try {
-                    localStorage.setItem(recentKey, JSON.stringify(next));
-                } catch {
-                    // Ignore
-                }
-                return next;
-            });
+            addRecentRoute(route);
             onClose();
         },
-        [onSelectRoute, onClose, recentKey]
+        [onSelectRoute, addRecentRoute, onClose]
     );
 
     // Select a stop (fly to stop & open live arrival popup)
@@ -256,7 +219,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             });
         }
 
-        if (isWonju) {
+        if (hasUniversityShuttle) {
             list.push({
                 id: "YONSEI",
                 label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI,
@@ -271,7 +234,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         }
 
         return list;
-    }, [isWonju, sortedAllRoutes.length, bookmarks, favoriteStops.length, dynamicCategories]);
+    }, [hasUniversityShuttle, sortedAllRoutes.length, bookmarks, favoriteStops.length, dynamicCategories]);
 
     // Reset selected category to ALL if current category does not exist in active categories
     useEffect(() => {

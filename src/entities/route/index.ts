@@ -1,6 +1,7 @@
 export * from "./types";
 export * from "./api";
 export * from "./hooks";
+export * from "./useRouteStorage";
 export * from "./routeColor";
 export * from "./routeMetadata";
 export * from "./directionService";

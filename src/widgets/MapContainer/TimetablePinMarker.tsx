@@ -7,6 +7,7 @@ import {Clock, RotateCw} from "lucide-react";
 import {type RouteVariation, type RouteVariationStop, useRouteVariations} from "@entities/route";
 import {type BusRoute, getUpcomingDepartures, resolveActiveScheduleVariant, useSchedule} from "@entities/schedule";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {getCityFeatures} from "@entities/city";
 import type {DayMode} from "@shared/types/navigation";
 
 // ----------------------------------------------------------------------
@@ -106,7 +107,7 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                                                                        isTodayWeekendOrHoliday,
                                                                    }: TimetablePinMarkerProps) {
     const {map} = useAppMapContext();
-    const isWonju = cityCode === "32020";
+    const {hasDetailedTimetable} = getCityFeatures(cityCode);
 
     // 1. Fetch Route Variations (stops & turning points)
     const {variations} = useRouteVariations(routeName, enabled, cityCode);
@@ -114,7 +115,7 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
     const stops = useMemo(() => primaryVariant?.stops ?? [], [primaryVariant?.stops]);
 
     // 2. Fetch Timetable Schedules
-    const {routes: scheduleRoutes} = useSchedule(enabled && isWonju);
+    const {routes: scheduleRoutes} = useSchedule(enabled && hasDetailedTimetable);
 
     // Matching timetable variants for current route
     const routeSchedules = useMemo(
@@ -195,8 +196,8 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
         [map, originStop, turningStop, onOpenScheduleModal, routeName]
     );
 
-    // Timetable pins are currently only supported for Wonju
-    if (!enabled || !isWonju || !stops.length || !originStop) {
+    // Timetable pins are only supported for cities with detailed schedule
+    if (!enabled || !hasDetailedTimetable || !stops.length || !originStop) {
         return null;
     }
 

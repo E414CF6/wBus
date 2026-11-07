@@ -8,7 +8,7 @@ import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useIsDesktop} from "@shared/ui/useIsDesktop";
-import {useCityContext} from "@entities/city";
+import {useCityContext, useCityFeatures} from "@entities/city";
 import {getRouteMeta, YONSEI_ROUTE_SET} from "@entities/route";
 import {CitySelectModal} from "@features/city-select";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
@@ -172,8 +172,8 @@ function BottomNavComponent({
     const isConnecting = !hasFetched || connectionStatus === "connecting";
     const shortCityName = currentCity.name.split("/")[0];
     const hasPendingRegion = Boolean(detectedCity && detectedCity.code !== currentCity.code);
-    const isWonju = currentCity.code === "32020";
-    const isYonseiSelected = isWonju && YONSEI_ROUTE_SET.has(selectedRoute);
+    const {hasDetailedTimetable, hasUniversityShuttle} = useCityFeatures();
+    const isYonseiSelected = hasUniversityShuttle && YONSEI_ROUTE_SET.has(selectedRoute);
     const routeMeta = useMemo(() => getRouteMeta(selectedRoute, currentCity.code), [selectedRoute, currentCity.code]);
 
     const dayModeTitle =
@@ -373,8 +373,8 @@ function BottomNavComponent({
                             />
                         </button>
 
-                        {/* 3-state Day Mode Toggle (Wonju only: Auto / Weekday / Holiday for pin timetables) */}
-                        {isWonju && onDayModeChange && (
+                        {/* 3-state Day Mode Toggle (Auto / Weekday / Holiday for pin timetables) */}
+                        {hasDetailedTimetable && onDayModeChange && (
                             <>
                                 <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
                                 <button

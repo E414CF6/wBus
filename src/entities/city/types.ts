@@ -1,3 +1,11 @@
+export interface CityFeatures {
+    hasDetailedTimetable: boolean;
+    hasUniversityShuttle: boolean;
+    hasRouteVariations: boolean;
+    defaultQuickRoutes: string[];
+    defaultRoute: string | null;
+}
+
 export interface CityInfo {
     code: string;
     name: string;
@@ -6,6 +14,7 @@ export interface CityInfo {
     lng: number;
     zoom?: number;
     isMajor?: boolean;
+    features?: CityFeatures;
 }
 
 export type Province =

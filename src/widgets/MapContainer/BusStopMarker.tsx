@@ -1,467 +1,36 @@
 "use client";
 
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useBusStop, useFavoriteStops, useNearbyStops} from "@entities/station/hooks";
 import type {BusStop} from "@entities/station/types";
-
+import {computeOptimalLabelPlacements} from "@entities/station/busStopMarkerUtils";
 import {MAP_SETTINGS} from "@shared/config/env";
-import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {useIsDesktop} from "@shared/ui/useIsDesktop";
 import {useCityContext} from "@entities/city";
-
-import {BusStopPopup} from "@entities/station";
 import {useRoutePolylineData} from "@features/live-tracking";
 import {getRouteMeta} from "@entities/route/routeMetadata";
-import {buildSegmentedRouteGeoJson, SHARED_BLUE_COLOR} from "@entities/route/polylineService";
-import type {Feature} from "geojson";
+import {buildSegmentedRouteGeoJson} from "@entities/route/polylineService";
+import {findNearestFeatureColor} from "./lib/markerGeometry";
+import {BusStopMarkerItem} from "./ui/BusStopMarkerItem";
+import {useVisibleStops} from "./hooks/useVisibleStops";
 
-import {ArrowLeftRight, BusFront, Info, MapPin, MapPinned, Star, X} from "lucide-react";
-import {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {createPortal} from "react-dom";
-import {Marker} from "react-map-gl/maplibre";
-import {computeOptimalLabelPlacements, type LabelPlacement,} from "./busStopMarkerUtils";
-
-type BusStopMarkerItemProps = {
-    stop: BusStop;
-    cityCode: string;
-    currentRouteName: string;
-    isRouteStop?: boolean;
-    isFavorite?: boolean;
-    onToggleFavorite?: (stop: BusStop) => void;
-    onRouteChange?: (routeName: string) => void;
-    showLabel?: boolean;
-    labelPlacement?: LabelPlacement;
-    disambiguationLabel?: string | null;
-    pairedOppositeStop?: BusStop | null;
-    onSelectOppositeStop?: (stop: BusStop) => void;
-    color?: string;
-    initialOpen?: boolean;
-    onClearInitialOpen?: () => void;
-};
-
-function getDistanceToSegmentMeters(
-    point: [number, number],
-    segA: [number, number],
-    segB: [number, number]
-): number {
-    const [pLat, pLng] = point;
-    const [aLat, aLng] = segA;
-    const [bLat, bLng] = segB;
-
-    const cosLat = Math.cos((pLat * Math.PI) / 180);
-    const dLat = (bLat - aLat) * 111000;
-    const dLng = (bLng - aLng) * 111000 * cosLat;
-    const lenSq = dLat * dLat + dLng * dLng;
-
-    if (lenSq === 0) {
-        const dy = (pLat - aLat) * 111000;
-        const dx = (pLng - aLng) * 111000 * cosLat;
-        return Math.sqrt(dx * dx + dy * dy);
-    }
-
-    const apLat = (pLat - aLat) * 111000;
-    const apLng = (pLng - aLng) * 111000 * cosLat;
-    const t = Math.max(0, Math.min(1, (apLat * dLat + apLng * dLng) / lenSq));
-
-    const projLat = aLat + t * (bLat - aLat);
-    const projLng = aLng + t * (bLng - aLng);
-
-    const dy = (pLat - projLat) * 111000;
-    const dx = (pLng - projLng) * 111000 * cosLat;
-    return Math.sqrt(dx * dx + dy * dy);
-}
-
-function findNearestFeatureColor(
-    stopLat: number,
-    stopLng: number,
-    features: Feature[],
-    fallbackColor: string = SHARED_BLUE_COLOR
-): string {
-    let minDistance = Infinity;
-    let matchedColor = fallbackColor;
-
-    for (const feat of features) {
-        if (feat.geometry.type !== "LineString") continue;
-        const color = feat.properties?.color;
-        if (!color) continue;
-
-        const coords = feat.geometry.coordinates as [number, number][];
-        for (let i = 0; i < coords.length - 1; i++) {
-            const segA: [number, number] = [coords[i][1], coords[i][0]];
-            const segB: [number, number] = [coords[i + 1][1], coords[i + 1][0]];
-            const dist = getDistanceToSegmentMeters([stopLat, stopLng], segA, segB);
-            if (dist < minDistance) {
-                minDistance = dist;
-                matchedColor = color;
-            }
-        }
-    }
-
-    return matchedColor;
-}
-
-const BusStopMarkerItem = memo(({
-                                    stop,
-                                    cityCode,
-                                    currentRouteName,
-                                    isRouteStop = true,
-                                    isFavorite = false,
-                                    onToggleFavorite,
-                                    onRouteChange,
-                                    showLabel = true,
-                                    labelPlacement = "right",
-                                    disambiguationLabel = null,
-                                    pairedOppositeStop = null,
-                                    onSelectOppositeStop,
-                                    color = "#059669",
-                                    initialOpen = false,
-                                    onClearInitialOpen,
-                                }: BusStopMarkerItemProps) => {
-    const isDesktop = useIsDesktop();
-    const [isPopupOpen, setIsPopupOpen] = useState(false);
-    const [closedStopId, setClosedStopId] = useState<string | null>(null);
-    const [isHovered, setIsHovered] = useState(false);
-
-    const isUserClosed = closedStopId === stop.nodeid;
-    // Derived open state for mobile bottom sheet without cascading renders
-    const isOpen = !isDesktop && (isPopupOpen || (initialOpen && !isUserClosed));
-
-    const handleMarkerClick = useCallback((e: { originalEvent?: Event }) => {
-        if (e.originalEvent) {
-            e.originalEvent.stopPropagation();
-        }
-        if (isDesktop) {
-            // On desktop, dispatch stop to open split view in left floating window
-            window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: stop}));
-            window.dispatchEvent(new CustomEvent("wbus:open-bus-list"));
-            return;
-        }
-
-        if (typeof window !== "undefined") {
-            window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
-            window.dispatchEvent(new CustomEvent("wbus:close-bus-list"));
-            window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
-        }
-        setClosedStopId(null);
-        setIsPopupOpen(true);
-    }, [isDesktop, stop]);
-
-    const handlePopupClose = useCallback(() => {
-        setClosedStopId(stop.nodeid);
-        setIsPopupOpen(false);
-        onClearInitialOpen?.();
-    }, [stop.nodeid, onClearInitialOpen]);
-
-    // Close when other popups or bus list requests closing
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        const handleClosePopups = () => {
-            setClosedStopId(stop.nodeid);
-            setIsPopupOpen(false);
-            onClearInitialOpen?.();
-        };
-        window.addEventListener("wbus:close-popups", handleClosePopups);
-        window.addEventListener("wbus:close-stop-popup", handleClosePopups);
-        return () => {
-            window.removeEventListener("wbus:close-popups", handleClosePopups);
-            window.removeEventListener("wbus:close-stop-popup", handleClosePopups);
-        };
-    }, [stop.nodeid, onClearInitialOpen]);
-
-    // Close on Escape key
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                handlePopupClose();
-            }
-        };
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isOpen, handlePopupClose]);
-
-    const handleSelectRouteFromPopup = useCallback(
-        (nextRoute: string) => {
-            setClosedStopId(stop.nodeid);
-            setIsPopupOpen(false);
-            onClearInitialOpen?.();
-            onRouteChange?.(nextRoute);
-        },
-        [stop.nodeid, onRouteChange, onClearInitialOpen]
-    );
-
-    const borderColor = isFavorite ? "#f59e0b" : isRouteStop ? color : "#64748b";
-    const effectiveZIndex = isHovered || isOpen ? 50 : isFavorite ? 22 : isRouteStop ? 18 : 12;
-
-    const placementClasses = useMemo(() => {
-        switch (labelPlacement) {
-            case "left":
-                return "right-full mr-1.5 top-1/2 -translate-y-1/2";
-            case "top":
-                return "bottom-full mb-1.5 left-1/2 -translate-x-1/2";
-            case "bottom":
-                return "top-full mt-1.5 left-1/2 -translate-x-1/2";
-            case "right":
-            default:
-                return "left-full ml-1.5 top-1/2 -translate-y-1/2";
-        }
-    }, [labelPlacement]);
-
-    return (
-        <>
-            <Marker
-                longitude={stop.gpslong}
-                latitude={stop.gpslati}
-                onClick={handleMarkerClick}
-                anchor="center"
-                style={{pointerEvents: "auto", cursor: "pointer", zIndex: effectiveZIndex}}
-            >
-                {/* Bus Stop Marker Icon & Name Label */}
-                <div
-                    className="relative flex items-center justify-center select-none group"
-                    onMouseEnter={() => setIsHovered(true)}
-                    onMouseLeave={() => setIsHovered(false)}
-                >
-                    {/* Bus Stop Marker Icon with Dynamic Polyline Color or Favorite Highlight */}
-                    {isRouteStop ? (
-                        <div
-                            title={`${stop.nodenm} (현재 노선 정류장)`}
-                            className={`relative flex items-center justify-center w-6 h-6 rounded-lg text-white shadow-md border-2 group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 before:absolute before:-inset-2 before:content-[''] ${
-                                isFavorite ? "border-amber-300 ring-2 ring-amber-400/60" : "border-white/90"
-                            }`}
-                            style={{backgroundColor: color}}
-                        >
-                            <BusFront className="w-3.5 h-3.5 fill-current"/>
-                            {isFavorite && (
-                                <span
-                                    className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow-xs border border-white">
-                                    <Star className="w-2 h-2 fill-current"/>
-                                </span>
-                            )}
-                        </div>
-                    ) : isFavorite ? (
-                        <div
-                            title={`${stop.nodenm} (즐겨찾는 정류장)`}
-                            className="relative flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500 text-white shadow-md border-2 border-white group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 ring-2 ring-amber-400/50 before:absolute before:-inset-2 before:content-['']"
-                        >
-                            <Star className="w-3.5 h-3.5 fill-current"/>
-                        </div>
-                    ) : (
-                        <div
-                            title={`${stop.nodenm} (주변 정류장 · 클릭하여 도착정보 확인)`}
-                            className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-700/90 dark:bg-slate-600/90 text-white shadow-sm border-[1.5px] border-white/85 opacity-85 group-hover:opacity-100 group-hover:scale-125 group-hover:bg-blue-600 transition-all cursor-pointer shrink-0 z-10 before:absolute before:-inset-2 before:content-['']"
-                        >
-                            <div className="w-1.5 h-1.5 rounded-full bg-white"/>
-                        </div>
-                    )}
-
-                    {/* Bus Stop Name Label Badge with Matching Border & Accent Color */}
-                    {(showLabel || isFavorite || isHovered || isOpen) && (
-                        <div
-                            className={`absolute px-2 py-0.5 rounded-md bg-[#18191c]/95 shadow-md backdrop-blur-md pointer-events-auto whitespace-nowrap group-hover:scale-105 transition-all z-20 flex items-center gap-1.5 ${placementClasses}`}
-                            style={{
-                                border: `1.2px solid ${borderColor}`,
-                            }}
-                        >
-                            {isFavorite && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 shrink-0"/>}
-                            <span
-                                className="text-white font-bold text-[11px] sm:text-[12px] tracking-tight leading-none">
-                                {stop.nodenm}
-                            </span>
-                            {disambiguationLabel && (
-                                <span
-                                    className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-white/15 text-slate-300">
-                                    {disambiguationLabel}
-                                </span>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </Marker>
-
-            {typeof document !== "undefined" && isOpen &&
-                createPortal(
-                    <div
-                        className="fixed inset-0 z-[120] flex flex-col justify-end items-center pb-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] pointer-events-none px-3"
-                    >
-                        {/* Click-outside backdrop */}
-                        <div
-                            className="fixed inset-0 bg-black/25 dark:bg-black/50 backdrop-blur-[1px] transition-opacity animate-fadeIn pointer-events-auto"
-                            onClick={handlePopupClose}
-                            aria-hidden="true"
-                        />
-
-                        {/* Floating Bus Stop Bottom Sheet */}
-                        <div
-                            role="dialog"
-                            aria-modal="true"
-                            aria-label={`${stop.nodenm} 정류장 실시간 도착 정보`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="relative z-10 pointer-events-auto flex flex-col bg-white dark:bg-[#11131a] backdrop-blur-3xl overflow-hidden rounded-[28px] shadow-[0_16px_48px_rgba(0,0,0,0.25)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.65)] border border-black/10 dark:border-white/12 w-full max-w-md max-h-[70vh] animate-fadeIn select-none"
-                        >
-                            {/* Mobile Drawer Handle Indicator */}
-                            <div className="pt-2 pb-0.5 flex justify-center shrink-0">
-                                <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-slate-700"/>
-                            </div>
-
-                            {/* Header Section */}
-                            <div
-                                className="relative overflow-hidden bg-transparent px-5 py-4 text-black dark:text-white border-b border-black/5 dark:border-white/5 shrink-0"
-                            >
-                                <div className="absolute -right-4 -top-4 opacity-5 pointer-events-none">
-                                    <BusFront size={100} strokeWidth={1}/>
-                                </div>
-
-                                <div className="relative z-10 flex flex-col gap-2.5">
-                                    <div className="flex items-start justify-between gap-2">
-                                        <div className="flex items-start gap-3 min-w-0">
-                                            <div
-                                                className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-sm"
-                                                style={{
-                                                    backgroundColor: isRouteStop ? color : isFavorite ? "#f59e0b" : "#475569"
-                                                }}
-                                            >
-                                                {isRouteStop ? (
-                                                    <MapPinned size={18} strokeWidth={2.5}/>
-                                                ) : (
-                                                    <MapPin size={18} strokeWidth={2.5}/>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-col overflow-hidden">
-                                                <div className="flex items-center gap-1.5 flex-wrap">
-                                                    <h3 className="truncate text-base sm:text-lg font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white">
-                                                        {stop.nodenm}
-                                                    </h3>
-                                                    <span
-                                                        className="px-1.5 py-0.2 rounded-md text-[9px] font-black text-white"
-                                                        style={{
-                                                            backgroundColor: isRouteStop ? color : "#64748b"
-                                                        }}
-                                                    >
-                                                        {isRouteStop ? "현재 노선" : "주변 정류장"}
-                                                    </span>
-                                                </div>
-                                                <div
-                                                    className="flex items-center gap-1.5 mt-1 text-gray-500 dark:text-gray-400">
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest">
-                                                        {UI_TEXT.STOP_POPUP.STATION_ID_LABEL}
-                                                    </span>
-                                                    <span className="text-[11px] font-mono font-semibold">
-                                                        {stop.nodeno || UI_TEXT.STOP_POPUP.STATION_ID_FALLBACK}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-1 shrink-0">
-                                            {onToggleFavorite && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => onToggleFavorite(stop)}
-                                                    className={`p-1.5 rounded-full border transition cursor-pointer active:scale-90 ${
-                                                        isFavorite
-                                                            ? "bg-amber-500/15 border-amber-500/40 text-amber-500"
-                                                            : "bg-slate-100 dark:bg-white/10 border-transparent text-slate-400 hover:text-amber-500"
-                                                    }`}
-                                                    title={isFavorite ? "즐겨찾는 정류장 해제" : "즐겨찾는 정류장 등록"}
-                                                    aria-label={isFavorite ? "즐겨찾는 정류장 해제" : "즐겨찾는 정류장 등록"}
-                                                >
-                                                    <Star
-                                                        className={`w-3.5 h-3.5 ${isFavorite ? "fill-amber-400" : ""}`}/>
-                                                </button>
-                                            )}
-                                            <button
-                                                type="button"
-                                                onClick={handlePopupClose}
-                                                className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer active:scale-90"
-                                                title="팝업 닫기"
-                                                aria-label="정류장 팝업 닫기"
-                                            >
-                                                <X className="w-3.5 h-3.5"/>
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Paired Opposite Stop Quick-Switcher Banner */}
-                                    {pairedOppositeStop && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                handlePopupClose();
-                                                onSelectOppositeStop?.(pairedOppositeStop);
-                                            }}
-                                            className="mt-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold border border-black/5 dark:border-white/10 transition-all cursor-pointer active:scale-98 group/opp"
-                                            title={`건너편 정류장(${pairedOppositeStop.nodenm}) 실시간 정보 보기`}
-                                        >
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                                <ArrowLeftRight
-                                                    className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0"/>
-                                                <span
-                                                    className="text-slate-500 dark:text-slate-400 font-medium">건너편</span>
-                                                <span
-                                                    className="font-extrabold truncate text-slate-900 dark:text-white">
-                                                    {pairedOppositeStop.nodenm}
-                                                </span>
-                                                {pairedOppositeStop.nodeno && (
-                                                    <span className="font-mono text-[10px] text-slate-400 shrink-0">
-                                                        ({pairedOppositeStop.nodeno})
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <span
-                                                className="text-[10px] font-black text-blue-600 dark:text-blue-400 shrink-0 group-hover/opp:translate-x-0.5 transition-transform">
-                                                전환 →
-                                            </span>
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Body Section: Real-time Bus Arrivals at this Stop */}
-                            <div className="relative flex-1 min-h-30 overflow-y-auto custom-scrollbar bg-transparent">
-                                <BusStopPopup
-                                    stopId={stop.nodeid}
-                                    cityCode={cityCode}
-                                    currentRouteName={currentRouteName}
-                                    onRouteChange={handleSelectRouteFromPopup}
-                                />
-                            </div>
-
-                            {/* Footer Section */}
-                            <div
-                                className="flex items-center justify-center border-t border-black/5 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 py-2.5 px-4 shrink-0"
-                            >
-                                <div className="flex items-center gap-1.5 text-[11px] font-semibold text-gray-400">
-                                    <Info size={14}/>
-                                    <span>{UI_TEXT.BUS_ITEM.CLICK_ROUTE_FOR_INFO}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>,
-                    document.body
-                )
-            }
-        </>
-    );
-});
-
-BusStopMarkerItem.displayName = "BusStopMarkerItem";
-
-export default ({
-                    routeName,
-                    onRouteChange,
-                    cityCode,
-                    showNearbyStops = true,
-                    focusedStopId = null,
-                    onClearFocusedStop,
-                }: {
+export interface BusStopMarkerProps {
     routeName: string;
     onRouteChange?: (routeName: string) => void;
     cityCode?: string;
     showNearbyStops?: boolean;
     focusedStopId?: string | null;
     onClearFocusedStop?: () => void;
-}) => {
+}
+
+export const BusStopMarker = ({
+    routeName,
+    onRouteChange,
+    cityCode,
+    showNearbyStops = true,
+    focusedStopId = null,
+    onClearFocusedStop,
+}: BusStopMarkerProps) => {
     const {currentCity} = useCityContext();
     const effectiveCityCode = cityCode || currentCity?.code || "32020";
     const routeStops = useBusStop(routeName, effectiveCityCode);
@@ -497,6 +66,7 @@ export default ({
         }
         return rawRouteIds;
     }, [rawRouteIds, effectiveCityCode]);
+
     const routeMainColor = useMemo(
         () => getRouteMeta(routeName, effectiveCityCode).colorTheme.main,
         [routeName, effectiveCityCode]
@@ -541,6 +111,7 @@ export default ({
         return colorMap;
     }, [routeStops, activeGeoJson, routeMainColor]);
 
+    // Track map zoom and viewport center/bounds
     useEffect(() => {
         if (!map) return;
 
@@ -556,7 +127,6 @@ export default ({
             });
         };
 
-        // Initialize state
         updateViewState();
 
         map.on("zoomend", updateViewState);
@@ -593,99 +163,19 @@ export default ({
         onClearFocusedStop?.();
     }, [onClearFocusedStop]);
 
-    // Zoom threshold for displaying stops in viewport (zoom >= 12.2 for route stop icons, >= 14.2 for labels)
-    const visibleStops = useMemo(() => {
-        if (!bounds || zoom < 12.0) {
-            if (eventFocusedStop) {
-                return [
-                    {
-                        ...eventFocusedStop,
-                        isRouteStop: true,
-                        showLabel: true,
-                        color: routeMainColor,
-                    },
-                ];
-            }
-            return [];
-        }
-
-        const stopsInView: Array<BusStop & { isRouteStop: boolean; showLabel: boolean; color: string }> = [];
-        const addedNodeIds = new Set<string>();
-        const isRouteLabelVisible = zoom >= 14.2;
-        const isNearbyLabelVisible = zoom >= 15.6;
-
-        // 1. Include route stops that are inside current viewport bounds (or currently focused)
-        if (zoom >= 12.2) {
-            for (const rStop of routeStops) {
-                if (bounds.contains([rStop.gpslong, rStop.gpslati]) || rStop.nodeid === activeFocusedStopId) {
-                    const stopKey = `${rStop.nodeid}-${rStop.updowncd ?? "na"}`;
-                    const color = stopColorMap.get(stopKey) || stopColorMap.get(rStop.nodeid) || routeMainColor;
-
-                    addedNodeIds.add(rStop.nodeid);
-                    stopsInView.push({
-                        ...rStop,
-                        isRouteStop: true,
-                        showLabel: isRouteLabelVisible || rStop.nodeid === activeFocusedStopId,
-                        color,
-                    });
-                }
-            }
-        }
-
-        // 2. Include favorite stops in viewport even if not on active route
-        for (const fav of favoriteStops) {
-            if (
-                !addedNodeIds.has(fav.nodeid) &&
-                (bounds.contains([fav.gpslong, fav.gpslati]) || fav.nodeid === activeFocusedStopId)
-            ) {
-                addedNodeIds.add(fav.nodeid);
-                stopsInView.push({
-                    nodeid: fav.nodeid,
-                    nodenm: fav.nodenm,
-                    nodeno: fav.nodeno,
-                    gpslati: fav.gpslati,
-                    gpslong: fav.gpslong,
-                    isRouteStop: false,
-                    showLabel: true,
-                    color: "#f59e0b",
-                });
-            }
-        }
-
-        // 3. Include spatial nearby stops when zoomed in (>= 14.3)
-        if (showNearbyStops && zoom >= 14.3 && nearbyStops.length > 0) {
-            for (const nStop of nearbyStops) {
-                if (
-                    !addedNodeIds.has(nStop.nodeid) &&
-                    (bounds.contains([nStop.gpslong, nStop.gpslati]) || nStop.nodeid === activeFocusedStopId)
-                ) {
-                    addedNodeIds.add(nStop.nodeid);
-                    stopsInView.push({
-                        nodeid: nStop.nodeid,
-                        nodenm: nStop.nodenm,
-                        nodeno: nStop.nodeno ?? "",
-                        gpslati: nStop.gpslati,
-                        gpslong: nStop.gpslong,
-                        isRouteStop: false,
-                        showLabel: isNearbyLabelVisible || nStop.nodeid === activeFocusedStopId,
-                        color: "#64748b",
-                    });
-                }
-            }
-        }
-
-        // 4. Ensure eventFocusedStop is always included even while camera is flying to it
-        if (eventFocusedStop && !addedNodeIds.has(eventFocusedStop.nodeid)) {
-            stopsInView.push({
-                ...eventFocusedStop,
-                isRouteStop: routeStops.some((s) => s.nodeid === eventFocusedStop.nodeid),
-                showLabel: true,
-                color: stopColorMap.get(eventFocusedStop.nodeid) || routeMainColor,
-            });
-        }
-
-        return stopsInView;
-    }, [routeStops, favoriteStops, nearbyStops, showNearbyStops, bounds, zoom, stopColorMap, routeMainColor, activeFocusedStopId, eventFocusedStop]);
+    // Viewport-aware visible stops derivation
+    const visibleStops = useVisibleStops({
+        routeStops,
+        favoriteStops,
+        nearbyStops,
+        showNearbyStops,
+        bounds,
+        zoom,
+        stopColorMap,
+        routeMainColor,
+        activeFocusedStopId,
+        eventFocusedStop,
+    });
 
     const handleSelectOppositeStop = useCallback(
         (targetStop: BusStop) => {
@@ -703,12 +193,7 @@ export default ({
     );
 
     const placementsMap = useMemo(() => {
-        return computeOptimalLabelPlacements(
-            visibleStops,
-            map,
-            centerCoords,
-            activeFocusedStopId
-        );
+        return computeOptimalLabelPlacements(visibleStops, map, centerCoords, activeFocusedStopId);
     }, [visibleStops, map, centerCoords, activeFocusedStopId]);
 
     return (
@@ -747,3 +232,4 @@ export default ({
     );
 };
 
+export default BusStopMarker;
