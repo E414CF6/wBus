@@ -80,10 +80,16 @@ const BusIconDOM = memo(({routeNumber, color, isSelected, isFollowed}: BusIconDO
                 <rect x="4" y="2" width="32" height="50" rx="10" fill={themeColor}/>
             </svg>
             <div
-                className="bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 text-white text-[11px] font-extrabold px-1 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_6px_rgba(0,0,0,0.3)] tracking-[0.3px] min-w-7 max-w-7 flex items-center justify-center select-none"
+                className="bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 w-7 box-border text-white text-[11px] font-extrabold px-1 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_6px_rgba(0,0,0,0.3)] tracking-[0.3px] flex items-center justify-center select-none"
                 style={{backgroundColor: themeColor}}
             >
-                <PopupMarquee text={routeNumber} maxWidthClass="max-w-7"/>
+                <PopupMarquee
+                    text={routeNumber}
+                    maxWidthClass="w-full max-w-7"
+                    durationSeconds={2}
+                    className="text-center"
+                    marqueeGapClassName="pr-1"
+                />
             </div>
         </div>
     );
@@ -543,4 +549,3 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
         </>
     );
 }
-

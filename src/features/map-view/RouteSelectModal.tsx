@@ -2,7 +2,7 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Bus, Clock, GraduationCap, MapPin, Navigation, Search, Star, X} from "lucide-react";
-import {getRouteMeta, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
+import {getRouteMeta, resolveRouteCategory, type RouteCategoryInfo, RouteMeta, YONSEI_ROUTE_SET} from "@entities/route";
 import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
@@ -178,21 +178,73 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         return map;
     }, [sortedAllRoutes, currentCity.code]);
 
+    // Direct raw routetp mapping from city routes
+    const rawTypeMap = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const r of cityRoutes) {
+            const no = String(r.routeno);
+            if (r.routetp && !map.has(no)) {
+                map.set(no, r.routetp);
+            }
+        }
+        return map;
+    }, [cityRoutes]);
+
+    // Automatic classification map per route
+    const routeCategoryMap = useMemo(() => {
+        const map = new Map<string, RouteCategoryInfo>();
+        for (const route of sortedAllRoutes) {
+            const rawType = rawTypeMap.get(route) || routeMetaMap.get(route)?.routeType;
+            map.set(route, resolveRouteCategory(rawType));
+        }
+        return map;
+    }, [sortedAllRoutes, rawTypeMap, routeMetaMap]);
+
+    // Automatically discovered categories based on actual routes in current city
+    const dynamicCategories = useMemo(() => {
+        const counts = new Map<string, { info: RouteCategoryInfo; count: number }>();
+        for (const r of sortedAllRoutes) {
+            const cat = routeCategoryMap.get(r);
+            if (!cat) continue;
+            const existing = counts.get(cat.id);
+            if (existing) {
+                existing.count += 1;
+            } else {
+                counts.set(cat.id, {info: cat, count: 1});
+            }
+        }
+
+        return Array.from(counts.values())
+            .sort((a, b) => a.info.order - b.info.order)
+            .map(({info, count}) => ({
+                id: info.id,
+                label: `${info.label} (${count})`,
+                dotClass: info.dotClass,
+                activeClass: info.activeClass,
+            }));
+    }, [sortedAllRoutes, routeCategoryMap]);
+
     const categories = useMemo(() => {
         const bookmarkedCount = sortedAllRoutes.filter((r) => bookmarks.includes(r)).length;
-        const expressCount = sortedAllRoutes.filter((r) => routeMetaMap.get(r)?.genericType === "EXPRESS").length;
-        const mainCount = sortedAllRoutes.filter((r) => routeMetaMap.get(r)?.genericType === "MAIN").length;
-        const branchCount = sortedAllRoutes.filter((r) => routeMetaMap.get(r)?.genericType === "BRANCH").length;
-        const villageCount = sortedAllRoutes.filter((r) => routeMetaMap.get(r)?.genericType === "VILLAGE").length;
 
         const list: {
             id: string;
             label: string;
             icon?: React.ComponentType<{ className?: string }>;
             dotClass?: string;
+            activeClass?: string;
         }[] = [
-            {id: "ALL", label: UI_TEXT.ROUTE_SELECT.CATEGORY_ALL(sortedAllRoutes.length)},
-            {id: "BOOKMARKS", label: UI_TEXT.ROUTE_SELECT.CATEGORY_BOOKMARKS(bookmarkedCount), icon: Star},
+            {
+                id: "ALL",
+                label: UI_TEXT.ROUTE_SELECT.CATEGORY_ALL(sortedAllRoutes.length),
+                activeClass: "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]",
+            },
+            {
+                id: "BOOKMARKS",
+                label: UI_TEXT.ROUTE_SELECT.CATEGORY_BOOKMARKS(bookmarkedCount),
+                icon: Star,
+                activeClass: "bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-[1.02]",
+            },
         ];
 
         if (favoriteStops.length > 0) {
@@ -200,28 +252,33 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                 id: "FAV_STOPS",
                 label: `정류장 즐겨찾기 (${favoriteStops.length})`,
                 icon: MapPin,
+                activeClass: "bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-[1.02]",
             });
         }
 
         if (isWonju) {
-            list.push({id: "YONSEI", label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI, icon: GraduationCap});
+            list.push({
+                id: "YONSEI",
+                label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI,
+                icon: GraduationCap,
+                activeClass: "bg-[#003876] text-white shadow-md shadow-[#003876]/30 scale-[1.02]",
+            });
         }
 
-        if (expressCount > 0) {
-            list.push({id: "EXPRESS", label: `급행 (${expressCount})`, dotClass: "bg-red-500"});
-        }
-        if (mainCount > 0) {
-            list.push({id: "MAIN", label: `간선 (${mainCount})`, dotClass: "bg-blue-500"});
-        }
-        if (branchCount > 0) {
-            list.push({id: "BRANCH", label: `지선 (${branchCount})`, dotClass: "bg-emerald-500"});
-        }
-        if (villageCount > 0) {
-            list.push({id: "VILLAGE", label: `마을 (${villageCount})`, dotClass: "bg-lime-500"});
+        // Add automatically discovered route type groups (e.g. 공항, 좌석, 일반, 순환, 간선, 지선, 마을...)
+        for (const cat of dynamicCategories) {
+            list.push(cat);
         }
 
         return list;
-    }, [isWonju, sortedAllRoutes, bookmarks, favoriteStops.length, routeMetaMap]);
+    }, [isWonju, sortedAllRoutes.length, bookmarks, favoriteStops.length, dynamicCategories]);
+
+    // Reset selected category to ALL if current category does not exist in active categories
+    useEffect(() => {
+        if (selectedCategory !== "ALL" && !categories.some((c) => c.id === selectedCategory)) {
+            setSelectedCategory("ALL");
+        }
+    }, [categories, selectedCategory]);
 
     // Filter stops based on Search Query or FAV_STOPS Category
     const matchedStops = useMemo<BusStop[]>(() => {
@@ -272,32 +329,28 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             list = list.filter((r) => bookmarks.includes(r));
         } else if (selectedCategory === "YONSEI") {
             list = list.filter((r) => YONSEI_ROUTE_SET.has(r));
-        } else if (selectedCategory === "EXPRESS") {
-            list = list.filter((r) => routeMetaMap.get(r)?.genericType === "EXPRESS");
-        } else if (selectedCategory === "MAIN") {
-            list = list.filter((r) => routeMetaMap.get(r)?.genericType === "MAIN");
-        } else if (selectedCategory === "BRANCH") {
-            list = list.filter((r) => routeMetaMap.get(r)?.genericType === "BRANCH");
-        } else if (selectedCategory === "VILLAGE") {
-            list = list.filter((r) => routeMetaMap.get(r)?.genericType === "VILLAGE");
+        } else if (selectedCategory !== "ALL" && selectedCategory !== "FAV_STOPS") {
+            list = list.filter((r) => routeCategoryMap.get(r)?.id === selectedCategory);
         }
 
-        // Apply Search Query (Matches routeNo, origin, destination, description, routeType)
+        // Apply Search Query (Matches routeNo, origin, destination, description, routeType, category label)
         const q = searchQuery.trim().toLowerCase();
         if (q) {
             list = list.filter((r) => {
                 const meta = routeMetaMap.get(r);
+                const category = routeCategoryMap.get(r);
                 const matchNo = r.toLowerCase().includes(q);
                 const matchOrigin = meta?.origin.toLowerCase().includes(q);
                 const matchDest = meta?.destination.toLowerCase().includes(q);
                 const matchDesc = meta?.description?.toLowerCase().includes(q);
                 const matchType = meta?.routeType?.toLowerCase().includes(q);
-                return matchNo || matchOrigin || matchDest || matchDesc || matchType;
+                const matchCategory = category?.label.toLowerCase().includes(q);
+                return matchNo || matchOrigin || matchDest || matchDesc || matchType || matchCategory;
             });
         }
 
         return list;
-    }, [sortedAllRoutes, selectedCategory, searchQuery, bookmarks, routeMetaMap]);
+    }, [sortedAllRoutes, selectedCategory, searchQuery, bookmarks, routeCategoryMap, routeMetaMap]);
 
     const validRecentRoutes = recentRoutes.filter((r) => sortedAllRoutes.includes(r));
 
@@ -425,19 +478,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                 onClick={() => setSelectedCategory(cat.id)}
                                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95 ${
                                     isActive
-                                        ? cat.id === "EXPRESS"
-                                            ? "bg-red-600 text-white shadow-md shadow-red-500/30 scale-[1.02]"
-                                            : cat.id === "MAIN"
-                                                ? "bg-blue-600 text-white shadow-md shadow-blue-500/30 scale-[1.02]"
-                                                : cat.id === "BRANCH"
-                                                    ? "bg-emerald-600 text-white shadow-md shadow-emerald-500/30 scale-[1.02]"
-                                                    : cat.id === "VILLAGE"
-                                                        ? "bg-lime-600 text-white shadow-md shadow-lime-500/30 scale-[1.02]"
-                                                        : cat.id === "YONSEI"
-                                                            ? "bg-[#003876] text-white shadow-md shadow-[#003876]/30 scale-[1.02]"
-                                                            : cat.id === "BOOKMARKS" || cat.id === "FAV_STOPS"
-                                                                ? "bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-[1.02]"
-                                                                : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]"
+                                        ? cat.activeClass || "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md shadow-black/10 dark:shadow-white/10 scale-[1.02]"
                                         : "bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.07] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300 border border-black/5 dark:border-white/5"
                                 }`}
                             >
@@ -571,7 +612,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                             <div className="flex items-center gap-1.5 flex-wrap mb-1">
                                                 <span
                                                     className={`px-1.5 py-0.5 rounded-md text-[9px] font-black ${meta.colorTheme.badgeBg} ${meta.colorTheme.text}`}>
-                                                    {meta.routeType || (meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : meta.genericType === "VILLAGE" ? "마을" : "간선")}
+                                                    {meta.routeType || routeCategoryMap.get(route)?.label || (meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : meta.genericType === "VILLAGE" ? "마을" : "간선")}
                                                 </span>
                                                 {isYonsei && (
                                                     <span

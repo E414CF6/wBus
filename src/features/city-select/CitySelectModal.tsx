@@ -1,8 +1,8 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Check, Compass, MapPin, Navigation, Search, Sparkles, X} from "lucide-react";
-import {NATIONWIDE_CITIES, useCityContext} from "@entities/city";
+import {Check, Compass, MapPin, Navigation, Search, Sparkles, Star, X} from "lucide-react";
+import {NATIONWIDE_CITIES, sortCitiesByMajor, useCityContext, useFavoriteCities} from "@entities/city";
 import type {CityInfo} from "@entities/city/types";
 import {Modal} from "@shared/ui";
 
@@ -10,20 +10,6 @@ interface CitySelectModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
-
-const PROVINCE_GROUPS: { label: string; match: (city: CityInfo) => boolean }[] = [
-    {label: "전체", match: () => true},
-    {label: "강원", match: (c) => c.province.includes("강원")},
-    {label: "수도권", match: (c) => c.province.includes("경기") || c.province.includes("인천")},
-    {label: "광역시·세종", match: (c) => c.isMajor === true && c.code.length === 2 && c.code !== "39"},
-    {label: "충청", match: (c) => c.province.includes("충청") || c.province.includes("대전") || c.province.includes("세종")},
-    {
-        label: "경상",
-        match: (c) => c.province.includes("경상") || c.province.includes("부산") || c.province.includes("대구") || c.province.includes("울산")
-    },
-    {label: "전라", match: (c) => c.province.includes("전라") || c.province.includes("광주")},
-    {label: "제주", match: (c) => c.province.includes("제주")},
-];
 
 export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose}) => {
     const {
@@ -35,8 +21,10 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
         isDetecting,
     } = useCityContext();
 
+    const {favoriteCityCodes, isFavoriteCity, toggleFavoriteCity} = useFavoriteCities();
+
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedTab, setSelectedTab] = useState("전체");
+    const [selectedTab, setSelectedTab] = useState<"ALL" | "FAVORITES">("ALL");
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Reset state on open
@@ -55,7 +43,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
         }
     }, [isOpen]);
 
-    // Filter cities
+    // Filter cities and sort by major metropolitan scale
     const filteredCities = useMemo(() => {
         let list = NATIONWIDE_CITIES;
         const q = searchQuery.trim().toLowerCase();
@@ -67,22 +55,12 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                     c.province.toLowerCase().includes(q) ||
                     c.code.includes(q)
             );
-        } else {
-            const activeGroup = PROVINCE_GROUPS.find((g) => g.label === selectedTab);
-            if (activeGroup) {
-                list = list.filter(activeGroup.match);
-            }
+        } else if (selectedTab === "FAVORITES") {
+            list = list.filter((c) => favoriteCityCodes.includes(c.code));
         }
 
-        // Put Wonju at top when in 전체 or 강원
-        return [...list].sort((a, b) => {
-            if (a.code === "32020") return -1;
-            if (b.code === "32020") return 1;
-            if (a.code === currentCity.code) return -1;
-            if (b.code === currentCity.code) return 1;
-            return 0;
-        });
-    }, [searchQuery, selectedTab, currentCity.code]);
+        return sortCitiesByMajor(list);
+    }, [searchQuery, selectedTab, favoriteCityCodes]);
 
     const handleSelectCity = useCallback(
         (city: CityInfo) => {
@@ -129,7 +107,10 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                     </strong>
                 </span>
             </div>
-            <span className="font-semibold shrink-0">총 {filteredCities.length}개 지역</span>
+            <span className="font-semibold shrink-0">
+                총 {filteredCities.length}개 지역
+                {selectedTab === "FAVORITES" && !searchQuery ? " (즐겨찾기)" : ""}
+            </span>
         </>
     );
 
@@ -185,7 +166,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="도시·지역 이름 검색 (예: 원주, 춘천, 수원, 부산)"
+                            placeholder="도시·지역 이름 검색 (예: 서울, 부산, 수원, 원주)"
                             className="w-full pl-10 pr-10 py-2.5 sm:py-3 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 rounded-2xl text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
                         />
                         {searchQuery && (
@@ -211,26 +192,45 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                     </button>
                 </div>
 
-                {/* Province Filter Chips */}
+                {/* Filter Tabs: 전체 / 즐겨찾기 */}
                 {!searchQuery && (
-                    <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden pt-0.5">
-                        {PROVINCE_GROUPS.map((group) => {
-                            const isActive = selectedTab === group.label;
-                            return (
-                                <button
-                                    key={group.label}
-                                    type="button"
-                                    onClick={() => setSelectedTab(group.label)}
-                                    className={`px-3 py-1.5 rounded-full font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer text-xs active:scale-95 ${
-                                        isActive
-                                            ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm scale-[1.02]"
-                                            : "bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.07] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300 border border-black/5 dark:border-white/5"
-                                    }`}
-                                >
-                                    {group.label}
-                                </button>
-                            );
-                        })}
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                        <button
+                            type="button"
+                            onClick={() => setSelectedTab("ALL")}
+                            className={`px-3.5 py-1.5 rounded-full font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer text-xs active:scale-95 ${
+                                selectedTab === "ALL"
+                                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm scale-[1.02]"
+                                    : "bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.07] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300 border border-black/5 dark:border-white/5"
+                            }`}
+                        >
+                            전체
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setSelectedTab("FAVORITES")}
+                            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer text-xs active:scale-95 ${
+                                selectedTab === "FAVORITES"
+                                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm scale-[1.02]"
+                                    : "bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.07] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300 border border-black/5 dark:border-white/5"
+                            }`}
+                        >
+                            <Star
+                                className={`w-3.5 h-3.5 ${
+                                    selectedTab === "FAVORITES"
+                                        ? "text-amber-400 fill-amber-400"
+                                        : favoriteCityCodes.length > 0
+                                            ? "text-amber-500 fill-amber-500"
+                                            : "text-slate-400"
+                                }`}
+                            />
+                            <span>즐겨찾기</span>
+                            {favoriteCityCodes.length > 0 && (
+                                <span className="text-[11px] opacity-80 font-bold">
+                                    {favoriteCityCodes.length}
+                                </span>
+                            )}
+                        </button>
                     </div>
                 )}
             </div>
@@ -238,17 +238,29 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
             {/* Cities Grid List */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-3 custom-scrollbar">
                 {filteredCities.length === 0 ? (
-                    <div className="py-14 text-center text-slate-400 dark:text-slate-500 space-y-1">
-                        <Compass className="w-9 h-9 mx-auto opacity-40 mb-2"/>
-                        <p className="text-sm font-black text-slate-700 dark:text-slate-200">검색된 지역이 없습니다</p>
-                        <p className="text-xs">다른 시·군 이름으로 검색해 보세요.</p>
-                    </div>
+                    selectedTab === "FAVORITES" && !searchQuery ? (
+                        <div className="py-14 text-center text-slate-400 dark:text-slate-500 space-y-2">
+                            <Star className="w-9 h-9 mx-auto opacity-30 text-amber-400 fill-amber-400/20 mb-2"/>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-200">
+                                즐겨찾는 지역이 없습니다
+                            </p>
+                            <p className="text-xs">
+                                자주 이용하는 지역 카드의 별표(★)를 눌러 등록해 보세요.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="py-14 text-center text-slate-400 dark:text-slate-500 space-y-1">
+                            <Compass className="w-9 h-9 mx-auto opacity-40 mb-2"/>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-200">검색된 지역이 없습니다</p>
+                            <p className="text-xs">다른 시·군 이름으로 검색해 보세요.</p>
+                        </div>
+                    )
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                         {filteredCities.map((city) => {
                             const isSelected = currentCity.code === city.code;
                             const isDetected = detectedCity?.code === city.code && !isSelected;
-                            const isWonju = city.code === "32020";
+                            const isFav = isFavoriteCity(city.code);
 
                             return (
                                 <button
@@ -274,19 +286,13 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                             >
                                                 {city.name}
                                             </span>
-                                            {isWonju && (
-                                                <span
-                                                    className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-[#003876] text-white shrink-0">
-                                                    연세대·시간표
-                                                </span>
-                                            )}
                                             {isDetected && (
                                                 <span
                                                     className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-500 text-white shrink-0">
                                                     화면위치
                                                 </span>
                                             )}
-                                            {city.isMajor && !isWonju && !isDetected && (
+                                            {city.isMajor && !isDetected && (
                                                 <span
                                                     className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
                                                     주요
@@ -298,11 +304,32 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                         </p>
                                     </div>
 
-                                    {isSelected && (
-                                        <div className="p-1 rounded-full bg-blue-600 text-white shrink-0 shadow-xs">
-                                            <Check className="w-3 h-3 stroke-[3]"/>
-                                        </div>
-                                    )}
+                                    {/* Action Buttons: Favorite Star & Active Selection Check */}
+                                    <div className="flex items-center gap-1 shrink-0 ml-1">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleFavoriteCity(city.code);
+                                            }}
+                                            title={isFav ? "즐겨찾기 해제" : "즐겨찾기 등록"}
+                                            aria-label={isFav ? `${city.name} 즐겨찾기 해제` : `${city.name} 즐겨찾기 등록`}
+                                            className="p-1.5 -mr-1 rounded-xl text-slate-400 hover:text-amber-500 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer active:scale-125"
+                                        >
+                                            <Star
+                                                className={`w-3.5 h-3.5 transition-colors ${
+                                                    isFav
+                                                        ? "text-amber-400 fill-amber-400"
+                                                        : "text-slate-300 dark:text-slate-600 hover:text-amber-400"
+                                                }`}
+                                            />
+                                        </button>
+                                        {isSelected && (
+                                            <div className="p-1 rounded-full bg-blue-600 text-white shrink-0 shadow-xs">
+                                                <Check className="w-3 h-3 stroke-[3]"/>
+                                            </div>
+                                        )}
+                                    </div>
                                 </button>
                             );
                         })}

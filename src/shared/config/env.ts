@@ -81,6 +81,7 @@ export const STORAGE_KEYS = {
     POLYLINE_PREFIX: "wbus_cached_polyline_v1_",
     ROUTE_STOPS_PREFIX: "wbus_cached_route_stops_v1_",
     FAVORITE_STOPS: "wbus_favorite_stops_v1",
+    FAVORITE_CITIES: "wbus_favorite_cities",
     TIMETABLE_SUBTAB: "wbus_timetable_subtab",
     ACTIVE_TAB: "wbus_active_tab",
 } as const;

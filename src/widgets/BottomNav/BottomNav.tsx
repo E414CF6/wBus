@@ -1,6 +1,6 @@
 "use client";
 
-import React, {memo, useCallback, useEffect, useState, useSyncExternalStore} from "react";
+import React, {memo, useCallback, useEffect, useMemo, useState, useSyncExternalStore} from "react";
 import {Bus, Calendar, ChevronDown, Coffee, Compass, MapIcon, MapPin, Moon, Sparkles, Sun, X,} from "lucide-react";
 import {useTheme} from "next-themes";
 
@@ -9,7 +9,7 @@ import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useIsDesktop} from "@shared/ui/useIsDesktop";
 import {useCityContext} from "@entities/city";
-import {YONSEI_ROUTE_SET} from "@entities/route/routeMetadata";
+import {getRouteMeta, YONSEI_ROUTE_SET} from "@entities/route";
 import {CitySelectModal} from "@features/city-select";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
 
@@ -174,6 +174,7 @@ function BottomNavComponent({
     const hasPendingRegion = Boolean(detectedCity && detectedCity.code !== currentCity.code);
     const isWonju = currentCity.code === "32020";
     const isYonseiSelected = isWonju && YONSEI_ROUTE_SET.has(selectedRoute);
+    const routeMeta = useMemo(() => getRouteMeta(selectedRoute, currentCity.code), [selectedRoute, currentCity.code]);
 
     const dayModeTitle =
         dayMode === "AUTO"
@@ -338,7 +339,7 @@ function BottomNavComponent({
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${
                                 isYonseiSelected
                                     ? "bg-[#003876]/15 dark:bg-[#003876]/35 hover:bg-[#003876]/25 border border-[#003876]/40 text-[#003876] dark:text-blue-300"
-                                    : "bg-blue-600/10 dark:bg-blue-500/15 hover:bg-blue-600/20 dark:hover:bg-blue-500/25 border border-blue-500/30 text-blue-700 dark:text-blue-300"
+                                    : `${routeMeta.colorTheme.badgeBg} border ${routeMeta.colorTheme.border} ${routeMeta.colorTheme.text}`
                             }`}
                             title="노선 선택 (검색/목록)"
                         >

@@ -215,3 +215,118 @@ export function findNearestCity(lat: number, lng: number): CityInfo {
     return findNearestCityWithDistance(lat, lng).city;
 }
 
+/**
+ * Priority rank for major nationwide metropolitan cities, special cities, and large municipal cities (population/hub-based order).
+ */
+export const MAJOR_CITY_PRIORITY_CODES: readonly string[] = [
+    // 1. 특별시 / 광역시 / 특별자치시
+    "11",    // 서울특별시
+    "21",    // 부산광역시
+    "23",    // 인천광역시
+    "22",    // 대구광역시
+    "25",    // 대전광역시/계룡시
+    "24",    // 광주광역시
+    "26",    // 울산광역시
+    "12",    // 세종특별자치시
+
+    // 2. 주요 대도시 / 특례시 (인구 50만 이상 및 주요 거점 도시)
+    "31010", // 수원시
+    "31190", // 용인시
+    "31100", // 고양시
+    "38010", // 창원시
+    "31020", // 성남시
+    "31240", // 화성시
+    "33010", // 청주시
+    "31050", // 부천시
+    "31130", // 남양주시
+    "34010", // 천안시
+    "35010", // 전주시
+    "31090", // 안산시
+    "31070", // 평택시
+    "31040", // 안양시
+    "31150", // 시흥시
+    "31200", // 파주시
+    "31230", // 김포시
+    "31030", // 의정부시
+    "38070", // 김해시
+    "37010", // 포항시
+    "39",    // 제주도
+    "37040", // 구미시
+    "38030", // 진주시
+    "32020", // 원주시
+    "32010", // 춘천시
+    "34040", // 아산시
+    "35030", // 익산시
+    "38100", // 양산시
+    "36030", // 순천시
+    "35020", // 군산시
+    "36020", // 여수시
+    "37020", // 경주시
+    "38090", // 거제시
+    "36010", // 목포시
+    "31250", // 광주시(경기)
+    "31180", // 하남시
+    "31210", // 이천시
+    "31260", // 양주시
+    "31140", // 오산시
+    "31120", // 구리시
+    "31220", // 안성시
+    "31270", // 포천시
+    "31170", // 의왕시
+    "31320", // 여주시
+    "31080", // 동두천시
+    "31110", // 과천시
+    "33020", // 충주시
+    "33030", // 제천시
+    "34390", // 당진시
+    "34050", // 서산시
+    "34060", // 논산시
+    "34020", // 공주시
+    "34030", // 보령시
+    "35040", // 정읍시
+    "35050", // 남원시
+    "35060", // 김제시
+    "36040", // 나주시
+    "36050", // 광양시
+    "37090", // 경산시
+    "37050", // 안동시
+    "37030", // 김천시
+    "37060", // 영주시
+    "37070", // 상주시
+    "37080", // 영천시
+    "37100", // 문경시
+    "38050", // 통영시
+    "38040", // 사천시
+    "38080", // 밀양시
+    "32050", // 태백시
+    "34070", // 계룡시
+];
+
+const majorCityRankMap = new Map<string, number>();
+MAJOR_CITY_PRIORITY_CODES.forEach((code, idx) => majorCityRankMap.set(code, idx));
+
+/**
+ * Sorts cities by metropolitan and population scale first (Seoul, Busan, Incheon, Daegu, Daejeon, Gwangju, Ulsan, Sejong, Suwon, etc.),
+ * followed by other municipal cities, and finally counties ('군').
+ */
+export function sortCitiesByMajor(cities: CityInfo[]): CityInfo[] {
+    return [...cities].sort((a, b) => {
+        const rankA = majorCityRankMap.has(a.code)
+            ? (majorCityRankMap.get(a.code) as number)
+            : a.name.endsWith("군")
+                ? 2000
+                : 1000;
+        const rankB = majorCityRankMap.has(b.code)
+            ? (majorCityRankMap.get(b.code) as number)
+            : b.name.endsWith("군")
+                ? 2000
+                : 1000;
+
+        if (rankA !== rankB) {
+            return rankA - rankB;
+        }
+        return a.name.localeCompare(b.name, "ko");
+    });
+}
+
+

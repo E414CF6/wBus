@@ -1,17 +1,7 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
-import {
-    AlertTriangle,
-    Bus,
-    CalendarClock,
-    Check,
-    ChevronDown,
-    GitFork,
-    GraduationCap,
-    RefreshCw,
-    Star
-} from "lucide-react";
+import {AlertTriangle, CalendarClock, Check, ChevronDown, GitFork, GraduationCap, RefreshCw, Star} from "lucide-react";
 
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {useCityContext} from "@entities/city";
@@ -22,7 +12,6 @@ import {useAppMapContext} from "@shared/context/AppMapContext";
 import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
 import {useRouteVariations} from "@entities/route/hooks";
 import {MarqueeText} from "@shared/ui/MarqueeText";
-import {RouteSelectModal} from "./RouteSelectModal";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 
@@ -69,7 +58,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
     const {map} = useAppMapContext();
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const isWonju = currentCity.code === "32020";
-    const [isModalOpen, setIsModalOpen] = useState(false);
     const [isVariantMenuOpen, setIsVariantMenuOpen] = useState(false);
     const variantMenuRef = useRef<HTMLDivElement>(null);
 
@@ -78,15 +66,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
 
     // Fetch variations for current route (e.g. 30 has basic, via-Sangji, etc.)
     const {variations} = useRouteVariations(selectedRoute, true, currentCity.code);
-
-    const handleSelectFromModal = useCallback(
-        (route: string) => {
-            onSelectRoute(route);
-            setIsModalOpen(false);
-            setIsVariantMenuOpen(false);
-        },
-        [onSelectRoute]
-    );
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -344,14 +323,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
 
     return (
         <>
-            <RouteSelectModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                allRoutes={allRoutes}
-                selectedRoute={selectedRoute}
-                onSelectRoute={handleSelectFromModal}
-            />
-
             <header
                 className={`absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 -translate-x-1/2 ${
                     isVariantMenuOpen ? "z-[80]" : "z-50"
@@ -362,32 +333,17 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                     ref={variantMenuRef}
                     className={`relative ${
                         isVariantMenuOpen ? "z-30" : "z-20"
-                    } flex items-center gap-1 sm:gap-1.5 p-1.5 pr-2.5 sm:p-2 sm:pr-3 bg-white/92 dark:bg-[#111218]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full`}
+                    } flex w-full min-w-0 items-center gap-1 sm:gap-1.5 p-1.5 pr-2.5 sm:p-2 sm:pr-3 bg-white/92 dark:bg-[#111218]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full sm:w-auto`}
                 >
-                    {/* Route Selector Button (Far Left, Triggers Modal) */}
-                    <button
-                        type="button"
-                        onClick={() => setIsModalOpen(true)}
-                        className={`flex items-center gap-1.5 px-3 py-1 rounded-full font-black text-xs sm:text-sm tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shadow-sm shrink-0 ${meta.colorTheme.bg} text-white ${meta.colorTheme.shadow || ""}`}
-                        title="다른 노선 선택하기 (검색/목록)"
-                        aria-label="노선 선택 모달 열기"
-                    >
-                        <Bus className="w-3.5 h-3.5 shrink-0"/>
-                        <span suppressHydrationWarning className="whitespace-nowrap font-extrabold">
-                            {selectedRoute || "노선"}번
-                        </span>
-                        <ChevronDown className="w-3.5 h-3.5 opacity-80 shrink-0"/>
-                    </button>
-
-                    {/* Route Variation Toggle & Focus Switcher (Replaces old UP/DOWN Direction Switcher) */}
-                    <div className={`relative flex items-center ${isVariantMenuOpen ? "z-50" : ""}`}>
+                    {/* Route Variation Toggle & Focus Switcher */}
+                    <div className={`relative flex min-w-0 flex-1 items-center ${isVariantMenuOpen ? "z-50" : ""}`}>
                         <button
                             type="button"
                             suppressHydrationWarning
                             onClick={hasMultipleVariants ? handleCycleVariant : undefined}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-all duration-200 cursor-pointer overflow-hidden max-w-[46vw] sm:max-w-[320px] text-left select-none active:scale-95 ${
+                            className={`flex w-full min-w-0 items-center gap-2 px-2 py-1 sm:px-2.5 sm:py-1 rounded-full transition-all duration-200 cursor-pointer overflow-hidden text-left select-none active:scale-95 ${
                                 hasMultipleVariants
-                                    ? "hover:bg-black/5 dark:hover:bg-white/5"
+                                    ? "hover:bg-blue-50/80 dark:hover:bg-blue-950/30"
                                     : "cursor-default"
                             }`}
                             title={
@@ -397,7 +353,17 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                             }
                             aria-label="노선 종류 및 경유지 전환"
                         >
-                            <div className="flex flex-col min-w-0 flex-1">
+                            <span
+                                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white ${meta.colorTheme.bg} ${meta.colorTheme.shadow || "shadow-[0_4px_12px_rgba(0,0,0,0.15)]"}`}
+                                aria-hidden="true"
+                            >
+                                <GitFork className="h-4 w-4"/>
+                            </span>
+                            <div className="flex min-w-0 flex-1 flex-col justify-center">
+                                <span
+                                    className={`mb-0.5 text-[9px] font-black uppercase tracking-wider ${meta.colorTheme.text}`}>
+                                    {selectedRoute}
+                                </span>
                                 <div className="flex items-center gap-1.5 min-w-0 max-w-full">
                                     {/* Main destination / origin path or variant title (Slowly marquees when overflowing on mobile instead of cutting with ellipsis) */}
                                     <MarqueeText
@@ -419,7 +385,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                             className={`px-1.5 py-0.5 rounded-md text-[9px] font-black shrink-0 transition-colors flex items-center gap-0.5 ${
                                                 selectedVariantId === "all"
                                                     ? "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
-                                                    : "bg-blue-600 text-white dark:bg-blue-500 shadow-xs"
+                                                    : `${meta.colorTheme.bg} text-white shadow-xs`
                                             }`}
                                         >
                                             <GitFork className="w-2.5 h-2.5 shrink-0"/>
@@ -489,7 +455,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                         onClick={() => handleSelectSpecificVariant("all")}
                                         className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-black transition cursor-pointer text-left ${
                                             selectedVariantId === "all"
-                                                ? "bg-blue-600 text-white shadow-xs"
+                                                ? `${meta.colorTheme.bg} text-white shadow-xs`
                                                 : "text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5"
                                         }`}
                                     >
@@ -497,7 +463,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                             <GitFork className="w-3.5 h-3.5 shrink-0 opacity-80"/>
                                             <div className="truncate">
                                                 <p className="truncate">전체 경로 (모든 경유지)</p>
-                                                <p className={`text-[10px] font-semibold truncate ${selectedVariantId === "all" ? "text-blue-100" : "text-slate-400"}`}>
+                                                <p className={`text-[10px] font-semibold truncate ${selectedVariantId === "all" ? "text-white/80" : "text-slate-400"}`}>
                                                     {meta.origin} ↔ {meta.destination}
                                                 </p>
                                             </div>
@@ -518,13 +484,13 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                 onClick={() => handleSelectSpecificVariant(variant.routeId)}
                                                 className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-black transition cursor-pointer text-left ${
                                                     isSelected
-                                                        ? "bg-blue-600 text-white shadow-xs"
+                                                        ? `${meta.colorTheme.bg} text-white shadow-xs`
                                                         : "text-slate-700 dark:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5"
                                                 }`}
                                             >
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <span
-                                                        className={`w-5 text-center font-mono text-[11px] font-bold shrink-0 ${isSelected ? "text-blue-200" : "text-slate-400"}`}>
+                                                        className={`w-5 text-center font-mono text-[11px] font-bold shrink-0 ${isSelected ? "text-white/80" : "text-slate-400"}`}>
                                                         {idx + 1}
                                                     </span>
                                                     <div className="truncate">
@@ -541,7 +507,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <p className={`text-[10px] font-semibold truncate ${isSelected ? "text-blue-100" : "text-slate-400"}`}>
+                                                        <p className={`text-[10px] font-semibold truncate ${isSelected ? "text-white/80" : "text-slate-400"}`}>
                                                             {turningStopName ? `회차: ${turningStopName}` : `${variant.stops.length}개 정류장`}
                                                         </p>
                                                     </div>
@@ -567,7 +533,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                     onReconnect?.();
                                 }
                             }}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer active:scale-95 ${statusConfig.badgeClass}`}
+                            className={`flex max-w-[44vw] shrink-0 items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer active:scale-95 sm:max-w-none ${statusConfig.badgeClass}`}
                             title={statusConfig.tooltip}
                         >
                             <span className="relative flex h-2 w-2 shrink-0 items-center justify-center">
@@ -617,7 +583,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                     isCurrent
                                         ? isYonsei
                                             ? "bg-[#003876] text-white shadow-sm ring-1 ring-[#003876] scale-[1.03]"
-                                            : "bg-blue-600 text-white shadow-sm ring-1 ring-blue-600 scale-[1.03]"
+                                            : `${meta.colorTheme.bg} text-white shadow-sm ring-1 ring-current scale-[1.03]`
                                         : "bg-white/85 dark:bg-[#111218]/85 backdrop-blur-xl hover:bg-white dark:hover:bg-[#181922] text-slate-700 dark:text-slate-300 border border-black/8 dark:border-white/10"
                                 }`}
                             >

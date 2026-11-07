@@ -8,6 +8,7 @@ export interface MarqueeTextProps {
     containerClassName?: string;
     durationSeconds?: number;
     fadeEdges?: boolean;
+    marqueeGapClassName?: string;
 }
 
 /**
@@ -20,6 +21,7 @@ export const MarqueeText: React.FC<MarqueeTextProps> = ({
                                                             containerClassName = "",
                                                             durationSeconds = 14,
                                                             fadeEdges = true,
+                                                            marqueeGapClassName = "pr-8",
                                                         }) => {
     const containerRef = useRef<HTMLDivElement>(null);
     const measureRef = useRef<HTMLSpanElement>(null);
@@ -76,10 +78,10 @@ export const MarqueeText: React.FC<MarqueeTextProps> = ({
                         animation: `marquee ${durationSeconds}s linear infinite`,
                     }}
                 >
-                    <span className={`pr-8 shrink-0 ${className}`}>
+                    <span className={`${marqueeGapClassName} shrink-0 ${className}`}>
                         {text}
                     </span>
-                    <span className={`pr-8 shrink-0 ${className}`} aria-hidden="true">
+                    <span className={`${marqueeGapClassName} shrink-0 ${className}`} aria-hidden="true">
                         {text}
                     </span>
                 </div>
@@ -91,6 +93,9 @@ export const MarqueeText: React.FC<MarqueeTextProps> = ({
 export type PopupMarqueeProps = {
     text: string;
     maxWidthClass?: string;
+    durationSeconds?: number;
+    className?: string;
+    marqueeGapClassName?: string;
 };
 
 /**
@@ -99,14 +104,18 @@ export type PopupMarqueeProps = {
 export const PopupMarquee: React.FC<PopupMarqueeProps> = ({
                                                               text,
                                                               maxWidthClass = "max-w-full",
+                                                              durationSeconds = 6,
+                                                              className = "",
+                                                              marqueeGapClassName = "pr-8",
                                                           }) => {
     return (
         <MarqueeText
             text={text}
             containerClassName={maxWidthClass}
-            durationSeconds={6}
+            durationSeconds={durationSeconds}
             fadeEdges={false}
-            className="font-medium"
+            className={`font-medium ${className}`}
+            marqueeGapClassName={marqueeGapClassName}
         />
     );
 };

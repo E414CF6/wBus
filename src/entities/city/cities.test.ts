@@ -6,6 +6,7 @@ import {
     getCityByCode,
     NATIONWIDE_CITIES,
     searchCities,
+    sortCitiesByMajor,
 } from "./cities";
 
 describe("cities entity & nearest city resolution", () => {
@@ -116,6 +117,35 @@ describe("cities entity & nearest city resolution", () => {
         it("returns all cities for empty query", () => {
             const results = searchCities("");
             expect(results.length).toBe(NATIONWIDE_CITIES.length);
+        });
+    });
+
+    describe("sortCitiesByMajor", () => {
+        it("places major metropolitan cities at the top (Seoul 1st)", () => {
+            const sorted = sortCitiesByMajor(NATIONWIDE_CITIES);
+            expect(sorted[0].name).toBe("서울특별시");
+            expect(sorted[0].code).toBe("11");
+            expect(sorted[1].name).toBe("부산광역시");
+            expect(sorted[1].code).toBe("21");
+            expect(sorted[2].name).toBe("인천광역시");
+            expect(sorted[2].code).toBe("23");
+        });
+
+        it("does not force Wonju to the first position", () => {
+            const sorted = sortCitiesByMajor(NATIONWIDE_CITIES);
+            expect(sorted[0].code).not.toBe("32020");
+            const wonjuIndex = sorted.findIndex((c) => c.code === "32020");
+            expect(wonjuIndex).toBeGreaterThan(0);
+        });
+
+        it("places municipal cities before county ('군') areas", () => {
+            const sorted = sortCitiesByMajor(NATIONWIDE_CITIES);
+            const seoulIdx = sorted.findIndex((c) => c.code === "11");
+            const suwonIdx = sorted.findIndex((c) => c.code === "31010");
+            const hoengseongIdx = sorted.findIndex((c) => c.code === "32320"); // 횡성군
+
+            expect(seoulIdx).toBeLessThan(suwonIdx);
+            expect(suwonIdx).toBeLessThan(hoengseongIdx);
         });
     });
 });

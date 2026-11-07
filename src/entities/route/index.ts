@@ -6,3 +6,4 @@ export * from "./routeMetadata";
 export * from "./directionService";
 export * from "./polylineService";
 export * from "./yonseiRoutes";
+export * from "./routeCategory";

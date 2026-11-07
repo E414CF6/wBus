@@ -511,14 +511,14 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                     }`}
                 >
                     <div className="flex items-start gap-2.5 min-w-0">
-                        {/* Blue Accent Vertical Bar */}
+                        {/* Route Hero Accent Vertical Bar */}
                         <div
-                            className={`w-1.5 rounded-full bg-blue-600 dark:bg-blue-500 shrink-0 mt-0.5 ${hasBottomSplit ? "h-9" : "h-11"}`}/>
+                            className={`w-1.5 rounded-full ${meta?.colorTheme?.bg || "bg-blue-600 dark:bg-blue-500"} shrink-0 mt-0.5 ${hasBottomSplit ? "h-9" : "h-11"}`}/>
 
                         <div className="flex flex-col min-w-0">
                         <span
-                            className="text-[10px] sm:text-[11px] font-bold text-blue-600 dark:text-blue-400 tracking-tight">
-                            버스 노선
+                            className={`text-[10px] sm:text-[11px] font-bold ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-400"} tracking-tight`}>
+                            {meta?.routeType || "버스 노선"}
                         </span>
                             <h2
                                 className={`font-black text-slate-900 dark:text-white tracking-tight leading-none mt-0.5 transition-all duration-200 ${
@@ -534,7 +534,8 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                 {routeSubInfo}
                             </p>
                             <div className="flex items-center gap-2 mt-1 text-xs flex-wrap">
-                            <span className="font-bold text-blue-600 dark:text-blue-400">
+                            <span
+                                className={`font-bold ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-400"}`}>
                                 {isConnecting
                                     ? "실시간 연결 중..."
                                     : `실시간 ${runningBuses.length}대 운행중`}
@@ -544,7 +545,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                     <button
                                         type="button"
                                         onClick={scrollToActiveBus}
-                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] font-extrabold border border-blue-500/25 transition cursor-pointer active:scale-95"
+                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${meta?.colorTheme?.badgeBg || "bg-blue-500/10"} ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-300"} text-[10px] font-extrabold border ${meta?.colorTheme?.border || "border-blue-500/25"} transition cursor-pointer active:scale-95`}
                                         title="현재 운행 중인 버스 정류장 위치로 스크롤"
                                     >
                                         <LocateFixed className="w-2.5 h-2.5"/>
@@ -565,7 +566,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                             aria-label="실시간 위치 새로고침"
                         >
                             <RefreshCw
-                                className={`w-4 h-4 ${isRefreshing ? "animate-spin text-blue-600 dark:text-blue-400" : ""}`}
+                                className={`w-4 h-4 ${isRefreshing ? `animate-spin ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-400"}` : ""}`}
                             />
                         </button>
                         <button
@@ -602,11 +603,11 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                 setSelectedVariantId(variant.routeId);
                                 setDirectionFilter("all");
                             }}
-                            className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${isSelectedVariant ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 border border-slate-200/60 dark:border-white/5"}`}
+                            className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${isSelectedVariant ? `${meta?.colorTheme?.badgeBg || "bg-blue-500/15 dark:bg-blue-500/25"} ${meta?.colorTheme?.text || "text-blue-700 dark:text-blue-300"} border ${meta?.colorTheme?.border || "border-blue-500/30"} shadow-xs` : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5 border border-slate-200/60 dark:border-white/5"}`}
                         >
                             <span>{variant.label}</span>
                             {busCountOnVariant > 0 && (<span
-                                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black leading-none ${isSelectedVariant ? "bg-blue-600 text-white dark:bg-blue-400 dark:text-black" : "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"}`}
+                                className={`px-1.5 py-0.2 rounded-full text-[10px] font-black leading-none ${isSelectedVariant ? `${meta?.colorTheme?.bg || "bg-blue-600"} text-white` : `${meta?.colorTheme?.badgeBg || "bg-blue-100"} ${meta?.colorTheme?.text || "text-blue-700"}`}`}
                             >
                                         {busCountOnVariant}대
                                     </span>)}
@@ -623,7 +624,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                 type="button"
                                 onClick={() => setDirectionFilter("all")}
                                 className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                    directionFilter === "all" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
+                                    directionFilter === "all" ? `${meta?.colorTheme?.badgeBg || "bg-blue-500/15 dark:bg-blue-500/25"} ${meta?.colorTheme?.text || "text-blue-700 dark:text-blue-300"} border ${meta?.colorTheme?.border || "border-blue-500/30"} shadow-xs` : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
                                 }`}
                             >
                                 전체 ({currentStops.length})
@@ -648,7 +649,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                         type="button"
                                         onClick={() => setDirectionFilter("up")}
                                         className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                            directionFilter === "up" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
+                                            directionFilter === "up" ? `${meta?.colorTheme?.badgeBg || "bg-blue-500/15 dark:bg-blue-500/25"} ${meta?.colorTheme?.text || "text-blue-700 dark:text-blue-300"} border ${meta?.colorTheme?.border || "border-blue-500/30"} shadow-xs` : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
                                         }`}
                                     >
                                         {meta.destination || "종점"} 방면 (상행)
@@ -657,7 +658,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                         type="button"
                                         onClick={() => setDirectionFilter("down")}
                                         className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                            directionFilter === "down" ? "bg-blue-500/15 dark:bg-blue-500/25 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-500/50 shadow-xs" : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
+                                            directionFilter === "down" ? `${meta?.colorTheme?.badgeBg || "bg-blue-500/15 dark:bg-blue-500/25"} ${meta?.colorTheme?.text || "text-blue-700 dark:text-blue-300"} border ${meta?.colorTheme?.border || "border-blue-500/30"} shadow-xs` : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-white/5"
                                         }`}
                                     >
                                         {meta.origin || "기점"} 방면 (하행)
@@ -699,7 +700,8 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                 >
                     {currentStops.length === 0 ? (<div
                             className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
-                            <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400"/>
+                            <Loader2
+                                className={`w-6 h-6 animate-spin ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-400"}`}/>
                             <span className="text-xs font-semibold">
                             정류장 목록을 불러오고 있습니다...
                         </span>
@@ -724,25 +726,32 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                     data-has-bus={busesHere.length > 0 ? "true" : undefined}
                                     data-selected-stop={isSelected ? "true" : undefined}
                                     className={`relative flex items-center min-h-[58px] py-3 transition-colors cursor-pointer group border-b border-slate-100 dark:border-white/5 ${
-                                        isSelected ? isTurningStop ? "bg-amber-100/70 dark:bg-amber-950/30" : "bg-blue-50/80 dark:bg-blue-950/40" : isTurningStop ? "bg-amber-50/70 hover:bg-amber-100/60 dark:bg-amber-500/[0.06] dark:hover:bg-amber-500/[0.12]" : "hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+                                        isSelected ? isTurningStop ? "bg-amber-100/70 dark:bg-amber-950/30" : (meta?.colorTheme?.badgeBg || "bg-blue-50/80 dark:bg-blue-950/40") : isTurningStop ? "bg-amber-50/70 hover:bg-amber-100/60 dark:bg-amber-500/[0.06] dark:hover:bg-amber-500/[0.12]" : "hover:bg-slate-50 dark:hover:bg-white/[0.04]"
                                     }`}
                                     onClick={() => handleStopClick(stop)}
                                 >
-                                    {/* Left Selection/Turning Indicator Bar (zero layout shift - fixes line alignment issue!) */}
+                                    {/* Left Selection/Turning Indicator Bar */}
                                     {isSelected ? (<div
-                                        className={`absolute left-0 top-0 bottom-0 w-1 rounded-r z-20 pointer-events-none ${isTurningStop ? "bg-amber-500" : "bg-blue-600 dark:bg-blue-500"}`}
+                                        className={`absolute left-0 top-0 bottom-0 w-1 rounded-r z-20 pointer-events-none ${isTurningStop ? "bg-amber-500" : (meta?.colorTheme?.bg || "bg-blue-600 dark:bg-blue-500")}`}
                                     />) : isTurningStop ? (<div
                                         className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500/70 rounded-r z-20 pointer-events-none"/>) : null}
 
                                     {/* Vertical Timeline Connecting Track */}
                                     <div
-                                        className={`absolute left-[74px] w-[2px] pointer-events-none ${isTurningStop ? "bg-gradient-to-b from-blue-600/70 via-amber-500 to-blue-600/70 dark:from-blue-500/80 dark:via-amber-400 dark:to-blue-500/80" : "bg-blue-600/70 dark:bg-blue-500/80"} ${
+                                        className={`absolute left-[74px] w-[2px] pointer-events-none ${
                                             isFirst
                                                 ? "top-1/2 bottom-0"
                                                 : isLast
                                                     ? "top-0 bottom-1/2"
                                                     : "top-0 bottom-0"
                                         }`}
+                                        style={{
+                                            backgroundColor: isTurningStop ? undefined : (meta?.colorTheme?.main || "#2563eb"),
+                                            backgroundImage: isTurningStop
+                                                ? `linear-gradient(to bottom, ${meta?.colorTheme?.main || "#2563eb"}b3, #f59e0b, ${meta?.colorTheme?.main || "#2563eb"}b3)`
+                                                : undefined,
+                                            opacity: 0.75,
+                                        }}
                                     />
 
                                     {/* Station Timeline Node (Donut Circle) */}
@@ -753,13 +762,14 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                         <RotateCw
                                             className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 stroke-[2.5]"/>
                                     </div>) : (<div
-                                        className="absolute left-[68px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-[2.5px] border-blue-600 dark:border-blue-400 bg-white dark:bg-[#0c100f] z-10 shadow-xs pointer-events-none"
+                                        className="absolute left-[68px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-[2.5px] bg-white dark:bg-[#0c100f] z-10 shadow-xs pointer-events-none"
+                                        style={{borderColor: meta?.colorTheme?.main || "#2563eb"}}
                                     />)}
 
                                     {/* Live Bus Markers if arriving/located at this station */}
                                     {busesHere.length > 0 && (
                                         <div
-                                            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1">
+                                            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-start gap-1">
                                             {busesHere.map((bus) => {
                                                 const plateDigits =
                                                     bus.vehicleno.replace(/[^0-9]/g, "").slice(-4) ||
@@ -775,13 +785,18 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                                     >
                                                         {/* Badge: Vehicle Number */}
                                                         <span
-                                                            className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-900 dark:bg-[#142238] border border-slate-700 dark:border-blue-500/40 text-blue-200 dark:text-blue-300 tracking-tight whitespace-nowrap select-none shadow-xs">
+                                                            className="px-1.5 py-0.5 rounded text-[10px] font-bold border text-white tracking-tight whitespace-nowrap select-none shadow-xs"
+                                                            style={{
+                                                                backgroundColor: meta?.colorTheme?.main || "#2563eb",
+                                                                borderColor: meta?.colorTheme?.main || "#2563eb",
+                                                            }}>
                                                         {plateDigits}
                                                     </span>
 
-                                                        {/* Blue Bus Icon Box */}
+                                                        {/* Route Hero Bus Icon Box */}
                                                         <div
-                                                            className="w-6 h-6 rounded-md bg-blue-600 dark:bg-blue-500 text-white flex items-center justify-center shadow-md shadow-blue-600/25 shrink-0">
+                                                            className={`w-6 h-6 rounded-md ${meta?.colorTheme?.bg || "bg-blue-600 dark:bg-blue-500"} text-white flex items-center justify-center shadow-md ${meta?.colorTheme?.shadow || "shadow-blue-600/25"} shrink-0`}
+                                                        >
                                                             <Bus className="w-3.5 h-3.5 fill-current"/>
                                                         </div>
                                                     </button>
@@ -794,7 +809,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                     <div className="ml-[92px] flex-1 flex flex-col justify-center min-w-0 pr-2">
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                         <span
-                                            className={`text-[14px] sm:text-[15px] font-bold truncate transition-colors ${isSelected ? isTurningStop ? "text-amber-800 dark:text-amber-300 font-black" : "text-blue-700 dark:text-blue-300 font-black" : isTurningStop ? "text-amber-900 dark:text-amber-200 font-extrabold group-hover:text-amber-950 dark:group-hover:text-amber-100" : "text-slate-800 dark:text-slate-100 group-hover:text-slate-950 dark:group-hover:text-white"}`}
+                                            className={`text-[14px] sm:text-[15px] font-bold truncate transition-colors ${isSelected ? isTurningStop ? "text-amber-800 dark:text-amber-300 font-black" : `${meta?.colorTheme?.text || "text-blue-700 dark:text-blue-300"} font-black` : isTurningStop ? "text-amber-900 dark:text-amber-200 font-extrabold group-hover:text-amber-950 dark:group-hover:text-amber-100" : "text-slate-800 dark:text-slate-100 group-hover:text-slate-950 dark:group-hover:text-white"}`}
                                         >
                                             {stop.nodenm}
                                         </span>
@@ -952,7 +967,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                 >
                                     <div className="flex items-center gap-1.5 min-w-0">
                                         <ArrowLeftRight
-                                            className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0"/>
+                                            className={`w-3.5 h-3.5 ${meta?.colorTheme?.text || "text-blue-500 dark:text-blue-400"} shrink-0`}/>
                                         <span className="text-slate-500 dark:text-slate-400 font-medium">건너편</span>
                                         <span className="font-extrabold truncate text-slate-900 dark:text-white">
                                             {pairedOppositeStop.nodenm}
@@ -964,7 +979,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                         )}
                                     </div>
                                     <span
-                                        className="text-[10px] font-black text-blue-600 dark:text-blue-400 shrink-0 group-hover/opp:translate-x-0.5 transition-transform">
+                                        className={`text-[10px] font-black ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-400"} shrink-0 group-hover/opp:translate-x-0.5 transition-transform`}>
                                         전환 →
                                     </span>
                                 </button>
