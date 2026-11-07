@@ -47,31 +47,32 @@ export const MarqueeText: React.FC<MarqueeTextProps> = ({
     return (
         <div
             ref={containerRef}
-            className={`overflow-hidden relative min-w-0 ${
+            className={`relative w-full min-w-0 overflow-hidden ${
                 isOverflowing && fadeEdges
                     ? "[mask-image:linear-gradient(to_right,transparent,black_8px,black_calc(100%-8px),transparent)] [-webkit-mask-image:linear-gradient(to_right,transparent,black_8px,black_calc(100%-8px),transparent)]"
                     : ""
             } ${containerClassName}`}
         >
-            {/* Measuring element (hidden when overflowing so it does not affect layout) */}
+            {/* Keep measurement out of layout so overflow detection cannot resize the parent. */}
             <span
                 ref={measureRef}
-                className={`whitespace-nowrap ${
-                    isOverflowing
-                        ? "absolute opacity-0 pointer-events-none -z-50"
-                        : "inline-block"
-                } ${className}`}
-                aria-hidden={isOverflowing}
+                className={`pointer-events-none absolute left-0 top-0 -z-50 whitespace-nowrap opacity-0 ${className}`}
+                aria-hidden="true"
             >
                 {text}
             </span>
 
+            {!isOverflowing && (
+                <span className={`inline-block max-w-full whitespace-nowrap ${className}`}>
+                    {text}
+                </span>
+            )}
+
             {/* Seamless marquee track when overflowing */}
             {isOverflowing && (
                 <div
-                    className="flex items-center whitespace-nowrap will-change-transform hover:[animation-play-state:paused]"
+                    className="flex w-max min-w-max items-center whitespace-nowrap will-change-transform hover:[animation-play-state:paused]"
                     style={{
-                        width: "max-content",
                         animation: `marquee ${durationSeconds}s linear infinite`,
                     }}
                 >
