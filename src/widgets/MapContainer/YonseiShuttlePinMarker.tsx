@@ -8,7 +8,7 @@ import {Clock, ExternalLink, GraduationCap, MapPin, RotateCw, X,} from "lucide-r
 import {type ShuttleInboundItem, type ShuttleOutboundItem, YONSEI_SHUTTLE_SCHEDULE,} from "@entities/schedule";
 import {getKakaoRoadviewUrl} from "@entities/station";
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {parseTimeToMinutes} from "@shared/lib/timeUtils";
+import {isSaturday, parseTimeToMinutes} from "@shared/lib/timeUtils";
 import type {DayMode} from "@shared/types/navigation";
 
 // ----------------------------------------------------------------------
@@ -22,10 +22,37 @@ const YONSEI_CAMPUS_LNG = 127.900657;
 // Shuttle pins are displayed matching city bus timetable pins without zoom restriction
 export const MIN_YONSEI_SHUTTLE_PIN_ZOOM = 0;
 
+export interface ShouldShowYonseiShuttlePinParams {
+    enabled?: boolean;
+    dayMode?: DayMode;
+    date?: Date;
+    hasNextDeparture?: boolean;
+    isPopupOpen?: boolean;
+}
+
+/**
+ * Determines whether the Yonsei campus shuttle timetable pin should be displayed on the map.
+ * In accordance with university schedule guidelines, shuttle buses never operate on Saturdays.
+ * On Saturdays (unless manually overridden to WEEKDAY), the pin itself must not be displayed.
+ */
+export function shouldShowYonseiShuttlePin({
+                                               enabled = true,
+                                               dayMode = "AUTO",
+                                               date = new Date(),
+                                               hasNextDeparture = false,
+                                               isPopupOpen = false,
+                                           }: ShouldShowYonseiShuttlePinParams): boolean {
+    if (!enabled) return false;
+    const isSat = dayMode === "WEEKDAY" ? false : isSaturday(date);
+    if (isSat) return false;
+    return hasNextDeparture || isPopupOpen;
+}
+
 export interface YonseiShuttlePinMarkerProps {
     enabled?: boolean;
     dayMode?: DayMode;
     isTodayWeekendOrHoliday?: boolean;
+    currentTime?: Date;
 }
 
 type ShuttleDirection = "OUTBOUND" | "INBOUND";
@@ -39,6 +66,7 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
                                                                                enabled = true,
                                                                                dayMode = "AUTO",
                                                                                isTodayWeekendOrHoliday: _isTodayWeekendOrHoliday,
+                                                                               currentTime,
                                                                            }: YonseiShuttlePinMarkerProps) {
     const {map} = useAppMapContext();
 
@@ -49,6 +77,9 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
         const timer = setInterval(() => setNow(new Date()), 15000);
         return () => clearInterval(timer);
     }, [enabled]);
+
+    const effectiveNow = currentTime || now;
+    const isTodaySaturday = dayMode === "WEEKDAY" ? false : isSaturday(effectiveNow);
 
     // 2. Active Day Filter (WEEKDAY vs SUNDAY)
     const [manualDayType, setManualDayType] = useState<ShuttleDayType | null>(null);
@@ -63,20 +94,21 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
         if (dayMode === "WEEKDAY") return "WEEKDAY";
         if (dayMode === "VACATION") return "SUNDAY";
         // AUTO: Sunday is day 0
-        return now.getDay() === 0 ? "SUNDAY" : "WEEKDAY";
-    }, [manualDayType, dayMode, now]);
+        return effectiveNow.getDay() === 0 ? "SUNDAY" : "WEEKDAY";
+    }, [manualDayType, dayMode, effectiveNow]);
 
     // 3. Direction State (OUTBOUND: 학교 출발 / INBOUND: 학교 도착)
     const [direction, setDirection] = useState<ShuttleDirection>("OUTBOUND");
     const [isPopupOpen, setIsPopupOpen] = useState(false);
 
-    const currentMins = now.getHours() * 60 + now.getMinutes();
+    const currentMins = effectiveNow.getHours() * 60 + effectiveNow.getMinutes();
 
     // 4. Sorted departures & next departure calculation
     const isSundayFilter = activeDayType === "SUNDAY";
 
     // Outbound (하교 / 학교 출발)
     const outboundList: ShuttleOutboundItem[] = useMemo(() => {
+        if (isTodaySaturday) return [];
         return YONSEI_SHUTTLE_SCHEDULE.outbound_from_campus
             .filter((item) =>
                 isSundayFilter
@@ -89,10 +121,11 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
                     (parseTimeToMinutes(a.departure_time) ?? 0) -
                     (parseTimeToMinutes(b.departure_time) ?? 0)
             );
-    }, [isSundayFilter]);
+    }, [isSundayFilter, isTodaySaturday]);
 
     // Inbound (등교 / 학교 도착)
     const inboundList: ShuttleInboundItem[] = useMemo(() => {
+        if (isTodaySaturday) return [];
         return YONSEI_SHUTTLE_SCHEDULE.inbound_to_campus
             .filter((item) =>
                 isSundayFilter
@@ -105,7 +138,7 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
                     (parseTimeToMinutes(a.departure_time) ?? 0) -
                     (parseTimeToMinutes(b.departure_time) ?? 0)
             );
-    }, [isSundayFilter]);
+    }, [isSundayFilter, isTodaySaturday]);
 
     // Next Outbound
     const nextOutbound = useMemo(() => {
@@ -190,8 +223,18 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
         return () => window.removeEventListener("wbus:close-timetable", handleClose);
     }, [isPopupOpen]);
 
-    // If disabled or all shuttle operations for the day have finished, do not show the pin on the map
-    if (!enabled || (!nextOutbound && !isPopupOpen)) return null;
+    // If disabled, Saturday, or all shuttle operations for the day have finished, do not show the pin on the map
+    if (
+        !shouldShowYonseiShuttlePin({
+            enabled,
+            dayMode,
+            date: effectiveNow,
+            hasNextDeparture: Boolean(nextOutbound),
+            isPopupOpen,
+        })
+    ) {
+        return null;
+    }
 
     return (
         <>

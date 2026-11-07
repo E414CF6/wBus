@@ -5,6 +5,7 @@ import {
     formatRelativeTime,
     formatRemainingTime,
     getCurrentKstMinutes,
+    isSaturday,
     isWeekend,
     parseTimeToMinutes,
 } from "./timeUtils";
@@ -45,6 +46,18 @@ describe("timeUtils", () => {
             expect(isWeekend(saturday)).toBe(true);
             expect(isWeekend(sunday)).toBe(true);
             expect(isWeekend(monday)).toBe(false);
+        });
+    });
+
+    describe("isSaturday", () => {
+        it("identifies Saturday accurately and returns false for other days", () => {
+            const saturday = new Date("2026-09-05T12:00:00"); // Saturday
+            const sunday = new Date("2026-09-06T12:00:00"); // Sunday
+            const monday = new Date("2026-09-07T12:00:00"); // Monday
+
+            expect(isSaturday(saturday)).toBe(true);
+            expect(isSaturday(sunday)).toBe(false);
+            expect(isSaturday(monday)).toBe(false);
         });
     });
 

@@ -2,7 +2,7 @@ import {describe, expect, it} from "vitest";
 import {YONSEI_SHUTTLE_SCHEDULE} from "@entities/schedule";
 import {YONSEI_SHUTTLE_STOPS} from "@entities/station";
 import {parseTimeToMinutes} from "@shared/lib/timeUtils";
-import {MIN_YONSEI_SHUTTLE_PIN_ZOOM} from "./YonseiShuttlePinMarker";
+import {MIN_YONSEI_SHUTTLE_PIN_ZOOM, shouldShowYonseiShuttlePin} from "./YonseiShuttlePinMarker";
 import {YONSEI_SHUTTLE_ROUTES} from "./RouteLayer";
 
 describe("YonseiShuttlePinMarker data & logic", () => {
@@ -81,5 +81,99 @@ describe("YonseiShuttlePinMarker data & logic", () => {
 
     it("verifies MIN_YONSEI_SHUTTLE_PIN_ZOOM has no minimum zoom restriction (0)", () => {
         expect(MIN_YONSEI_SHUTTLE_PIN_ZOOM).toBe(0);
+    });
+
+    describe("shouldShowYonseiShuttlePin Saturday suppression", () => {
+        const saturday = new Date("2026-11-07T14:00:00"); // Saturday (day 6)
+        const sunday = new Date("2026-11-08T18:00:00"); // Sunday (day 0)
+        const weekday = new Date("2026-11-09T08:00:00"); // Monday (day 1)
+
+        it("does NOT show the shuttle pin on Saturday in AUTO mode", () => {
+            const isVisible = shouldShowYonseiShuttlePin({
+                enabled: true,
+                dayMode: "AUTO",
+                date: saturday,
+                hasNextDeparture: true,
+                isPopupOpen: false,
+            });
+            expect(isVisible).toBe(false);
+        });
+
+        it("does NOT show the shuttle pin on Saturday even if popup was open or next departure exists", () => {
+            const isVisibleWithPopup = shouldShowYonseiShuttlePin({
+                enabled: true,
+                dayMode: "AUTO",
+                date: saturday,
+                hasNextDeparture: true,
+                isPopupOpen: true,
+            });
+            expect(isVisibleWithPopup).toBe(false);
+        });
+
+        it("does NOT show the shuttle pin on Saturday in VACATION mode", () => {
+            const isVisible = shouldShowYonseiShuttlePin({
+                enabled: true,
+                dayMode: "VACATION",
+                date: saturday,
+                hasNextDeparture: true,
+                isPopupOpen: false,
+            });
+            expect(isVisible).toBe(false);
+        });
+
+        it("allows showing pin when user explicitly forces WEEKDAY mode on Saturday", () => {
+            const isVisible = shouldShowYonseiShuttlePin({
+                enabled: true,
+                dayMode: "WEEKDAY",
+                date: saturday,
+                hasNextDeparture: true,
+                isPopupOpen: false,
+            });
+            expect(isVisible).toBe(true);
+        });
+
+        it("shows the shuttle pin on Sunday when upcoming departures exist", () => {
+            const isVisible = shouldShowYonseiShuttlePin({
+                enabled: true,
+                dayMode: "AUTO",
+                date: sunday,
+                hasNextDeparture: true,
+                isPopupOpen: false,
+            });
+            expect(isVisible).toBe(true);
+        });
+
+        it("shows the shuttle pin on weekdays when upcoming departures exist", () => {
+            const isVisible = shouldShowYonseiShuttlePin({
+                enabled: true,
+                dayMode: "AUTO",
+                date: weekday,
+                hasNextDeparture: true,
+                isPopupOpen: false,
+            });
+            expect(isVisible).toBe(true);
+        });
+
+        it("does NOT show the shuttle pin on weekdays when no departures remain and popup is closed", () => {
+            const isVisible = shouldShowYonseiShuttlePin({
+                enabled: true,
+                dayMode: "AUTO",
+                date: weekday,
+                hasNextDeparture: false,
+                isPopupOpen: false,
+            });
+            expect(isVisible).toBe(false);
+        });
+
+        it("does NOT show the shuttle pin when enabled is false", () => {
+            const isVisible = shouldShowYonseiShuttlePin({
+                enabled: false,
+                dayMode: "AUTO",
+                date: weekday,
+                hasNextDeparture: true,
+                isPopupOpen: false,
+            });
+            expect(isVisible).toBe(false);
+        });
     });
 });

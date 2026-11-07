@@ -48,6 +48,13 @@ export function isWeekend(date: Date = new Date()): boolean {
 }
 
 /**
+ * Checks if a given date is Saturday.
+ */
+export function isSaturday(date: Date = new Date()): boolean {
+    return date.getDay() === 6;
+}
+
+/**
  * Calculates remaining 24-hour cooldown time and formatted string.
  */
 export function formatCooldownRemaining(updatedAt: string | null | undefined, cooldownHours = 24): {
