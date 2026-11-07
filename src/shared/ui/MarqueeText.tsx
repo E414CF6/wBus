@@ -33,8 +33,9 @@ export const MarqueeText: React.FC<MarqueeTextProps> = ({
         if (!container || !measure) return;
 
         const checkOverflow = () => {
-            const hasOverflow = measure.scrollWidth > container.clientWidth + 1;
-            setIsOverflowing(hasOverflow);
+            // Require at least 8px overflow to prevent subpixel jitter loops
+            const diff = measure.scrollWidth - container.clientWidth;
+            setIsOverflowing(diff > 8);
         };
 
         checkOverflow();
@@ -64,16 +65,19 @@ export const MarqueeText: React.FC<MarqueeTextProps> = ({
                 {text}
             </span>
 
-            {!isOverflowing && (
-                <span className={`inline-block max-w-full whitespace-nowrap ${className}`}>
-                    {text}
-                </span>
-            )}
+            {/* Static fallback in standard document flow establishes exact container bounds */}
+            <span
+                className={`inline-block max-w-full whitespace-nowrap truncate ${className} ${
+                    isOverflowing ? "invisible pointer-events-none" : ""
+                }`}
+            >
+                {text}
+            </span>
 
-            {/* Seamless marquee track when overflowing */}
+            {/* Seamless marquee track when overflowing (absolute to prevent layout oscillation) */}
             {isOverflowing && (
                 <div
-                    className="flex w-max min-w-max items-center whitespace-nowrap will-change-transform hover:[animation-play-state:paused]"
+                    className="absolute inset-y-0 left-0 flex items-center whitespace-nowrap will-change-transform hover:[animation-play-state:paused]"
                     style={{
                         animation: `marquee ${durationSeconds}s linear infinite`,
                     }}

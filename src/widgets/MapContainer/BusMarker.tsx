@@ -16,8 +16,6 @@ import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useCityContext} from "@entities/city";
 
-import PopupMarquee from "@shared/ui/MarqueeText";
-
 import {LocateFixed, Navigation} from "lucide-react";
 import React, {memo, useCallback, useEffect, useMemo, useState} from "react";
 import {Popup} from "react-map-gl/maplibre";
@@ -47,6 +45,8 @@ interface BusIconDOMProps {
 const BusIconDOM = memo(({routeNumber, color, isSelected, isFollowed}: BusIconDOMProps) => {
     const [w, h] = SETTINGS.ICON_SIZE;
     const themeColor = color || "#2563eb";
+    const cleanRoute = (routeNumber || "").trim();
+    const isMarquee = cleanRoute.length >= 4;
 
     return (
         <div
@@ -80,16 +80,25 @@ const BusIconDOM = memo(({routeNumber, color, isSelected, isFollowed}: BusIconDO
                 <rect x="4" y="2" width="32" height="50" rx="10" fill={themeColor}/>
             </svg>
             <div
-                className="bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 w-7 box-border text-white text-[11px] font-extrabold px-1 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_6px_rgba(0,0,0,0.3)] tracking-[0.3px] flex items-center justify-center select-none"
+                className={`bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 text-white text-[11px] font-extrabold px-1 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_6px_rgba(0,0,0,0.3)] tracking-[0.3px] min-w-7 max-w-7 flex items-center ${
+                    isMarquee ? "justify-start" : "justify-center"
+                } select-none overflow-hidden`}
                 style={{backgroundColor: themeColor}}
             >
-                <PopupMarquee
-                    text={routeNumber}
-                    maxWidthClass="w-full max-w-7"
-                    durationSeconds={2}
-                    className="text-center"
-                    marqueeGapClassName="pr-1"
-                />
+                {isMarquee ? (
+                    <div className="marquee-scroll flex-nowrap items-center hover:[animation-play-state:paused]">
+                        <span className="pr-2 whitespace-nowrap shrink-0">{cleanRoute}</span>
+                        <span className="pr-2 whitespace-nowrap shrink-0" aria-hidden="true">{cleanRoute}</span>
+                    </div>
+                ) : (
+                    <span
+                        className={`text-center whitespace-nowrap select-none ${
+                            cleanRoute.length === 3 ? "text-[10px] tracking-tight" : ""
+                        }`}
+                    >
+                        {cleanRoute}
+                    </span>
+                )}
             </div>
         </div>
     );
@@ -179,7 +188,7 @@ const BusPopupContent = memo(
                             {UI_TEXT.BUS_ITEM.CURRENT_LOC}
                         </span>
                         <div className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 min-w-0">
-                            <PopupMarquee text={stopName} maxWidthClass="max-w-[155px]"/>
+                            <p className="truncate max-w-[155px] font-bold" title={stopName}>{stopName}</p>
                         </div>
                     </div>
 

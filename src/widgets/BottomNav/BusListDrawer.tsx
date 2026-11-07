@@ -1,19 +1,7 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {
-    ArrowLeftRight,
-    Bus,
-    Loader2,
-    LocateFixed,
-    MapPin,
-    MapPinned,
-    RefreshCw,
-    RotateCw,
-    Search,
-    Star,
-    X
-} from "lucide-react";
+import {ArrowLeftRight, Bus, Loader2, MapPin, MapPinned, RefreshCw, RotateCw, Search, Star, X} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {isDesktopViewport, useIsDesktop} from "@shared/ui/useIsDesktop";
 import {type RouteVariationStop, useRouteVariations} from "@entities/route";
@@ -534,24 +522,13 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                 {routeSubInfo}
                             </p>
                             <div className="flex items-center gap-2 mt-1 text-xs flex-wrap">
-                            <span
-                                className={`font-bold ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-400"}`}>
-                                {isConnecting
-                                    ? "실시간 연결 중..."
-                                    : `실시간 ${runningBuses.length}대 운행중`}
-                            </span>
+                                <span
+                                    className={`font-bold ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-400"}`}>
+                                    {isConnecting
+                                        ? "실시간 연결 중..."
+                                        : `실시간 ${runningBuses.length}대 운행중`}
+                                </span>
                                 <span className="text-slate-400 dark:text-slate-500 font-medium">{timeAgo}</span>
-                                {busesByStopKey.size > 0 && (
-                                    <button
-                                        type="button"
-                                        onClick={scrollToActiveBus}
-                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full ${meta?.colorTheme?.badgeBg || "bg-blue-500/10"} ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-300"} text-[10px] font-extrabold border ${meta?.colorTheme?.border || "border-blue-500/25"} transition cursor-pointer active:scale-95`}
-                                        title="현재 운행 중인 버스 정류장 위치로 스크롤"
-                                    >
-                                        <LocateFixed className="w-2.5 h-2.5"/>
-                                        <span>버스 위치로</span>
-                                    </button>
-                                )}
                             </div>
                         </div>
                     </div>
