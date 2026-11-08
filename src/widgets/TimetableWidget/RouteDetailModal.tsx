@@ -4,6 +4,7 @@ import React, {useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
 import {type BusRoute, getNextDeparture} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
+import {useModalHistory} from "@shared/ui";
 import {ArrowRight, MapPin, Search, Star, X} from "lucide-react";
 
 const emptySubscribe = () => () => {
@@ -29,6 +30,14 @@ export const RouteDetailModal: React.FC<RouteDetailModalProps> = ({
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const [tableSearch, setTableSearch] = useState("");
     const now = currentTime || new Date();
+
+    const isOpen = Boolean(route);
+    useModalHistory({
+        isOpen,
+        onClose,
+        modalId: route ? `route-detail-${route.routeNo}` : "route-detail",
+        enableHistory: isClient,
+    });
 
     if (!route || !isClient) return null;
 

@@ -10,6 +10,7 @@ import {getKakaoRoadviewUrl} from "@entities/station";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {isSaturday, parseTimeToMinutes} from "@shared/lib/timeUtils";
 import type {DayMode} from "@shared/types/navigation";
+import {useModalHistory} from "@shared/ui";
 
 // ----------------------------------------------------------------------
 // Constants & Types
@@ -100,6 +101,16 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
     // 3. Direction State (OUTBOUND: 학교 출발 / INBOUND: 학교 도착)
     const [direction, setDirection] = useState<ShuttleDirection>("OUTBOUND");
     const [isPopupOpen, setIsPopupOpen] = useState(false);
+
+    const handleClosePopup = useCallback(() => {
+        setIsPopupOpen(false);
+    }, []);
+
+    useModalHistory({
+        isOpen: isPopupOpen,
+        onClose: handleClosePopup,
+        modalId: "shuttle-pin",
+    });
 
     const currentMins = effectiveNow.getHours() * 60 + effectiveNow.getMinutes();
 

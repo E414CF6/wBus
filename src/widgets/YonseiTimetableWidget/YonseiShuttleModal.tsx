@@ -97,6 +97,7 @@ export const YonseiShuttleModal: React.FC<YonseiShuttleModalProps> = ({
             hideCloseButton
             className="border-teal-500/30 dark:border-teal-500/20 bg-white dark:bg-[#111622]"
             bodyClassName="overflow-hidden"
+            modalId="yonsei-shuttle"
             ariaLabel="셔틀버스 시간표"
         >
             {modalContent}

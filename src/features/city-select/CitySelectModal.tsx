@@ -125,7 +125,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
             footer={modalFooter}
             maxWidth="2xl"
             height="default"
-            enableHistory={false}
+            modalId="city"
             ariaLabel="서비스 지역 선택"
         >
             {/* Detected Viewport City Banner (if user panned to another city) */}
@@ -263,11 +263,18 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                             const isFav = isFavoriteCity(city.code);
 
                             return (
-                                <button
+                                <div
                                     key={city.code}
-                                    type="button"
+                                    role="button"
+                                    tabIndex={0}
                                     onClick={() => handleSelectCity(city)}
-                                    className={`flex items-center justify-between p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer active:scale-[0.98] ${
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            handleSelectCity(city);
+                                        }
+                                    }}
+                                    className={`flex items-center justify-between p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer select-none active:scale-[0.98] ${
                                         isSelected
                                             ? "bg-blue-50 dark:bg-blue-950/40 border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20 shadow-xs"
                                             : isDetected
@@ -312,6 +319,9 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                                 e.stopPropagation();
                                                 toggleFavoriteCity(city.code);
                                             }}
+                                            onKeyDown={(e) => {
+                                                e.stopPropagation();
+                                            }}
                                             title={isFav ? "즐겨찾기 해제" : "즐겨찾기 등록"}
                                             aria-label={isFav ? `${city.name} 즐겨찾기 해제` : `${city.name} 즐겨찾기 등록`}
                                             className="p-1.5 -mr-1 rounded-xl text-slate-400 hover:text-amber-500 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer active:scale-125"
@@ -330,7 +340,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                             </div>
                                         )}
                                     </div>
-                                </button>
+                                </div>
                             );
                         })}
                     </div>

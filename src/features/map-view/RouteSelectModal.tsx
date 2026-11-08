@@ -7,9 +7,9 @@ import {
     resolveRouteCategory,
     type RouteCategoryInfo,
     RouteMeta,
-    YONSEI_ROUTE_SET,
-    useRouteBookmarks,
     useRecentRoutes,
+    useRouteBookmarks,
+    YONSEI_ROUTE_SET,
 } from "@entities/route";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
@@ -368,7 +368,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             footer={modalFooter}
             maxWidth="2xl"
             height="default"
-            enableHistory={false}
+            modalId="route"
             ariaLabel={UI_TEXT.ROUTE_SELECT.MODAL_ARIA}
         >
             {/* Search Bar Input */}

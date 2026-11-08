@@ -1,9 +1,10 @@
 "use client";
 
-import React, {useCallback, useEffect, useRef, useSyncExternalStore} from "react";
+import React, {useCallback, useEffect, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
 import {X} from "lucide-react";
 import {useBodyScrollLock} from "./useBodyScrollLock";
+import {useModalHistory} from "./useModalHistory";
 
 export type ModalMaxWidth = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full";
 export type ModalHeight = "default" | "tall" | "auto" | "full";
@@ -98,75 +99,14 @@ export function Modal({
 
     useBodyScrollLock(isOpen);
 
-    // Track whether this modal pushed a history entry, and if popstate caused closing
-    const hasPushedHistoryRef = useRef(false);
-    const isPopstateClosingRef = useRef(false);
-
-    // Synchronize History & Query String to prevent site exit on mobile back button
-    useEffect(() => {
-        if (!isOpen || !enableHistory || !isClient) return;
-
-        const key = queryKey;
-        const value = modalId || "open";
-
-        try {
-            const currentUrl = new URL(window.location.href);
-            const currentVal = currentUrl.searchParams.get(key);
-
-            // If current URL does not already have this modal parameter, push state
-            if (currentVal !== value) {
-                currentUrl.searchParams.set(key, value);
-                window.history.pushState(
-                    {modalId: value, isWbusModal: true},
-                    "",
-                    currentUrl.pathname + currentUrl.search + currentUrl.hash
-                );
-                hasPushedHistoryRef.current = true;
-            }
-        } catch {
-            // Ignore in restricted environments
-        }
-
-        const handlePopState = () => {
-            try {
-                const nextUrl = new URL(window.location.href);
-                const nextVal = nextUrl.searchParams.get(key);
-                if (nextVal !== value) {
-                    // Mobile or browser back button was pressed
-                    isPopstateClosingRef.current = true;
-                    hasPushedHistoryRef.current = false;
-                    onClose();
-                }
-            } catch {
-                isPopstateClosingRef.current = true;
-                hasPushedHistoryRef.current = false;
-                onClose();
-            }
-        };
-
-        window.addEventListener("popstate", handlePopState);
-        return () => {
-            window.removeEventListener("popstate", handlePopState);
-        };
-    }, [isOpen, enableHistory, isClient, modalId, queryKey, onClose]);
-
-    // Handle modal closure triggered via UI (Close Button, Backdrop click, ESC key)
-    useEffect(() => {
-        if (!isOpen) {
-            if (hasPushedHistoryRef.current && !isPopstateClosingRef.current) {
-                hasPushedHistoryRef.current = false;
-                try {
-                    // Revert the history entry pushed when opening this modal
-                    window.history.back();
-                } catch {
-                    // Ignore
-                }
-            }
-            isPopstateClosingRef.current = false;
-        } else {
-            isPopstateClosingRef.current = false;
-        }
-    }, [isOpen]);
+    // URL 쿼리스트링 및 브라우저 뒤로가기(popstate) 히스토리 동기화 (모바일 뒤로가기 이탈 방지)
+    useModalHistory({
+        isOpen,
+        onClose,
+        modalId,
+        queryKey,
+        enableHistory: enableHistory && isClient,
+    });
 
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {

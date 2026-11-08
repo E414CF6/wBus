@@ -1,6 +1,7 @@
 "use client";
 
 import {UI_TEXT} from "@shared/config/locale";
+import {useModalHistory} from "@shared/ui";
 
 import React, {useState, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
@@ -42,6 +43,14 @@ export const YonseiRouteDetailModal: React.FC<YonseiRouteDetailModalProps> = ({
         tableSearch,
         now,
         selectedFootnote,
+    });
+
+    const isOpen = Boolean(route);
+    useModalHistory({
+        isOpen,
+        onClose,
+        modalId: route ? `yonsei-detail-${route.routeNo}` : "yonsei-detail",
+        enableHistory: isClient,
     });
 
     if (!route || !isClient) return null;

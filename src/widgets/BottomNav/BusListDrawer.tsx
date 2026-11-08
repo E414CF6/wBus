@@ -4,6 +4,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Loader2} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {isDesktopViewport, useIsDesktop} from "@shared/ui/useIsDesktop";
+import {useModalHistory} from "@shared/ui";
 import {type RouteVariationStop, useRouteVariations} from "@entities/route";
 import type {DirectionCode, RouteVariation} from "@entities/route/types";
 import {getRouteMeta} from "@entities/route/routeMetadata";
@@ -38,19 +39,19 @@ interface BusListDrawerProps {
 }
 
 export const BusListDrawer: React.FC<BusListDrawerProps> = ({
-    isOpen,
-    onClose,
-    selectedRoute,
-    runningBuses,
-    isConnecting,
-    getDirection,
-    onBusClick,
-    lastUpdated,
-    onReconnect,
-    onRouteChange,
-    selectedVariantId: controlledVariantId,
-    onSelectVariant,
-}) => {
+                                                                isOpen,
+                                                                onClose,
+                                                                selectedRoute,
+                                                                runningBuses,
+                                                                isConnecting,
+                                                                getDirection,
+                                                                onBusClick,
+                                                                lastUpdated,
+                                                                onReconnect,
+                                                                onRouteChange,
+                                                                selectedVariantId: controlledVariantId,
+                                                                onSelectVariant,
+                                                            }) => {
     const {map} = useAppMapContext();
     const {currentCity} = useCityContext();
     const {hasDetailedTimetable, hasRouteVariations} = useCityFeatures();
@@ -61,6 +62,13 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const {isFavoriteStop, toggleFavoriteStop} = useFavoriteStops(currentCity.code);
 
     const isDesktop = useIsDesktop();
+
+    useModalHistory({
+        isOpen: isOpen && !isDesktop,
+        onClose,
+        modalId: "bus-list",
+        enableHistory: !isDesktop,
+    });
 
     const [internalVariantId, setInternalVariantId] = useState<string | null>(null);
     const selectedVariantId = controlledVariantId !== undefined ? controlledVariantId : internalVariantId;
@@ -343,7 +351,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         >
             {/* Mobile Bottom Sheet Grab Handle */}
             <div className="flex md:hidden justify-center pt-2.5 pb-1 shrink-0">
-                <div className="w-10 h-1 bg-slate-300 dark:bg-white/20 rounded-full" />
+                <div className="w-10 h-1 bg-slate-300 dark:bg-white/20 rounded-full"/>
             </div>
 
             {/* Upper Section: Route Overview & Stops Timeline */}
@@ -393,7 +401,8 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                 {/* 3. Bus Stop Timeline List Body */}
                 <div ref={listRef} className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0">
                     {currentStops.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
+                        <div
+                            className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
                             <Loader2
                                 className={`w-6 h-6 animate-spin ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-400"}`}
                             />
@@ -414,8 +423,8 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                             const isSelected = selectedStopId === stop.nodeid;
                             const isTurning = Boolean(
                                 turningStop &&
-                                    turningStop.nodeid === stop.nodeid &&
-                                    turningStop.nodeord === stop.nodeord
+                                turningStop.nodeid === stop.nodeid &&
+                                turningStop.nodeord === stop.nodeord
                             );
                             const isFav = isFavoriteStop(stop.nodeid);
 
