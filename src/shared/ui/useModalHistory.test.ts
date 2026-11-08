@@ -71,3 +71,27 @@ describe("useModalHistory exports", () => {
         expect(typeof useModalHistory).toBe("function");
     });
 });
+
+describe("useModalHistory URL state decision logic", () => {
+    it("correctly identifies when URL still matches the active modal", () => {
+        const urlBeforeClosing = "https://wbus.kr/?cityCode=32020&route=30&modal=route";
+        expect(isModalQueryMatching(urlBeforeClosing, "route")).toBe(true);
+    });
+
+    it("correctly identifies when user selected a route and URL was replaced with a new route without modal param", () => {
+        // User selected route 34, so handleRouteChange called replaceState to /?cityCode=32020&route=34
+        const urlAfterSelection = "https://wbus.kr/?cityCode=32020&route=34";
+        expect(isModalQueryMatching(urlAfterSelection, "route")).toBe(false);
+    });
+
+    it("correctly identifies when user selected a different city and URL was replaced without modal param", () => {
+        // User selected Chuncheon (32010), so setCity called replaceState to /?cityCode=32010
+        const urlAfterCitySelection = "https://wbus.kr/?cityCode=32010";
+        expect(isModalQueryMatching(urlAfterCitySelection, "city")).toBe(false);
+    });
+
+    it("removes modal query correctly while preserving other queries on direct cleanup", () => {
+        const cleaned = removeModalUrlQuery("https://wbus.kr/?cityCode=32020&route=34&modal=route");
+        expect(cleaned).toBe("/?cityCode=32020&route=34");
+    });
+});
