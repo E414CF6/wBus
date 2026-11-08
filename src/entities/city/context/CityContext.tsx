@@ -152,6 +152,8 @@ export function CityContextProvider({children}: CityContextProviderProps) {
                         url.searchParams.set("cityCode", nextCity.code);
                         url.searchParams.delete("city");
                         url.searchParams.delete("route");
+                        url.searchParams.delete("subTab");
+                        url.searchParams.delete("modal");
                         window.history.replaceState(null, "", `${url.pathname}${url.search}`);
                     }
                 } catch {

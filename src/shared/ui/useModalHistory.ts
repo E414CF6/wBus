@@ -75,6 +75,7 @@ export function useModalHistory({
 
     const hasPushedRef = useRef(false);
     const isPopstateClosingRef = useRef(false);
+    const initialUrlRef = useRef<string | null>(null);
 
     // 모달 열림: URL에 쿼리스트링 추가 및 popstate 이벤트 리스너 등록
     useEffect(() => {
@@ -86,6 +87,11 @@ export function useModalHistory({
         try {
             const currentUrl = new URL(window.location.href);
             const currentVal = currentUrl.searchParams.get(key);
+
+            // 모달 열리기 전의 기본 URL (modal 쿼리 제외) 기록
+            if (!initialUrlRef.current) {
+                initialUrlRef.current = removeModalUrlQuery(window.location.href, key);
+            }
 
             if (currentVal !== value) {
                 const targetUrl = buildModalUrl(window.location.href, value, key);
@@ -129,27 +135,35 @@ export function useModalHistory({
             if (hasPushedRef.current && !isPopstateClosingRef.current) {
                 hasPushedRef.current = false;
                 if (typeof window !== "undefined") {
-                    // 현재 URL에 이 모달 쿼리 파라미터가 그대로 남아 있는 경우에만(단순 닫기/취소) history.back() 수행
-                    // 만약 사용자가 모달에서 항목(노선, 지역 등)을 선택하여 이미 새 URL로 이동/교체(replaceState/pushState)된 경우,
-                    // history.back()을 호출하면 방금 선택한 변경사항이 직전 URL로 롤백되어 버리므로 호출하지 않음!
+                    const currentHref = window.location.href;
+                    const initialBase = initialUrlRef.current;
+                    const currentBase = removeModalUrlQuery(currentHref, queryKey);
+
+                    // 1) 모달이 열려 있던 동안 base URL(지역/노선 등 modal 이외의 쿼리)이 변경된 경우:
+                    // 이는 사용자가 모달에서 항목을 선택/커밋한 것이므로 history.back()을 호출하면 변경사항이 롤백됨!
+                    // 2) 현재 URL에 modal 쿼리가 이미 남아있지 않은 경우:
+                    // 이미 외부 핸들러에 의해 새 URL로 전환되었으므로 history.back()을 호출하지 않음!
+                    const hasNavigated = Boolean(initialBase && initialBase !== currentBase);
                     const isStillOnModal = isModalQueryMatching(
-                        window.location.href,
+                        currentHref,
                         modalId || "open",
                         queryKey
                     );
-                    if (isStillOnModal) {
+
+                    // base URL이 변경되지 않았고, 여전히 모달 쿼리가 남아있는 경우(단순 X 버튼/취소)에만 history.back() 수행
+                    if (isStillOnModal && !hasNavigated) {
                         try {
                             window.history.back();
                         } catch {
-                            const cleanUrl = removeModalUrlQuery(window.location.href, queryKey);
+                            const cleanUrl = removeModalUrlQuery(currentHref, queryKey);
                             window.history.replaceState(null, "", cleanUrl);
                         }
                     } else {
-                        // 이미 새 URL로 전환된 경우 혹시 남아있을 수 있는 modal 파라미터만 정리
+                        // 이미 새 URL/지역/노선으로 전환된 경우 혹시 남아있을 수 있는 modal 파라미터만 정리
                         try {
-                            const currentUrl = new URL(window.location.href);
+                            const currentUrl = new URL(currentHref);
                             if (currentUrl.searchParams.has(queryKey)) {
-                                const cleanUrl = removeModalUrlQuery(window.location.href, queryKey);
+                                const cleanUrl = removeModalUrlQuery(currentHref, queryKey);
                                 window.history.replaceState(null, "", cleanUrl);
                             }
                         } catch {
@@ -172,6 +186,7 @@ export function useModalHistory({
                 }
             }
             isPopstateClosingRef.current = false;
+            initialUrlRef.current = null;
         } else {
             isPopstateClosingRef.current = false;
         }

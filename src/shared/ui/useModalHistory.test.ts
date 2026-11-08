@@ -94,4 +94,22 @@ describe("useModalHistory URL state decision logic", () => {
         const cleaned = removeModalUrlQuery("https://wbus.kr/?cityCode=32020&route=34&modal=route");
         expect(cleaned).toBe("/?cityCode=32020&route=34");
     });
+
+    it("detects navigation when city changes from Wonju (32020) to Chuncheon (32010)", () => {
+        const initialBeforeOpen = removeModalUrlQuery("https://wbus.kr/?cityCode=32020&route=30", "modal");
+        const currentAfterCityChange = removeModalUrlQuery("https://wbus.kr/?cityCode=32010", "modal");
+        expect(initialBeforeOpen !== currentAfterCityChange).toBe(true);
+    });
+
+    it("detects navigation when route changes from 30 to 34", () => {
+        const initialBeforeOpen = removeModalUrlQuery("https://wbus.kr/?cityCode=32020&route=30", "modal");
+        const currentAfterRouteChange = removeModalUrlQuery("https://wbus.kr/?cityCode=32020&route=34", "modal");
+        expect(initialBeforeOpen !== currentAfterRouteChange).toBe(true);
+    });
+
+    it("does not detect navigation when modal is simply closed via X button without state change", () => {
+        const initialBeforeOpen = removeModalUrlQuery("https://wbus.kr/?cityCode=32020&route=30", "modal");
+        const currentOnDismiss = removeModalUrlQuery("https://wbus.kr/?cityCode=32020&route=30&modal=city", "modal");
+        expect(initialBeforeOpen !== currentOnDismiss).toBe(false);
+    });
 });
