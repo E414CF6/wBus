@@ -183,8 +183,9 @@ export const BusStopMarker = ({
                 window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: targetStop}));
             }
             if (map && targetStop.gpslong && targetStop.gpslati) {
-                map.flyTo({
+                map.easeTo({
                     center: [targetStop.gpslong, targetStop.gpslati],
+                    offset: [0, -120],
                     duration: 450,
                 });
             }

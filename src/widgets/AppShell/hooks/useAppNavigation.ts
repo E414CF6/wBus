@@ -211,6 +211,7 @@ export function useAppNavigation() {
         selectedRoute,
         setSelectedRoute,
         isMapActive,
+        isScheduleRoute: pathname === "/schedule",
         handleTabChange,
         handleRouteChange,
         handleSelectMapRoute,

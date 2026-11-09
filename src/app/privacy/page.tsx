@@ -9,10 +9,10 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
     return (<div
-        className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-800 dark:text-slate-200 transition-colors">
+        className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-800 dark:text-slate-200 transition-colors">
         {/* Sticky Header */}
         <header
-            className="sticky top-0 z-40 bg-white/80 dark:bg-[#0b0f19]/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/10">
+            className="sticky top-0 z-40 bg-white/80 dark:bg-[#090d16]/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/10">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Link
@@ -69,7 +69,7 @@ export default function PrivacyPage() {
             {/* Privacy Summary Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div
-                    className="p-4 rounded-2xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-1.5">
+                    className="p-4 rounded-2xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-1.5">
                     <div
                         className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
                         <Lock className="w-4 h-4"/>
@@ -81,7 +81,7 @@ export default function PrivacyPage() {
                 </div>
 
                 <div
-                    className="p-4 rounded-2xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-1.5">
+                    className="p-4 rounded-2xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-1.5">
                     <div
                         className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
                         <CheckCircle2 className="w-4 h-4"/>
@@ -93,7 +93,7 @@ export default function PrivacyPage() {
                 </div>
 
                 <div
-                    className="p-4 rounded-2xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-1.5">
+                    className="p-4 rounded-2xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-1.5">
                     <div
                         className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
                         <Shield className="w-4 h-4"/>
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
             <div className="space-y-6 text-sm sm:text-base leading-relaxed">
                 {/* 1. 총칙 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-emerald-600 dark:text-emerald-400">1.</span> 총칙
                     </h2>
@@ -121,7 +121,7 @@ export default function PrivacyPage() {
 
                 {/* 2. 수집하는 개인정보 항목 및 방법 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-emerald-600 dark:text-emerald-400">2.</span> 수집하는 항목 및 수집 방법
                     </h2>
@@ -143,7 +143,7 @@ export default function PrivacyPage() {
 
                 {/* 3. 개인정보의 이용 목적 및 보유 기간 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-emerald-600 dark:text-emerald-400">3.</span> 개인정보의 이용 목적 및 보유 기간
                     </h2>
@@ -156,7 +156,7 @@ export default function PrivacyPage() {
 
                 {/* 4. 개인정보의 제3자 제공 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-emerald-600 dark:text-emerald-400">4.</span> 개인정보의 제3자 제공
                     </h2>
@@ -168,7 +168,7 @@ export default function PrivacyPage() {
 
                 {/* 5. 로컬 스토리지(Local Storage) 및 쿠키 사용 안내 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-emerald-600 dark:text-emerald-400">5.</span> 브라우저 저장소(Local Storage)
                         운용
@@ -187,7 +187,7 @@ export default function PrivacyPage() {
 
                 {/* 6. 정보주체의 권리 및 행사 방법 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-emerald-600 dark:text-emerald-400">6.</span> 정보주체의 권리 및 행사 방법
                     </h2>
@@ -199,7 +199,7 @@ export default function PrivacyPage() {
 
                 {/* 7. 개인정보 보호책임자 및 문의처 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-emerald-600 dark:text-emerald-400">7.</span> 개인정보 보호책임자 및 문의
                     </h2>

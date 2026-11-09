@@ -3,6 +3,7 @@ import {Marker} from "react-map-gl/maplibre";
 import {BusFront, Star} from "lucide-react";
 import type {BusStop} from "@entities/station/types";
 import {useIsDesktop} from "@shared/ui/useIsDesktop";
+import {useAppMapContext} from "@shared/context/AppMapContext";
 import type {LabelPlacement} from "@entities/station/busStopMarkerUtils";
 import {BusStopBottomSheet} from "./BusStopBottomSheet";
 
@@ -42,6 +43,7 @@ export const BusStopMarkerItem = memo<BusStopMarkerItemProps>(({
     onClearInitialOpen,
 }) => {
     const isDesktop = useIsDesktop();
+    const {map} = useAppMapContext();
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     const [closedStopId, setClosedStopId] = useState<string | null>(null);
     const [isHovered, setIsHovered] = useState(false);
@@ -66,7 +68,15 @@ export const BusStopMarkerItem = memo<BusStopMarkerItemProps>(({
         }
         setClosedStopId(null);
         setIsPopupOpen(true);
-    }, [isDesktop, stop]);
+
+        if (map && stop.gpslong && stop.gpslati) {
+            map.easeTo({
+                center: [stop.gpslong, stop.gpslati],
+                offset: [0, -120],
+                duration: 350,
+            });
+        }
+    }, [isDesktop, stop, map]);
 
     const handlePopupClose = useCallback(() => {
         setClosedStopId(stop.nodeid);

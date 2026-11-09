@@ -1,6 +1,7 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import Link from "next/link";
 import {Check, Compass, MapPin, Navigation, Search, Sparkles, Star, X} from "lucide-react";
 import {NATIONWIDE_CITIES, sortCitiesByMajor, useCityContext, useFavoriteCities} from "@entities/city";
 import type {CityInfo} from "@entities/city/types";
@@ -97,7 +98,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
     );
 
     const modalFooter = (
-        <>
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-1.5 w-full text-xs">
             <div className="flex items-center gap-1.5 truncate">
                 <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0"/>
                 <span className="truncate">
@@ -107,11 +108,22 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                     </strong>
                 </span>
             </div>
-            <span className="font-semibold shrink-0">
-                총 {filteredCities.length}개 지역
-                {selectedTab === "FAVORITES" && !searchQuery ? " (즐겨찾기)" : ""}
-            </span>
-        </>
+            <div className="flex items-center gap-2 text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
+                <span className="font-semibold">
+                    총 {filteredCities.length}개 지역
+                    {selectedTab === "FAVORITES" && !searchQuery ? " (즐겨찾기)" : ""}
+                </span>
+                <span>•</span>
+                <Link href="/terms" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
+                    이용약관
+                </Link>
+                <span>•</span>
+                <Link href="/privacy"
+                      className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-bold">
+                    개인정보처리방침
+                </Link>
+            </div>
+        </div>
     );
 
     return (

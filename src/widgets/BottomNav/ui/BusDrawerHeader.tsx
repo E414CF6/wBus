@@ -25,7 +25,7 @@ export const BusDrawerHeader: React.FC<BusDrawerHeaderProps> = ({
     timeAgo,
     isRefreshing,
     hasBottomSplit,
-    metaThemeMainColor = "#2563eb",
+                                                                    metaThemeMainColor: _metaThemeMainColor = "#2563eb",
     metaThemeBg = "bg-blue-600 dark:bg-blue-500",
     metaThemeText = "text-blue-600 dark:text-blue-400",
     metaThemeShadow = "shadow-blue-600/25",
@@ -81,7 +81,7 @@ export const BusDrawerHeader: React.FC<BusDrawerHeaderProps> = ({
                 <button
                     type="button"
                     onClick={onClose}
-                    className="w-8 h-8 rounded-full border border-slate-200/80 dark:border-white/15 bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 dark:hover:bg-white/15 flex md:hidden items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer active:scale-90"
+                    className="w-8 h-8 rounded-full border border-slate-200/80 dark:border-white/15 bg-slate-100 hover:bg-slate-200/80 dark:bg-white/5 dark:hover:bg-white/15 flex lg:hidden items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer active:scale-90"
                     title="닫기"
                     aria-label="닫기"
                 >

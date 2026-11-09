@@ -36,7 +36,7 @@ export const BusDrawerFilterBar: React.FC<BusDrawerFilterBarProps> = ({
     stopSearchQuery,
     onSearchQueryChange,
     turningStop,
-    metaThemeMainColor = "#2563eb",
+                                                                          metaThemeMainColor: _metaThemeMainColor = "#2563eb",
     metaThemeBadgeBg = "bg-blue-500/15 dark:bg-blue-500/25",
     metaThemeBg = "bg-blue-600",
     metaThemeText = "text-blue-700 dark:text-blue-300",

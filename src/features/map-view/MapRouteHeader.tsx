@@ -36,7 +36,6 @@ interface MapRouteHeaderProps {
     onOpenScheduleModal?: (docOrSubTab?: string, initialLocation?: "origin" | "dest") => void;
 }
 
-const DEFAULT_QUICK_ROUTES = ["30", "34", "34-1"];
 const emptySubscribe = () => () => {
 };
 
@@ -309,16 +308,16 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
     return (
         <>
             <header
-                className={`absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 -translate-x-1/2 ${
+                className={`absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 -translate-x-1/2 lg:left-[calc(50%+210px)] ${
                     isVariantMenuOpen ? "z-[80]" : "z-50"
-                } pointer-events-auto flex flex-col items-center gap-1.5 max-w-[95vw] w-full sm:w-auto animate-fadeIn select-none`}
+                } pointer-events-auto flex flex-col items-center gap-1.5 max-w-[95vw] lg:max-w-[calc(100vw-460px)] w-full sm:w-auto animate-fadeIn select-none`}
             >
                 {/* 1. Main Route Overview Glass Card */}
                 <div
                     ref={variantMenuRef}
                     className={`relative ${
                         isVariantMenuOpen ? "z-30" : "z-20"
-                    } flex w-full min-w-0 items-center gap-1 sm:gap-1.5 p-1.5 pr-2.5 sm:p-2 sm:pr-3 bg-white/92 dark:bg-[#111218]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full sm:w-auto`}
+                    } flex w-full min-w-0 items-center gap-1 sm:gap-1.5 p-1.5 pr-2.5 sm:p-2 sm:pr-3 bg-white/92 dark:bg-[#11131a]/92 backdrop-blur-2xl border border-black/10 dark:border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 max-w-full sm:w-auto`}
                 >
                     {/* Route Variation Toggle & Focus Switcher */}
                     <div className={`relative flex min-w-0 flex-1 items-center ${isVariantMenuOpen ? "z-50" : ""}`}>
@@ -512,7 +511,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                         <button
                             type="button"
                             onClick={() => {
-                                if (runningCount === 0 && nextScheduleInfo && onOpenScheduleModal) {
+                                if (runningCount === 0 && onOpenScheduleModal) {
                                     onOpenScheduleModal(`route:${selectedRoute}`);
                                 } else {
                                     onReconnect?.();
@@ -530,7 +529,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                 <span className={`relative inline-flex rounded-full h-2 w-2 ${statusConfig.dotClass}`}/>
                             </span>
                             <span>{statusConfig.label}</span>
-                            {runningCount === 0 && nextScheduleInfo && onOpenScheduleModal && (
+                            {runningCount === 0 && onOpenScheduleModal && (
                                 <CalendarClock className="w-3 h-3 opacity-80 ml-0.5"/>
                             )}
                             {onReconnect && (!hasFetched || connectionStatus === "connecting") && (
@@ -569,7 +568,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                         ? isYonsei
                                             ? "bg-[#003876] text-white shadow-sm ring-1 ring-[#003876] scale-[1.03]"
                                             : `${meta.colorTheme.bg} text-white shadow-sm ring-1 ring-current scale-[1.03]`
-                                        : "bg-white/85 dark:bg-[#111218]/85 backdrop-blur-xl hover:bg-white dark:hover:bg-[#181922] text-slate-700 dark:text-slate-300 border border-black/8 dark:border-white/10"
+                                        : "bg-white/85 dark:bg-[#11131a]/85 backdrop-blur-xl hover:bg-white dark:hover:bg-[#181922] text-slate-700 dark:text-slate-300 border border-black/8 dark:border-white/10"
                                 }`}
                             >
                                 {isYonsei && <GraduationCap className="w-3 h-3"/>}

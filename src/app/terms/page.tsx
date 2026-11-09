@@ -9,10 +9,10 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
     return (<div
-        className="min-h-screen bg-slate-50 dark:bg-[#0b0f19] text-slate-800 dark:text-slate-200 transition-colors">
+        className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-800 dark:text-slate-200 transition-colors">
         {/* Sticky Header */}
         <header
-            className="sticky top-0 z-40 bg-white/80 dark:bg-[#0b0f19]/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/10">
+            className="sticky top-0 z-40 bg-white/80 dark:bg-[#090d16]/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/10">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <Link
@@ -82,7 +82,7 @@ export default function TermsPage() {
             <div className="space-y-6 text-sm sm:text-base leading-relaxed">
                 {/* 제1조 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-blue-600 dark:text-blue-400">제1조</span> (목적)
                     </h2>
@@ -94,7 +94,7 @@ export default function TermsPage() {
 
                 {/* 제2조 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-blue-600 dark:text-blue-400">제2조</span> (용어의 정의)
                     </h2>
@@ -108,7 +108,7 @@ export default function TermsPage() {
 
                 {/* 제3조 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-blue-600 dark:text-blue-400">제3조</span> (약관의 효력 및 변경)
                     </h2>
@@ -120,7 +120,7 @@ export default function TermsPage() {
 
                 {/* 제4조 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-blue-600 dark:text-blue-400">제4조</span> (서비스의 제공 및 한계)
                     </h2>
@@ -135,7 +135,7 @@ export default function TermsPage() {
 
                 {/* 제5조 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-blue-600 dark:text-blue-400">제5조</span> (위치기반 서비스 및 데이터 이용)
                     </h2>
@@ -147,7 +147,7 @@ export default function TermsPage() {
 
                 {/* 제6조 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-blue-600 dark:text-blue-400">제6조</span> (저작권 및 지식재산권)
                     </h2>
@@ -159,7 +159,7 @@ export default function TermsPage() {
 
                 {/* 제7조 */}
                 <section
-                    className="p-6 rounded-3xl bg-white dark:bg-[#111218] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
+                    className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                     <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                         <span className="text-blue-600 dark:text-blue-400">제7조</span> (준거법 및 재판관할)
                     </h2>

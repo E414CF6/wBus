@@ -234,19 +234,20 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         }
 
         return list;
-    }, [hasUniversityShuttle, sortedAllRoutes.length, bookmarks, favoriteStops.length, dynamicCategories]);
+    }, [hasUniversityShuttle, sortedAllRoutes, bookmarks, favoriteStops.length, dynamicCategories]);
 
-    // Reset selected category to ALL if current category does not exist in active categories
-    useEffect(() => {
+    // Fallback selected category to ALL if current category does not exist in active categories
+    const effectiveCategory = useMemo(() => {
         if (selectedCategory !== "ALL" && !categories.some((c) => c.id === selectedCategory)) {
-            setSelectedCategory("ALL");
+            return "ALL";
         }
+        return selectedCategory;
     }, [categories, selectedCategory]);
 
     // Filter stops based on Search Query or FAV_STOPS Category
     const matchedStops = useMemo<BusStop[]>(() => {
         const q = searchQuery.trim().toLowerCase();
-        if (!q && selectedCategory !== "FAV_STOPS") return [];
+        if (!q && effectiveCategory !== "FAV_STOPS") return [];
 
         const deduped = new Map<string, BusStop>();
         for (const fav of favoriteStops) {
@@ -259,7 +260,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             });
         }
 
-        if (selectedCategory !== "FAV_STOPS") {
+        if (effectiveCategory !== "FAV_STOPS") {
             for (const s of currentRouteStops) {
                 if (!deduped.has(s.nodeid)) {
                     deduped.set(s.nodeid, s);
@@ -277,23 +278,23 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                     String(s.nodeno ?? "").toLowerCase().includes(q)
             )
             .slice(0, 12);
-    }, [searchQuery, selectedCategory, favoriteStops, currentRouteStops]);
+    }, [searchQuery, effectiveCategory, favoriteStops, currentRouteStops]);
 
     // Filter routes based on Category and Search Query
     const filteredRoutes = useMemo(() => {
-        if (selectedCategory === "FAV_STOPS" && !searchQuery.trim()) {
+        if (effectiveCategory === "FAV_STOPS" && !searchQuery.trim()) {
             return [];
         }
 
         let list = sortedAllRoutes;
 
         // Apply Category
-        if (selectedCategory === "BOOKMARKS") {
+        if (effectiveCategory === "BOOKMARKS") {
             list = list.filter((r) => bookmarks.includes(r));
-        } else if (selectedCategory === "YONSEI") {
+        } else if (effectiveCategory === "YONSEI") {
             list = list.filter((r) => YONSEI_ROUTE_SET.has(r));
-        } else if (selectedCategory !== "ALL" && selectedCategory !== "FAV_STOPS") {
-            list = list.filter((r) => routeCategoryMap.get(r)?.id === selectedCategory);
+        } else if (effectiveCategory !== "ALL" && effectiveCategory !== "FAV_STOPS") {
+            list = list.filter((r) => routeCategoryMap.get(r)?.id === effectiveCategory);
         }
 
         // Apply Search Query (Matches routeNo, origin, destination, description, routeType, category label)
@@ -313,7 +314,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         }
 
         return list;
-    }, [sortedAllRoutes, selectedCategory, searchQuery, bookmarks, routeCategoryMap, routeMetaMap]);
+    }, [sortedAllRoutes, effectiveCategory, searchQuery, bookmarks, routeCategoryMap, routeMetaMap]);
 
     const validRecentRoutes = recentRoutes.filter((r) => sortedAllRoutes.includes(r));
 
@@ -433,7 +434,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                     className="px-4 sm:px-6 py-2.5 flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden shrink-0 border-b border-black/5 dark:border-white/5">
                     {categories.map((cat) => {
                         const Icon = cat.icon;
-                        const isActive = selectedCategory === cat.id;
+                        const isActive = effectiveCategory === cat.id;
                         return (
                             <button
                                 key={cat.id}
@@ -466,7 +467,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                 className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                                 <MapPin className="w-3.5 h-3.5 text-amber-500"/>
                                 <span>
-                                    {selectedCategory === "FAV_STOPS" && !searchQuery.trim()
+                                    {effectiveCategory === "FAV_STOPS" && !searchQuery.trim()
                                         ? `즐겨찾는 정류장 (${matchedStops.length})`
                                         : `정류장 검색 결과 (${matchedStops.length})`}
                                 </span>
@@ -527,11 +528,11 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                             {UI_TEXT.ROUTE_SELECT.NO_RESULTS_TITLE}
                         </p>
                         <p className="text-xs mt-1 text-slate-500 dark:text-slate-400">
-                            {selectedCategory === "BOOKMARKS"
+                            {effectiveCategory === "BOOKMARKS"
                                 ? UI_TEXT.ROUTE_SELECT.NO_BOOKMARKS_DESC
                                 : UI_TEXT.ROUTE_SELECT.NO_RESULTS_DESC}
                         </p>
-                        {selectedCategory !== "ALL" && (
+                        {effectiveCategory !== "ALL" && (
                             <button
                                 type="button"
                                 onClick={() => {

@@ -203,10 +203,10 @@ function BottomNavComponent({
                 }}
             />
 
-            {/* 3. Click-outside Backdrop when BusListDrawer is open (Mobile only) */}
+            {/* 3. Click-outside Backdrop when BusListDrawer is open (Mobile & Tablet only) */}
             {!isDesktop && isMobileBusListOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-black/15 dark:bg-black/35 backdrop-blur-[1px] transition-opacity animate-fadeIn md:hidden"
+                    className="fixed inset-0 z-40 bg-black/15 dark:bg-black/35 backdrop-blur-[1px] transition-opacity animate-fadeIn lg:hidden"
                     onClick={() => setIsMobileBusListOpen(false)}
                     aria-hidden="true"
                 />
@@ -238,7 +238,7 @@ function BottomNavComponent({
                 {/* Floating Region Switch Prompt Pill */}
                 {hasPendingRegion && detectedCity && !isBusListOpen && (
                     <div
-                        className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-white/92 dark:bg-[#111111]/92 backdrop-blur-2xl text-slate-900 dark:text-white rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.16)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.6)] border border-black/10 dark:border-white/15 animate-fadeIn select-none"
+                        className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-white/92 dark:bg-[#11131a]/92 backdrop-blur-2xl text-slate-900 dark:text-white rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.16)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.6)] border border-black/10 dark:border-white/15 animate-fadeIn select-none"
                         role="status"
                         aria-live="polite"
                     >
@@ -273,7 +273,7 @@ function BottomNavComponent({
                 {/* Unified Bottom Floating Pill Navigation Bar (Identical on Desktop and Mobile) */}
                 <nav
                     aria-label={UI_TEXT.ACCESSIBILITY.MAIN_NAV}
-                    className="relative max-w-[calc(100vw-2rem)] sm:max-w-none bg-white/92 dark:bg-[#111111]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 select-none overflow-hidden shrink-0"
+                    className="relative max-w-[calc(100vw-2rem)] sm:max-w-none bg-white/92 dark:bg-[#11131a]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 select-none overflow-hidden shrink-0"
                 >
                     <div
                         className="flex items-center gap-1.5 p-1.5 px-3 overflow-x-auto scrollbar-hide custom-scrollbar-hidden scroll-smooth touch-pan-x overscroll-x-contain">
@@ -348,11 +348,11 @@ function BottomNavComponent({
                             <ChevronDown className="w-3.5 h-3.5 opacity-70"/>
                         </button>
 
-                        {/* Running Bus List & Stop Timeline Toggle Button (Mobile Only: on desktop the left panel is always displayed) */}
+                        {/* Running Bus List & Stop Timeline Toggle Button (Mobile & Tablet: on desktop the left panel is always displayed) */}
                         <button
                             type="button"
                             onClick={handleToggleBusList}
-                            className={`flex md:hidden items-center justify-center p-2 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 ${
+                            className={`flex lg:hidden items-center justify-center p-2 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 ${
                                 isBusListOpen
                                     ? "bg-indigo-600 text-white shadow-xs"
                                     : "hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"

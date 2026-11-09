@@ -131,13 +131,17 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
     // View states
     const [viewMode, setViewMode] = useState<TimetableViewMode>("summary");
     const [hourlyLocation, setHourlyLocation] = useState<"dest" | "origin">(initialLocation ?? "dest");
+    const [prevInitialLocation, setPrevInitialLocation] = useState(initialLocation);
+    const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
 
-    // Sync hourlyLocation with initialLocation when modal opens or initialLocation changes
-    useEffect(() => {
-        if (isOpen && initialLocation) {
+    // Sync hourlyLocation with initialLocation when modal opens or initialLocation changes (render-phase state update)
+    if (isOpen !== prevIsOpen || initialLocation !== prevInitialLocation) {
+        setPrevIsOpen(isOpen);
+        setPrevInitialLocation(initialLocation);
+        if (isOpen && initialLocation && hourlyLocation !== initialLocation) {
             setHourlyLocation(initialLocation);
         }
-    }, [isOpen, initialLocation]);
+    }
 
     const [tableSearch, setTableSearch] = useState("");
     const tableRef = useRef<HTMLDivElement>(null);
@@ -433,7 +437,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                         value={tableSearch}
                                         onChange={(e) => setTableSearch(e.target.value)}
                                         placeholder="시각·비고 검색"
-                                        className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11141c] text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11131a] text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                     />
                                     {tableSearch && (
                                         <button
@@ -449,11 +453,11 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
 
                             <div
                                 ref={tableRef}
-                                className="max-h-96 overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#12151e] shadow-xs custom-scrollbar"
+                                className="max-h-96 overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11131a] shadow-xs custom-scrollbar"
                             >
                                 <table className="w-full border-collapse text-left text-xs">
                                     <thead
-                                        className="sticky top-0 z-10 bg-slate-100/95 dark:bg-[#1b202e]/95 backdrop-blur-md text-slate-700 dark:text-slate-200 border-b border-black/5 dark:border-white/10 font-extrabold">
+                                        className="sticky top-0 z-10 bg-slate-100/95 dark:bg-[#161922]/95 backdrop-blur-md text-slate-700 dark:text-slate-200 border-b border-black/5 dark:border-white/10 font-extrabold">
                                     <tr>
                                         <th className="py-2 px-2.5 w-12 text-center border-r border-black/5 dark:border-white/10">
                                             회차

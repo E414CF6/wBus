@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import React, {useCallback, useEffect, useMemo, useState} from "react";
 
-import {MAP_SETTINGS} from "@shared/config/env";
 import {useBusRouteMap} from "@entities/route/hooks";
 import {useCityContext, useCityFeatures} from "@entities/city";
 
@@ -13,7 +12,7 @@ import {RouteScheduleModal} from "@features/map-view/RouteScheduleModal";
 
 import {isWeekend} from "@shared/lib/timeUtils";
 import {BottomNav} from "@widgets/BottomNav";
-import {useAppNavigation} from "./hooks/useAppNavigation";
+import {buildMapUrl, useAppNavigation} from "./hooks/useAppNavigation";
 
 const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
     ssr: false,
@@ -28,6 +27,7 @@ export function AppShell() {
         setDayMode,
         selectedRoute,
         handleRouteChange,
+        isScheduleRoute,
     } = useAppNavigation();
 
     // Live weekend check for timetable badge
@@ -66,8 +66,8 @@ export function AppShell() {
         return Object.keys(routeMap)[0] ?? selectedRoute;
     }, [routeMap, selectedRoute, defaultRoute, currentCity.code]);
 
-    // Centered floating RouteScheduleModal state (for cities with detailed timetable)
-    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+    // Centered floating RouteScheduleModal state (for cities with detailed timetable or direct /schedule visit)
+    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(isScheduleRoute);
     const [scheduleLocation, setScheduleLocation] = useState<"origin" | "dest">("dest");
 
     // Handler for opening the centered Route Timetable Modal from Map Pins or Route Header
@@ -116,7 +116,7 @@ export function AppShell() {
     }, [routeMap, activeRoute, selectedRoute, currentCity.code, handleRouteChange]);
 
     return (
-        <div className="fixed inset-0 w-full h-full overflow-hidden bg-slate-50 dark:bg-[#0b0f19]">
+        <div className="fixed inset-0 w-full h-full overflow-hidden bg-slate-50 dark:bg-[#090d16]">
             {/* 1. Real-time Map View Container (Main View) */}
             <div className="absolute inset-0 w-full h-full overflow-hidden block">
                 <MapRouteHeader
@@ -152,7 +152,12 @@ export function AppShell() {
                 <RouteScheduleModal
                     isOpen={isScheduleModalOpen}
                     routeName={activeRoute}
-                    onClose={() => setIsScheduleModalOpen(false)}
+                    onClose={() => {
+                        setIsScheduleModalOpen(false);
+                        if (isScheduleRoute && typeof window !== "undefined") {
+                            window.history.replaceState(null, "", buildMapUrl(activeRoute, currentCity.code));
+                        }
+                    }}
                     dayMode={dayMode}
                     isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
                     initialLocation={scheduleLocation}

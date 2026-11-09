@@ -345,12 +345,12 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             aria-label="실시간 버스 노선 및 정류장 목록"
             className={`transition-all duration-300 ease-out z-40 ${
                 isDesktop
-                    ? "hidden md:flex fixed top-[72px] bottom-6 left-4 w-[380px] lg:w-[420px] max-h-[calc(100vh-96px)] bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex-col"
+                    ? "hidden lg:flex fixed top-[72px] bottom-6 left-4 w-[380px] lg:w-[420px] max-h-[calc(100vh-96px)] bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex-col"
                     : "fixed inset-x-0 bottom-0 max-h-[82vh] h-[82vh] bg-white dark:bg-[#11131a] rounded-t-3xl shadow-2xl flex flex-col border-t border-slate-200/80 dark:border-white/10"
             }`}
         >
             {/* Mobile Bottom Sheet Grab Handle */}
-            <div className="flex md:hidden justify-center pt-2.5 pb-1 shrink-0">
+            <div className="flex lg:hidden justify-center pt-2.5 pb-1 shrink-0">
                 <div className="w-10 h-1 bg-slate-300 dark:bg-white/20 rounded-full"/>
             </div>
 

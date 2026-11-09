@@ -5,7 +5,7 @@ import {AppShell} from "./AppShell";
 
 export function MainApp() {
     return (
-        <Suspense fallback={<div className="min-h-screen bg-slate-50 dark:bg-[#0b0f19]"/>}>
+        <Suspense fallback={<div className="min-h-screen bg-slate-50 dark:bg-[#090d16]"/>}>
             <AppShell/>
         </Suspense>
     );
