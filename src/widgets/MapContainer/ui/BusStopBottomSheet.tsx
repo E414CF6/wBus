@@ -5,6 +5,7 @@ import type {BusStop} from "@entities/station/types";
 import {BusStopPopup, getKakaoRoadviewUrl} from "@entities/station";
 import {UI_TEXT} from "@shared/config/locale";
 import {useModalHistory} from "@shared/ui";
+import {triggerHaptic} from "@shared/utils/haptics";
 
 export interface BusStopBottomSheetProps {
     isOpen: boolean;
@@ -145,6 +146,7 @@ export const BusStopBottomSheet: React.FC<BusStopBottomSheetProps> = ({
                     {pairedOppositeStop && (<button
                             type="button"
                             onClick={() => {
+                                triggerHaptic("selection");
                                 onClose();
                                 onSelectOppositeStop?.(pairedOppositeStop);
                             }}

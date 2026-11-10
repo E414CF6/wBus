@@ -2,6 +2,7 @@
 
 import {useCallback, useEffect, useState} from "react";
 import {STORAGE_KEYS} from "@shared/config/env";
+import {triggerHaptic} from "@shared/utils/haptics";
 
 export const FAVORITE_CITIES_SYNC_EVENT = "wbus:favorite-cities-updated";
 
@@ -98,6 +99,7 @@ export function useFavoriteCities() {
 
             setFavoriteCityCodes(next);
             saveFavoriteCityCodesToStorage(next);
+            triggerHaptic(current.includes(code) ? "light" : "medium");
             try {
                 window.dispatchEvent(new CustomEvent(FAVORITE_CITIES_SYNC_EVENT));
             } catch {

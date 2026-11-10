@@ -40,6 +40,28 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard Variable", Pretendard, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+    overscroll-behavior-x: none;
+}
+
+/* Prevent 300ms tap delay and tap highlights on interactive controls */
+button,
+a,
+[role="button"],
+input[type="button"],
+input[type="submit"] {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent iOS Safari 1.2x auto-zoom when tapping inputs on mobile */
+@media (max-width: 639px) {
+    input,
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
 }
 
 /* MapLibre Map Overrides */
@@ -180,7 +202,7 @@ body {
 
 /* MapLibre Controls Positioning & Glassmorphism */
 .maplibregl-ctrl-top-right {
-    top: calc(env(safe-area-inset-top, 0px) + 92px) !important;
+    top: calc(env(safe-area-inset-top, 0px) + 98px) !important;
     right: max(12px, env(safe-area-inset-right, 12px)) !important;
 }
 
@@ -443,5 +465,26 @@ body {
     .group:hover .animate-marquee,
     .group:hover .animate-marquee-fast {
         animation-play-state: paused;
+    }
+
+    /* Content Visibility Optimization for Ultra-light Offscreen Rendering */
+    .cv-auto-stop {
+        content-visibility: auto;
+        contain-intrinsic-size: 0 58px;
+    }
+
+    .cv-auto-route {
+        content-visibility: auto;
+        contain-intrinsic-size: 0 88px;
+    }
+
+    .cv-auto-city {
+        content-visibility: auto;
+        contain-intrinsic-size: 0 52px;
+    }
+
+    .cv-auto-row {
+        content-visibility: auto;
+        contain-intrinsic-size: 0 37px;
     }
 }

@@ -12,6 +12,7 @@ import {
 } from "@entities/city";
 import type {CityInfo} from "@entities/city/types";
 import {matchesHangul} from "@shared/utils/hangul";
+import {triggerHaptic} from "@shared/utils/haptics";
 import {Modal} from "@shared/ui";
 
 type CityTabId = "ALL" | "FAVORITES" | "CAPITAL" | "GANGWON" | "CHUNGCHEONG" | "JEOLLA" | "GYEONGSANG" | "JEJU";
@@ -110,8 +111,34 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
         return sortCitiesByMajor(list);
     }, [searchQuery, selectedTab, favoriteCityCodes]);
 
+    // Visible windowing state for large city lists (reset during render when filter changes)
+    const [prevFilter, setPrevFilter] = useState({searchQuery, selectedTab});
+    const [visibleCityCount, setVisibleCityCount] = useState(48);
+
+    if (prevFilter.searchQuery !== searchQuery || prevFilter.selectedTab !== selectedTab) {
+        setPrevFilter({searchQuery, selectedTab});
+        setVisibleCityCount(48);
+    }
+
+    const handleScroll = useCallback(
+        (e: React.UIEvent<HTMLDivElement>) => {
+            const el = e.currentTarget;
+            if (el.scrollHeight - el.scrollTop - el.clientHeight < 300) {
+                setVisibleCityCount((prev) =>
+                    prev < filteredCities.length ? Math.min(prev + 48, filteredCities.length) : prev
+                );
+            }
+        },
+        [filteredCities.length]
+    );
+
+    const visibleCities = useMemo(() => {
+        return filteredCities.slice(0, visibleCityCount);
+    }, [filteredCities, visibleCityCount]);
+
     const handleSelectCity = useCallback(
         (city: CityInfo) => {
+            triggerHaptic("selection");
             setCity(city);
             onClose();
         },
@@ -264,7 +291,10 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                 <button
                                     key={tab.id}
                                     type="button"
-                                    onClick={() => setSelectedTab(tab.id)}
+                                    onClick={() => {
+                                        triggerHaptic("selection");
+                                        setSelectedTab(tab.id);
+                                    }}
                                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer text-xs active:scale-95 shrink-0 ${
                                         isSelected
                                             ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm scale-[1.02]"
@@ -300,7 +330,10 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
             </div>
 
             {/* Cities Grid List */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-3 custom-scrollbar">
+            <div
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto p-4 sm:p-6 pt-3 custom-scrollbar"
+            >
                 {filteredCities.length === 0 ? (
                     selectedTab === "FAVORITES" && !searchQuery ? (
                         <div className="py-14 text-center text-slate-400 dark:text-slate-500 space-y-2">
@@ -325,7 +358,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                     )
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-                        {filteredCities.map((city) => {
+                        {visibleCities.map((city) => {
                             const isSelected = currentCity.code === city.code;
                             const isDetected = detectedCity?.code === city.code && !isSelected;
                             const isFav = isFavoriteCity(city.code);
@@ -342,7 +375,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                             handleSelectCity(city);
                                         }
                                     }}
-                                    className={`flex items-center justify-between p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer select-none active:scale-[0.98] ${
+                                    className={`cv-auto-city flex items-center justify-between p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer select-none active:scale-[0.98] ${
                                         isSelected
                                             ? "bg-blue-50 dark:bg-blue-950/40 border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20 shadow-xs"
                                             : isDetected
@@ -411,6 +444,12 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                 </div>
                             );
                         })}
+                        {visibleCities.length < filteredCities.length && (
+                            <div
+                                className="col-span-full py-2.5 text-center text-xs font-semibold text-slate-400 dark:text-slate-500">
+                                스크롤하여 더 많은 지역 불러오기 ({visibleCities.length} / {filteredCities.length})
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

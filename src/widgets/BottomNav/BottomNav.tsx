@@ -12,6 +12,7 @@ import {useCityContext, useCityFeatures} from "@entities/city";
 import {getRouteMeta, YONSEI_ROUTE_SET} from "@entities/route";
 import {CitySelectModal} from "@features/city-select";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
+import {triggerHaptic} from "@shared/utils/haptics";
 
 import {BusListDrawer} from "./BusListDrawer";
 
@@ -89,6 +90,7 @@ function BottomNavComponent({
         : false;
 
     const handleToggleTheme = useCallback(() => {
+        triggerHaptic("light");
         const nextTheme = isDark ? "light" : "dark";
         setTheme(nextTheme);
         if (typeof document !== "undefined") {
@@ -113,6 +115,7 @@ function BottomNavComponent({
         if (isDesktop) {
             return;
         }
+        triggerHaptic("selection");
         const next = !isMobileBusListOpen;
         setIsMobileBusListOpen(next);
         if (next && typeof window !== "undefined") {
@@ -151,6 +154,7 @@ function BottomNavComponent({
 
     const handleRecenterCity = useCallback(() => {
         if (!map) return;
+        triggerHaptic("light");
         map.flyTo({
             center: [currentCity.lng, currentCity.lat],
             zoom: currentCity.zoom,
@@ -160,6 +164,7 @@ function BottomNavComponent({
 
     const handleCycleDayMode = useCallback(() => {
         if (!onDayModeChange) return;
+        triggerHaptic("selection");
         if (dayMode === "AUTO") {
             onDayModeChange("WEEKDAY");
         } else if (dayMode === "WEEKDAY") {
@@ -302,7 +307,10 @@ function BottomNavComponent({
                         {/* Region Selector Button */}
                         <button
                             type="button"
-                            onClick={() => setIsCityModalOpen(true)}
+                            onClick={() => {
+                                triggerHaptic("light");
+                                setIsCityModalOpen(true);
+                            }}
                             className={`relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
                                 hasPendingRegion
                                     ? "bg-blue-600 text-white shadow-md shadow-blue-600/25 ring-2 ring-blue-400/40"
@@ -337,7 +345,10 @@ function BottomNavComponent({
                         {/* Route Selector Button */}
                         <button
                             type="button"
-                            onClick={() => setIsRoutePickerOpen(true)}
+                            onClick={() => {
+                                triggerHaptic("light");
+                                setIsRoutePickerOpen(true);
+                            }}
                             className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${
                                 isYonseiSelected
                                     ? "bg-[#003876]/15 dark:bg-[#003876]/35 hover:bg-[#003876]/25 border border-[#003876]/40 text-[#003876] dark:text-blue-300"

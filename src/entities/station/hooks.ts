@@ -6,6 +6,7 @@ import type {BusStop, BusStopArrival, FavoriteStop, NearbyStop} from "@entities/
 import type {CachedData} from "@shared/cache";
 import {CacheManager} from "@shared/cache/CacheManager";
 import {getFavoriteStopsStorageKey, STORAGE_KEYS} from "@shared/config/env";
+import {triggerHaptic} from "@shared/utils/haptics";
 
 import {UI_TEXT} from "@shared/config/locale";
 
@@ -223,6 +224,7 @@ export function useFavoriteStops(cityCode: string = "32020") {
                 ].slice(0, 20);
 
             setFavoriteStops(next);
+            triggerHaptic(exists ? "light" : "medium");
             try {
                 localStorage.setItem(storageKey, JSON.stringify(next));
                 window.dispatchEvent(new CustomEvent(FAVORITE_STOPS_SYNC_EVENT));

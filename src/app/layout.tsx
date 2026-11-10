@@ -66,6 +66,11 @@ export const viewport: Viewport = {
     maximumScale: 5,
     userScalable: true,
     viewportFit: "cover",
+    themeColor: [
+        {media: "(prefers-color-scheme: light)", color: "#f8fafc"},
+        {media: "(prefers-color-scheme: dark)", color: "#090d16"},
+    ],
+    interactiveWidget: "resizes-content",
 };
 
 const jsonLd = {

@@ -558,11 +558,11 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                             : undefined
                                                     }
                                                     data-target-next={isTargetNext ? "true" : undefined}
-                                                    className={
+                                                    className={`cv-auto-row ${
                                                         isNextOrigin || isNextDest
                                                             ? "bg-blue-50/80 dark:bg-blue-950/40 font-bold"
                                                             : "hover:bg-slate-50 dark:hover:bg-white/[0.02]"
-                                                    }
+                                                    }`}
                                                 >
                                                     <td className="py-2 px-2.5 text-center font-mono text-slate-400 border-r border-black/5 dark:border-white/10">
                                                         {row.seq}

@@ -18,6 +18,7 @@ import {useCityRoutes} from "@entities/route/hooks";
 import {useBusStop, useFavoriteStops} from "@entities/station/hooks";
 import type {BusStop} from "@entities/station/types";
 import {matchesHangul} from "@shared/utils/hangul";
+import {triggerHaptic} from "@shared/utils/haptics";
 import {Modal} from "@shared/ui";
 
 // ----------------------------------------------------------------------
@@ -87,6 +88,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     // Select route & update recent routes history
     const handleSelect = useCallback(
         (route: string) => {
+            triggerHaptic("selection");
             onSelectRoute(route);
             addRecentRoute(route);
             onClose();
@@ -97,6 +99,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     // Select a stop (fly to stop & open live arrival popup)
     const handleSelectStop = useCallback(
         (stop: BusStop) => {
+            triggerHaptic("selection");
             if (map && stop.gpslong && stop.gpslati) {
                 map.flyTo({
                     center: [stop.gpslong, stop.gpslati],
@@ -319,6 +322,31 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
 
     const validRecentRoutes = recentRoutes.filter((r) => sortedAllRoutes.includes(r));
 
+    // Visible-windowing incremental rendering state for large route lists (reset during render on filter changes)
+    const [prevFilter, setPrevFilter] = useState({searchQuery, effectiveCategory});
+    const [visibleCount, setVisibleCount] = useState(36);
+
+    if (prevFilter.searchQuery !== searchQuery || prevFilter.effectiveCategory !== effectiveCategory) {
+        setPrevFilter({searchQuery, effectiveCategory});
+        setVisibleCount(36);
+    }
+
+    const handleScroll = useCallback(
+        (e: React.UIEvent<HTMLDivElement>) => {
+            const el = e.currentTarget;
+            if (el.scrollHeight - el.scrollTop - el.clientHeight < 360) {
+                setVisibleCount((prev) =>
+                    prev < filteredRoutes.length ? Math.min(prev + 36, filteredRoutes.length) : prev
+                );
+            }
+        },
+        [filteredRoutes.length]
+    );
+
+    const visibleRoutes = useMemo(() => {
+        return filteredRoutes.slice(0, visibleCount);
+    }, [filteredRoutes, visibleCount]);
+
     const modalIcon = (
         <div
             className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-blue-600 text-white shadow-md shadow-blue-500/25 shrink-0">
@@ -459,7 +487,10 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             )}
 
             {/* Route & Stop List Display Section */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-2 sm:pt-3 custom-scrollbar space-y-4">
+            <div
+                onScroll={handleScroll}
+                className="flex-1 overflow-y-auto p-4 sm:p-6 pt-2 sm:pt-3 custom-scrollbar space-y-4"
+            >
                 {/* Matched Stops Section (Shown when searching or in FAV_STOPS category) */}
                 {matchedStops.length > 0 && (
                     <div>
@@ -548,7 +579,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                     </div>
                 ) : filteredRoutes.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3">
-                        {filteredRoutes.map((route) => {
+                        {visibleRoutes.map((route) => {
                             const meta = routeMetaMap.get(route) || getRouteMeta(route, currentCity.code);
                             const isSelected = route === selectedRoute;
                             const isYonsei = meta.isYonsei;
@@ -558,7 +589,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                 <div
                                     key={route}
                                     onClick={() => handleSelect(route)}
-                                    className={`group relative flex items-start justify-between p-3.5 sm:p-4 rounded-2xl transition-all duration-200 cursor-pointer select-none active:scale-[0.98] border ${
+                                    className={`cv-auto-route group relative flex items-start justify-between p-3.5 sm:p-4 rounded-2xl transition-all duration-200 cursor-pointer select-none active:scale-[0.98] border ${
                                         isSelected
                                             ? `bg-slate-50/90 dark:bg-white/[0.06] ${meta.colorTheme.border} shadow-md ring-2 ${meta.colorTheme.ring || "ring-blue-500/30"}`
                                             : "bg-black/[0.02] dark:bg-white/[0.03] hover:bg-black/[0.05] dark:hover:bg-white/[0.06] border-black/5 dark:border-white/5 hover:border-black/15 dark:hover:border-white/15"
@@ -626,6 +657,12 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                 </div>
                             );
                         })}
+                        {visibleRoutes.length < filteredRoutes.length && (
+                            <div
+                                className="col-span-full py-2.5 text-center text-xs font-semibold text-slate-400 dark:text-slate-500">
+                                스크롤하여 더 많은 노선 불러오기 ({visibleRoutes.length} / {filteredRoutes.length})
+                            </div>
+                        )}
                     </div>
                 ) : null}
             </div>

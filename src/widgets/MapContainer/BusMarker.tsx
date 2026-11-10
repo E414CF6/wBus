@@ -19,6 +19,7 @@ import {useCityContext} from "@entities/city";
 import {LocateFixed, Navigation} from "lucide-react";
 import React, {memo, useCallback, useEffect, useMemo, useState} from "react";
 import {Popup} from "react-map-gl/maplibre";
+import type {LngLatBounds} from "maplibre-gl";
 import BusAnimatedMarker from "./BusAnimatedMarker";
 
 // ----------------------------------------------------------------------
@@ -486,6 +487,49 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
         };
     }, [map, followedBusKey]);
 
+    // Viewport-based culling for live bus markers: only animate & render buses in visible view (+ buffer)
+    const [bounds, setBounds] = useState<LngLatBounds | null>(() => (map ? map.getBounds() : null));
+
+    useEffect(() => {
+        if (!map) return;
+        let rafId: number | null = null;
+        const updateBounds = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => {
+                setBounds(map.getBounds());
+            });
+        };
+        map.on("moveend", updateBounds);
+        map.on("zoomend", updateBounds);
+        return () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            map.off("moveend", updateBounds);
+            map.off("zoomend", updateBounds);
+        };
+    }, [map]);
+
+    const visibleMarkers = useMemo(() => {
+        if (!bounds) return markers;
+
+        const sw = bounds.getSouthWest();
+        const ne = bounds.getNorthEast();
+        // 25% safety buffer margin around viewport so buses entering the screen are pre-mounted
+        const latBuffer = Math.max(Math.abs(ne.lat - sw.lat) * 0.25, 0.01);
+        const lngBuffer = Math.max(Math.abs(ne.lng - sw.lng) * 0.25, 0.01);
+
+        const minLat = sw.lat - latBuffer;
+        const maxLat = ne.lat + latBuffer;
+        const minLng = sw.lng - lngBuffer;
+        const maxLng = ne.lng + lngBuffer;
+
+        return markers.filter((m) => {
+            // Always render followed or clicked bus regardless of position
+            if (m.key === selectedBusKey || m.key === followedBusKey) return true;
+            const [lat, lng] = m.position;
+            return lat >= minLat && lat <= maxLat && lng >= minLng && lng <= maxLng;
+        });
+    }, [markers, bounds, selectedBusKey, followedBusKey]);
+
     const handleMarkerClick = useCallback(
         (key: string) => {
             setSelectedBusKey(key);
@@ -501,7 +545,7 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
 
     return (
         <>
-            {markers.map((marker) => (
+            {visibleMarkers.map((marker) => (
                 <MarkerItemComponent
                     key={marker.key}
                     markerKey={marker.key}

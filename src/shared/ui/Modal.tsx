@@ -129,7 +129,7 @@ export function Modal({
 
     const modalContent = (
         <div
-            className={`fixed inset-0 ${zIndex} flex items-center justify-center p-3.5 sm:p-4 select-none pointer-events-auto`}
+            className={`fixed inset-0 ${zIndex} flex items-center justify-center pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] px-3 sm:p-4 select-none pointer-events-auto`}
             role="dialog"
             aria-modal="true"
             aria-label={ariaLabel}

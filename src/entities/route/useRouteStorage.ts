@@ -2,6 +2,7 @@
 
 import {useCallback, useEffect, useState} from "react";
 import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
+import {triggerHaptic} from "@shared/utils/haptics";
 
 export const WONJU_DEFAULT_BOOKMARKS = ["30", "34", "34-1"];
 export const EMPTY_DEFAULT_BOOKMARKS: string[] = [];
@@ -97,6 +98,7 @@ export function useRouteBookmarks(cityCode: string = "32020") {
             const next = toggleBookmarkInList(current, routeName);
 
             setBookmarks(next);
+            triggerHaptic(current.includes(routeName) ? "light" : "medium");
             try {
                 localStorage.setItem(storageKey, JSON.stringify(next));
                 window.dispatchEvent(new CustomEvent(BOOKMARKS_SYNC_EVENT));

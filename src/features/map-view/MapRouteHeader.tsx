@@ -554,7 +554,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                 {/* 2. Fast Route & Favorite Stop Switcher Bar (Horizontal Swipeable Quick Pills) */}
                 <div className="relative z-0 max-w-full w-full sm:w-auto px-1">
                     <div
-                        className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden py-0.5 px-0.5 scroll-smooth touch-pan-x select-none"
+                        className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden py-0.5 px-0.5 pr-12 sm:pr-0.5 scroll-smooth touch-pan-x select-none"
                     >
                         {quickRoutes.map((route) => {
                             const isCurrent = route === selectedRoute;

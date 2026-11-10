@@ -405,7 +405,10 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                 />
 
                 {/* 3. Bus Stop Timeline List Body */}
-                <div ref={listRef} className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0">
+                <div
+                    ref={listRef}
+                    className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0 pb-[calc(env(safe-area-inset-bottom,0px)+2.5rem)] lg:pb-3"
+                >
                     {currentStops.length === 0 ? (
                         <div
                             className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
