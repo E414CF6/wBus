@@ -308,9 +308,9 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
     return (
         <>
             <header
-                className={`absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 -translate-x-1/2 lg:left-[calc(50%+210px)] ${
+                className={`absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 -translate-x-1/2 ${
                     isVariantMenuOpen ? "z-[80]" : "z-50"
-                } pointer-events-auto flex flex-col items-center gap-1.5 max-w-[95vw] lg:max-w-[calc(100vw-460px)] w-full sm:w-auto animate-fadeIn select-none`}
+                } pointer-events-auto flex flex-col items-center gap-1.5 max-w-[95vw] w-full sm:w-auto animate-fadeIn select-none`}
             >
                 {/* 1. Main Route Overview Glass Card */}
                 <div
