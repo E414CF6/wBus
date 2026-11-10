@@ -1,8 +1,8 @@
 import React from "react";
 import {createPortal} from "react-dom";
-import {ArrowLeftRight, BusFront, Info, MapPin, MapPinned, Star, X} from "lucide-react";
+import {ArrowLeftRight, BusFront, ExternalLink, Info, MapPin, MapPinned, Star, X} from "lucide-react";
 import type {BusStop} from "@entities/station/types";
-import {BusStopPopup} from "@entities/station";
+import {BusStopPopup, getKakaoRoadviewUrl} from "@entities/station";
 import {UI_TEXT} from "@shared/config/locale";
 import {useModalHistory} from "@shared/ui";
 
@@ -108,6 +108,18 @@ export const BusStopBottomSheet: React.FC<BusStopBottomSheetProps> = ({
                         </div>
 
                         <div className="flex items-center gap-1 shrink-0">
+                            {stop.gpslati && stop.gpslong && (
+                                <a
+                                    href={getKakaoRoadviewUrl(stop.gpslati, stop.gpslong)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer active:scale-90"
+                                    title="카카오 로드뷰로 정류장 보기"
+                                    aria-label="카카오 로드뷰로 정류장 보기"
+                                >
+                                    <ExternalLink className="w-3.5 h-3.5"/>
+                                </a>
+                            )}
                             {onToggleFavorite && (<button
                                     type="button"
                                     onClick={() => onToggleFavorite(stop)}

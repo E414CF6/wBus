@@ -270,39 +270,40 @@ function BottomNavComponent({
                     </div>
                 )}
 
-                {/* Unified Bottom Floating Pill Navigation Bar (Identical on Desktop and Mobile) */}
+                {/* Unified Bottom Floating Pill Navigation Bar (Responsive on Mobile and Desktop) */}
                 <nav
                     aria-label={UI_TEXT.ACCESSIBILITY.MAIN_NAV}
-                    className="relative max-w-[calc(100vw-2rem)] sm:max-w-none bg-white/92 dark:bg-[#11131a]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 select-none overflow-hidden shrink-0"
+                    className="relative max-w-[calc(100vw-1.5rem)] sm:max-w-none bg-white/92 dark:bg-[#11131a]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 select-none overflow-hidden shrink-0"
                 >
                     <div
-                        className="flex items-center gap-1.5 p-1.5 px-3 overflow-x-auto scrollbar-hide custom-scrollbar-hidden scroll-smooth touch-pan-x overscroll-x-contain">
+                        className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 px-2 sm:px-3 overflow-x-auto scrollbar-hide custom-scrollbar-hidden scroll-smooth touch-pan-x overscroll-x-contain">
                         {/* Brand Logo & Title (Recenter on Current City) */}
                         <button
                             type="button"
                             onClick={handleRecenterCity}
                             title={`${currentCity.name} 중심으로 지도 이동`}
-                            className="flex items-center gap-2 pl-1 pr-1.5 py-0.5 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all select-none shrink-0 cursor-pointer active:scale-95"
+                            className="flex items-center gap-1.5 sm:gap-2 p-0.5 sm:pl-1 sm:pr-1.5 sm:py-0.5 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all select-none shrink-0 cursor-pointer active:scale-95"
+                            aria-label={`${APP_CONFIG.NAME} - ${currentCity.name} 중심으로 지도 이동`}
                         >
                             <div
-                                className="flex items-center justify-center w-7.5 h-7.5 rounded-full bg-black dark:bg-white text-white dark:text-black shrink-0 shadow-xs"
+                                className="flex items-center justify-center w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full bg-black dark:bg-white text-white dark:text-black shrink-0 shadow-xs"
                             >
                                 <MapIcon className="w-3.5 h-3.5" strokeWidth={2.5} aria-hidden="true"/>
                             </div>
                             <span
-                                className="text-sm sm:text-base font-black text-black dark:text-white tracking-tight shrink-0"
+                                className="hidden sm:inline text-sm sm:text-base font-black text-black dark:text-white tracking-tight shrink-0"
                             >
                                 {APP_CONFIG.NAME}
                             </span>
                         </button>
 
-                        <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+                        <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
 
                         {/* Region Selector Button */}
                         <button
                             type="button"
                             onClick={() => setIsCityModalOpen(true)}
-                            className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
+                            className={`relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
                                 hasPendingRegion
                                     ? "bg-blue-600 text-white shadow-md shadow-blue-600/25 ring-2 ring-blue-400/40"
                                     : "bg-black text-white dark:bg-white dark:text-black shadow-sm shadow-black/10 dark:shadow-white/10 hover:opacity-90"
@@ -319,8 +320,9 @@ function BottomNavComponent({
                             ) : (
                                 <MapPin className="w-3.5 h-3.5 stroke-[2.4] shrink-0"/>
                             )}
-                            <span className="whitespace-nowrap font-black">{shortCityName}</span>
-                            <ChevronDown className="w-3.5 h-3.5 opacity-75 shrink-0"/>
+                            <span
+                                className="whitespace-nowrap font-black max-w-[70px] sm:max-w-none truncate">{shortCityName}</span>
+                            <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-75 shrink-0"/>
 
                             {hasPendingRegion && (
                                 <span className="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
@@ -336,23 +338,23 @@ function BottomNavComponent({
                         <button
                             type="button"
                             onClick={() => setIsRoutePickerOpen(true)}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${
+                            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${
                                 isYonseiSelected
                                     ? "bg-[#003876]/15 dark:bg-[#003876]/35 hover:bg-[#003876]/25 border border-[#003876]/40 text-[#003876] dark:text-blue-300"
                                     : `${routeMeta.colorTheme.badgeBg} border ${routeMeta.colorTheme.border} ${routeMeta.colorTheme.text}`
                             }`}
                             title="노선 선택 (검색/목록)"
                         >
-                            <Bus className="w-3.5 h-3.5"/>
+                            <Bus className="w-3.5 h-3.5 shrink-0"/>
                             <span className="whitespace-nowrap font-black">{selectedRoute || "노선"}번</span>
-                            <ChevronDown className="w-3.5 h-3.5 opacity-70"/>
+                            <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-70 shrink-0"/>
                         </button>
 
                         {/* Running Bus List & Stop Timeline Toggle Button (Mobile & Tablet: on desktop the left panel is always displayed) */}
                         <button
                             type="button"
                             onClick={handleToggleBusList}
-                            className={`flex lg:hidden items-center justify-center p-2 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 ${
+                            className={`flex lg:hidden items-center justify-center p-1.5 sm:p-2 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 ${
                                 isBusListOpen
                                     ? "bg-indigo-600 text-white shadow-xs"
                                     : "hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
@@ -376,13 +378,13 @@ function BottomNavComponent({
                         {/* 3-state Day Mode Toggle (Auto / Weekday / Holiday for pin timetables) */}
                         {hasDetailedTimetable && onDayModeChange && (
                             <>
-                                <div className="w-px h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+                                <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
                                 <button
                                     type="button"
                                     onClick={handleCycleDayMode}
                                     title={dayModeTitle}
                                     aria-label={dayModeTitle}
-                                    className="p-2 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0"
+                                    className="p-1.5 sm:p-2 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0"
                                 >
                                     {dayMode === "AUTO" && (
                                         <Sparkles
@@ -405,7 +407,7 @@ function BottomNavComponent({
                             type="button"
                             onClick={handleToggleTheme}
                             aria-label={UI_TEXT.NAV.THEME_TOGGLE_LABEL}
-                            className="p-2 rounded-full text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0"
+                            className="p-1.5 sm:p-2 rounded-full text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0"
                         >
                             {isDark ? (
                                 <Moon className="w-4 h-4 text-blue-400 stroke-[2.2] animate-fadeIn"/>

@@ -5,6 +5,7 @@ import {
     findNearestCityWithDistance,
     getCityByCode,
     NATIONWIDE_CITIES,
+    resolveCityRegion,
     searchCities,
     sortCitiesByMajor,
 } from "./cities";
@@ -146,6 +147,24 @@ describe("cities entity & nearest city resolution", () => {
 
             expect(seoulIdx).toBeLessThan(suwonIdx);
             expect(suwonIdx).toBeLessThan(hoengseongIdx);
+        });
+    });
+
+    describe("resolveCityRegion", () => {
+        it("accurately classifies cities by geographic region", () => {
+            const seoul = getCityByCode("11");
+            const wonju = getCityByCode("32020");
+            const daejeon = getCityByCode("25");
+            const gwangju = getCityByCode("24");
+            const busan = getCityByCode("21");
+            const jeju = getCityByCode("39");
+
+            expect(resolveCityRegion(seoul)).toBe("CAPITAL");
+            expect(resolveCityRegion(wonju)).toBe("GANGWON");
+            expect(resolveCityRegion(daejeon)).toBe("CHUNGCHEONG");
+            expect(resolveCityRegion(gwangju)).toBe("JEOLLA");
+            expect(resolveCityRegion(busan)).toBe("GYEONGSANG");
+            expect(resolveCityRegion(jeju)).toBe("JEJU");
         });
     });
 });

@@ -17,6 +17,7 @@ import {useCityContext, useCityFeatures} from "@entities/city";
 import {useCityRoutes} from "@entities/route/hooks";
 import {useBusStop, useFavoriteStops} from "@entities/station/hooks";
 import type {BusStop} from "@entities/station/types";
+import {matchesHangul} from "@shared/utils/hangul";
 import {Modal} from "@shared/ui";
 
 // ----------------------------------------------------------------------
@@ -244,9 +245,9 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         return selectedCategory;
     }, [categories, selectedCategory]);
 
-    // Filter stops based on Search Query or FAV_STOPS Category
+    // Filter stops based on Search Query or FAV_STOPS Category (supports Korean Choseong)
     const matchedStops = useMemo<BusStop[]>(() => {
-        const q = searchQuery.trim().toLowerCase();
+        const q = searchQuery.trim();
         if (!q && effectiveCategory !== "FAV_STOPS") return [];
 
         const deduped = new Map<string, BusStop>();
@@ -274,13 +275,13 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         return allCandidateStops
             .filter(
                 (s) =>
-                    s.nodenm.toLowerCase().includes(q) ||
-                    String(s.nodeno ?? "").toLowerCase().includes(q)
+                    matchesHangul(s.nodenm, q) ||
+                    String(s.nodeno ?? "").toLowerCase().includes(q.toLowerCase())
             )
             .slice(0, 12);
     }, [searchQuery, effectiveCategory, favoriteStops, currentRouteStops]);
 
-    // Filter routes based on Category and Search Query
+    // Filter routes based on Category and Search Query (supports Korean Choseong)
     const filteredRoutes = useMemo(() => {
         if (effectiveCategory === "FAV_STOPS" && !searchQuery.trim()) {
             return [];
@@ -298,17 +299,17 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         }
 
         // Apply Search Query (Matches routeNo, origin, destination, description, routeType, category label)
-        const q = searchQuery.trim().toLowerCase();
+        const q = searchQuery.trim();
         if (q) {
             list = list.filter((r) => {
                 const meta = routeMetaMap.get(r);
                 const category = routeCategoryMap.get(r);
-                const matchNo = r.toLowerCase().includes(q);
-                const matchOrigin = meta?.origin.toLowerCase().includes(q);
-                const matchDest = meta?.destination.toLowerCase().includes(q);
-                const matchDesc = meta?.description?.toLowerCase().includes(q);
-                const matchType = meta?.routeType?.toLowerCase().includes(q);
-                const matchCategory = category?.label.toLowerCase().includes(q);
+                const matchNo = matchesHangul(r, q);
+                const matchOrigin = meta ? matchesHangul(meta.origin, q) : false;
+                const matchDest = meta ? matchesHangul(meta.destination, q) : false;
+                const matchDesc = meta?.description ? matchesHangul(meta.description, q) : false;
+                const matchType = meta?.routeType ? matchesHangul(meta.routeType, q) : false;
+                const matchCategory = category ? matchesHangul(category.label, q) : false;
                 return matchNo || matchOrigin || matchDest || matchDesc || matchType || matchCategory;
             });
         }

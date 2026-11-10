@@ -1,7 +1,7 @@
 import React from "react";
-import {ArrowLeftRight, Info, MapPin, MapPinned, Star, X} from "lucide-react";
+import {ArrowLeftRight, ChevronDown, ChevronUp, ExternalLink, Info, MapPin, MapPinned, Star, X} from "lucide-react";
 import type {BusStop} from "@entities/station/types";
-import {BusStopPopup} from "@entities/station";
+import {BusStopPopup, getKakaoRoadviewUrl} from "@entities/station";
 import type {MapRef} from "react-map-gl/maplibre";
 
 interface DesktopSplitStopViewProps {
@@ -19,6 +19,8 @@ interface DesktopSplitStopViewProps {
     currentCityCode: string;
     onRouteChange?: (routeName: string) => void;
     map?: MapRef | null;
+    isCollapsed?: boolean;
+    onToggleCollapse?: () => void;
 }
 
 export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
@@ -36,12 +38,25 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
     currentCityCode,
     onRouteChange,
     map,
+                                                                              isCollapsed = false,
+                                                                              onToggleCollapse,
 }) => {
     return (
-        <div className="w-full flex-[48] h-[48%] min-h-[260px] border-t border-slate-200/80 dark:border-white/10 flex flex-col overflow-hidden bg-white dark:bg-[#11131a] animate-fadeIn select-none">
+        <div
+            className={`w-full border-t border-slate-200/80 dark:border-white/10 flex flex-col overflow-hidden bg-white dark:bg-[#11131a] transition-all duration-300 animate-fadeIn select-none ${
+                isCollapsed
+                    ? "h-14 min-h-[56px] flex-none"
+                    : "flex-[48] h-[48%] min-h-[260px]"
+            }`}
+        >
             <div className="w-full h-full flex flex-col overflow-hidden">
                 {/* Stop Header */}
-                <div className="flex items-start justify-between px-4 py-3 border-b border-slate-200/80 dark:border-white/10 shrink-0 bg-slate-50/70 dark:bg-white/[0.03]">
+                <div
+                    onClick={isCollapsed && onToggleCollapse ? onToggleCollapse : undefined}
+                    className={`flex items-start justify-between px-4 py-3 border-b border-slate-200/80 dark:border-white/10 shrink-0 bg-slate-50/70 dark:bg-white/[0.03] ${
+                        isCollapsed ? "cursor-pointer hover:bg-slate-100/80 dark:hover:bg-white/[0.06]" : ""
+                    }`}
+                >
                     <div className="flex items-start gap-3 min-w-0">
                         <div
                             className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white shadow-xs"
@@ -92,8 +107,20 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                         </div>
                     </div>
 
-                    {/* Action Buttons: Favorite & Close Pane */}
-                    <div className="flex items-center gap-1 shrink-0 ml-2">
+                    {/* Action Buttons: Roadview, Favorite, Collapse Toggle & Close Pane */}
+                    <div className="flex items-center gap-1 shrink-0 ml-2" onClick={(e) => e.stopPropagation()}>
+                        {selectedStop.gpslati && selectedStop.gpslong && (
+                            <a
+                                href={getKakaoRoadviewUrl(selectedStop.gpslati, selectedStop.gpslong)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer active:scale-90"
+                                title="카카오 로드뷰로 정류장 보기"
+                                aria-label="카카오 로드뷰로 정류장 보기"
+                            >
+                                <ExternalLink className="w-3.5 h-3.5"/>
+                            </a>
+                        )}
                         <button
                             type="button"
                             onClick={() => toggleFavoriteStop(selectedStop)}
@@ -109,6 +136,18 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                                 className={`w-3.5 h-3.5 ${isFavoriteStop(selectedStop.nodeid) ? "fill-amber-400" : ""}`}
                             />
                         </button>
+                        {onToggleCollapse && (
+                            <button
+                                type="button"
+                                onClick={onToggleCollapse}
+                                className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer active:scale-90"
+                                title={isCollapsed ? "정류장 도착 정보 펼치기" : "정류장 도착 정보 접기"}
+                                aria-label={isCollapsed ? "정류장 도착 정보 펼치기" : "정류장 도착 정보 접기"}
+                            >
+                                {isCollapsed ? <ChevronUp className="w-3.5 h-3.5"/> :
+                                    <ChevronDown className="w-3.5 h-3.5"/>}
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={onClose}
@@ -121,59 +160,65 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                     </div>
                 </div>
 
-                {/* Paired Opposite Stop Switcher */}
-                {pairedOppositeStop && (
-                    <div className="px-4 py-1.5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] shrink-0">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                onSelectStop(pairedOppositeStop);
-                                if (map && pairedOppositeStop.gpslong && pairedOppositeStop.gpslati) {
-                                    map.flyTo({
-                                        center: [pairedOppositeStop.gpslong, pairedOppositeStop.gpslati],
-                                        duration: 400,
-                                    });
-                                }
-                            }}
-                            className="w-full inline-flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold border border-black/5 dark:border-white/10 transition-all cursor-pointer active:scale-98 group/opp"
-                            title={`건너편 정류장(${pairedOppositeStop.nodenm}) 실시간 정보 보기`}
-                        >
-                            <div className="flex items-center gap-1.5 min-w-0">
-                                <ArrowLeftRight className={`w-3.5 h-3.5 ${metaThemeTextColor} shrink-0`} />
-                                <span className="text-slate-500 dark:text-slate-400 font-medium">건너편</span>
-                                <span className="font-extrabold truncate text-slate-900 dark:text-white">
-                                    {pairedOppositeStop.nodenm}
-                                </span>
-                                {pairedOppositeStop.nodeno && (
-                                    <span className="font-mono text-[10px] text-slate-400 shrink-0">
-                                        ({pairedOppositeStop.nodeno})
+                {!isCollapsed && (
+                    <>
+                        {/* Paired Opposite Stop Switcher */}
+                        {pairedOppositeStop && (
+                            <div
+                                className="px-4 py-1.5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        onSelectStop(pairedOppositeStop);
+                                        if (map && pairedOppositeStop.gpslong && pairedOppositeStop.gpslati) {
+                                            map.flyTo({
+                                                center: [pairedOppositeStop.gpslong, pairedOppositeStop.gpslati],
+                                                duration: 400,
+                                            });
+                                        }
+                                    }}
+                                    className="w-full inline-flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold border border-black/5 dark:border-white/10 transition-all cursor-pointer active:scale-98 group/opp"
+                                    title={`건너편 정류장(${pairedOppositeStop.nodenm}) 실시간 정보 보기`}
+                                >
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                        <ArrowLeftRight className={`w-3.5 h-3.5 ${metaThemeTextColor} shrink-0`}/>
+                                        <span className="text-slate-500 dark:text-slate-400 font-medium">건너편</span>
+                                        <span className="font-extrabold truncate text-slate-900 dark:text-white">
+                                            {pairedOppositeStop.nodenm}
+                                        </span>
+                                        {pairedOppositeStop.nodeno && (
+                                            <span className="font-mono text-[10px] text-slate-400 shrink-0">
+                                                ({pairedOppositeStop.nodeno})
+                                            </span>
+                                        )}
+                                    </div>
+                                    <span
+                                        className={`text-[10px] font-black ${metaThemeTextColor} shrink-0 group-hover/opp:translate-x-0.5 transition-transform`}
+                                    >
+                                        전환 →
                                     </span>
-                                )}
+                                </button>
                             </div>
-                            <span
-                                className={`text-[10px] font-black ${metaThemeTextColor} shrink-0 group-hover/opp:translate-x-0.5 transition-transform`}
-                            >
-                                전환 →
-                            </span>
-                        </button>
-                    </div>
+                        )}
+
+                        {/* Live Arrivals Body */}
+                        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1">
+                            <BusStopPopup
+                                stopId={selectedStop.nodeid}
+                                cityCode={currentCityCode}
+                                currentRouteName={selectedRoute}
+                                onRouteChange={onRouteChange}
+                            />
+                        </div>
+
+                        {/* Footer Info Note */}
+                        <div
+                            className="px-4 py-2 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-200/80 dark:border-white/10 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-medium shrink-0">
+                            <Info className="w-3.5 h-3.5 text-slate-400 shrink-0"/>
+                            <span>실시간 버스 도착 정보는 정류장 기준 30초 주기로 갱신됩니다</span>
+                        </div>
+                    </>
                 )}
-
-                {/* Live Arrivals Body */}
-                <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-1">
-                    <BusStopPopup
-                        stopId={selectedStop.nodeid}
-                        cityCode={currentCityCode}
-                        currentRouteName={selectedRoute}
-                        onRouteChange={onRouteChange}
-                    />
-                </div>
-
-                {/* Footer Info Note */}
-                <div className="px-4 py-2 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-200/80 dark:border-white/10 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-medium shrink-0">
-                    <Info className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    <span>실시간 버스 도착 정보는 정류장 기준 30초 주기로 갱신됩니다</span>
-                </div>
             </div>
         </div>
     );

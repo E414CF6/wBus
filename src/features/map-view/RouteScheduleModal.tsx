@@ -1,7 +1,7 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Clock, LocateFixed, RotateCw, Search, X} from "lucide-react";
+import {Clock, Download, LocateFixed, RotateCw, Search, X} from "lucide-react";
 
 import {
     type BusRoute,
@@ -168,6 +168,28 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
             target.scrollIntoView({behavior: "smooth", block: "center"});
         }
     }, []);
+
+    const handleExportCsv = useCallback(() => {
+        if (!activeVariant?.timetable || activeVariant.timetable.length === 0) return;
+        const headers = ["회차", `${originName} 기점 출발`, `${destName} 회차지 출발`, "유형", "비고"];
+        const rows = activeVariant.timetable.map((row) => [
+            row.seq,
+            `"${row.originDepTime}"`,
+            `"${row.destDepTime}"`,
+            `"${(row.type || "").replace(/"/g, '""')}"`,
+            `"${(row.notes || "").replace(/"/g, '""')}"`,
+        ]);
+        const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+        const blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"});
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `wBus_${routeName}번_${activeVariant.dayType}_시간표.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, [activeVariant, originName, destName, routeName]);
 
     const renderBodyContent = () => (
         <div className="p-3.5 sm:p-5 overflow-y-auto space-y-3.5 sm:space-y-4 custom-scrollbar flex-1 min-h-0">
@@ -427,6 +449,15 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                             <span>다음 출발 행으로</span>
                                         </button>
                                     )}
+                                    <button
+                                        type="button"
+                                        onClick={handleExportCsv}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[11px] font-extrabold border border-emerald-200 dark:border-emerald-800 cursor-pointer active:scale-95 transition whitespace-nowrap"
+                                        title="시간표를 CSV 파일로 다운로드 (엑셀 호환)"
+                                    >
+                                        <Download className="w-3 h-3"/>
+                                        <span>CSV 다운로드</span>
+                                    </button>
                                 </div>
 
                                 <div className={`relative w-full ${embedded ? "" : "sm:w-56"}`}>

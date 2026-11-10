@@ -3,9 +3,34 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "next/link";
 import {Check, Compass, MapPin, Navigation, Search, Sparkles, Star, X} from "lucide-react";
-import {NATIONWIDE_CITIES, sortCitiesByMajor, useCityContext, useFavoriteCities} from "@entities/city";
+import {
+    NATIONWIDE_CITIES,
+    resolveCityRegion,
+    sortCitiesByMajor,
+    useCityContext,
+    useFavoriteCities,
+} from "@entities/city";
 import type {CityInfo} from "@entities/city/types";
+import {matchesHangul} from "@shared/utils/hangul";
 import {Modal} from "@shared/ui";
+
+type CityTabId = "ALL" | "FAVORITES" | "CAPITAL" | "GANGWON" | "CHUNGCHEONG" | "JEOLLA" | "GYEONGSANG" | "JEJU";
+
+interface CityTabConfig {
+    id: CityTabId;
+    label: string;
+}
+
+const CITY_TABS: readonly CityTabConfig[] = [
+    {id: "ALL", label: "전체"},
+    {id: "FAVORITES", label: "즐겨찾기"},
+    {id: "CAPITAL", label: "수도권"},
+    {id: "GANGWON", label: "강원"},
+    {id: "CHUNGCHEONG", label: "충청"},
+    {id: "JEOLLA", label: "전라"},
+    {id: "GYEONGSANG", label: "경상"},
+    {id: "JEJU", label: "제주"},
+] as const;
 
 interface CitySelectModalProps {
     isOpen: boolean;
@@ -25,7 +50,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
     const {favoriteCityCodes, isFavoriteCity, toggleFavoriteCity} = useFavoriteCities();
 
     const [searchQuery, setSearchQuery] = useState("");
-    const [selectedTab, setSelectedTab] = useState<"ALL" | "FAVORITES">("ALL");
+    const [selectedTab, setSelectedTab] = useState<CityTabId>("ALL");
     const searchInputRef = useRef<HTMLInputElement>(null);
 
     // Reset state on open
@@ -34,6 +59,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
         setPrevIsOpen(isOpen);
         if (isOpen) {
             setSearchQuery("");
+            setSelectedTab("ALL");
         }
     }
 
@@ -44,20 +70,41 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
         }
     }, [isOpen]);
 
-    // Filter cities and sort by major metropolitan scale
+    // Counts per region tab
+    const regionCounts = useMemo(() => {
+        const counts: Record<CityTabId, number> = {
+            ALL: NATIONWIDE_CITIES.length,
+            FAVORITES: favoriteCityCodes.length,
+            CAPITAL: 0,
+            GANGWON: 0,
+            CHUNGCHEONG: 0,
+            JEOLLA: 0,
+            GYEONGSANG: 0,
+            JEJU: 0,
+        };
+        for (const city of NATIONWIDE_CITIES) {
+            const reg = resolveCityRegion(city);
+            counts[reg] = (counts[reg] || 0) + 1;
+        }
+        return counts;
+    }, [favoriteCityCodes.length]);
+
+    // Filter cities by search query (including Choseong like "ㅇㅈ") and region tab
     const filteredCities = useMemo(() => {
         let list = NATIONWIDE_CITIES;
-        const q = searchQuery.trim().toLowerCase();
+        const q = searchQuery.trim();
 
         if (q) {
             list = list.filter(
                 (c) =>
-                    c.name.toLowerCase().includes(q) ||
-                    c.province.toLowerCase().includes(q) ||
+                    matchesHangul(c.name, q) ||
+                    matchesHangul(c.province, q) ||
                     c.code.includes(q)
             );
         } else if (selectedTab === "FAVORITES") {
             list = list.filter((c) => favoriteCityCodes.includes(c.code));
+        } else if (selectedTab !== "ALL") {
+            list = list.filter((c) => resolveCityRegion(c) === selectedTab);
         }
 
         return sortCitiesByMajor(list);
@@ -204,45 +251,50 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                     </button>
                 </div>
 
-                {/* Filter Tabs: 전체 / 즐겨찾기 */}
+                {/* Filter Tabs: 전체 / 즐겨찾기 / 6대 권역 */}
                 {!searchQuery && (
-                    <div className="flex items-center gap-1.5 pt-0.5">
-                        <button
-                            type="button"
-                            onClick={() => setSelectedTab("ALL")}
-                            className={`px-3.5 py-1.5 rounded-full font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer text-xs active:scale-95 ${
-                                selectedTab === "ALL"
-                                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm scale-[1.02]"
-                                    : "bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.07] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300 border border-black/5 dark:border-white/5"
-                            }`}
-                        >
-                            전체
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setSelectedTab("FAVORITES")}
-                            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer text-xs active:scale-95 ${
-                                selectedTab === "FAVORITES"
-                                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm scale-[1.02]"
-                                    : "bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.07] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300 border border-black/5 dark:border-white/5"
-                            }`}
-                        >
-                            <Star
-                                className={`w-3.5 h-3.5 ${
-                                    selectedTab === "FAVORITES"
-                                        ? "text-amber-400 fill-amber-400"
-                                        : favoriteCityCodes.length > 0
-                                            ? "text-amber-500 fill-amber-500"
-                                            : "text-slate-400"
-                                }`}
-                            />
-                            <span>즐겨찾기</span>
-                            {favoriteCityCodes.length > 0 && (
-                                <span className="text-[11px] opacity-80 font-bold">
-                                    {favoriteCityCodes.length}
-                                </span>
-                            )}
-                        </button>
+                    <div
+                        className="flex items-center gap-1.5 pt-0.5 overflow-x-auto custom-scrollbar-hidden select-none">
+                        {CITY_TABS.map((tab) => {
+                            const isSelected = selectedTab === tab.id;
+                            const count = regionCounts[tab.id] ?? 0;
+                            const isFav = tab.id === "FAVORITES";
+
+                            return (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setSelectedTab(tab.id)}
+                                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-extrabold whitespace-nowrap transition-all duration-200 cursor-pointer text-xs active:scale-95 shrink-0 ${
+                                        isSelected
+                                            ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm scale-[1.02]"
+                                            : "bg-black/[0.03] dark:bg-white/[0.05] hover:bg-black/[0.07] dark:hover:bg-white/[0.08] text-slate-600 dark:text-slate-300 border border-black/5 dark:border-white/5"
+                                    }`}
+                                >
+                                    {isFav && (
+                                        <Star
+                                            className={`w-3.5 h-3.5 ${
+                                                isSelected
+                                                    ? "text-amber-400 fill-amber-400"
+                                                    : count > 0
+                                                        ? "text-amber-500 fill-amber-500"
+                                                        : "text-slate-400"
+                                            }`}
+                                        />
+                                    )}
+                                    <span>{tab.label}</span>
+                                    <span
+                                        className={`text-[10px] font-mono font-bold ${
+                                            isSelected
+                                                ? "opacity-90"
+                                                : "text-slate-400 dark:text-slate-500"
+                                        }`}
+                                    >
+                                        {count}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
             </div>
@@ -263,8 +315,12 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                     ) : (
                         <div className="py-14 text-center text-slate-400 dark:text-slate-500 space-y-1">
                             <Compass className="w-9 h-9 mx-auto opacity-40 mb-2"/>
-                            <p className="text-sm font-black text-slate-700 dark:text-slate-200">검색된 지역이 없습니다</p>
-                            <p className="text-xs">다른 시·군 이름으로 검색해 보세요.</p>
+                            <p className="text-sm font-black text-slate-700 dark:text-slate-200">
+                                {searchQuery ? `"${searchQuery}" 검색 결과가 없습니다` : "해당 권역에 등록된 지역이 없습니다"}
+                            </p>
+                            <p className="text-xs">
+                                {searchQuery ? "초성(예: ㅇㅈ, ㅅㅇ) 또는 다른 시·군 이름으로 검색해 보세요." : "다른 권역 탭을 선택해 보세요."}
+                            </p>
                         </div>
                     )
                 ) : (

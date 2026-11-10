@@ -75,6 +75,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const setSelectedVariantId = onSelectVariant ?? setInternalVariantId;
     const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
     const [selectedStop, setSelectedStop] = useState<BusStop | null>(null);
+    const [isSplitCollapsed, setIsSplitCollapsed] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const listRef = useRef<HTMLDivElement>(null);
     const hasAutoScrolledRef = useRef<string | null>(null);
@@ -116,6 +117,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         setPrevRoute(selectedRoute);
         setSelectedStop(null);
         setSelectedStopId(null);
+        setIsSplitCollapsed(false);
     }
 
     // Route Metadata
@@ -357,7 +359,11 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             {/* Upper Section: Route Overview & Stops Timeline */}
             <div
                 className={`w-full flex flex-col overflow-hidden transition-all duration-300 ${
-                    hasBottomSplit ? "flex-[52] h-[52%]" : "flex-1 h-full"
+                    hasBottomSplit
+                        ? isSplitCollapsed
+                            ? "flex-1 h-[calc(100%-56px)]"
+                            : "flex-[52] h-[52%]"
+                        : "flex-1 h-full"
                 }`}
             >
                 {/* 1. Header */}
@@ -461,6 +467,8 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                     pairedOppositeStop={pairedOppositeStop}
                     isFavoriteStop={isFavoriteStop}
                     toggleFavoriteStop={toggleFavoriteStop}
+                    isCollapsed={isSplitCollapsed}
+                    onToggleCollapse={() => setIsSplitCollapsed((prev) => !prev)}
                     onClose={() => {
                         setSelectedStop(null);
                         setSelectedStopId(null);

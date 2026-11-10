@@ -329,4 +329,20 @@ export function sortCitiesByMajor(cities: CityInfo[]): CityInfo[] {
     });
 }
 
+export type CityRegionGroup = "CAPITAL" | "GANGWON" | "CHUNGCHEONG" | "JEOLLA" | "GYEONGSANG" | "JEJU";
+
+/**
+ * Maps a city to its geographic metropolitan region.
+ */
+export function resolveCityRegion(city: CityInfo): CityRegionGroup {
+    const p = city.province;
+    if (p.includes("서울") || p.includes("인천") || p.includes("경기")) return "CAPITAL";
+    if (p.includes("강원")) return "GANGWON";
+    if (p.includes("충청") || p.includes("대전") || p.includes("세종")) return "CHUNGCHEONG";
+    if (p.includes("전라") || p.includes("광주")) return "JEOLLA";
+    if (p.includes("경상") || p.includes("부산") || p.includes("대구") || p.includes("울산")) return "GYEONGSANG";
+    if (p.includes("제주")) return "JEJU";
+    return "CAPITAL";
+}
+
 
