@@ -6,10 +6,9 @@
 [![TypeScript 6](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind_CSS-4.3-38B2AC?logo=tailwind-css)](https://tailwindcss.com/)
 [![MapLibre GL](https://img.shields.io/badge/MapLibre_GL-6.14-blue?logo=maplibre)](https://maplibre.org/)
-[![Vitest](https://img.shields.io/badge/Vitest-5.1_(253_Passed)-729B1B?logo=vitest)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Vitest-5.1_(406_Passed)-729B1B?logo=vitest)](https://vitest.dev/)
 
-> *A high-performance, real-time transit tracking and timetable platform supporting Wonju City and 139 municipalities
-> across South Korea.*
+> *A high-performance, real-time public transit tracking platform supporting 140 municipalities across South Korea.*
 
 ---
 
@@ -18,17 +17,16 @@
 - [Overview](#-overview)
 - [Key Features](#-key-features)
   - [1. Real-Time Interactive Map & Telemetry](#1-real-time-interactive-map--telemetry)
-  - [2. Hub Timetable Pins & Schedule Explorer](#2-hub-timetable-pins--schedule-explorer)
-  - [3. Nationwide Transit Support (139 Cities)](#3-nationwide-transit-support-139-cities)
-  - [4. Wonju ITS Transit Notice Center](#4-wonju-its-transit-notice-center)
-  - [5. Multi-Tier Caching & High-Resiliency Architecture](#5-multi-tier-caching--high-resiliency-architecture)
+  - [2. Nationwide Coverage (140 Cities & Counties)](#2-nationwide-coverage-140-cities--counties)
+  - [3. Dynamic OSRM Road-Snapped Geometries](#3-dynamic-osrm-road-snapped-geometries)
+  - [4. Multi-Tier Caching & Fault-Tolerant Pipeline](#4-multi-tier-caching--fault-tolerant-pipeline)
 - [System Architecture](#-system-architecture)
 - [Data Pipeline](#-data-pipeline)
 - [Technology Stack](#-technology-stack)
 - [API Reference](#-api-reference)
 - [Getting Started](#-getting-started)
 - [Available Scripts](#-available-scripts)
-- [Automated Updates](#-automated-updates)
+- [Automated Sync](#-automated-sync)
 - [Testing & Quality](#-testing--quality)
 - [License](#-license)
 
@@ -36,25 +34,24 @@
 
 ## 📋 Overview
 
-`wBus` is a next-generation real-time public transit web platform engineered to eliminate information asymmetry and
-sluggish user experiences for daily commuters.
+`wBus` is a real-time public transit web platform built with **Next.js 16**, **React 19**, and **MapLibre GL 6** to
+provide unified, low-latency bus tracking across South Korea.
 
-Traditional transit portals and municipal bus apps often report only garage origin departure times—making it difficult
-to determine actual departures at major hubs and turnaround points—while suffering from choppy telemetry updates and
-excessive background network polling.
+By combining national public transit OpenAPIs with road-network geometry matching, multi-tier serverless caching, and
+physics-based client interpolation, `wBus` delivers smooth 60fps vehicle motion across **140 supported cities and
+counties** while minimizing upstream API load and mobile battery usage.
 
-`wBus` is built around four core engineering pillars:
+Core engineering pillars:
 
-1. **Accurate Hub & Turnaround Schedules**: Provides clear, structured departure schedules and variant detection
-   (Weekday, Saturday, Holiday) across major transit terminals and turnaround hubs, complete with real-time countdowns
-   to the next departure.
-2. **Smooth Physics-Based Telemetry**: Combines OSRM road-network vector map matching with physics-based dead reckoning
-   to smoothly interpolate vehicle motion along actual road geometries between 10-second public API polling intervals.
-3. **Nationwide Coverage Across 139 Cities**: Integrates the Ministry of Land, Infrastructure and Transport (MOLIT) TAGO
-   OpenAPI (138 cities/counties) alongside the Seoul Metropolitan Government Bus Information System (TOPIS) for seamless
-   nationwide tracking.
-4. **Resource Efficiency & Resiliency**: Employs an L1 in-memory LRU cache, in-flight request coalescing, CDN edge
-   micro-caching, and Page Visibility sleep/wake cycles to minimize mobile battery drain and cellular data usage.
+1. **Unified Nationwide Transit Data**: Integrates the Ministry of Land, Infrastructure and Transport (**MOLIT TAGO
+   OpenAPI**) for regional municipalities alongside the **Seoul TOPIS (`ws.bus.go.kr`)** API behind consistent schemas
+   and city-boundary guards.
+2. **Smooth Physics-Based Telemetry**: Snaps 10-second telemetry updates onto road-matched OSRM polylines and
+   interpolates vehicle motion using stop dwell-time modeling and server latency (`ageMs`) compensation.
+3. **Serverless Multi-Tier Resiliency**: Combines L1 in-memory LRU caching, L2 **Upstash Redis** distributed caching,
+   **Vercel Blob** durable artifact storage, in-flight request coalescing, and Zod runtime validation.
+4. **Adaptive Client Efficiency**: Stores bulky stop metadata asynchronously in **IndexedDB**, chunks multi-route
+   telemetry polling, and pauses background loops via the Page Visibility API.
 
 ---
 
@@ -63,138 +60,110 @@ excessive background network polling.
 ### 1. Real-Time Interactive Map & Telemetry
 
 - **Hardware-Accelerated Rendering (`MapLibre GL 6`)**:
-  - WebGL-powered vector tile rendering delivering smooth 60fps pan, zoom, pitch, and bearing interactions.
-  - Automatic synchronization between dark (`Darker`) and light (`Liberty`) map styles via `next-themes`.
-- **Road-Snapped Dead Reckoning Interpolation (`useAnimatedPosition`)**:
-  - Matches 10-second TAGO/TOPIS telemetry updates against high-precision OSRM road polylines.
-  - Projects continuous forward motion factoring in stop dwell-time weighting and network latency compensation.
-  - Prevents coordinate teleportation, filters backward GPS jitter, and smoothly interpolates vehicle heading angles.
-- **Route Variation & Via-Point Toggle**:
-  - Automatically identifies sub-route variations and via-point deviations (e.g. base routes vs. campus/terminal bypass
-    variants).
-  - Interactive header toggle and dropdown popover allowing riders to switch between individual route variations (with
-    live operating bus count per branch) or view all combined paths.
-  - Active bus list drawer that automatically synchronizes the route timeline with the vehicle nearest to the map
-    center.
-- **High-Precision GPS Tracking**:
-  - Real-time user location indicator with accuracy radius visualization.
-  - Automatic out-of-bounds detection modal when navigating outside the active city's service area.
-  - One-click compass reset and viewport zoom controls.
-- **Live Stop Arrival Predictions (`/api/bus-arrival`)**:
-  - Clicking any bus stop marker reveals approaching routes, remaining stop counts, and estimated arrival times (ETA in
-    seconds).
-  - Radius-based spatial discovery of nearby stops (`/api/stops/nearby`).
+  - WebGL vector map rendering with smooth 60fps pan, zoom, pitch, and bearing interactions.
+  - Automatic synchronization between dark (`Darker`) and light (`Liberty`) map themes via `next-themes`.
+- **Road-Snapped Dead Reckoning (`useAnimatedPosition`)**:
+  - Projects live vehicle positions along road-snapped route polylines between 10-second polling intervals.
+  - Accounts for upstream/cache response age (`serverAgeMs`) to compensate for telemetry delay, filters backward GPS
+    jitter, and smoothly interpolates bearing angles.
+- **Route Variations & Active Bus Drawer**:
+  - Detects and groups sub-route variations under a shared route number with per-branch active vehicle counts.
+  - Synchronizes the directional stop timeline with the active vehicle closest to the viewport center.
+- **Stop Arrival Predictions & Spatial Search**:
+  - Live stop arrival ETAs and remaining stop counts (`/api/bus-arrival/[busStopId]`).
+  - Coordinate-based nearby stop discovery sorted by Haversine distance (`/api/stops/nearby`).
 
-### 2. Hub Timetable Pins & Schedule Explorer
+### 2. Nationwide Coverage (140 Cities & Counties)
 
-- **Origin & Turnaround Map Pins (`TimetablePinMarker`)**:
-  - Displays interactive timetable pins at key origins, terminals, and turnaround hubs directly on the map canvas.
-  - Dynamically scales pin visibility by zoom level to prevent map clutter.
-  - Clicking a pin opens the full route schedule modal with real-time countdown badges for upcoming departures.
-- **Integrated Route Schedule Modal (`RouteScheduleModal`)**:
-  - Automatic schedule variant resolution (`AUTO`, Weekday, Saturday, Sunday/Holiday) via
-    `resolveActiveScheduleVariant`.
-  - Detailed route notes (via-point variations, early departures, terminal loops) and one-click CSV timetable export.
+- **Centralized City Directory (`/api/cities`)**:
+  - Covers Special & Metropolitan Cities (Seoul, Sejong, Busan, Daegu, Incheon, Gwangju, Daejeon/Gyeryong, Ulsan, Jeju)
+    and 131 provincial cities and counties nationwide.
+- **City Switcher & GPS Auto-Detection (`CitySelectModal`)**:
+  - Province-categorized browser with Korean initial-consonant (Choseong) search and one-click GPS city detection.
+- **City Boundary Integrity**:
+  - Enforces strict municipal boundary filters (`src/entities/city/routeBoundary.ts`) to keep cross-border route
+    prefixes isolated cleanly per selected city.
 
-### 3. Nationwide Transit Support (139 Cities)
+### 3. Dynamic OSRM Road-Snapped Geometries
 
-- **Comprehensive National Coverage**:
-  - Unified integration with MOLIT TAGO Bus Location & Route OpenAPIs (138 municipalities) and Seoul TOPIS
-    (`ws.bus.go.kr`).
-- **City Switcher Modal (`CitySelectModal`)**:
-  - Categorized regional tabs covering Special/Metropolitan Cities, Gyeonggi (31), Gangwon (7), Chungcheong, Jeolla,
-    Gyeongsang, and Jeju.
-  - Instant search with Korean initial-consonant (Choseong) matching.
-  - One-click GPS city auto-detection to immediately switch to the user's current municipality.
-- **On-Demand Dynamic Polyline Generation**:
-  - For regional routes without pre-built static geometries, `wBus` dynamically chunks stop sequences and synthesizes
-    road-snapped OSRM vector polylines on the fly, caching the results at the edge.
+- **On-Demand Polyline Synthesis (`/api/polyline/[routeId]`)**:
+  - Chunks ordered TAGO/TOPIS stop sequences through the OSRM routing engine to generate road-snapped vector geometries
+    on demand.
+  - Detects routing detours (`OSRM_DETOUR_TTL_MS = 15 min` temporary cache) and falls back gracefully to smooth spline
+    geometry when needed.
+  - Persists generated route geometries across serverless cold starts via **Vercel Blob** (with `/tmp` and `public/`
+    filesystem fallbacks).
 
-### 4. Wonju ITS Transit Notice Center
+### 4. Multi-Tier Caching & Fault-Tolerant Pipeline
 
-- Scrapes and caches official transit advisories from the Wonju Intelligent Transport Systems (`its.wonju.go.kr`)
-  portal.
-- Surfaces urgent announcements—such as road construction detours, route revisions, and timetable updates—via a header
-  marquee banner and an interactive detail modal.
-
-### 5. Multi-Tier Caching & High-Resiliency Architecture
-
-- **3-Tier Caching Pipeline**:
-  - **L1 In-Memory LRU Cache**: Delivers sub-millisecond responses within warm serverless instances.
-  - **In-Flight Request Coalescing**: Deduplicates concurrent requests for the same route so only a single upstream
-    public API call is dispatched.
-  - **CDN Edge Micro-Caching**: Configured with `s-maxage=10, stale-while-revalidate=5` to absorb traffic spikes
-    effortlessly.
-- **Multi-Key Rotation & Circuit Breaker (`DATA_GO_KR_SERVICE_KEYS`)**:
-  - Supports comma-separated public data API keys with round-robin load balancing, quota exhaustion detection, and
-    automatic per-key cooldown recovery.
-  - Built-in 3-state Circuit Breaker (`CLOSED` ➔ `OPEN` ➔ `HALF_OPEN`) to protect against upstream government API
-    outages.
-- **Battery & Data Saver**:
-  - Listens to the browser Page Visibility API to pause telemetry polling and `requestAnimationFrame` loops immediately
-    when the tab is backgrounded, resuming seamlessly on focus.
-- **Progressive Web App (PWA) & Offline Support**:
-  - Service Worker (`sw.js`) pre-caching for static assets and map resources.
-  - Full Add-to-Home-Screen (A2HS) support with iOS Dynamic Island and Safe Area full-bleed viewport adaptation.
+- **3-Tier Server Cache + Durable Artifact Store**:
+  - **L1 Memory LRU (`CacheManager`)**: Sub-millisecond hits per warm serverless instance with bounded revalidation
+    tracking (max 2,000 keys) and in-flight request deduplication.
+  - **L2 Distributed Cache (`Upstash Redis`)**: Shared cache state across serverless instances (`KV_REST_API_*` /
+    `UPSTASH_REDIS_REST_*`), including L2 `stale-if-error` fallback on cold starts.
+  - **CDN Edge Micro-Caching & Poisoning Protection**: Prevents empty arrays (`[]`) or degraded fallback responses from
+    entering shared caches (`Cache-Control: no-store` on degraded responses).
+  - **Durable Artifact Store (`Vercel Blob`)**: Persists JSON route and dataset snapshots across deployments and cold
+    starts.
+- **Upstream Resiliency (`SharedCircuitBreaker` & `fetchWithRetry`)**:
+  - 3-state circuit breakers (`CLOSED` ➔ `OPEN` ➔ `HALF_OPEN`), exponential backoff with jitter, bounded concurrency
+    (`mapWithConcurrencyLimit`), and round-robin `DATA_GO_KR_SERVICE_KEYS` rotation with per-key rate-limit cooldowns.
+- **Client Offline & Storage Optimization**:
+  - IndexedDB storage (`src/shared/cache/idbStorage.ts`) for large stop datasets instead of synchronous `localStorage`.
+  - Service Worker (`public/sw.js`) static asset pre-caching and PWA Add-to-Home-Screen support.
 
 ---
 
 ## 🏗️ System Architecture
 
-`wBus` follows **Feature-Sliced Design (FSD)** principles to enforce clear module boundaries and unidirectional
-dependencies.
+`wBus` follows **Feature-Sliced Design (FSD)** principles to maintain strict, unidirectional module dependencies: `app`
+➔ `widgets` ➔ `features` ➔ `entities` ➔ `shared`.
 
 ```text
 src/
 ├── app/                          # Next.js App Router (Pages & Serverless API Routes)
-│   ├── api/                      # REST API endpoints
-│   │   ├── bus/                  # Real-time bus telemetry, batch queries, health check
+│   ├── api/
+│   │   ├── bus/                  # Batched & single-route live bus telemetry + health check
 │   │   ├── bus-arrival/          # Real-time stop arrival predictions
-│   │   ├── bus-stops/            # Ordered stop sequences per route
-│   │   ├── cities/               # Nationwide directory of 139 supported municipalities
-│   │   ├── cron/refresh/         # Vercel Cron endpoint for automated dataset synchronization
-│   │   ├── notice/               # Wonju ITS transit notice scraper & detail API
-│   │   ├── polyline/             # On-demand OSRM road-snapped polyline generator
-│   │   ├── route-stops/          # Directional (UP/DOWN) stop mapping by route name
-│   │   ├── routes/               # Per-city route catalog & synchronization
-│   │   ├── schedule/             # Wonju bus timetables & cache invalidation
-│   │   └── stops/nearby/         # Coordinate-based spatial search for nearby stops
-│   ├── data/[...path]/           # Static geometry asset & on-demand vector proxy
+│   │   ├── bus-stops/            # Ordered stop sequences by route ID
+│   │   ├── cities/               # Directory of 140 supported cities and city codes
+│   │   ├── cron/refresh/         # Scheduled dataset & route catalog synchronization
+│   │   ├── polyline/             # On-demand OSRM road-snapped route polyline generator
+│   │   ├── route-stops/          # Directional (UP/DOWN) stop lists by route number
+│   │   ├── routes/               # Per-city route catalog & manual synchronization
+│   │   ├── schedule/             # Route schedule metadata & refresh endpoint
+│   │   └── stops/nearby/         # Coordinate-based spatial search for nearby bus stops
+│   ├── schedule/                 # Dedicated timetable explorer route
 │   ├── privacy/ & terms/         # Legal & privacy policy pages
-│   ├── schedule/                 # Dedicated schedule exploration route
-│   ├── globals.css               # Tailwind CSS 4 theme & global stylesheet
-│   ├── layout.tsx                # Root layout (SEO metadata, theme & global providers)
-│   └── page.tsx                  # Primary application entry point
-├── entities/                     # Core domain models & data services
-│   ├── bus/                      # Bus telemetry models, TAGO/TOPIS clients, circuit breaker
-│   ├── city/                     # 139 city codes, coordinate bounds, CityContext
-│   ├── notice/                   # Wonju ITS notice parser & domain schema
-│   ├── route/                    # Route definitions, OSRM routing engine, polyline chunker
-│   ├── schedule/                 # Timetable schemas, variant resolver, schedule utilities
-│   └── station/                  # Stop coordinates, turnaround detector, Kakao Roadview link
-├── features/                     # User-facing interactive features & business logic
-│   ├── city-select/              # City selection modal & GPS-based city auto-detection
-│   ├── live-tracking/            # BusLocationStore, interpolation store, heading calculator
-│   └── map-view/                 # Map viewport orchestration, RouteScheduleModal, MapRouteHeader
-├── shared/                       # Reusable infrastructure, hooks, and UI primitives
-│   ├── animation/                # useAnimatedPosition (physics-based dead reckoning)
-│   ├── api/                      # Shared fetchers, error handlers, request validators
-│   ├── cache/                    # CacheManager (L1 In-Memory LRU + request coalescing)
-│   ├── config/                   # Environment schema, localization dictionary, storage keys
-│   ├── context/                  # AppMapContext (global MapLibre instance management)
-│   ├── lib/                      # Time formatting & countdown utilities (timeUtils)
-│   ├── types/                    # Global TypeScript type definitions
-│   ├── ui/                       # Design system primitives (Pill, ThemeToggle, Marquee, etc.)
-│   └── utils/                    # Geospatial math (geo), XSS sanitizer, concurrency limiter
+│   ├── globals.css               # Tailwind CSS 4 theme tokens & global styles
+│   ├── layout.tsx                # Root layout (metadata, theme & global providers)
+│   └── page.tsx                  # Primary interactive map application entry
+├── entities/                     # Core domain models, API adapters & business services
+│   ├── bus/                      # TAGO/TOPIS clients, operating window helpers, circuit breakers
+│   ├── city/                     # 140 city codes, municipal bounds, boundary filters, CityContext
+│   ├── notice/                   # Transit notice DOM scraper & domain model
+│   ├── route/                    # Route synchronization service, OSRM client, polyline chunker
+│   ├── schedule/                 # Timetable dataset loader, variant resolver, DOM scraper
+│   └── station/                  # Stop filtering, IndexedDB stop cache, turnaround detection
+├── features/                     # User-facing interactive workflows
+│   ├── city-select/              # Nationwide city selector modal & GPS auto-detection
+│   ├── live-tracking/            # BusLocationStore (15-route chunking, latency tracking), snapService
+│   └── map-view/                 # Map viewport orchestration, schedule modal, header controls
+├── shared/                       # Shared infrastructure, validation, caching & UI primitives
+│   ├── animation/                # useAnimatedPosition (dead reckoning & bearing interpolation)
+│   ├── api/                      # createApiHandler, upstreamClient, Zod schemas, validators
+│   ├── cache/                    # CacheManager, L2 Redis adapter, Blob artifactStore, idbStorage
+│   ├── config/                   # Storage keys, page routes, cookie & locale config
+│   ├── context/                  # Global MapLibre context
+│   ├── lib/                      # Time & countdown utilities
+│   ├── types/                    # Shared TypeScript definitions
+│   ├── ui/                       # Reusable UI primitives (Modal, Pill, MarqueeText, ThemeToggle)
+│   └── utils/                    # Haversine/geo math, Hangul search, XSS sanitizer, concurrency
 └── widgets/                      # Self-contained composite UI blocks
-    ├── AppShell/                 # Primary application shell & route/tab orchestrator
-    ├── BottomNav/                # Floating bottom navigation bar & active bus list drawer
-    ├── MapContainer/             # MapLibre GL canvas wrapper, bus/stop/timetable pin layers
-    ├── NoticeWidget/             # Wonju ITS transit notice banner & modal
-    └── TimetableWidget/          # Standalone timetable exploration widget
+    ├── AppShell/                 # Application shell & navigation orchestrator
+    ├── BottomNav/                # Floating navigation bar, stop search & active bus drawer
+    └── MapContainer/             # MapLibre GL canvas, bus markers, stop pins, route polylines
 ```
-
-> **FSD Dependency Rule**: `app` ➔ `widgets` ➔ `features` ➔ `entities` ➔ `shared` (strictly unidirectional imports)
 
 ---
 
@@ -202,86 +171,84 @@ src/
 
 ```mermaid
 flowchart TD
-  subgraph External["External Public & Open Data Sources"]
-    TAGO["MOLIT TAGO OpenAPI<br/>(Real-Time Telemetry for 138 Cities)"]
-    TOPIS["Seoul TOPIS API<br/>(Seoul Real-Time Bus Positions & Routes)"]
-    WONJU_ITS["Wonju ITS Center<br/>(Official Timetables & Transit Notices)"]
-    OSRM["OSRM Routing Engine<br/>(Road Network Map Matching)"]
+  subgraph External["Upstream Data Sources"]
+    TAGO["MOLIT TAGO OpenAPI<br/>(National Regional Transit Data)"]
+    TOPIS["Seoul TOPIS API<br/>(Seoul Metropolitan Bus Telemetry)"]
+    OSRM["OSRM Routing Engine<br/>(Road-Network Map Matching)"]
   end
 
-  subgraph Serverless["Next.js 16 Edge / Serverless API Layer"]
-    API_BUS["GET /api/bus/[routeId]<br/>(Real-Time Bus Telemetry)"]
-    API_ARR["GET /api/bus-arrival<br/>(Stop Arrival Predictions)"]
-    API_SCHED["GET /api/schedule<br/>(Timetables & Route Variants)"]
-    API_POLY["GET /api/polyline/[routeId]<br/>(Road-Snapped Vector Polylines)"]
-    CACHE["CacheManager (L1 Memory LRU)<br/>+ In-Flight Request Coalescing<br/>+ CDN Edge Micro-Cache"]
+  subgraph Server["Next.js 16 Serverless API Layer"]
+    VALID["Zod Runtime Validation<br/>+ SharedCircuitBreaker + Retry"]
+    L1["L1 Memory Cache (LRU)<br/>+ In-Flight Coalescing"]
+    L2["L2 Upstash Redis<br/>(Distributed Serverless Cache)"]
+    BLOB["Vercel Blob Store<br/>(Durable JSON Artifacts)"]
+    ROUTES["API Route Handlers<br/>(/api/bus, /api/bus-arrival, /api/routes, /api/polyline)"]
   end
 
-  subgraph Client["Client Browser (React 19 & MapLibre GL 6)"]
-    STORE["BusLocationStore<br/>(10s Polling / Visibility-Aware Sleep)"]
-    PHYSICS["useAnimatedPosition<br/>(Road Snapping & Physics Dead Reckoning)"]
-    MAP_VIEW["MapLibre GL 6 Vector Canvas<br/>(60fps Bus Markers & Directional Polylines)"]
-    MODAL_VIEW["RouteScheduleModal & Hub Pins<br/>(Departure Countdowns & Timetables)"]
+  subgraph Client["Browser Runtime (React 19 & MapLibre GL 6)"]
+    STORE["BusLocationStore<br/>(15-Route Chunking / Visibility Sleep)"]
+    IDB["IndexedDB Stop Cache"]
+    PHYSICS["useAnimatedPosition<br/>(Road Snapping & Latency Compensation)"]
+    MAP["MapLibre GL 6 WebGL Canvas<br/>(60fps Markers & Directional Polylines)"]
   end
 
-  TAGO --> CACHE
-  TOPIS --> CACHE
-  WONJU_ITS --> CACHE
-  OSRM --> CACHE
-  CACHE --> API_BUS
-  CACHE --> API_ARR
-  CACHE --> API_SCHED
-  CACHE --> API_POLY
-  API_BUS --> STORE
-  API_POLY --> PHYSICS
+  TAGO --> VALID
+  TOPIS --> VALID
+  OSRM --> VALID
+  VALID --> L1
+  L1 <--> L2
+  VALID --> BLOB
+  L1 --> ROUTES
+  BLOB --> ROUTES
+  ROUTES --> STORE
+  ROUTES --> IDB
+  ROUTES --> PHYSICS
   STORE --> PHYSICS
-  PHYSICS --> MAP_VIEW
-  API_SCHED --> MODAL_VIEW
+  PHYSICS --> MAP
 ```
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer                | Technology                        | Version            | Key Role & Highlights                                              |
-|:---------------------|:----------------------------------|:-------------------|:-------------------------------------------------------------------|
-| **Framework**        | Next.js (App Router)              | `16.4.1`           | Turbopack dev server, React Server Components, Serverless Routes   |
-| **UI Library**       | React                             | `19.3.1`           | Concurrent rendering, strict mode, high-frequency animation hooks  |
-| **Language**         | TypeScript                        | `6.0.3`            | End-to-end strict type safety across geospatial & domain schemas   |
-| **Styling**          | Tailwind CSS                      | `4.3.3`            | CSS-first engine, zero runtime overhead, adaptive dark/light theme |
-| **Map Rendering**    | MapLibre GL / react-map-gl        | `6.14.0` / `8.1.3` | WebGL vector map rendering, 3D pitch/bearing, dynamic style switch |
-| **State & Fetching** | SWR / Custom External Stores      | `2.5.1`            | In-memory reactive stores, background revalidation, visibility API |
-| **Icons**            | Lucide React                      | `1.57.0`           | Crisp, customizable vector iconography                             |
-| **Theme System**     | next-themes                       | `0.4.6`            | SSR-safe system/dark/light theme synchronization without flash     |
-| **Routing Engine**   | OSRM (MLD Algorithm)              | -                  | Stop-sequence road network map matching and spline synthesis       |
-| **Testing**          | Vitest                            | `5.1.0`            | 253 unit tests covering geospatial math, physics, and caching      |
-| **Analytics**        | Vercel Analytics / Speed Insights | `2.0.1` / `2.0.0`  | Real-user Core Web Vitals and interaction performance telemetry    |
+| Layer | Technology | Version | Role & Highlights |
+| :--- | :--- | :--- | :--- |
+| **Framework** | Next.js (App Router) | `16.4.1` | Turbopack dev server, Serverless Route Handlers, RSC |
+| **UI Library** | React | `19.3.1` | Concurrent rendering, external telemetry stores & animation hooks |
+| **Language** | TypeScript | `6.0.3` | Strict type checking across geospatial, API, and UI layers |
+| **Validation** | Zod | `4.6.7` | Runtime validation for upstream TAGO/OSRM payloads & JSON artifacts |
+| **Styling** | Tailwind CSS | `4.3.3` | Zero-runtime CSS-first styling with adaptive light/dark themes |
+| **Map Engine** | MapLibre GL / react-map-gl | `6.14.0` / `8.1.3` | WebGL vector tile rendering, pitch/bearing controls |
+| **Server Storage** | `@upstash/redis` / `@vercel/blob` | `1.41.0` / `2.9.0` | L2 distributed serverless cache & durable artifact persistence |
+| **Parsing** | `node-html-parser` | `9.0.7` | Resilient DOM parsing for transit timetable and advisory feeds |
+| **Client Fetching** | SWR | `2.5.1` | Client revalidation paired with IndexedDB & external stores |
+| **Routing Engine** | OSRM (Driving Profile) | — | Stop-sequence road matching and fallback spline synthesis |
+| **Testing** | Vitest | `5.0.5` (`5.1.0`) | 53 test suites / 406 unit & integration tests |
+| **Observability** | Vercel Analytics / Speed Insights | `2.0.1` / `2.0.0` | Real-user Core Web Vitals & telemetry |
 
 ---
 
 ## 📡 API Reference
 
-All API endpoints feature low-latency serialization, CDN edge micro-caching headers, and upstream circuit-breaker
-protection.
+All API handlers apply standardized error handling, Zod/parameter validation, and anti-poisoning `Cache-Control` rules
+(`no-store` automatically on degraded upstream responses).
 
-| Method     | Endpoint                                       | Description                                                    | Cache Policy (`Cache-Control`) |
-|:-----------|:-----------------------------------------------|:---------------------------------------------------------------|:-------------------------------|
-| `GET`      | `/api/bus?routeIds=...&cityCode=...`           | Batch query real-time bus locations across multiple routes     | `s-maxage=10`, SWR: `5s`       |
-| `GET`      | `/api/bus/[routeId]?cityCode=...`              | Real-time GPS telemetry and direction for a specific route     | `s-maxage=10`, SWR: `5s`       |
-| `GET`      | `/api/bus/health`                              | Upstream public API connectivity and circuit-breaker status    | `no-store`                     |
-| `GET`      | `/api/bus-arrival/[busStopId]?cityCode=...`    | Real-time approaching bus ETAs for a specific stop             | `s-maxage=5`, SWR: `5s`        |
-| `GET`      | `/api/bus-stops/[routeId]?cityCode=...`        | Ordered sequence of stops belonging to a specific route        | `s-maxage=86400` (1 day)       |
-| `GET`      | `/api/route-stops/[routeName]?cityCode=...`    | Directional (`UP`/`DOWN`) stop lists grouped by route number   | `s-maxage=86400` (1 day)       |
-| `GET`      | `/api/routes?cityCode=...`                     | Complete catalog of operating bus routes for a given city      | `s-maxage=86400` (1 day)       |
-| `GET`      | `/api/polyline/[routeId]?cityCode=...`         | High-precision road-snapped OSRM vector polyline for a route   | `s-maxage=604800` (7 days)     |
-| `GET`      | `/api/stops/nearby?lat=...&lng=...&radius=...` | Spatial search for bus stops within a radius (default: `500m`) | `s-maxage=3600` (1 hour)       |
-| `GET`      | `/api/cities`                                  | Directory of all 139 supported cities and TAGO city codes      | `s-maxage=86400` (1 day)       |
-| `GET`      | `/api/schedule`                                | Wonju route timetables, hub departures, and schedule metadata  | `s-maxage=60`, SWR: `300s`     |
-| `GET/POST` | `/api/schedule/refresh`                        | On-demand Wonju ITS timetable scrape and cache invalidation    | `no-store`                     |
-| `GET/POST` | `/api/routes/refresh`                          | Manual resynchronization of route catalogs and stop mappings   | `no-store`                     |
-| `GET`      | `/api/notice`                                  | Official Wonju ITS transit notices and advisories list         | `s-maxage=900` (15 min)        |
-| `GET`      | `/api/notice/[id]`                             | Detailed body content for a specific Wonju ITS transit notice  | `s-maxage=600` (10 min)        |
-| `GET/POST` | `/api/cron/refresh?target=...`                 | Unified Vercel Cron trigger (daily schedules + weekly routes)  | `no-store` (Bearer Auth)       |
+| Method | Endpoint | Description | Cache Policy (`Cache-Control`) |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/bus?routeIds=...&cityCode=...` | Batched live bus telemetry across multiple route IDs | `max-age=2, s-maxage=10`, SWR `5s`, `stale-if-error=60` |
+| `GET` | `/api/bus/[routeId]?cityCode=...` | Live bus telemetry and direction for a single route | `max-age=2, s-maxage=10`, SWR `5s`, `stale-if-error=60` |
+| `GET` | `/api/bus/health` | Circuit breakers, key pool, L1 cache, and Redis/Blob backend health | `no-store` |
+| `GET` | `/api/bus-arrival/[busStopId]?cityCode=...` | Live approaching bus ETAs for a specific stop | `max-age=1, s-maxage=3`, SWR `5s`, `stale-if-error=60` |
+| `GET` | `/api/bus-stops/[routeId]?cityCode=...` | Ordered stop sequence for a specific route | `s-maxage=86400`, SWR `86400s` (+ L2 Redis) |
+| `GET` | `/api/route-stops/[routeName]?cityCode=...` | Directional (`UP`/`DOWN`) stop lists grouped by route number | `s-maxage=86400`, SWR `86400s` (+ L2 Redis) |
+| `GET` | `/api/routes?cityCode=...` | Route catalog for a given municipality | `max-age=3600, s-maxage=86400`, SWR `7d` (+ L2 Redis) |
+| `GET` | `/api/polyline/[routeId]?cityCode=...` | Road-snapped OSRM vector polyline for a route | `max-age=86400, s-maxage=604800`, SWR `30d` (+ Blob) |
+| `GET` | `/api/stops/nearby?lat=...&lng=...&limit=...` | Nearby bus stops sorted by Haversine distance | `max-age=30, s-maxage=60`, SWR `120s` |
+| `GET` | `/api/cities` | Nationwide directory of all 140 supported cities and city codes | `s-maxage=86400`, SWR `86400s` |
+| `GET` | `/api/schedule` | Route timetable snapshot & refresh metadata | `max-age=60`, SWR `300s` |
+| `GET/POST` | `/api/routes/refresh` | Manual route catalog & geometry resynchronization | `no-store` (Bearer Auth) |
+| `GET/POST` | `/api/schedule/refresh` | On-demand schedule snapshot refresh & tag invalidation | `no-store` (Bearer Auth) |
+| `GET/POST` | `/api/cron/refresh?target=...` | Scheduled Vercel refresh endpoint (`auto`, `routes`, `all`) | `no-store` (Bearer Auth) |
 
 ---
 
@@ -290,9 +257,9 @@ protection.
 ### Prerequisites
 
 - **Node.js**: `20.18.0` or higher (LTS recommended)
-- **Package Manager**: `npm 10.x` or higher
+- **npm**: `10.x` or higher
 
-### 1. Clone the Repository & Install Dependencies
+### 1. Clone & Install Dependencies
 
 ```bash
 git clone https://github.com/kernelily/wBus.git && cd wBus
@@ -301,53 +268,57 @@ npm install
 
 ### 2. Configure Environment Variables
 
-Copy `.env.example` to `.env.local`:
+Copy `.env.example` to `.env.local` (or pull linked environment variables via `vercel env pull`):
 
 ```bash
 cp .env.example .env.local
 ```
 
-Populate `.env.local` with your credentials:
+Configure the keys in `.env.local`:
 
 ```dotenv
-# Korea Public Data Portal (TAGO OpenAPI & Seoul TOPIS) Service Key
-# Supports either a single key or comma-separated keys for automatic rotation.
+# Required: Korea Public Data Portal (TAGO OpenAPI & Seoul TOPIS) Service Key
+# Comma-separated keys are supported for automatic rotation.
 DATA_GO_KR_SERVICE_KEY="YOUR_PUBLIC_DATA_PORTAL_KEY"
 # DATA_GO_KR_SERVICE_KEYS="KEY_1,KEY_2,KEY_3"
 
-# OSRM Routing Engine Endpoint (Default: public OSRM demo server)
+# Optional: OSRM Routing Engine endpoint (defaults to public OSRM server)
 # OSRM_API_URL="https://router.project-osrm.org/route/v1/driving"
 
-# Secret token for authenticating Vercel Cron / dataset refresh requests (Optional)
+# Optional: Secret token for Vercel Schedules / Cron & refresh endpoints (>= 16 chars)
 # CRON_SECRET=""
+
+# Optional: L2 Distributed Cache (Upstash Redis or Vercel KV; falls back to L1 memory)
+# UPSTASH_REDIS_REST_URL=""
+# UPSTASH_REDIS_REST_TOKEN=""
+
+# Optional: Durable Artifact Store (Vercel Blob; falls back to /tmp & public/)
+# BLOB_READ_WRITE_TOKEN=""
+# BLOB_ACCESS="private"
 ```
 
 > [!NOTE]
-> You can obtain a `DATA_GO_KR_SERVICE_KEY` from the [Korea Public Data Portal (data.go.kr)](https://www.data.go.kr/) by
-subscribing to the **MOLIT Bus Location Information** and **MOLIT Bus Route Information** OpenAPIs. Seoul TOPIS
-endpoints share the same key infrastructure.
+> `DATA_GO_KR_SERVICE_KEY` can be issued from the [Korea Public Data Portal (data.go.kr)](https://www.data.go.kr/) for
+the MOLIT Bus Location & Bus Route OpenAPIs and Seoul TOPIS endpoints. Without Redis or Blob credentials configured,
+`wBus` automatically falls back to L1 in-memory caching and local filesystem storage.
 
-### 3. Run the Development Server
-
-Start the local Next.js development server powered by `Turbopack`:
+### 3. Start the Development Server
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to inspect the application.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
 ## 📜 Available Scripts
 
-Key scripts defined in `package.json`:
-
 ```bash
-# Start local development server with Next.js Turbopack
+# Start local development server with Turbopack
 npm run dev
 
-# Build optimized production bundle
+# Build production bundle (webpack)
 npm run build
 
 # Start production server
@@ -356,36 +327,32 @@ npm run start
 # Run ESLint static analysis
 npm run lint
 
-# Run ESLint with automatic fixes
+# Run ESLint with auto-fixes
 npm run lint:fix
 
-# Run strict TypeScript type checking
+# Run TypeScript type checking
 npm run typecheck
 
-# Execute the full Vitest unit test suite
+# Run full Vitest test suite
 npm run test
 ```
 
 ---
 
-## ⏱️ Automated Updates
+## ⏱️ Automated Sync
 
-`wBus` includes an automated serverless synchronization pipeline to keep transit datasets aligned with upstream
-municipal changes (route reorganizations, stop updates, and timetable revisions).
+`wBus` uses **Vercel Schedules** configured in [`vercel.json`](./vercel.json) to synchronize datasets automatically:
 
-### Vercel Cron (`/api/cron/refresh`)
-
-- **Daily Timetable Sync (04:00 KST / 19:00 UTC)**:
-  - Scrapes the latest official timetables from Wonju ITS, updates runtime data, and invalidates cached responses
-    (`revalidatePath("/api/schedule")`).
-- **Weekly Route & Geometry Sync (Sundays)**:
-  - Audits nationwide route catalogs, stop sequences, and polyline geometries against the TAGO OpenAPI.
-- **Security**:
-  - Protected via `Authorization: Bearer <CRON_SECRET>` header verification.
+- **`daily-refresh` (`0 19 * * *` UTC / `04:00 KST`)**:
+  - Triggers `GET /api/cron/refresh`, updates timetable snapshots, invalidates Next.js cache tags (`revalidatePath`),
+    and runs weekly route catalog synchronization (`?target=auto` on Sundays UTC, or on demand via `?target=all` /
+    `?target=routes`).
+- **Authentication**:
+  - Protected in production via `Authorization: Bearer <CRON_SECRET>` (or `ADMIN_KEY`).
 
 ```bash
-# Example: Manually trigger a full dataset refresh via cURL
-curl -X POST "https://your-domain.vercel.app/api/cron/refresh?target=all" \
+# Example: Manually trigger a full refresh against a deployed instance
+curl -X GET "https://your-domain.vercel.app/api/cron/refresh?target=all" \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
@@ -393,27 +360,21 @@ curl -X POST "https://your-domain.vercel.app/api/cron/refresh?target=all" \
 
 ## 🧪 Testing & Quality
 
-`wBus` maintains a comprehensive Vitest unit test suite across 32 test files (253 passing assertions) to guarantee
-accuracy in high-frequency telemetry and geospatial operations:
+`wBus` passes **53 test files (406 tests)** under Vitest covering:
 
-- **Geospatial & Physics Interpolation**: Road-network snapping, dwell-time deceleration curves, latency compensation,
-  and shortest-arc bearing interpolation.
-- **Caching & Concurrency Control**: LRU eviction policies, in-flight request coalescing, bounded concurrency
-  (`mapWithConcurrencyLimit`), and multi-key circuit breaker state transitions.
-- **Domain Business Logic**: Schedule variant resolution, holiday/weekend detection, and directional (`UP`/`DOWN`) stop
-  sequence splitting.
+- **Geospatial & Dead Reckoning**: Road-network snapping, dwell-time modulation, latency compensation, and city boundary
+  filtering (`routeBoundary`, `geo`, `polylineChunker`, `snapService`).
+- **Resilience & Caching**: `CacheManager` LRU/TTL bounds, `createApiHandler` anti-poisoning headers, `distributedCache`
+  L2 fallback behavior, multi-key cooldown rotation (`seoulApi`), and `BusLocationStore` batching/cleanup.
+- **Validation & Parsing**: Zod upstream schemas (`schemas.test.ts`), HTML DOM scrapers (`itsScraper.test.ts`,
+  `noticeScraper.test.ts`), schedule variant logic, and polyline generation.
 
 ```bash
-# Run all unit tests
-npm run test
-
-# Verify TypeScript compilation
-npm run typecheck
+npm run test && npm run typecheck && npm run lint
 ```
 
 ---
 
 ## 📄 License
 
-This project is open-source software distributed under the [MIT License](./LICENSE). Contributions, issues, and forks
-are welcome.
+Distributed under the [MIT License](./LICENSE).
