@@ -6,3 +6,4 @@ export {
     useModalHistory, buildModalUrl, removeModalUrlQuery, isModalQueryMatching,
 } from "./useModalHistory";
 export type {UseModalHistoryOptions} from "./useModalHistory";
+export {applyThemePreference, type ThemePreference} from "./themeUtils";

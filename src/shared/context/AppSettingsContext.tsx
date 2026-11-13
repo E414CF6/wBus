@@ -90,6 +90,9 @@ export function AppSettingsProvider({children}: { children: React.ReactNode }) {
                 ...prev,
                 ...patch,
             };
+            if (patch.hapticEnabled !== undefined) {
+                setHapticEnabled(next.hapticEnabled);
+            }
             writeSettingsToBrowser(next);
             return next;
         });
@@ -100,6 +103,7 @@ export function AppSettingsProvider({children}: { children: React.ReactNode }) {
             ...DEFAULT_APP_SETTINGS,
             hasCompletedOnboarding: true,
         };
+        setHapticEnabled(next.hapticEnabled);
         setSettings(next);
         writeSettingsToBrowser(next);
     }, []);

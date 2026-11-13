@@ -68,7 +68,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
 
             {/* Vertical Timeline Connecting Track */}
             <div
-                className={`absolute left-[74px] w-[2px] pointer-events-none ${
+                className={`absolute left-[64px] sm:left-[74px] w-[2px] pointer-events-none ${
                     isFirst ? "top-1/2 bottom-0" : isLast ? "top-0 bottom-1/2" : "top-0 bottom-0"
                 }`}
                 style={{
@@ -83,21 +83,22 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
             {/* Station Timeline Node (Donut Circle) */}
             {isTurningStop ? (
                 <div
-                    className="absolute left-[65px] top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-[2.5px] border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-[#0c100f] z-10 shadow-[0_0_12px_rgba(245,158,11,0.35)] flex items-center justify-center pointer-events-none"
+                    className="absolute left-[55px] sm:left-[65px] top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-[2.5px] border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-[#0c100f] z-10 shadow-[0_0_12px_rgba(245,158,11,0.35)] flex items-center justify-center pointer-events-none"
                     title="회차지 정류장"
                 >
                     <RotateCw className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 stroke-[2.5]" />
                 </div>
             ) : (
                 <div
-                    className="absolute left-[68px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-[2.5px] bg-white dark:bg-[#0c100f] z-10 shadow-xs pointer-events-none"
+                    className="absolute left-[58px] sm:left-[68px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-[2.5px] bg-white dark:bg-[#0c100f] z-10 shadow-xs pointer-events-none"
                     style={{borderColor: metaThemeMainColor}}
                 />
             )}
 
             {/* Live Bus Markers if arriving/located at this station */}
             {busesHere.length > 0 && (
-                <div className="absolute left-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-start gap-1">
+                <div
+                    className="absolute left-1.5 sm:left-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-start gap-1">
                     {busesHere.map((bus) => {
                         const plateDigits =
                             bus.vehicleno.replace(/[^0-9]/g, "").slice(-4) || bus.vehicleno.slice(-4);
@@ -107,11 +108,11 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                                 key={`${bus.vehicleno}-${bus.nodeord}`}
                                 type="button"
                                 onClick={(e) => onBusBadgeClick(e, bus.gpslati, bus.gpslong)}
-                                className="flex items-center gap-1 group/bus cursor-pointer active:scale-95 transition-transform"
+                                className="flex items-center gap-0.5 sm:gap-1 group/bus cursor-pointer active:scale-95 transition-transform"
                                 title={`${bus.vehicleno} 실시간 위치로 이동`}
                             >
                                 <span
-                                    className="px-1.5 py-0.5 rounded text-[10px] font-bold border text-white tracking-tight whitespace-nowrap select-none shadow-xs"
+                                    className="px-1 sm:px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold border text-white tracking-tight whitespace-nowrap select-none shadow-xs"
                                     style={{
                                         backgroundColor: metaThemeMainColor,
                                         borderColor: metaThemeMainColor,
@@ -120,9 +121,9 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                                     {plateDigits}
                                 </span>
                                 <div
-                                    className={`w-6 h-6 rounded-md ${metaThemeBg} text-white flex items-center justify-center shadow-md ${metaThemeShadow} shrink-0`}
+                                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md ${metaThemeBg} text-white flex items-center justify-center shadow-md ${metaThemeShadow} shrink-0`}
                                 >
-                                    <Bus className="w-3.5 h-3.5 fill-current" />
+                                    <Bus className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current"/>
                                 </div>
                             </button>
                         );
@@ -131,7 +132,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
             )}
 
             {/* Station Name & Metadata */}
-            <div className="ml-[92px] flex-1 flex flex-col justify-center min-w-0 pr-2">
+            <div className="ml-[80px] sm:ml-[92px] flex-1 flex flex-col justify-center min-w-0 pr-2">
                 <div className="flex items-center gap-1.5 flex-wrap">
                     <span
                         className={`text-[14px] sm:text-[15px] font-bold truncate transition-colors ${

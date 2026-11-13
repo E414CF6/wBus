@@ -172,7 +172,7 @@ function BottomNavComponent({
             {/* 3. Click-outside Backdrop when BusListDrawer is open (Mobile & Tablet only) */}
             {!isDesktop && isMobileBusListOpen && (
                 <div
-                    className="fixed inset-0 z-40 bg-black/15 dark:bg-black/35 backdrop-blur-[1px] transition-opacity animate-fadeIn lg:hidden"
+                    className="fixed inset-0 z-[55] bg-black/35 dark:bg-black/60 backdrop-blur-[2px] transition-opacity animate-fadeIn lg:hidden"
                     onClick={() => setIsMobileBusListOpen(false)}
                     aria-hidden="true"
                 />

@@ -8,11 +8,9 @@ import {
     Bus,
     Calendar,
     CheckCircle2,
-    Clock,
     Coffee,
     GraduationCap,
     Info,
-    MapIcon,
     Moon,
     Settings,
     Sparkles,
@@ -22,12 +20,7 @@ import {
 
 import {NoticeBanner, NoticeModal} from "@entities/notice";
 import {TARGET_ROUTE_NUMBERS} from "@entities/route";
-import {
-    type BusRoute,
-    CacheInfoBanner,
-    resolveActiveScheduleVariant,
-    useSchedule,
-} from "@entities/schedule";
+import {type BusRoute, CacheInfoBanner, resolveActiveScheduleVariant, useSchedule,} from "@entities/schedule";
 import {RouteScheduleModal} from "@features/map-view/RouteScheduleModal";
 import {OnboardingModal} from "@features/onboarding";
 import {SettingsModal} from "@features/settings";
@@ -300,41 +293,6 @@ export function YonseiCampusPage() {
 
             {/* Main Content */}
             <main className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-7 space-y-6">
-                {/* Hero Banner */}
-                <section className="relative overflow-hidden rounded-3xl p-5 sm:p-7 bg-gradient-to-br from-[#003876] via-[#002b5c] to-[#0b1736] text-white shadow-lg">
-                    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <div className="space-y-2">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-white/15 border border-white/20 backdrop-blur-md">
-                                    {UI_TEXT.YONSEI.HERO_BADGE}
-                                </span>
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-400/20 text-sky-100 border border-sky-300/30 font-mono">
-                                    <Clock className="w-3 h-3" />
-                                    <span>현재 시각 {currentTimeText} · {dayModeLabel}</span>
-                                </span>
-                            </div>
-                            <h1 className="text-xl sm:text-2xl font-black tracking-tight">
-                                {UI_TEXT.YONSEI.HERO_TITLE}
-                            </h1>
-                            <p className="text-xs sm:text-sm text-sky-100/90 font-medium max-w-2xl">
-                                {directionMode === "OUTBOUND"
-                                    ? "현재 [하교 모드]입니다. 연세대 미래캠퍼스·매지리·회촌에서 출발하는 시내버스(30·34·34-1) 및 무료 셔틀의 다음 출발 시각을 우선 표시합니다."
-                                    : "현재 [등교 모드]입니다. 장양리·원주역·고속터미널·여주역·만종역에서 캠퍼스로 향하는 시내버스 및 무료 셔틀의 다음 출발 시각을 우선 표시합니다."}
-                            </p>
-                        </div>
-
-                        <div className="flex flex-wrap items-center gap-2 shrink-0">
-                            <Link
-                                href="/?cityCode=32020&route=30"
-                                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-white text-[#003876] hover:bg-sky-50 text-xs sm:text-sm font-black shadow-md transition-all active:scale-95"
-                            >
-                                <MapIcon className="w-4 h-4" />
-                                <span>실시간 버스 지도 보기</span>
-                            </Link>
-                        </div>
-                    </div>
-                </section>
-
                 {/* Toast Message Notification */}
                 {refreshToast && (
                     <div

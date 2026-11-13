@@ -1,10 +1,11 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Loader2} from "lucide-react";
+import {Bus, Loader2} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {isDesktopViewport, useIsDesktop} from "@shared/ui/useIsDesktop";
 import {useModalHistory} from "@shared/ui";
+import {triggerHaptic} from "@shared/utils/haptics";
 import {type RouteVariationStop, useRouteVariations} from "@entities/route";
 import type {DirectionCode, RouteVariation} from "@entities/route/types";
 import {getRouteMeta} from "@entities/route/routeMetadata";
@@ -77,9 +78,21 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const [selectedStop, setSelectedStop] = useState<BusStop | null>(null);
     const [isSplitCollapsed, setIsSplitCollapsed] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
+    const [dragOffsetY, setDragOffsetY] = useState(0);
+    const [isDraggingSheet, setIsDraggingSheet] = useState(false);
+    const dragStartRef = useRef<{ y: number; time: number } | null>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const hasAutoScrolledRef = useRef<string | null>(null);
     const suppressNextMapSyncRef = useRef(false);
+
+    const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
+    if (isOpen !== prevIsOpen) {
+        setPrevIsOpen(isOpen);
+        if (isOpen) {
+            setDragOffsetY(0);
+            setIsDraggingSheet(false);
+        }
+    }
 
     // Listen to external focus stop event (from map marker click or search)
     useEffect(() => {
@@ -336,6 +349,78 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         setTimeout(() => setIsRefreshing(false), 800);
     }, [onReconnect]);
 
+    // Running buses quick-jump list derived from currently visible stops
+    const matchedBusesForJump = useMemo(() => {
+        const items: { stopKey: string; stop: RouteVariationStop; plateDigits: string; bus: BusItem }[] = [];
+        for (const stop of filteredStops) {
+            const stopKey = `${stop.nodeid}-${stop.nodeord ?? ""}`;
+            const busesHere = busesByStopKey.get(stopKey);
+            if (!busesHere || busesHere.length === 0) continue;
+            for (const bus of busesHere) {
+                const plateDigits =
+                    bus.vehicleno.replace(/[^0-9]/g, "").slice(-4) || bus.vehicleno.slice(-4);
+                items.push({stopKey, stop, plateDigits, bus});
+            }
+        }
+        return items;
+    }, [filteredStops, busesByStopKey]);
+
+    const handleJumpToBusStop = useCallback((stopKey: string, stop: RouteVariationStop) => {
+        triggerHaptic("selection");
+        setSelectedStopId(stop.nodeid);
+        requestAnimationFrame(() => {
+            if (!listRef.current) return;
+            const targetEl = listRef.current.querySelector(
+                `[data-stop-key="${CSS.escape(stopKey)}"]`
+            );
+            if (targetEl) {
+                targetEl.scrollIntoView({behavior: "smooth", block: "center"});
+            }
+        });
+    }, []);
+
+    // Mobile swipe-down-to-dismiss handlers on grab handle & header
+    const handleSheetTouchStart = useCallback(
+        (e: React.TouchEvent) => {
+            if (isDesktop || e.touches.length !== 1) return;
+            dragStartRef.current = {
+                y: e.touches[0].clientY,
+                time: Date.now(),
+            };
+            setIsDraggingSheet(true);
+        },
+        [isDesktop]
+    );
+
+    const handleSheetTouchMove = useCallback(
+        (e: React.TouchEvent) => {
+            if (isDesktop || !dragStartRef.current || e.touches.length !== 1) return;
+            const deltaY = e.touches[0].clientY - dragStartRef.current.y;
+            if (deltaY > 0) {
+                setDragOffsetY(deltaY);
+            } else {
+                setDragOffsetY(0);
+            }
+        },
+        [isDesktop]
+    );
+
+    const handleSheetTouchEnd = useCallback(() => {
+        if (isDesktop || !dragStartRef.current) return;
+        const elapsed = Math.max(1, Date.now() - dragStartRef.current.time);
+        const velocity = dragOffsetY / elapsed;
+        dragStartRef.current = null;
+        setIsDraggingSheet(false);
+
+        if (dragOffsetY > 95 || (velocity > 0.45 && dragOffsetY > 32)) {
+            triggerHaptic("light");
+            setDragOffsetY(0);
+            onClose();
+        } else {
+            setDragOffsetY(0);
+        }
+    }, [isDesktop, dragOffsetY, onClose]);
+
     // Paired opposite stop derivation
     const pairedOppositeStop = useMemo(() => {
         if (!selectedStop || currentStops.length === 0) return null;
@@ -354,27 +439,30 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     return (
         <aside
             aria-label="실시간 버스 노선 및 정류장 목록"
-            className={`transition-all duration-300 ease-out z-40 ${
+            style={
+                !isDesktop && dragOffsetY > 0
+                    ? {transform: `translateY(${dragOffsetY}px)`, animation: "none"}
+                    : undefined
+            }
+            className={`${
+                isDraggingSheet ? "transition-none" : "transition-all duration-300 ease-out"
+            } ${
                 isDesktop
-                    ? "hidden lg:flex fixed top-[72px] bottom-6 left-4 w-[380px] lg:w-[420px] max-h-[calc(100vh-96px)] bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex-col"
-                    : "fixed inset-x-0 bottom-0 max-h-[82vh] h-[82vh] bg-white dark:bg-[#11131a] rounded-t-3xl shadow-2xl flex flex-col border-t border-slate-200/80 dark:border-white/10"
+                    ? "hidden lg:flex z-40 fixed top-[72px] bottom-6 left-4 w-[380px] lg:w-[420px] max-h-[calc(100vh-96px)] bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex-col"
+                    : "fixed inset-x-0 bottom-0 z-[60] max-h-[86dvh] h-[86dvh] bg-white dark:bg-[#11131a] rounded-t-[28px] shadow-[0_-16px_50px_rgba(0,0,0,0.28)] dark:shadow-[0_-16px_50px_rgba(0,0,0,0.75)] flex flex-col border-t border-slate-200/80 dark:border-white/10 animate-slideUp"
             }`}
         >
-            {/* Mobile Bottom Sheet Grab Handle */}
-            <div className="flex lg:hidden justify-center pt-2.5 pb-1 shrink-0">
-                <div className="w-10 h-1 bg-slate-300 dark:bg-white/20 rounded-full"/>
-            </div>
-
-            {/* Upper Section: Route Overview & Stops Timeline */}
+            {/* Mobile Bottom Sheet Grab Handle + Swipeable Header Area */}
             <div
-                className={`w-full flex flex-col overflow-hidden transition-all duration-300 ${
-                    hasBottomSplit
-                        ? isSplitCollapsed
-                            ? "flex-1 h-[calc(100%-56px)]"
-                            : "flex-[52] h-[52%]"
-                        : "flex-1 h-full"
-                }`}
+                onTouchStart={handleSheetTouchStart}
+                onTouchMove={handleSheetTouchMove}
+                onTouchEnd={handleSheetTouchEnd}
+                className="touch-none lg:touch-auto shrink-0"
             >
+                <div className="flex lg:hidden justify-center pt-2.5 pb-1">
+                    <div className="w-10 h-1 bg-slate-300 dark:bg-white/25 rounded-full" />
+                </div>
+
                 {/* 1. Header */}
                 <BusDrawerHeader
                     selectedRoute={selectedRoute}
@@ -391,7 +479,18 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                     onRefresh={handleRefresh}
                     onClose={onClose}
                 />
+            </div>
 
+            {/* Upper Section: Route Overview & Stops Timeline */}
+            <div
+                className={`w-full flex flex-col overflow-hidden transition-all duration-300 ${
+                    hasBottomSplit
+                        ? isSplitCollapsed
+                            ? "flex-1 h-[calc(100%-56px)]"
+                            : "flex-[52] h-[52%]"
+                        : "flex-1 min-h-0"
+                }`}
+            >
                 {/* 1.5 Variation Tabs & 2. Direction Filter / Search */}
                 <BusDrawerFilterBar
                     effectiveVariations={effectiveVariations}
@@ -413,10 +512,38 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                     metaThemeBorder={meta?.colorTheme?.border}
                 />
 
+                {/* 2.5 Live Running Buses Quick-Jump Strip */}
+                {matchedBusesForJump.length > 0 && (
+                    <div className="flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 border-b border-slate-200/70 dark:border-white/5 bg-slate-50/80 dark:bg-white/[0.015] overflow-x-auto custom-scrollbar-hidden shrink-0">
+                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0 mr-0.5">
+                            운행중
+                        </span>
+                        {matchedBusesForJump.map(({stopKey, stop, plateDigits, bus}) => (
+                            <button
+                                key={`${bus.vehicleno}-${stopKey}`}
+                                type="button"
+                                onClick={() => handleJumpToBusStop(stopKey, stop)}
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold border transition cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
+                                    meta?.colorTheme?.badgeBg || "bg-blue-500/10 dark:bg-blue-500/20"
+                                } ${
+                                    meta?.colorTheme?.text || "text-blue-700 dark:text-blue-300"
+                                } ${
+                                    meta?.colorTheme?.border || "border-blue-500/25"
+                                }`}
+                                title={`${bus.vehicleno} (${stop.nodenm}) 위치로 스크롤`}
+                            >
+                                <Bus className="w-3 h-3 shrink-0" />
+                                <span className="font-mono font-black">{plateDigits}</span>
+                                <span className="opacity-75 max-w-[90px] truncate">· {stop.nodenm}</span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 {/* 3. Bus Stop Timeline List Body */}
                 <div
                     ref={listRef}
-                    className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0 pb-[calc(env(safe-area-inset-bottom,0px)+2.5rem)] lg:pb-3"
+                    className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] lg:pb-3"
                 >
                     {currentStops.length === 0 ? (
                         <div
