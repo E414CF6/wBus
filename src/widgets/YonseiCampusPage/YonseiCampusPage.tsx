@@ -75,7 +75,7 @@ export function YonseiCampusPage() {
     const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const isDark = mounted
         ? resolvedTheme === "dark" ||
-          (typeof document !== "undefined" && document.documentElement.classList.contains("dark"))
+        (typeof document !== "undefined" && document.documentElement.classList.contains("dark"))
         : false;
 
     const handleToggleTheme = useCallback(() => {
@@ -169,10 +169,13 @@ export function YonseiCampusPage() {
     }, [now]);
 
     return (
-        <div className="h-dvh w-full overflow-y-auto overflow-x-hidden bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 transition-colors custom-scrollbar">
+        <div
+            className="h-dvh w-full overflow-y-auto overflow-x-hidden bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 transition-colors custom-scrollbar">
             {/* Sticky Header */}
-            <header className="sticky top-0 z-40 bg-white/85 dark:bg-[#090d16]/85 backdrop-blur-2xl border-b border-slate-200/80 dark:border-white/10">
-                <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
+            <header
+                className="sticky top-0 z-40 bg-white/85 dark:bg-[#090d16]/85 backdrop-blur-2xl border-b border-slate-200/80 dark:border-white/10">
+                <div
+                    className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
                     {/* Left: Back to Map + Yonsei Brand */}
                     <div className="flex items-center gap-2.5 min-w-0">
                         <Link
@@ -181,18 +184,21 @@ export function YonseiCampusPage() {
                             aria-label="실시간 지도로 돌아가기"
                             title="실시간 지도로 돌아가기"
                         >
-                            <ArrowLeft className="w-4 h-4" />
+                            <ArrowLeft className="w-4 h-4"/>
                         </Link>
                         <div className="flex items-center gap-2 min-w-0">
-                            <div className="w-8 h-8 rounded-xl bg-[#003876] flex items-center justify-center text-white shadow-xs shrink-0">
-                                <GraduationCap className="w-4 h-4" />
+                            <div
+                                className="w-8 h-8 rounded-xl bg-[#003876] flex items-center justify-center text-white shadow-xs shrink-0">
+                                <GraduationCap className="w-4 h-4"/>
                             </div>
                             <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                    <span className="font-black text-sm sm:text-base tracking-tight text-slate-900 dark:text-white truncate">
+                                    <span
+                                        className="font-black text-sm sm:text-base tracking-tight text-slate-900 dark:text-white truncate">
                                         연세대학교 미래캠퍼스
                                     </span>
-                                    <span className="hidden md:inline-flex px-2 py-0.5 rounded-full text-[10px] font-black bg-[#003876]/10 dark:bg-blue-500/20 text-[#003876] dark:text-blue-300">
+                                    <span
+                                        className="hidden md:inline-flex px-2 py-0.5 rounded-full text-[10px] font-black bg-[#003876]/10 dark:bg-blue-500/20 text-[#003876] dark:text-blue-300">
                                         교통 허브
                                     </span>
                                 </div>
@@ -249,13 +255,13 @@ export function YonseiCampusPage() {
                             className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200/80 dark:hover:bg-white/15 text-[11px] font-black text-slate-700 dark:text-slate-200 transition cursor-pointer active:scale-95 shrink-0"
                         >
                             {dayMode === "AUTO" && (
-                                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"/>
                             )}
                             {dayMode === "WEEKDAY" && (
-                                <Calendar className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                                <Calendar className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"/>
                             )}
                             {dayMode === "VACATION" && (
-                                <Coffee className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                <Coffee className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"/>
                             )}
                             <span className="hidden sm:inline whitespace-nowrap">{dayModeLabel}</span>
                         </button>
@@ -268,9 +274,9 @@ export function YonseiCampusPage() {
                             className="p-2 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200/80 dark:hover:bg-white/15 text-slate-600 dark:text-slate-300 transition cursor-pointer active:scale-90 shrink-0"
                         >
                             {isDark ? (
-                                <Moon className="w-4 h-4 text-blue-400" />
+                                <Moon className="w-4 h-4 text-blue-400"/>
                             ) : (
-                                <Sun className="w-4 h-4 text-amber-500" />
+                                <Sun className="w-4 h-4 text-amber-500"/>
                             )}
                         </button>
 
@@ -285,7 +291,7 @@ export function YonseiCampusPage() {
                             title="환경설정"
                             className="p-2 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200/80 dark:hover:bg-white/15 text-slate-600 dark:text-slate-300 transition cursor-pointer active:scale-90 shrink-0"
                         >
-                            <Settings className="w-4 h-4" />
+                            <Settings className="w-4 h-4"/>
                         </button>
                     </div>
                 </div>
@@ -306,9 +312,9 @@ export function YonseiCampusPage() {
                     >
                         <div className="flex items-center gap-2.5">
                             {refreshToast.type === "success" ? (
-                                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"/>
                             ) : (
-                                <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                                <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"/>
                             )}
                             <span className="text-xs sm:text-sm font-semibold">
                                 {refreshToast.message}
@@ -320,7 +326,7 @@ export function YonseiCampusPage() {
                             className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 cursor-pointer"
                             aria-label="알림 닫기"
                         >
-                            <X className="h-4 w-4" />
+                            <X className="h-4 w-4"/>
                         </button>
                     </div>
                 )}
@@ -333,14 +339,14 @@ export function YonseiCampusPage() {
                         isRefreshing={isRefreshing}
                         variant="banner"
                     />
-                    <NoticeBanner onClick={handleOpenNoticeModal} />
+                    <NoticeBanner onClick={handleOpenNoticeModal}/>
                 </div>
 
                 {/* Section 1: City Bus 30, 34, 34-1 Live & Next Departures */}
                 <section className="space-y-3.5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
                         <div className="flex items-center gap-2">
-                            <Bus className="w-5 h-5 text-[#003876] dark:text-blue-400" />
+                            <Bus className="w-5 h-5 text-[#003876] dark:text-blue-400"/>
                             <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
                                 캠퍼스 경유 시내버스 (30 · 34 · 34-1번)
                             </h2>
@@ -359,9 +365,9 @@ export function YonseiCampusPage() {
                                     key={i}
                                     className="rounded-3xl p-5 space-y-4 animate-pulse bg-white/80 dark:bg-[#111520]/80 border border-slate-200/80 dark:border-white/10"
                                 >
-                                    <div className="h-7 w-1/3 bg-slate-200 dark:bg-white/10 rounded-xl" />
-                                    <div className="h-4 w-2/3 bg-slate-200 dark:bg-white/10 rounded" />
-                                    <div className="h-24 w-full bg-slate-200 dark:bg-white/10 rounded-2xl" />
+                                    <div className="h-7 w-1/3 bg-slate-200 dark:bg-white/10 rounded-xl"/>
+                                    <div className="h-4 w-2/3 bg-slate-200 dark:bg-white/10 rounded"/>
+                                    <div className="h-24 w-full bg-slate-200 dark:bg-white/10 rounded-2xl"/>
                                 </div>
                             ))}
                         </div>
@@ -390,10 +396,10 @@ export function YonseiCampusPage() {
                 />
 
                 {/* Section 3: Shuttle Stop Guide & Interactive MiniMap */}
-                <YonseiShuttleStopsSection directionMode={directionMode} />
+                <YonseiShuttleStopsSection directionMode={directionMode}/>
 
                 {/* Footer */}
-                <Footer />
+                <Footer/>
             </main>
 
             {/* Full City Bus Timetable Modal */}
@@ -428,7 +434,7 @@ export function YonseiCampusPage() {
             />
 
             {/* First-Visit Onboarding Modal */}
-            <OnboardingModal />
+            <OnboardingModal/>
         </div>
     );
 }

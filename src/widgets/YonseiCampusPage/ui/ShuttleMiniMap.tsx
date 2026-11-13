@@ -24,10 +24,10 @@ export interface ShuttleMiniMapProps {
 }
 
 export const ShuttleMiniMap: React.FC<ShuttleMiniMapProps> = ({
-    stops,
-    selectedStop,
-    onSelectStop,
-}) => {
+                                                                  stops,
+                                                                  selectedStop,
+                                                                  onSelectStop,
+                                                              }) => {
     const mapRef = useRef<MapRef>(null);
     const {resolvedTheme} = useTheme();
     const mapStyleUrl = useMemo(() => getMapStyleUrl(resolvedTheme), [resolvedTheme]);
@@ -52,7 +52,8 @@ export const ShuttleMiniMap: React.FC<ShuttleMiniMapProps> = ({
     }, [selectedStop, flyToStop]);
 
     return (
-        <div className="relative w-full h-[300px] sm:h-[360px] rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10 shadow-inner bg-slate-100 dark:bg-[#10141e]">
+        <div
+            className="relative w-full h-[300px] sm:h-[360px] rounded-2xl overflow-hidden border border-slate-200/80 dark:border-white/10 shadow-inner bg-slate-100 dark:bg-[#10141e]">
             <MapGL
                 ref={mapRef}
                 initialViewState={{
@@ -68,7 +69,7 @@ export const ShuttleMiniMap: React.FC<ShuttleMiniMapProps> = ({
                 style={{width: "100%", height: "100%"}}
                 attributionControl={false}
             >
-                <NavigationControl position="bottom-right" showCompass={false} />
+                <NavigationControl position="bottom-right" showCompass={false}/>
 
                 {stops.map((stop) => {
                     const isSelected = stop.id === selectedStop.id;
@@ -108,7 +109,7 @@ export const ShuttleMiniMap: React.FC<ShuttleMiniMapProps> = ({
                                     }`}
                                 >
                                     {isSelected ? (
-                                        <Bus className="w-4 h-4" />
+                                        <Bus className="w-4 h-4"/>
                                     ) : (
                                         <span className="text-[11px] font-black">{stop.number}</span>
                                     )}
@@ -124,8 +125,9 @@ export const ShuttleMiniMap: React.FC<ShuttleMiniMapProps> = ({
                 })}
             </MapGL>
 
-            <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 dark:bg-black/85 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-sm text-xs font-bold text-slate-700 dark:text-slate-300 pointer-events-none">
-                <MapPin className="w-3.5 h-3.5 text-[#003876] dark:text-blue-400" />
+            <div
+                className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/95 dark:bg-black/85 backdrop-blur-md border border-black/5 dark:border-white/10 shadow-sm text-xs font-bold text-slate-700 dark:text-slate-300 pointer-events-none">
+                <MapPin className="w-3.5 h-3.5 text-[#003876] dark:text-blue-400"/>
                 <span>정류장 핀을 선택해 상세 승차 위치를 확인하세요</span>
             </div>
         </div>

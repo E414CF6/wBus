@@ -106,12 +106,12 @@ export interface UseBusStopMatcherParams {
  * Hook to match live buses to the stops of the active route variation.
  */
 export function useBusStopMatcher({
-    runningBuses,
-    currentStops,
-    effectiveVariations,
-    currentVariant,
-    getDirection,
-}: UseBusStopMatcherParams) {
+                                      runningBuses,
+                                      currentStops,
+                                      effectiveVariations,
+                                      currentVariant,
+                                      getDirection,
+                                  }: UseBusStopMatcherParams) {
     const busesByStopKey = useMemo(() => {
         const map = new Map<string, BusItem[]>();
         if (!runningBuses.length || !currentStops.length) {

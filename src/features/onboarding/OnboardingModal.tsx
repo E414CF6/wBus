@@ -98,7 +98,8 @@ export const OnboardingModal: React.FC = () => {
     const currentMeta = STEP_META[step];
 
     const modalIcon = (
-        <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-[#003876] to-blue-600 text-white shadow-sm shrink-0">
+        <div
+            className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-br from-[#003876] to-blue-600 text-white shadow-sm shrink-0">
             <Sparkles className="w-5 h-5"/>
         </div>
     );

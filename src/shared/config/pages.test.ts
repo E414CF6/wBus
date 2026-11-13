@@ -1,10 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {
-    buildPageHref,
-    isValidSpecialPageId,
-    resolveSpecialPageFromSearch,
-    SPECIAL_PAGE_IDS,
-} from "./pages";
+import {buildPageHref, isValidSpecialPageId, resolveSpecialPageFromSearch, SPECIAL_PAGE_IDS,} from "./pages";
 
 describe("pages registry", () => {
     it("validates registered special page IDs", () => {

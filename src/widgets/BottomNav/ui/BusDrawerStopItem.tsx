@@ -23,22 +23,22 @@ export interface BusDrawerStopItemProps {
 }
 
 export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
-    stop,
-    isFirst,
-    isLast,
-    isSelected,
-    isTurningStop,
-    isFavStop,
-    busesHere,
-    metaThemeMainColor = "#2563eb",
-    metaThemeBadgeBg = "bg-blue-50/80 dark:bg-blue-950/40",
-    metaThemeBg = "bg-blue-600 dark:bg-blue-500",
-    metaThemeText = "text-blue-700 dark:text-blue-300",
-    metaThemeShadow = "shadow-blue-600/25",
-    onStopClick,
-    onBusBadgeClick,
-    onToggleFavorite,
-}) => {
+                                                                   stop,
+                                                                   isFirst,
+                                                                   isLast,
+                                                                   isSelected,
+                                                                   isTurningStop,
+                                                                   isFavStop,
+                                                                   busesHere,
+                                                                   metaThemeMainColor = "#2563eb",
+                                                                   metaThemeBadgeBg = "bg-blue-50/80 dark:bg-blue-950/40",
+                                                                   metaThemeBg = "bg-blue-600 dark:bg-blue-500",
+                                                                   metaThemeText = "text-blue-700 dark:text-blue-300",
+                                                                   metaThemeShadow = "shadow-blue-600/25",
+                                                                   onStopClick,
+                                                                   onBusBadgeClick,
+                                                                   onToggleFavorite,
+                                                               }) => {
     const hasBuses = busesHere.length > 0;
 
     return (
@@ -52,7 +52,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                         ? "bg-amber-100/70 dark:bg-amber-950/30"
                         : metaThemeBadgeBg
                     : isTurningStop
-                    ? "bg-amber-50/70 hover:bg-amber-100/60 dark:bg-amber-500/[0.06] dark:hover:bg-amber-500/[0.12]"
+                        ? "bg-amber-50/70 hover:bg-amber-100/60 dark:bg-amber-500/[0.06] dark:hover:bg-amber-500/[0.12]"
                         : hasBuses
                             ? "bg-slate-50/90 hover:bg-slate-100/80 dark:bg-white/[0.035] dark:hover:bg-white/[0.06]"
                             : "hover:bg-slate-50/80 dark:hover:bg-white/[0.04]"
@@ -67,7 +67,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                     }`}
                 />
             ) : isTurningStop ? (
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500/70 rounded-r z-20 pointer-events-none" />
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500/70 rounded-r z-20 pointer-events-none"/>
             ) : null}
 
             {/* Vertical Timeline Connecting Track */}
@@ -98,7 +98,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                     className="absolute left-[26px] sm:left-[30px] -translate-x-1/2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-[#11131a] z-10 shadow-[0_0_10px_rgba(245,158,11,0.3)] flex items-center justify-center pointer-events-none"
                     title="회차지 정류장"
                 >
-                    <RotateCw className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 stroke-[2.5]" />
+                    <RotateCw className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 stroke-[2.5]"/>
                 </div>
             ) : (
                 <div
@@ -122,7 +122,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                                     ? "text-amber-800 dark:text-amber-300 font-black"
                                     : `${metaThemeText} font-black`
                                 : isTurningStop
-                                ? "text-amber-900 dark:text-amber-200 font-extrabold group-hover:text-amber-950 dark:group-hover:text-amber-100"
+                                    ? "text-amber-900 dark:text-amber-200 font-extrabold group-hover:text-amber-950 dark:group-hover:text-amber-100"
                                     : hasBuses
                                         ? "text-slate-950 dark:text-white font-extrabold"
                                         : "text-slate-800 dark:text-slate-100 font-bold group-hover:text-slate-950 dark:group-hover:text-white"
@@ -131,8 +131,9 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                         {stop.nodenm}
                     </span>
                     {isTurningStop && (
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-xs shrink-0 select-none">
-                            <RotateCw className="w-2.5 h-2.5 stroke-[2.5]" />
+                        <span
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-xs shrink-0 select-none">
+                            <RotateCw className="w-2.5 h-2.5 stroke-[2.5]"/>
                             회차지
                         </span>
                     )}
@@ -189,7 +190,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                 title={isFavStop ? "정류장 즐겨찾기 해제" : "정류장 즐겨찾기 추가"}
                 aria-label={isFavStop ? "정류장 즐겨찾기 해제" : "정류장 즐겨찾기 추가"}
             >
-                <Star className={`w-4 h-4 ${isFavStop ? "fill-amber-500" : ""}`} />
+                <Star className={`w-4 h-4 ${isFavStop ? "fill-amber-500" : ""}`}/>
             </button>
         </div>
     );

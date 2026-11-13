@@ -24,24 +24,24 @@ interface BusDrawerFilterBarProps {
 }
 
 export const BusDrawerFilterBar: React.FC<BusDrawerFilterBarProps> = ({
-    effectiveVariations,
-    currentVariant,
-    busesPerVariation,
-    onSelectVariant,
-    hasDirections,
-    directionFilter,
-    onDirectionFilterChange,
-    favoriteStopsCountInRoute,
-    stopCount,
-    stopSearchQuery,
-    onSearchQueryChange,
-    turningStop,
+                                                                          effectiveVariations,
+                                                                          currentVariant,
+                                                                          busesPerVariation,
+                                                                          onSelectVariant,
+                                                                          hasDirections,
+                                                                          directionFilter,
+                                                                          onDirectionFilterChange,
+                                                                          favoriteStopsCountInRoute,
+                                                                          stopCount,
+                                                                          stopSearchQuery,
+                                                                          onSearchQueryChange,
+                                                                          turningStop,
                                                                           metaThemeMainColor: _metaThemeMainColor = "#2563eb",
-    metaThemeBadgeBg = "bg-blue-500/15 dark:bg-blue-500/25",
-    metaThemeBg = "bg-blue-600",
-    metaThemeText = "text-blue-700 dark:text-blue-300",
-    metaThemeBorder = "border-blue-500/30",
-}) => {
+                                                                          metaThemeBadgeBg = "bg-blue-500/15 dark:bg-blue-500/25",
+                                                                          metaThemeBg = "bg-blue-600",
+                                                                          metaThemeText = "text-blue-700 dark:text-blue-300",
+                                                                          metaThemeBorder = "border-blue-500/30",
+                                                                      }) => {
     return (
         <>
             {/* 1. Variation Selector (if route has multiple variations) */}

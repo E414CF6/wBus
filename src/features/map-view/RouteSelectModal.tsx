@@ -676,7 +676,8 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                     </button>
 
                                     {/* Right Controls: Bookmark */}
-                                    <div className="flex items-center gap-1.5 shrink-0 pt-3.5 sm:pt-4 pr-3.5 sm:pr-4 pl-1">
+                                    <div
+                                        className="flex items-center gap-1.5 shrink-0 pt-3.5 sm:pt-4 pr-3.5 sm:pr-4 pl-1">
                                         <button
                                             type="button"
                                             onClick={(e) => toggleBookmark(e, route)}

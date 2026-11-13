@@ -1,10 +1,6 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
 import {STORAGE_KEYS} from "@shared/config/env";
-import {
-    getFavoriteCityCodesFromStorage,
-    saveFavoriteCityCodesToStorage,
-    toggleCityCodeInList,
-} from "./hooks";
+import {getFavoriteCityCodesFromStorage, saveFavoriteCityCodesToStorage, toggleCityCodeInList,} from "./hooks";
 
 describe("Favorite cities storage helpers", () => {
     let store: Record<string, string> = {};

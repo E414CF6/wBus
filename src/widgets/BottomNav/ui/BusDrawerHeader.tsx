@@ -18,20 +18,20 @@ interface BusDrawerHeaderProps {
 }
 
 export const BusDrawerHeader: React.FC<BusDrawerHeaderProps> = ({
-    selectedRoute,
-    routeSubInfo,
-    runningBusCount,
-    isConnecting,
-    timeAgo,
-    isRefreshing,
-    hasBottomSplit,
+                                                                    selectedRoute,
+                                                                    routeSubInfo,
+                                                                    runningBusCount,
+                                                                    isConnecting,
+                                                                    timeAgo,
+                                                                    isRefreshing,
+                                                                    hasBottomSplit,
                                                                     metaThemeMainColor: _metaThemeMainColor = "#2563eb",
-    metaThemeBg = "bg-blue-600 dark:bg-blue-500",
-    metaThemeText = "text-blue-600 dark:text-blue-400",
-    metaThemeShadow = "shadow-blue-600/25",
-    onRefresh,
-    onClose,
-}) => {
+                                                                    metaThemeBg = "bg-blue-600 dark:bg-blue-500",
+                                                                    metaThemeText = "text-blue-600 dark:text-blue-400",
+                                                                    metaThemeShadow = "shadow-blue-600/25",
+                                                                    onRefresh,
+                                                                    onClose,
+                                                                }) => {
     return (
         <div className="flex items-center justify-between px-4 sm:px-5 pt-2 pb-2.5 lg:pt-4 lg:pb-3 shrink-0">
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
@@ -96,7 +96,7 @@ export const BusDrawerHeader: React.FC<BusDrawerHeaderProps> = ({
                     title="닫기"
                     aria-label="닫기"
                 >
-                    <X className="w-4 h-4" />
+                    <X className="w-4 h-4"/>
                 </button>
             </div>
         </div>

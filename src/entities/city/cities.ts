@@ -178,10 +178,10 @@ export function getCityByCode(code?: string | null): CityInfo {
 }
 
 export function resolveInitialCity({
-    search,
-    pathname,
-    savedCode,
-}: {
+                                       search,
+                                       pathname,
+                                       savedCode,
+                                   }: {
     search?: string;
     pathname?: string;
     savedCode?: string | null;

@@ -24,23 +24,23 @@ interface DesktopSplitStopViewProps {
 }
 
 export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
-    selectedStop,
-    isSelectedStopRouteStop,
-    pairedOppositeStop,
-    isFavoriteStop,
-    toggleFavoriteStop,
-    onClose,
-    onSelectStop,
-    metaThemeMainColor = "#2563eb",
-    metaThemeTextColor = "text-blue-500 dark:text-blue-400",
-    cityName,
-    selectedRoute,
-    currentCityCode,
-    onRouteChange,
-    map,
+                                                                              selectedStop,
+                                                                              isSelectedStopRouteStop,
+                                                                              pairedOppositeStop,
+                                                                              isFavoriteStop,
+                                                                              toggleFavoriteStop,
+                                                                              onClose,
+                                                                              onSelectStop,
+                                                                              metaThemeMainColor = "#2563eb",
+                                                                              metaThemeTextColor = "text-blue-500 dark:text-blue-400",
+                                                                              cityName,
+                                                                              selectedRoute,
+                                                                              currentCityCode,
+                                                                              onRouteChange,
+                                                                              map,
                                                                               isCollapsed = false,
                                                                               onToggleCollapse,
-}) => {
+                                                                          }) => {
     return (
         <div
             className={`w-full border-t border-slate-200/80 dark:border-white/10 flex flex-col overflow-hidden bg-white dark:bg-[#11131a] transition-all duration-300 animate-fadeIn select-none ${
@@ -64,14 +64,14 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                                 backgroundColor: isSelectedStopRouteStop
                                     ? metaThemeMainColor
                                     : isFavoriteStop(selectedStop.nodeid)
-                                    ? "#f59e0b"
-                                    : "#475569",
+                                        ? "#f59e0b"
+                                        : "#475569",
                             }}
                         >
                             {isSelectedStopRouteStop ? (
-                                <MapPinned size={18} strokeWidth={2.5} />
+                                <MapPinned size={18} strokeWidth={2.5}/>
                             ) : (
-                                <MapPin size={18} strokeWidth={2.5} />
+                                <MapPin size={18} strokeWidth={2.5}/>
                             )}
                         </div>
                         <div className="flex flex-col min-w-0">
@@ -155,7 +155,7 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                             title="정류장 정보 닫기 (분할 해제)"
                             aria-label="정류장 정보 닫기"
                         >
-                            <X className="w-3.5 h-3.5" />
+                            <X className="w-3.5 h-3.5"/>
                         </button>
                     </div>
                 </div>

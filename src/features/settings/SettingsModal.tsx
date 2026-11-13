@@ -169,8 +169,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
     }, [clearAllAppData, setIsAutoDetectEnabled, setTheme]);
 
     const modalIcon = (
-        <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm shrink-0">
-            <Settings className="w-5 h-5" />
+        <div
+            className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm shrink-0">
+            <Settings className="w-5 h-5"/>
         </div>
     );
 
@@ -184,7 +185,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
     const modalFooter = (
         <>
             <div className="flex items-center gap-1.5 text-[11px] font-semibold truncate">
-                <Cookie className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                <Cookie className="w-3.5 h-3.5 text-amber-500 shrink-0"/>
                 <span className="truncate">
                     <code className="font-mono">{SETTINGS_COOKIE_NAME}</code> 쿠키에 자동 저장
                 </span>

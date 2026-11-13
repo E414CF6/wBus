@@ -27,15 +27,15 @@ export interface BusStopMarkerProps {
 }
 
 export const BusStopMarker = ({
-    routeName,
-    onRouteChange,
-    enabled = true,
-    cityCode,
-    showNearbyStops = true,
+                                  routeName,
+                                  onRouteChange,
+                                  enabled = true,
+                                  cityCode,
+                                  showNearbyStops = true,
                                   showStopLabels = true,
-    focusedStopId = null,
-    onClearFocusedStop,
-}: BusStopMarkerProps) => {
+                                  focusedStopId = null,
+                                  onClearFocusedStop,
+                              }: BusStopMarkerProps) => {
     const {currentCity} = useCityContext();
     const effectiveCityCode = cityCode || currentCity?.code || "32020";
     const activeRouteName = enabled ? routeName : "";

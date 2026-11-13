@@ -1,8 +1,4 @@
-import type {
-    ShuttleBusScheduleData,
-    ShuttleInboundItem,
-    ShuttleOutboundItem,
-} from "@entities/schedule";
+import type {ShuttleBusScheduleData, ShuttleInboundItem, ShuttleOutboundItem,} from "@entities/schedule";
 import {isSaturday, parseTimeToMinutes} from "@shared/lib/timeUtils";
 import type {DayMode} from "@shared/types/navigation";
 import {matchesHangul} from "@shared/utils/hangul";

@@ -23,18 +23,18 @@ export interface UseVisibleStopsParams {
 }
 
 export function useVisibleStops({
-    routeStops,
-    favoriteStops,
-    nearbyStops,
-    showNearbyStops,
+                                    routeStops,
+                                    favoriteStops,
+                                    nearbyStops,
+                                    showNearbyStops,
                                     showStopLabels = true,
-    bounds,
-    zoom,
-    stopColorMap,
-    routeMainColor,
-    activeFocusedStopId,
-    eventFocusedStop,
-}: UseVisibleStopsParams): VisibleStopItem[] {
+                                    bounds,
+                                    zoom,
+                                    stopColorMap,
+                                    routeMainColor,
+                                    activeFocusedStopId,
+                                    eventFocusedStop,
+                                }: UseVisibleStopsParams): VisibleStopItem[] {
     return useMemo(() => {
         if (!bounds || zoom < 12.0) {
             if (eventFocusedStop) {

@@ -535,7 +535,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                 }`}
                                 title={`${bus.vehicleno} (${stop.nodenm}) 위치로 스크롤`}
                             >
-                                <Bus className="w-3 h-3 shrink-0" />
+                                <Bus className="w-3 h-3 shrink-0"/>
                                 <span className="font-mono font-black">{plateDigits}</span>
                                 <span className="opacity-75 max-w-[90px] truncate">· {stop.nodenm}</span>
                             </button>

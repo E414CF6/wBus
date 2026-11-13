@@ -29,9 +29,9 @@ export function SettingsSectionHeader({icon, title, right}: SettingsSectionHeade
  * Grouped inset card container with hairline dividers between rows.
  */
 export function SettingsGroup({
-    children,
-    className = "",
-}: {
+                                  children,
+                                  className = "",
+                              }: {
     children: React.ReactNode;
     className?: string;
 }) {
@@ -57,13 +57,13 @@ export interface SettingsToggleRowProps {
  * Uniform toggle row used inside a SettingsGroup.
  */
 export function SettingsToggleRow({
-    icon,
-    title,
-    description,
-    checked,
-    onChange,
-    ariaLabel,
-}: SettingsToggleRowProps) {
+                                      icon,
+                                      title,
+                                      description,
+                                      checked,
+                                      onChange,
+                                      ariaLabel,
+                                  }: SettingsToggleRowProps) {
     return (
         <div className="p-3.5 flex items-center justify-between gap-3">
             <div className="flex items-start gap-2.5 min-w-0">
@@ -77,7 +77,7 @@ export function SettingsToggleRow({
                     </p>
                 </div>
             </div>
-            <ToggleSwitch checked={checked} onChange={onChange} ariaLabel={ariaLabel} />
+            <ToggleSwitch checked={checked} onChange={onChange} ariaLabel={ariaLabel}/>
         </div>
     );
 }
@@ -86,9 +86,9 @@ export function SettingsToggleRow({
  * Padded content block inside a SettingsGroup for segmented controls or custom layouts.
  */
 export function SettingsBlock({
-    children,
-    className = "",
-}: {
+                                  children,
+                                  className = "",
+                              }: {
     children: React.ReactNode;
     className?: string;
 }) {

@@ -1,10 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {YONSEI_SHUTTLE_SCHEDULE} from "@entities/schedule";
-import {
-    filterShuttleSchedule,
-    getNextShuttleDepartures,
-    resolveEffectiveShuttleDayType,
-} from "./yonseiShuttleUtils";
+import {filterShuttleSchedule, getNextShuttleDepartures, resolveEffectiveShuttleDayType,} from "./yonseiShuttleUtils";
 
 describe("yonseiShuttleUtils", () => {
     describe("resolveEffectiveShuttleDayType", () => {

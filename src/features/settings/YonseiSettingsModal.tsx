@@ -22,15 +22,16 @@ export interface YonseiSettingsModalProps {
  * accessed from SettingsModal.
  */
 export const YonseiSettingsModal: React.FC<YonseiSettingsModalProps> = ({
-    isOpen,
-    onClose,
-    onCloseParent,
-}) => {
+                                                                            isOpen,
+                                                                            onClose,
+                                                                            onCloseParent,
+                                                                        }) => {
     const {settings, updateSettings} = useAppSettings();
 
     const modalIcon = (
-        <div className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#003876] text-white shadow-sm shrink-0">
-            <GraduationCap className="w-5 h-5" />
+        <div
+            className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#003876] text-white shadow-sm shrink-0">
+            <GraduationCap className="w-5 h-5"/>
         </div>
     );
 
@@ -46,7 +47,7 @@ export const YonseiSettingsModal: React.FC<YonseiSettingsModalProps> = ({
                 className="inline-flex items-center gap-1.5 text-xs font-black text-[#003876] dark:text-blue-300 hover:underline"
             >
                 <span>연세대 화면 열기</span>
-                <ExternalLink className="w-3.5 h-3.5" />
+                <ExternalLink className="w-3.5 h-3.5"/>
             </Link>
             <button
                 type="button"

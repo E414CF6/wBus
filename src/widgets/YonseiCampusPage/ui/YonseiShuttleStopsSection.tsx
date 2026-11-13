@@ -4,19 +4,15 @@ import dynamic from "next/dynamic";
 import React, {memo, useMemo, useState} from "react";
 import {Camera, ExternalLink, Info, MapPin, Navigation} from "lucide-react";
 
-import {
-    getKakaoMapUrl,
-    getKakaoRoadviewUrl,
-    YONSEI_SHUTTLE_STOPS,
-    type YonseiShuttleStop,
-} from "@entities/station";
+import {getKakaoMapUrl, getKakaoRoadviewUrl, YONSEI_SHUTTLE_STOPS, type YonseiShuttleStop,} from "@entities/station";
 import {UI_TEXT} from "@shared/config/locale";
 import type {CampusDirectionMode} from "../lib/yonseiShuttleUtils";
 
 const ShuttleMiniMap = dynamic(() => import("./ShuttleMiniMap"), {
     ssr: false,
     loading: () => (
-        <div className="w-full h-[300px] sm:h-[360px] rounded-2xl bg-slate-100 dark:bg-white/5 animate-pulse flex items-center justify-center text-xs font-bold text-slate-400">
+        <div
+            className="w-full h-[300px] sm:h-[360px] rounded-2xl bg-slate-100 dark:bg-white/5 animate-pulse flex items-center justify-center text-xs font-bold text-slate-400">
             셔틀 승강장 지도를 불러오는 중...
         </div>
     ),
@@ -54,7 +50,7 @@ export const YonseiShuttleStopsSection: React.FC<YonseiShuttleStopsSectionProps>
             const preferredStop =
                 directionMode === "OUTBOUND"
                     ? YONSEI_SHUTTLE_STOPS.find((s) => s.id === "mirae-hall") ??
-                      YONSEI_SHUTTLE_STOPS.find((s) => s.directionTag === "시내방면")
+                    YONSEI_SHUTTLE_STOPS.find((s) => s.directionTag === "시내방면")
                     : YONSEI_SHUTTLE_STOPS.find((s) => s.directionTag === "학교방면");
             if (preferredStop) {
                 setSelectedStopId(preferredStop.id);
@@ -78,12 +74,14 @@ export const YonseiShuttleStopsSection: React.FC<YonseiShuttleStopsSectionProps>
         const kakaoRoadviewUrl = getKakaoRoadviewUrl(selectedStop.lat, selectedStop.lng);
 
         return (
-            <section className="rounded-3xl p-4 sm:p-6 bg-white/90 dark:bg-[#111520]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 shadow-sm space-y-4">
+            <section
+                className="rounded-3xl p-4 sm:p-6 bg-white/90 dark:bg-[#111520]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 shadow-sm space-y-4">
                 {/* Header & Direction Filter */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
-                        <div className="flex items-center justify-center w-9 h-9 rounded-2xl bg-teal-600 text-white shadow-xs shrink-0">
-                            <MapPin className="w-4 h-4" />
+                        <div
+                            className="flex items-center justify-center w-9 h-9 rounded-2xl bg-teal-600 text-white shadow-xs shrink-0">
+                            <MapPin className="w-4 h-4"/>
                         </div>
                         <div>
                             <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
@@ -95,7 +93,8 @@ export const YonseiShuttleStopsSection: React.FC<YonseiShuttleStopsSectionProps>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-white/5 p-1 self-start sm:self-auto shrink-0">
+                    <div
+                        className="flex items-center gap-1 rounded-xl bg-slate-100 dark:bg-white/5 p-1 self-start sm:self-auto shrink-0">
                         {(
                             [
                                 {id: "ALL", label: "전체 승강장"},
@@ -159,10 +158,12 @@ export const YonseiShuttleStopsSection: React.FC<YonseiShuttleStopsSectionProps>
                 />
 
                 {/* Selected Stop Detail Card */}
-                <div className="p-4 rounded-2xl bg-slate-50/90 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div
+                    className="p-4 rounded-2xl bg-slate-50/90 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div className="space-y-1.5 min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span className="w-5 h-5 rounded-full bg-[#003876] text-white text-[11px] font-black flex items-center justify-center shrink-0">
+                            <span
+                                className="w-5 h-5 rounded-full bg-[#003876] text-white text-[11px] font-black flex items-center justify-center shrink-0">
                                 {selectedStop.number}
                             </span>
                             <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">
@@ -179,29 +180,32 @@ export const YonseiShuttleStopsSection: React.FC<YonseiShuttleStopsSectionProps>
                             </span>
                         </div>
 
-                        <div className="flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
-                            <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+                        <div
+                            className="flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
+                            <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5"/>
                             <span>{selectedStop.locationDescription}</span>
                         </div>
 
                         {selectedStop.tips && (
-                            <div className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-300 font-medium">
-                                <Info className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                            <div
+                                className="flex items-start gap-1.5 text-[11px] text-amber-700 dark:text-amber-300 font-medium">
+                                <Info className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5"/>
                                 <span>{selectedStop.tips}</span>
                             </div>
                         )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-black/5 dark:border-white/5">
+                    <div
+                        className="flex flex-wrap items-center gap-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-black/5 dark:border-white/5">
                         <a
                             href={kakaoRoadviewUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white text-xs font-black transition-all shadow-sm active:scale-95"
                         >
-                            <Camera className="w-3.5 h-3.5" />
+                            <Camera className="w-3.5 h-3.5"/>
                             <span>로드뷰 보기</span>
-                            <ExternalLink className="w-3 h-3 opacity-80" />
+                            <ExternalLink className="w-3 h-3 opacity-80"/>
                         </a>
                         <a
                             href={kakaoMapUrl}
@@ -209,7 +213,7 @@ export const YonseiShuttleStopsSection: React.FC<YonseiShuttleStopsSectionProps>
                             rel="noopener noreferrer"
                             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 hover:bg-slate-300/80 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all active:scale-95"
                         >
-                            <Navigation className="w-3.5 h-3.5" />
+                            <Navigation className="w-3.5 h-3.5"/>
                             <span>카카오맵 길찾기</span>
                         </a>
                     </div>

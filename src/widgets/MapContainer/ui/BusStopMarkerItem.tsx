@@ -26,22 +26,22 @@ export interface BusStopMarkerItemProps {
 }
 
 export const BusStopMarkerItem = memo<BusStopMarkerItemProps>(({
-    stop,
-    cityCode,
-    currentRouteName,
-    isRouteStop = true,
-    isFavorite = false,
-    onToggleFavorite,
-    onRouteChange,
-    showLabel = true,
-    labelPlacement = "right",
-    disambiguationLabel = null,
-    pairedOppositeStop = null,
-    onSelectOppositeStop,
-    color = "#059669",
-    initialOpen = false,
-    onClearInitialOpen,
-}) => {
+                                                                   stop,
+                                                                   cityCode,
+                                                                   currentRouteName,
+                                                                   isRouteStop = true,
+                                                                   isFavorite = false,
+                                                                   onToggleFavorite,
+                                                                   onRouteChange,
+                                                                   showLabel = true,
+                                                                   labelPlacement = "right",
+                                                                   disambiguationLabel = null,
+                                                                   pairedOppositeStop = null,
+                                                                   onSelectOppositeStop,
+                                                                   color = "#059669",
+                                                                   initialOpen = false,
+                                                                   onClearInitialOpen,
+                                                               }) => {
     const isDesktop = useIsDesktop();
     const {map} = useAppMapContext();
     const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -161,10 +161,11 @@ export const BusStopMarkerItem = memo<BusStopMarkerItemProps>(({
                             }`}
                             style={{backgroundColor: color}}
                         >
-                            <BusFront className="w-3.5 h-3.5 fill-current" />
+                            <BusFront className="w-3.5 h-3.5 fill-current"/>
                             {isFavorite && (
-                                <span className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow-xs border border-white">
-                                    <Star className="w-2 h-2 fill-current" />
+                                <span
+                                    className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow-xs border border-white">
+                                    <Star className="w-2 h-2 fill-current"/>
                                 </span>
                             )}
                         </div>
@@ -173,14 +174,14 @@ export const BusStopMarkerItem = memo<BusStopMarkerItemProps>(({
                             title={`${stop.nodenm} (즐겨찾는 정류장)`}
                             className="relative flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500 text-white shadow-md border-2 border-white group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 ring-2 ring-amber-400/50 before:absolute before:-inset-2 before:content-['']"
                         >
-                            <Star className="w-3.5 h-3.5 fill-current" />
+                            <Star className="w-3.5 h-3.5 fill-current"/>
                         </div>
                     ) : (
                         <div
                             title={`${stop.nodenm} (주변 정류장 · 클릭하여 도착정보 확인)`}
                             className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-700/90 dark:bg-slate-600/90 text-white shadow-sm border-[1.5px] border-white/85 opacity-85 group-hover:opacity-100 group-hover:scale-125 group-hover:bg-blue-600 transition-all cursor-pointer shrink-0 z-10 before:absolute before:-inset-2 before:content-['']"
                         >
-                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-white"/>
                         </div>
                     )}
 
@@ -191,12 +192,14 @@ export const BusStopMarkerItem = memo<BusStopMarkerItemProps>(({
                                 border: `1.2px solid ${borderColor}`,
                             }}
                         >
-                            {isFavorite && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 shrink-0" />}
-                            <span className="text-white font-bold text-[11px] sm:text-[12px] tracking-tight leading-none">
+                            {isFavorite && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 shrink-0"/>}
+                            <span
+                                className="text-white font-bold text-[11px] sm:text-[12px] tracking-tight leading-none">
                                 {stop.nodenm}
                             </span>
                             {disambiguationLabel && (
-                                <span className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-white/15 text-slate-300">
+                                <span
+                                    className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-white/15 text-slate-300">
                                     {disambiguationLabel}
                                 </span>
                             )}

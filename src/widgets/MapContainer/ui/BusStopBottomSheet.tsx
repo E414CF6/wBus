@@ -122,14 +122,14 @@ export const BusStopBottomSheet: React.FC<BusStopBottomSheetProps> = ({
                                 </a>
                             )}
                             {onToggleFavorite && (<button
-                                    type="button"
-                                    onClick={() => onToggleFavorite(stop)}
-                                    className={`p-1.5 rounded-full border transition cursor-pointer active:scale-90 ${isFavorite ? "bg-amber-500/15 border-amber-500/40 text-amber-500" : "bg-slate-100 dark:bg-white/10 border-transparent text-slate-400 hover:text-amber-500"}`}
-                                    title={isFavorite ? "즐겨찾는 정류장 해제" : "즐겨찾는 정류장 등록"}
-                                    aria-label={isFavorite ? "즐겨찾는 정류장 해제" : "즐겨찾는 정류장 등록"}
-                                >
-                                    <Star className={`w-3.5 h-3.5 ${isFavorite ? "fill-amber-400" : ""}`}/>
-                                </button>)}
+                                type="button"
+                                onClick={() => onToggleFavorite(stop)}
+                                className={`p-1.5 rounded-full border transition cursor-pointer active:scale-90 ${isFavorite ? "bg-amber-500/15 border-amber-500/40 text-amber-500" : "bg-slate-100 dark:bg-white/10 border-transparent text-slate-400 hover:text-amber-500"}`}
+                                title={isFavorite ? "즐겨찾는 정류장 해제" : "즐겨찾는 정류장 등록"}
+                                aria-label={isFavorite ? "즐겨찾는 정류장 해제" : "즐겨찾는 정류장 등록"}
+                            >
+                                <Star className={`w-3.5 h-3.5 ${isFavorite ? "fill-amber-400" : ""}`}/>
+                            </button>)}
                             <button
                                 type="button"
                                 onClick={onClose}
@@ -144,31 +144,31 @@ export const BusStopBottomSheet: React.FC<BusStopBottomSheetProps> = ({
 
                     {/* Paired Opposite Stop Quick-Switcher Banner */}
                     {pairedOppositeStop && (<button
-                            type="button"
-                            onClick={() => {
-                                triggerHaptic("selection");
-                                onClose();
-                                onSelectOppositeStop?.(pairedOppositeStop);
-                            }}
-                            className="mt-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold border border-black/5 dark:border-white/10 transition-all cursor-pointer active:scale-98 group/opp"
-                            title={`건너편 정류장(${pairedOppositeStop.nodenm}) 실시간 정보 보기`}
-                        >
-                            <div className="flex items-center gap-1.5 min-w-0">
-                                <ArrowLeftRight className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0"/>
-                                <span className="text-slate-500 dark:text-slate-400 font-medium">건너편</span>
-                                <span className="font-extrabold truncate text-slate-900 dark:text-white">
+                        type="button"
+                        onClick={() => {
+                            triggerHaptic("selection");
+                            onClose();
+                            onSelectOppositeStop?.(pairedOppositeStop);
+                        }}
+                        className="mt-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold border border-black/5 dark:border-white/10 transition-all cursor-pointer active:scale-98 group/opp"
+                        title={`건너편 정류장(${pairedOppositeStop.nodenm}) 실시간 정보 보기`}
+                    >
+                        <div className="flex items-center gap-1.5 min-w-0">
+                            <ArrowLeftRight className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0"/>
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">건너편</span>
+                            <span className="font-extrabold truncate text-slate-900 dark:text-white">
                                         {pairedOppositeStop.nodenm}
                                     </span>
-                                {pairedOppositeStop.nodeno && (
-                                    <span className="font-mono text-[10px] text-slate-400 shrink-0">
+                            {pairedOppositeStop.nodeno && (
+                                <span className="font-mono text-[10px] text-slate-400 shrink-0">
                                             ({pairedOppositeStop.nodeno})
                                         </span>)}
-                            </div>
-                            <span
-                                className="text-[10px] font-black text-blue-600 dark:text-blue-400 shrink-0 group-hover/opp:translate-x-0.5 transition-transform">
+                        </div>
+                        <span
+                            className="text-[10px] font-black text-blue-600 dark:text-blue-400 shrink-0 group-hover/opp:translate-x-0.5 transition-transform">
                                     전환 →
                                 </span>
-                        </button>)}
+                    </button>)}
                 </div>
             </div>
 

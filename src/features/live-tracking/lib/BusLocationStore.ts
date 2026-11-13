@@ -71,6 +71,12 @@ export class BusLocationStore {
         this.startPolling();
     };
 
+    public restartPollingIfActive() {
+        if (!this.pollInterval) return;
+        this.stopPolling();
+        this.startPolling();
+    }
+
     private abortInflight() {
         if (this.abortController) {
             this.abortController.abort();
@@ -292,12 +298,6 @@ export class BusLocationStore {
                 this.isFetching = false;
             }
         }
-    }
-
-    public restartPollingIfActive() {
-        if (!this.pollInterval) return;
-        this.stopPolling();
-        this.startPolling();
     }
 
     private startPolling() {
