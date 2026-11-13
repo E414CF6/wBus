@@ -39,19 +39,23 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
     onBusBadgeClick,
     onToggleFavorite,
 }) => {
+    const hasBuses = busesHere.length > 0;
+
     return (
         <div
             data-stop-key={`${stop.nodeid}-${stop.nodeord ?? ""}`}
-            data-has-bus={busesHere.length > 0 ? "true" : undefined}
+            data-has-bus={hasBuses ? "true" : undefined}
             data-selected-stop={isSelected ? "true" : undefined}
-            className={`cv-auto-stop relative flex items-center min-h-[58px] py-3 transition-colors cursor-pointer group border-b border-slate-100 dark:border-white/5 ${
+            className={`cv-auto-stop relative flex items-center min-h-[54px] py-2.5 transition-colors cursor-pointer group border-b border-slate-100/80 dark:border-white/[0.05] ${
                 isSelected
                     ? isTurningStop
                         ? "bg-amber-100/70 dark:bg-amber-950/30"
                         : metaThemeBadgeBg
                     : isTurningStop
                     ? "bg-amber-50/70 hover:bg-amber-100/60 dark:bg-amber-500/[0.06] dark:hover:bg-amber-500/[0.12]"
-                    : "hover:bg-slate-50 dark:hover:bg-white/[0.04]"
+                        : hasBuses
+                            ? "bg-slate-50/90 hover:bg-slate-100/80 dark:bg-white/[0.035] dark:hover:bg-white/[0.06]"
+                            : "hover:bg-slate-50/80 dark:hover:bg-white/[0.04]"
             }`}
             onClick={() => onStopClick(stop)}
         >
@@ -68,7 +72,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
 
             {/* Vertical Timeline Connecting Track */}
             <div
-                className={`absolute left-[64px] sm:left-[74px] w-[2px] pointer-events-none ${
+                className={`absolute left-[26px] sm:left-[30px] -translate-x-1/2 w-[2px] z-[5] pointer-events-none ${
                     isFirst ? "top-1/2 bottom-0" : isLast ? "top-0 bottom-1/2" : "top-0 bottom-0"
                 }`}
                 style={{
@@ -76,73 +80,52 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                     backgroundImage: isTurningStop
                         ? `linear-gradient(to bottom, ${metaThemeMainColor}b3, #f59e0b, ${metaThemeMainColor}b3)`
                         : undefined,
-                    opacity: 0.75,
+                    opacity: 0.7,
                 }}
             />
 
-            {/* Station Timeline Node (Donut Circle) */}
-            {isTurningStop ? (
+            {/* Station Timeline Node (Active Bus / Turning / Regular Stop) */}
+            {hasBuses ? (
                 <div
-                    className="absolute left-[55px] sm:left-[65px] top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-[2.5px] border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-[#0c100f] z-10 shadow-[0_0_12px_rgba(245,158,11,0.35)] flex items-center justify-center pointer-events-none"
+                    className="absolute left-[26px] sm:left-[30px] -translate-x-1/2 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full text-white z-20 ring-[3px] ring-white dark:ring-[#11131a] shadow-sm flex items-center justify-center pointer-events-none"
+                    style={{backgroundColor: metaThemeMainColor}}
+                    aria-hidden="true"
+                >
+                    <Bus className="w-3.5 h-3.5"/>
+                </div>
+            ) : isTurningStop ? (
+                <div
+                    className="absolute left-[26px] sm:left-[30px] -translate-x-1/2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-[#11131a] z-10 shadow-[0_0_10px_rgba(245,158,11,0.3)] flex items-center justify-center pointer-events-none"
                     title="회차지 정류장"
                 >
                     <RotateCw className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 stroke-[2.5]" />
                 </div>
             ) : (
                 <div
-                    className="absolute left-[58px] sm:left-[68px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-[2.5px] bg-white dark:bg-[#0c100f] z-10 shadow-xs pointer-events-none"
-                    style={{borderColor: metaThemeMainColor}}
+                    className={`absolute left-[26px] sm:left-[30px] -translate-x-1/2 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full border-[2.5px] z-10 pointer-events-none transition-transform ${
+                        isSelected ? "scale-115" : "bg-white dark:bg-[#11131a]"
+                    }`}
+                    style={{
+                        borderColor: metaThemeMainColor,
+                        backgroundColor: isSelected ? metaThemeMainColor : undefined,
+                    }}
                 />
             )}
 
-            {/* Live Bus Markers if arriving/located at this station */}
-            {busesHere.length > 0 && (
-                <div
-                    className="absolute left-1.5 sm:left-2 top-1/2 -translate-y-1/2 z-20 flex flex-col items-start gap-1">
-                    {busesHere.map((bus) => {
-                        const plateDigits =
-                            bus.vehicleno.replace(/[^0-9]/g, "").slice(-4) || bus.vehicleno.slice(-4);
-
-                        return (
-                            <button
-                                key={`${bus.vehicleno}-${bus.nodeord}`}
-                                type="button"
-                                onClick={(e) => onBusBadgeClick(e, bus.gpslati, bus.gpslong)}
-                                className="flex items-center gap-0.5 sm:gap-1 group/bus cursor-pointer active:scale-95 transition-transform"
-                                title={`${bus.vehicleno} 실시간 위치로 이동`}
-                            >
-                                <span
-                                    className="px-1 sm:px-1.5 py-0.5 rounded text-[9px] sm:text-[10px] font-bold border text-white tracking-tight whitespace-nowrap select-none shadow-xs"
-                                    style={{
-                                        backgroundColor: metaThemeMainColor,
-                                        borderColor: metaThemeMainColor,
-                                    }}
-                                >
-                                    {plateDigits}
-                                </span>
-                                <div
-                                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-md ${metaThemeBg} text-white flex items-center justify-center shadow-md ${metaThemeShadow} shrink-0`}
-                                >
-                                    <Bus className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current"/>
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
-
             {/* Station Name & Metadata */}
-            <div className="ml-[80px] sm:ml-[92px] flex-1 flex flex-col justify-center min-w-0 pr-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="ml-12 sm:ml-14 flex-1 flex flex-col justify-center min-w-0 pr-2">
+                <div className="flex items-center gap-1.5 min-w-0">
                     <span
-                        className={`text-[14px] sm:text-[15px] font-bold truncate transition-colors ${
+                        className={`text-[14px] sm:text-[15px] truncate transition-colors ${
                             isSelected
                                 ? isTurningStop
                                     ? "text-amber-800 dark:text-amber-300 font-black"
                                     : `${metaThemeText} font-black`
                                 : isTurningStop
                                 ? "text-amber-900 dark:text-amber-200 font-extrabold group-hover:text-amber-950 dark:group-hover:text-amber-100"
-                                : "text-slate-800 dark:text-slate-100 group-hover:text-slate-950 dark:group-hover:text-white"
+                                    : hasBuses
+                                        ? "text-slate-950 dark:text-white font-extrabold"
+                                        : "text-slate-800 dark:text-slate-100 font-bold group-hover:text-slate-950 dark:group-hover:text-white"
                         }`}
                     >
                         {stop.nodenm}
@@ -155,9 +138,35 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                     )}
                 </div>
                 {stop.nodeno && (
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">{stop.nodeno}</span>
+                    <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono leading-tight mt-0.5">
+                        {stop.nodeno}
+                    </span>
                 )}
             </div>
+
+            {/* Live Bus Vehicle Badges (Right-aligned before Star Button) */}
+            {hasBuses && (
+                <div className="flex items-center gap-1 flex-wrap justify-end shrink-0 mr-1 max-w-[132px]">
+                    {busesHere.map((bus) => {
+                        const plateDigits =
+                            bus.vehicleno.replace(/[^0-9]/g, "").slice(-4) || bus.vehicleno.slice(-4);
+
+                        return (
+                            <button
+                                key={`${bus.vehicleno}-${bus.nodeord}`}
+                                type="button"
+                                onClick={(e) => onBusBadgeClick(e, bus.gpslati, bus.gpslong)}
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-black text-white shadow-xs ${metaThemeShadow} cursor-pointer active:scale-95 transition-transform whitespace-nowrap`}
+                                style={{backgroundColor: metaThemeMainColor}}
+                                title={`${bus.vehicleno} 실시간 위치로 이동`}
+                            >
+                                <Bus className="w-3 h-3 shrink-0"/>
+                                <span className="font-mono tracking-tight leading-none">{plateDigits}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* Stop Favorite Star Button */}
             <button
@@ -172,7 +181,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                         gpslong: stop.gpslong,
                     });
                 }}
-                className={`mr-3 p-1.5 rounded-full transition-colors cursor-pointer shrink-0 ${
+                className={`mr-3 sm:mr-3.5 p-1.5 rounded-full transition-colors cursor-pointer shrink-0 ${
                     isFavStop
                         ? "text-amber-500 hover:text-amber-600"
                         : "text-slate-300 dark:text-slate-600 opacity-60 group-hover:opacity-100 hover:text-amber-500 dark:hover:text-amber-400"

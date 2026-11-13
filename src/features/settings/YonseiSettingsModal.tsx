@@ -6,7 +6,7 @@ import {ExternalLink, GraduationCap, MapIcon} from "lucide-react";
 
 import {buildPageHref, SPECIAL_PAGE_IDS} from "@shared/config/pages";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
-import {Modal} from "@shared/ui";
+import {markModalNavigating, Modal} from "@shared/ui";
 import {triggerHaptic} from "@shared/utils/haptics";
 
 import {SettingsBlock, SettingsGroup, SettingsToggleRow} from "./SettingsPrimitives";
@@ -39,6 +39,7 @@ export const YonseiSettingsModal: React.FC<YonseiSettingsModalProps> = ({
             <Link
                 href={buildPageHref(SPECIAL_PAGE_IDS.YONSEI_MIRAE)}
                 onClick={() => {
+                    markModalNavigating();
                     onClose();
                     onCloseParent?.();
                 }}

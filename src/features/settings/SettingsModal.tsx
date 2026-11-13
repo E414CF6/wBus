@@ -36,7 +36,7 @@ import {
     SETTINGS_COOKIE_NAME,
 } from "@shared/config/settingsCookie";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
-import {applyThemePreference, Modal, type ThemePreference} from "@shared/ui";
+import {applyThemePreference, markModalNavigating, Modal, type ThemePreference} from "@shared/ui";
 import {triggerHaptic} from "@shared/utils/haptics";
 
 import {SettingsBlock, SettingsGroup, SettingsSectionHeader, SettingsToggleRow,} from "./SettingsPrimitives";
@@ -779,7 +779,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                                 <div className="grid grid-cols-2 gap-2">
                                     <Link
                                         href="/terms"
-                                        onClick={onClose}
+                                        onClick={() => {
+                                            markModalNavigating();
+                                            onClose();
+                                        }}
                                         className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-black transition active:scale-95"
                                     >
                                         <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0"/>
@@ -788,7 +791,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
 
                                     <Link
                                         href="/privacy"
-                                        onClick={onClose}
+                                        onClick={() => {
+                                            markModalNavigating();
+                                            onClose();
+                                        }}
                                         className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-black transition active:scale-95"
                                     >
                                         <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0"/>

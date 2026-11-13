@@ -3,7 +3,12 @@ export type {ModalProps, ModalMaxWidth, ModalHeight} from "./Modal";
 export {useBodyScrollLock} from "./useBodyScrollLock";
 export {useIsDesktop} from "./useIsDesktop";
 export {
-    useModalHistory, buildModalUrl, removeModalUrlQuery, isModalQueryMatching,
+    useModalHistory,
+    buildModalUrl,
+    removeModalUrlQuery,
+    isModalQueryMatching,
+    markModalNavigating,
+    shouldSuppressHistoryBackOnClose,
 } from "./useModalHistory";
 export type {UseModalHistoryOptions} from "./useModalHistory";
 export {applyThemePreference, type ThemePreference} from "./themeUtils";

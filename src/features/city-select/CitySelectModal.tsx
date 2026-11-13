@@ -13,7 +13,7 @@ import {
 import type {CityInfo} from "@entities/city/types";
 import {matchesHangul} from "@shared/utils/hangul";
 import {triggerHaptic} from "@shared/utils/haptics";
-import {Modal} from "@shared/ui";
+import {markModalNavigating, Modal} from "@shared/ui";
 
 type CityTabId = "ALL" | "FAVORITES" | "CAPITAL" | "GANGWON" | "CHUNGCHEONG" | "JEOLLA" | "GYEONGSANG" | "JEJU";
 
@@ -188,12 +188,25 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                     {selectedTab === "FAVORITES" && !searchQuery ? " (즐겨찾기)" : ""}
                 </span>
                 <span>•</span>
-                <Link href="/terms" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
+                <Link
+                    href="/terms"
+                    onClick={() => {
+                        markModalNavigating();
+                        onClose();
+                    }}
+                    className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+                >
                     이용약관
                 </Link>
                 <span>•</span>
-                <Link href="/privacy"
-                      className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-bold">
+                <Link
+                    href="/privacy"
+                    onClick={() => {
+                        markModalNavigating();
+                        onClose();
+                    }}
+                    className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-bold"
+                >
                     개인정보처리방침
                 </Link>
             </div>

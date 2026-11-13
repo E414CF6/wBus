@@ -1,5 +1,12 @@
 import {describe, expect, it} from "vitest";
-import {buildModalUrl, isModalQueryMatching, removeModalUrlQuery, useModalHistory,} from "./useModalHistory";
+import {
+    buildModalUrl,
+    isModalQueryMatching,
+    isRecentModalNavigation,
+    removeModalUrlQuery,
+    shouldSuppressHistoryBackOnClose,
+    useModalHistory,
+} from "./useModalHistory";
 
 describe("useModalHistory URL Helpers", () => {
     describe("buildModalUrl", () => {
@@ -111,5 +118,37 @@ describe("useModalHistory URL state decision logic", () => {
         const initialBeforeOpen = removeModalUrlQuery("https://wbus.kr/?cityCode=32020&route=30", "modal");
         const currentOnDismiss = removeModalUrlQuery("https://wbus.kr/?cityCode=32020&route=30&modal=city", "modal");
         expect(initialBeforeOpen !== currentOnDismiss).toBe(false);
+    });
+
+    it("suppresses history.back when closing immediately after an internal Link click", () => {
+        expect(
+            shouldSuppressHistoryBackOnClose({
+                currentHref: "https://wbus.kr/?cityCode=32020&route=30&modal=route",
+                initialBaseUrl: "/?cityCode=32020&route=30",
+                modalId: "route",
+                queryKey: "modal",
+                lastNavigationAt: 1000,
+                now: 1200,
+            })
+        ).toBe(true);
+    });
+
+    it("detects recent modal link navigation within 1000ms", () => {
+        expect(isRecentModalNavigation(1000, 1500)).toBe(true);
+        expect(isRecentModalNavigation(1000, 2500)).toBe(false);
+        expect(isRecentModalNavigation(0, 1500)).toBe(false);
+    });
+
+    it("allows history.back when closing normally via X/backdrop without recent link navigation", () => {
+        expect(
+            shouldSuppressHistoryBackOnClose({
+                currentHref: "https://wbus.kr/?cityCode=32020&route=30&modal=route",
+                initialBaseUrl: "/?cityCode=32020&route=30",
+                modalId: "route",
+                queryKey: "modal",
+                lastNavigationAt: 0,
+                now: 5000,
+            })
+        ).toBe(false);
     });
 });

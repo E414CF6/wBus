@@ -449,7 +449,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             } ${
                 isDesktop
                     ? "hidden lg:flex z-40 fixed top-[72px] bottom-6 left-4 w-[380px] lg:w-[420px] max-h-[calc(100vh-96px)] bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex-col"
-                    : "fixed inset-x-0 bottom-0 z-[60] max-h-[86dvh] h-[86dvh] bg-white dark:bg-[#11131a] rounded-t-[28px] shadow-[0_-16px_50px_rgba(0,0,0,0.28)] dark:shadow-[0_-16px_50px_rgba(0,0,0,0.75)] flex flex-col border-t border-slate-200/80 dark:border-white/10 animate-slideUp"
+                    : "fixed inset-x-0 bottom-0 z-[60] max-h-[82dvh] h-[82dvh] bg-white dark:bg-[#11131a] rounded-t-[24px] shadow-[0_-12px_40px_rgba(0,0,0,0.2)] dark:shadow-[0_-12px_40px_rgba(0,0,0,0.7)] flex flex-col border-t border-slate-200/70 dark:border-white/10 animate-slideUp"
             }`}
         >
             {/* Mobile Bottom Sheet Grab Handle + Swipeable Header Area */}
@@ -459,8 +459,8 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                 onTouchEnd={handleSheetTouchEnd}
                 className="touch-none lg:touch-auto shrink-0"
             >
-                <div className="flex lg:hidden justify-center pt-2.5 pb-1">
-                    <div className="w-10 h-1 bg-slate-300 dark:bg-white/25 rounded-full" />
+                <div className="flex lg:hidden justify-center pt-2 pb-0.5">
+                    <div className="w-9 h-1 bg-slate-300/90 dark:bg-white/20 rounded-full"/>
                 </div>
 
                 {/* 1. Header */}
@@ -514,8 +514,11 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
                 {/* 2.5 Live Running Buses Quick-Jump Strip */}
                 {matchedBusesForJump.length > 0 && (
-                    <div className="flex items-center gap-1.5 px-3.5 sm:px-4 py-1.5 border-b border-slate-200/70 dark:border-white/5 bg-slate-50/80 dark:bg-white/[0.015] overflow-x-auto custom-scrollbar-hidden shrink-0">
-                        <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0 mr-0.5">
+                    <div
+                        className="flex items-center gap-1.5 px-4 pb-2.5 overflow-x-auto custom-scrollbar-hidden shrink-0">
+                        <span
+                            className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0 mr-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"/>
                             운행중
                         </span>
                         {matchedBusesForJump.map(({stopKey, stop, plateDigits, bus}) => (
@@ -523,7 +526,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                 key={`${bus.vehicleno}-${stopKey}`}
                                 type="button"
                                 onClick={() => handleJumpToBusStop(stopKey, stop)}
-                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-bold border transition cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border transition cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
                                     meta?.colorTheme?.badgeBg || "bg-blue-500/10 dark:bg-blue-500/20"
                                 } ${
                                     meta?.colorTheme?.text || "text-blue-700 dark:text-blue-300"
@@ -543,7 +546,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                 {/* 3. Bus Stop Timeline List Body */}
                 <div
                     ref={listRef}
-                    className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] lg:pb-3"
+                    className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0 border-t border-slate-100 dark:border-white/[0.07] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] lg:pb-3"
                 >
                     {currentStops.length === 0 ? (
                         <div

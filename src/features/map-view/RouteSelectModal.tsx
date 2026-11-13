@@ -22,7 +22,7 @@ import {useBusStop, useFavoriteStops} from "@entities/station/hooks";
 import type {BusStop} from "@entities/station/types";
 import {matchesHangul} from "@shared/utils/hangul";
 import {triggerHaptic} from "@shared/utils/haptics";
-import {Modal} from "@shared/ui";
+import {markModalNavigating, Modal} from "@shared/ui";
 
 // ----------------------------------------------------------------------
 // Types & Constants
@@ -502,7 +502,10 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                 {hasUniversityShuttle && settings.showYonseiFeatures && !searchQuery && (
                     <Link
                         href={buildPageHref(SPECIAL_PAGE_IDS.YONSEI_MIRAE)}
-                        onClick={onClose}
+                        onClick={() => {
+                            markModalNavigating();
+                            onClose();
+                        }}
                         className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-[#003876] to-blue-800 text-white shadow-sm hover:shadow-md transition-all active:scale-[0.99] group"
                     >
                         <div className="flex items-center gap-2.5 min-w-0">
