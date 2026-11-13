@@ -610,7 +610,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                         {visibleRoutes.map((route) => {
                             const meta = routeMetaMap.get(route) || getRouteMeta(route, currentCity.code);
                             const isSelected = route === selectedRoute;
-                            const isYonsei = meta.isYonsei;
+                            const isYonsei = settings.showYonseiFeatures && meta.isYonsei;
                             const isBookmarked = bookmarks.includes(route);
 
                             return (

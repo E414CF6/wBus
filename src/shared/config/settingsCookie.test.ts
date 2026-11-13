@@ -28,6 +28,13 @@ describe("settingsCookie", () => {
                 smoothBusAnimation: false,
                 showNearbyStops: false,
                 showStopLabels: false,
+                autoFitRouteBounds: false,
+                showTimetablePins: false,
+                showBusPlateNumber: true,
+                rememberMapView: false,
+                showMapControls: false,
+                reduceMotion: true,
+                fontScale: "large" as const,
             };
 
             const serialized = serializeSettingsCookie(custom);
@@ -56,6 +63,9 @@ describe("settingsCookie", () => {
                     livePollingIntervalMs: 99999,
                     smoothBusAnimation: false,
                     showNearbyStops: "yes",
+                    autoFitRouteBounds: "no",
+                    showBusPlateNumber: true,
+                    fontScale: "huge",
                 })
             );
 
@@ -72,6 +82,13 @@ describe("settingsCookie", () => {
                 smoothBusAnimation: false,
                 showNearbyStops: true,
                 showStopLabels: true,
+                autoFitRouteBounds: true,
+                showTimetablePins: true,
+                showBusPlateNumber: true,
+                rememberMapView: true,
+                showMapControls: true,
+                reduceMotion: false,
+                fontScale: "normal",
             });
         });
 

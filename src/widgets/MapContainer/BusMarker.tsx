@@ -39,16 +39,18 @@ interface BusIconDOMProps {
     color?: string;
     isSelected?: boolean;
     isFollowed?: boolean;
+    plateNumber?: string;
 }
 
 /**
  * Clean, minimalist top-down bus marker capsule.
  */
-const BusIconDOM = memo(({routeNumber, color, isSelected, isFollowed}: BusIconDOMProps) => {
+const BusIconDOM = memo(({routeNumber, color, isSelected, isFollowed, plateNumber}: BusIconDOMProps) => {
     const [w, h] = SETTINGS.ICON_SIZE;
     const themeColor = color || "#2563eb";
     const cleanRoute = (routeNumber || "").trim();
     const isMarquee = cleanRoute.length >= 4;
+    const shortPlate = plateNumber ? plateNumber.trim().slice(-4) : "";
 
     return (
         <div
@@ -102,6 +104,12 @@ const BusIconDOM = memo(({routeNumber, color, isSelected, isFollowed}: BusIconDO
                     </span>
                 )}
             </div>
+            {shortPlate && (
+                <span
+                    className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 px-1 py-px rounded bg-slate-900/90 dark:bg-white/95 text-white dark:text-slate-900 text-[9px] font-mono font-bold leading-none whitespace-nowrap shadow-xs border border-white/40 dark:border-black/20 pointer-events-none select-none">
+                    {shortPlate}
+                </span>
+            )}
         </div>
     );
 });
@@ -237,6 +245,7 @@ interface MarkerItemComponentProps {
     markerColor: string;
     isSelected: boolean;
     isFollowed: boolean;
+    showPlateNumber?: boolean;
     routeName: string;
     effectiveAnimationDuration: number;
     effectivePollingIntervalMs: number;
@@ -257,6 +266,7 @@ const MarkerItemComponent = memo(function MarkerItemComponent({
                                                                   markerColor,
                                                                   isSelected,
                                                                   isFollowed,
+                                                                  showPlateNumber = false,
                                                                   routeName,
                                                                   effectiveAnimationDuration,
                                                                   effectivePollingIntervalMs,
@@ -295,6 +305,7 @@ const MarkerItemComponent = memo(function MarkerItemComponent({
                 color={markerColor}
                 isSelected={isSelected}
                 isFollowed={isFollowed}
+                plateNumber={showPlateNumber ? bus.vehicleno : undefined}
             />
         </BusAnimatedMarker>
     );
@@ -356,7 +367,8 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
         setFollowedBusKey(null);
     }
 
-    const effectiveAnimationDuration = settings.smoothBusAnimation ? MAP_SETTINGS.ANIMATION.BUS_MOVE_MS : 0;
+    const effectiveAnimationDuration =
+        settings.smoothBusAnimation && !settings.reduceMotion ? MAP_SETTINGS.ANIMATION.BUS_MOVE_MS : 0;
     const effectivePollingIntervalMs = settings.livePollingIntervalMs || API_CONFIG.LIVE.POLLING_INTERVAL_MS;
     const effectiveDataDelayMs = API_CONFIG.LIVE.DATA_DELAY_MS;
 
@@ -561,6 +573,7 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
                     markerColor={marker.markerColor}
                     isSelected={selectedBusKey === marker.key}
                     isFollowed={followedBusKey === marker.key}
+                    showPlateNumber={settings.showBusPlateNumber}
                     routeName={routeName}
                     effectiveAnimationDuration={effectiveAnimationDuration}
                     effectivePollingIntervalMs={effectivePollingIntervalMs}

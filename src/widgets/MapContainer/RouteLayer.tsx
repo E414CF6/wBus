@@ -66,15 +66,17 @@ const RouteLayer = memo(({
             focusedStopId={focusedStopId}
             onClearFocusedStop={onClearFocusedStop}
         />
-        <TimetablePinMarker
-            routeName={routeName}
-            cityCode={cityCode}
-            onRouteChange={onRouteChange}
-            onOpenScheduleModal={onOpenScheduleModal}
-            enabled={enabled}
-            dayMode={dayMode}
-            isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-        />
+        {settings.showTimetablePins && (
+            <TimetablePinMarker
+                routeName={routeName}
+                cityCode={cityCode}
+                onRouteChange={onRouteChange}
+                onOpenScheduleModal={onOpenScheduleModal}
+                enabled={enabled}
+                dayMode={dayMode}
+                isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+            />
+        )}
         {cityCode === "32020" && YONSEI_SHUTTLE_ROUTES.has(routeName) && settings.showYonseiFeatures && (
             <YonseiShuttlePinMarker
                 enabled={enabled && settings.showYonseiFeatures}

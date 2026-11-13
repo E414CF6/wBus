@@ -6,6 +6,7 @@ import {useRoutePolylineData} from "@features/live-tracking";
 import {MAP_SETTINGS} from "@shared/config/env";
 import {isDesktopViewport} from "@shared/ui/useIsDesktop";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {useCityContext} from "@entities/city";
 import {useTheme} from "next-themes";
 import {useEffect, useMemo, useRef} from "react";
@@ -25,6 +26,7 @@ export default function BusRoutePolyline({
                                              cityCode,
                                          }: BusRoutePolylineProps) {
     const {map} = useAppMapContext();
+    const {settings} = useAppSettings();
     const {resolvedTheme} = useTheme();
     const isDark = resolvedTheme === "dark";
 
@@ -131,11 +133,11 @@ export default function BusRoutePolyline({
                         left: isCompact ? 56 : isDesktop ? 440 : 64,
                         right: isCompact ? 68 : 76,
                     },
-                    duration: MAP_SETTINGS.ANIMATION.FLY_TO_MS,
+                    duration: settings.reduceMotion ? 0 : MAP_SETTINGS.ANIMATION.FLY_TO_MS,
                 }
             );
         };
-    }, [map, bbox]);
+    }, [map, bbox, settings.reduceMotion]);
 
     useEffect(() => {
         if (!map || !bbox) return;
@@ -144,8 +146,9 @@ export default function BusRoutePolyline({
         if (lastBoundsKeyRef.current === key) return;
         lastBoundsKeyRef.current = key;
 
+        if (!settings.autoFitRouteBounds) return;
         fitToRouteBounds();
-    }, [map, bbox, fitToRouteBounds]);
+    }, [map, bbox, fitToRouteBounds, settings.autoFitRouteBounds]);
 
     // The map is mounted while the timetable view is hidden. Re-fit after its
     // container gets a real size instead of fitting against a zero-sized canvas.

@@ -397,7 +397,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                         </span>
                                     )}
 
-                                    {meta.isYonsei && (
+                                    {meta.isYonsei && settings.showYonseiFeatures && (
                                         <span
                                             className="hidden xs:inline-flex px-1.5 py-0.2 rounded-full text-[9px] font-black bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 shrink-0">
                                             연세대
@@ -560,7 +560,10 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                     >
                         {quickRoutes.map((route) => {
                             const isCurrent = route === selectedRoute;
-                            const isYonsei = hasUniversityShuttle && defaultQuickRoutes.includes(route);
+                            const isYonsei =
+                                settings.showYonseiFeatures &&
+                                hasUniversityShuttle &&
+                                defaultQuickRoutes.includes(route);
 
                             return (
                                 <button

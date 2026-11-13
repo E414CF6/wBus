@@ -1,6 +1,7 @@
 "use client";
 
 import React, {useCallback, useState, useSyncExternalStore} from "react";
+import Link from "next/link";
 import {useTheme} from "next-themes";
 import {
     Calendar,
@@ -8,21 +9,27 @@ import {
     ChevronRight,
     Compass,
     Cookie,
+    Database,
+    FileText,
     GraduationCap,
+    Info,
     MapIcon,
     Monitor,
     Moon,
     Radio,
     RotateCcw,
     Settings,
+    ShieldCheck,
     Sparkles,
     Sun,
     Trash2,
+    Type,
     Vibrate,
 } from "lucide-react";
 
 import {useCityContext} from "@entities/city";
 import {
+    type FontScale,
     LIVE_POLLING_INTERVAL_OPTIONS,
     type LivePollingIntervalMs,
     SETTINGS_COOKIE_NAME,
@@ -33,6 +40,8 @@ import {triggerHaptic} from "@shared/utils/haptics";
 
 import {ToggleSwitch} from "./ToggleSwitch";
 import {YonseiSettingsModal} from "./YonseiSettingsModal";
+
+const APP_VERSION = "26.13.0";
 
 export interface SettingsModalProps {
     isOpen: boolean;
@@ -54,10 +63,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
         settings,
         updateSettings,
         resetSettings,
+        clearApiCache,
         clearAllAppData,
         openOnboarding,
     } = useAppSettings();
-    const {setIsAutoDetectEnabled} = useCityContext();
+    const {currentCity, setIsAutoDetectEnabled} = useCityContext();
     const {theme, setTheme} = useTheme();
     const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
@@ -118,6 +128,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
         },
         [setTheme]
     );
+
+    const handleClearApiCache = useCallback(() => {
+        triggerHaptic("light");
+        clearApiCache();
+        setConfirmClearData(false);
+        setStatusNotice("노선·시간표·공지사항 임시 캐시가 삭제되었습니다. 즐겨찾기와 설정은 유지됩니다.");
+    }, [clearApiCache]);
 
     const handleResetSettings = useCallback(() => {
         triggerHaptic("warning");
@@ -240,7 +257,47 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                             </div>
                         </div>
 
-                        {/* 1-2. Default Day Mode */}
+                        {/* 1-2. Font Scale */}
+                        <div
+                            className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 space-y-2.5">
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5">
+                                    <Type className="w-3.5 h-3.5 text-violet-500 shrink-0"/>
+                                    <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                        화면 글자 크기
+                                    </p>
+                                </div>
+                                <span className="text-[11px] font-semibold text-slate-400">
+                                    앱 전체 텍스트 비율
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-1.5">
+                                {(
+                                    [
+                                        {id: "normal", label: "보통 (기본)"},
+                                        {id: "large", label: "크게"},
+                                    ] as const satisfies readonly { id: FontScale; label: string }[]
+                                ).map((opt) => (
+                                    <button
+                                        key={opt.id}
+                                        type="button"
+                                        onClick={() => {
+                                            triggerHaptic("selection");
+                                            updateSettings({fontScale: opt.id});
+                                        }}
+                                        className={`py-2 px-2.5 rounded-xl text-xs font-black border transition cursor-pointer ${
+                                            settings.fontScale === opt.id
+                                                ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-xs"
+                                                : "bg-white dark:bg-white/5 text-slate-700 dark:text-slate-300 border-black/10 dark:border-white/10"
+                                        }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* 1-3. Default Day Mode */}
                         <div className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 space-y-2.5">
                             <div className="flex items-center gap-1.5">
                                 <Calendar className="w-3.5 h-3.5 text-amber-500 shrink-0" />
@@ -387,14 +444,103 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                                 ariaLabel="지도 정류장 이름 라벨 표시 전환"
                             />
                         </div>
+
+                        {/* 2-5. Show Bus Plate Number */}
+                        <div
+                            className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                    버스 마커 차량번호 표시
+                                </p>
+                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                                    지도 위 버스 아이콘 아래에 차량번호 뒷 4자리를 함께 표시합니다
+                                </p>
+                            </div>
+                            <ToggleSwitch
+                                checked={settings.showBusPlateNumber}
+                                onChange={(next) => {
+                                    triggerHaptic("selection");
+                                    updateSettings({showBusPlateNumber: next});
+                                }}
+                                ariaLabel="버스 마커 차량번호 표시 전환"
+                            />
+                        </div>
+
+                        {/* 2-6. Auto Fit Route Bounds */}
+                        <div
+                            className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                    노선 변경 시 지도 자동 맞춤
+                                </p>
+                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                                    새 노선을 선택할 때 전체 노선 경로가 한눈에 들어오도록 지도를 이동합니다
+                                </p>
+                            </div>
+                            <ToggleSwitch
+                                checked={settings.autoFitRouteBounds}
+                                onChange={(next) => {
+                                    triggerHaptic("selection");
+                                    updateSettings({autoFitRouteBounds: next});
+                                }}
+                                ariaLabel="노선 변경 시 지도 자동 맞춤 전환"
+                            />
+                        </div>
+
+                        {/* 2-7. Show Timetable Pins */}
+                        <div
+                            className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                    기점·종점 시간표 핀 표시
+                                </p>
+                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                                    지도 위 기점·종점·회차 정류장의 다음 출발 시각 핀을 표시합니다
+                                </p>
+                            </div>
+                            <ToggleSwitch
+                                checked={settings.showTimetablePins}
+                                onChange={(next) => {
+                                    triggerHaptic("selection");
+                                    updateSettings({showTimetablePins: next});
+                                }}
+                                ariaLabel="기점·종점 시간표 핀 표시 전환"
+                            />
+                        </div>
+
+                        {/* 2-8. Show Map Controls */}
+                        <div
+                            className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                    지도 줌·나침반 버튼 표시
+                                </p>
+                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                                    지도 우측 상단의 확대/축소 및 나침반 컨트롤 버튼을 표시합니다
+                                </p>
+                            </div>
+                            <ToggleSwitch
+                                checked={settings.showMapControls}
+                                onChange={(next) => {
+                                    triggerHaptic("selection");
+                                    updateSettings({showMapControls: next});
+                                }}
+                                ariaLabel="지도 줌 나침반 버튼 표시 전환"
+                            />
+                        </div>
                     </section>
 
                     {/* Section 3: Region & Device Convenience */}
                     <section className="space-y-3">
-                        <h3 className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                            <Compass className="w-4 h-4 text-emerald-500" />
-                            <span>지역 및 기기 편의 설정</span>
-                        </h3>
+                        <div className="flex items-center justify-between gap-2">
+                            <h3 className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                <Compass className="w-4 h-4 text-emerald-500"/>
+                                <span>지역 · 접근성 및 기기 편의</span>
+                            </h3>
+                            <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
+                                현재 지역: {currentCity.name}
+                            </span>
+                        </div>
 
                         <div className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 flex items-center justify-between gap-3">
                             <div className="min-w-0">
@@ -409,6 +555,46 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                                 checked={settings.autoDetectCity}
                                 onChange={handleToggleAutoDetect}
                                 ariaLabel="지도 이동 시 지역 자동 감지 전환"
+                            />
+                        </div>
+
+                        <div
+                            className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                    마지막 지도 위치 기억
+                                </p>
+                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                                    앱을 다시 열 때 마지막으로 보던 지도 위치와 확대 수준을 복원합니다
+                                </p>
+                            </div>
+                            <ToggleSwitch
+                                checked={settings.rememberMapView}
+                                onChange={(next) => {
+                                    triggerHaptic("selection");
+                                    updateSettings({rememberMapView: next});
+                                }}
+                                ariaLabel="마지막 지도 위치 기억 전환"
+                            />
+                        </div>
+
+                        <div
+                            className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                    화면 전환·모션 줄이기
+                                </p>
+                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                                    모달 전환과 지도 이동 애니메이션을 최소화해 배터리·눈 피로를 줄입니다
+                                </p>
+                            </div>
+                            <ToggleSwitch
+                                checked={settings.reduceMotion}
+                                onChange={(next) => {
+                                    triggerHaptic("selection");
+                                    updateSettings({reduceMotion: next});
+                                }}
+                                ariaLabel="화면 전환 모션 줄이기 전환"
                             />
                         </div>
 
@@ -465,6 +651,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                             <span>온보딩 가이드 다시 보기</span>
                         </button>
 
+                        <button
+                            type="button"
+                            onClick={handleClearApiCache}
+                            className="w-full flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-slate-200 text-xs font-black transition cursor-pointer active:scale-[0.99]"
+                        >
+                            <Database className="w-3.5 h-3.5 text-amber-500"/>
+                            <span>임시 캐시만 비우기 (즐겨찾기·설정 유지)</span>
+                        </button>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             <button
                                 type="button"
@@ -491,6 +686,39 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                                         : "즐겨찾기·캐시·쿠키 전체 초기화"}
                                 </span>
                             </button>
+                        </div>
+                    </section>
+
+                    {/* Section 5: App Info, Notices & Legal */}
+                    <section className="space-y-2.5 pt-2 border-t border-black/5 dark:border-white/5">
+                        <div className="flex items-center justify-between gap-2">
+                            <h3 className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                <Info className="w-4 h-4 text-slate-400"/>
+                                <span>앱 정보 및 안내</span>
+                            </h3>
+                            <span className="text-[11px] font-mono font-bold text-slate-400 dark:text-slate-500">
+                                wBus v{APP_VERSION}
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                            <Link
+                                href="/terms"
+                                onClick={onClose}
+                                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-black transition active:scale-95"
+                            >
+                                <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0"/>
+                                <span>이용약관</span>
+                            </Link>
+
+                            <Link
+                                href="/privacy"
+                                onClick={onClose}
+                                className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-black transition active:scale-95"
+                            >
+                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0"/>
+                                <span>개인정보</span>
+                            </Link>
                         </div>
                     </section>
                 </div>

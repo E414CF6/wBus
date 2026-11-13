@@ -43,9 +43,12 @@ function isValidCoordinate(val: unknown): val is number {
 
 /**
  * Gets the initial map view state.
- * Priority: 1. Local Storage (User Preference) -> 2. Default Config
+ * Priority: 1. Local Storage (User Preference, if rememberMapView is true) -> 2. Default Config
  */
-export function getInitialMapView(): StoredMapView {
+export function getInitialMapView(rememberMapView: boolean = true): StoredMapView {
+    if (!rememberMapView) {
+        return DEFAULT_MAP_VIEW;
+    }
     return loadStoredMapView() ?? DEFAULT_MAP_VIEW;
 }
 

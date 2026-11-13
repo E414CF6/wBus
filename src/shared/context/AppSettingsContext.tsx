@@ -19,6 +19,7 @@ interface AppSettingsContextValue {
     closeOnboarding: () => void;
     updateSettings: (patch: Partial<AppSettings>) => void;
     resetSettings: () => void;
+    clearApiCache: () => void;
     clearAllAppData: () => void;
 }
 
@@ -30,6 +31,7 @@ const DEFAULT_CONTEXT_VALUE: AppSettingsContextValue = {
     closeOnboarding: () => undefined,
     updateSettings: () => undefined,
     resetSettings: () => undefined,
+    clearApiCache: () => undefined,
     clearAllAppData: () => undefined,
 };
 
@@ -58,6 +60,12 @@ export function AppSettingsProvider({children}: { children: React.ReactNode }) {
         if (!hasLoadedSettings) return;
         setGlobalBusPollingIntervalMs(settings.livePollingIntervalMs);
     }, [hasLoadedSettings, settings.livePollingIntervalMs]);
+
+    useEffect(() => {
+        if (!hasLoadedSettings || typeof document === "undefined") return;
+        document.documentElement.classList.toggle("reduce-motion", settings.reduceMotion);
+        document.documentElement.style.fontSize = settings.fontScale === "large" ? "17.5px" : "";
+    }, [hasLoadedSettings, settings.reduceMotion, settings.fontScale]);
 
     const openOnboarding = useCallback(() => {
         setIsOnboardingOpen(true);
@@ -96,6 +104,28 @@ export function AppSettingsProvider({children}: { children: React.ReactNode }) {
         writeSettingsToBrowser(next);
     }, []);
 
+    const clearApiCache = useCallback(() => {
+        if (typeof window !== "undefined") {
+            try {
+                const keysToRemove: string[] = [];
+                for (let i = 0; i < window.localStorage.length; i++) {
+                    const key = window.localStorage.key(i);
+                    if (
+                        key &&
+                        (key.startsWith("wbus_cached_") || key.startsWith("wbus_cache_"))
+                    ) {
+                        keysToRemove.push(key);
+                    }
+                }
+                for (const key of keysToRemove) {
+                    window.localStorage.removeItem(key);
+                }
+            } catch {
+                // Ignore localStorage failure
+            }
+        }
+    }, []);
+
     const clearAllAppData = useCallback(() => {
         clearSettingsCookie();
         if (typeof window !== "undefined") {
@@ -131,6 +161,7 @@ export function AppSettingsProvider({children}: { children: React.ReactNode }) {
             closeOnboarding,
             updateSettings,
             resetSettings,
+            clearApiCache,
             clearAllAppData,
         }),
         [
@@ -141,6 +172,7 @@ export function AppSettingsProvider({children}: { children: React.ReactNode }) {
             closeOnboarding,
             updateSettings,
             resetSettings,
+            clearApiCache,
             clearAllAppData,
         ]
     );

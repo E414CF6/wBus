@@ -7,7 +7,9 @@ import {createMapViewFromMap, getInitialMapView, saveMapView} from "@features/ma
 
 import {MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
+import {readSettingsFromBrowser} from "@shared/config/settingsCookie";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {useCityContext} from "@entities/city";
 
 import * as maplibregl from "maplibre-gl";
@@ -45,6 +47,7 @@ interface LocationToastState {
 export default function Map({onReady, children}: MapProps) {
     const mapRef = useRef<MapRef>(null);
     const {setMap} = useAppMapContext();
+    const {settings} = useAppSettings();
     const readyOnceRef = useRef(false);
     const {resolvedTheme} = useTheme();
 
@@ -52,7 +55,10 @@ export default function Map({onReady, children}: MapProps) {
     const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
 
     // Load saved view state (center/zoom) or default from config
-    const initialView = useMemo(() => getInitialMapView(), []);
+    const initialView = useMemo(
+        () => getInitialMapView(readSettingsFromBrowser().rememberMapView),
+        []
+    );
     const mapStyleUrl = useMemo(() => getMapStyleUrl(resolvedTheme), [resolvedTheme]);
     const maxCanvasSize = useMemo(() => getMaxCanvasSize(), []);
 
@@ -92,7 +98,9 @@ export default function Map({onReady, children}: MapProps) {
 
     const handleMoveEnd = useCallback(() => {
         if (!mapRef.current) return;
-        saveMapView(createMapViewFromMap(mapRef.current));
+        if (settings.rememberMapView) {
+            saveMapView(createMapViewFromMap(mapRef.current));
+        }
 
         if (isAutoDetectEnabled) {
             if (viewportDebounceTimerRef.current) {
@@ -105,7 +113,7 @@ export default function Map({onReady, children}: MapProps) {
                 handleViewportChange(center.lat, center.lng, zoom);
             }, 350);
         }
-    }, [handleViewportChange, isAutoDetectEnabled]);
+    }, [handleViewportChange, isAutoDetectEnabled, settings.rememberMapView]);
 
     const handleGeolocateError = useCallback(
         (e: { code?: number; message?: string }) => {
@@ -222,11 +230,13 @@ export default function Map({onReady, children}: MapProps) {
                     onError={handleGeolocateError}
                     onOutOfMaxBounds={handleOutOfMaxBounds}
                 />
-                <NavigationControl
-                    position="top-right"
-                    showCompass={true}
-                    visualizePitch={true}
-                />
+                {settings.showMapControls && (
+                    <NavigationControl
+                        position="top-right"
+                        showCompass={true}
+                        visualizePitch={true}
+                    />
+                )}
                 {children}
             </MapGL>
 

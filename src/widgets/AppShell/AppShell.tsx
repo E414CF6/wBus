@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import {useRouter, useSearchParams} from "next/navigation";
-import React, {useCallback, useEffect, useMemo, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 
 import {useBusRouteMap} from "@entities/route/hooks";
 import {useCityContext, useCityFeatures} from "@entities/city";
@@ -39,10 +39,14 @@ export function AppShell() {
         [searchParams]
     );
 
-    // Redirect root "/" (with empty query string) to "/?page=yonsei_mirae" if configured as default start page
+    const hasCheckedInitialStartPageRef = useRef(false);
+
+    // Redirect root "/" (with empty query string) to "/?page=yonsei_mirae" on initial load if configured as default start page
     useEffect(() => {
+        if (hasCheckedInitialStartPageRef.current) return;
         if (!hasLoadedSettings) return;
         if (isOnboardingOpen || !settings.hasCompletedOnboarding) return;
+        hasCheckedInitialStartPageRef.current = true;
         if (settings.defaultStartPage !== "yonsei") return;
         if (activeSpecialPage !== null) return;
         if (typeof window === "undefined") return;

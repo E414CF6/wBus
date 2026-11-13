@@ -8,6 +8,7 @@ export const SETTINGS_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 export type DefaultStartPage = "map" | "yonsei";
 export type YonseiDefaultDirection = "AUTO" | "OUTBOUND" | "INBOUND";
 export type LivePollingIntervalMs = 5000 | 10000 | 15000 | 30000;
+export type FontScale = "normal" | "large";
 
 export const LIVE_POLLING_INTERVAL_OPTIONS: readonly LivePollingIntervalMs[] = [
     5000,
@@ -28,6 +29,13 @@ export interface AppSettings {
     smoothBusAnimation: boolean;
     showNearbyStops: boolean;
     showStopLabels: boolean;
+    autoFitRouteBounds: boolean;
+    showTimetablePins: boolean;
+    showBusPlateNumber: boolean;
+    rememberMapView: boolean;
+    showMapControls: boolean;
+    reduceMotion: boolean;
+    fontScale: FontScale;
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
@@ -42,6 +50,13 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     smoothBusAnimation: true,
     showNearbyStops: true,
     showStopLabels: true,
+    autoFitRouteBounds: true,
+    showTimetablePins: true,
+    showBusPlateNumber: false,
+    rememberMapView: true,
+    showMapControls: true,
+    reduceMotion: false,
+    fontScale: "normal",
 };
 
 function sanitizeSettings(raw: unknown): AppSettings {
@@ -113,6 +128,41 @@ function sanitizeSettings(raw: unknown): AppSettings {
             ? obj.showStopLabels
             : DEFAULT_APP_SETTINGS.showStopLabels;
 
+    const autoFitRouteBounds: boolean =
+        typeof obj.autoFitRouteBounds === "boolean"
+            ? obj.autoFitRouteBounds
+            : DEFAULT_APP_SETTINGS.autoFitRouteBounds;
+
+    const showTimetablePins: boolean =
+        typeof obj.showTimetablePins === "boolean"
+            ? obj.showTimetablePins
+            : DEFAULT_APP_SETTINGS.showTimetablePins;
+
+    const showBusPlateNumber: boolean =
+        typeof obj.showBusPlateNumber === "boolean"
+            ? obj.showBusPlateNumber
+            : DEFAULT_APP_SETTINGS.showBusPlateNumber;
+
+    const rememberMapView: boolean =
+        typeof obj.rememberMapView === "boolean"
+            ? obj.rememberMapView
+            : DEFAULT_APP_SETTINGS.rememberMapView;
+
+    const showMapControls: boolean =
+        typeof obj.showMapControls === "boolean"
+            ? obj.showMapControls
+            : DEFAULT_APP_SETTINGS.showMapControls;
+
+    const reduceMotion: boolean =
+        typeof obj.reduceMotion === "boolean"
+            ? obj.reduceMotion
+            : DEFAULT_APP_SETTINGS.reduceMotion;
+
+    const fontScale: FontScale =
+        obj.fontScale === "large" || obj.fontScale === "normal"
+            ? obj.fontScale
+            : DEFAULT_APP_SETTINGS.fontScale;
+
     return {
         defaultStartPage,
         showYonseiFeatures,
@@ -125,6 +175,13 @@ function sanitizeSettings(raw: unknown): AppSettings {
         smoothBusAnimation,
         showNearbyStops,
         showStopLabels,
+        autoFitRouteBounds,
+        showTimetablePins,
+        showBusPlateNumber,
+        rememberMapView,
+        showMapControls,
+        reduceMotion,
+        fontScale,
     };
 }
 
