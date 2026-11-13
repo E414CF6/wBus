@@ -9,6 +9,7 @@ import {useFavoriteStops} from "@entities/station/hooks";
 import type {FavoriteStop} from "@entities/station/types";
 import {getNextDeparture, useSchedule} from "@entities/schedule";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {useRecentRoutes, useRouteBookmarks, useRouteVariations} from "@entities/route";
 import {MarqueeText} from "@shared/ui/MarqueeText";
 
@@ -55,6 +56,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
     const {currentCity} = useCityContext();
     const {hasDetailedTimetable, hasUniversityShuttle, defaultQuickRoutes} = useCityFeatures();
     const {map} = useAppMapContext();
+    const {settings} = useAppSettings();
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const [isVariantMenuOpen, setIsVariantMenuOpen] = useState(false);
     const variantMenuRef = useRef<HTMLDivElement>(null);

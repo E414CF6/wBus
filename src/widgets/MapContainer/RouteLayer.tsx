@@ -6,6 +6,7 @@ import BusRoutePolyline from "./BusRoutePolyline";
 import BusStopMarker from "./BusStopMarker";
 import TimetablePinMarker from "./TimetablePinMarker";
 import YonseiShuttlePinMarker from "./YonseiShuttlePinMarker";
+import {useAppSettings} from "@shared/context/AppSettingsContext";
 import type {DayMode} from "@shared/types/navigation";
 
 // ----------------------------------------------------------------------
@@ -46,19 +47,22 @@ const RouteLayer = memo(({
                              selectedDirection = "all",
                              selectedVariantId = null,
                              cityCode,
-                             showNearbyStops = true,
+                             showNearbyStops,
                              focusedStopId = null,
                              onClearFocusedStop,
                              dayMode,
                              isTodayWeekendOrHoliday,
                          }: RouteLayerProps) => {
+    const {settings} = useAppSettings();
+    const effectiveShowNearbyStops = showNearbyStops ?? settings.showNearbyStops;
     return (<>
         <BusMarker routeName={routeName} enabled={enabled} cityCode={cityCode}/>
         <BusStopMarker
             routeName={routeName}
             onRouteChange={onRouteChange}
             cityCode={cityCode}
-            showNearbyStops={showNearbyStops}
+            showNearbyStops={effectiveShowNearbyStops}
+            showStopLabels={settings.showStopLabels}
             focusedStopId={focusedStopId}
             onClearFocusedStop={onClearFocusedStop}
         />
@@ -71,9 +75,9 @@ const RouteLayer = memo(({
             dayMode={dayMode}
             isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
         />
-        {cityCode === "32020" && YONSEI_SHUTTLE_ROUTES.has(routeName) && (
+        {cityCode === "32020" && YONSEI_SHUTTLE_ROUTES.has(routeName) && settings.showYonseiFeatures && (
             <YonseiShuttlePinMarker
-                enabled={enabled}
+                enabled={enabled && settings.showYonseiFeatures}
                 dayMode={dayMode}
                 isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
             />

@@ -1,5 +1,6 @@
 import type {MetadataRoute} from "next";
 import {SITE_CONFIG} from "@shared/config/env";
+import {buildPageHref, SPECIAL_PAGE_IDS} from "@shared/config/pages";
 
 export default function sitemap(): MetadataRoute.Sitemap {
     const baseUrl = SITE_CONFIG.METADATA.BASE_URL;
@@ -7,6 +8,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     return [{
         url: baseUrl, lastModified, changeFrequency: "hourly", priority: 1.0,
+    }, {
+        url: `${baseUrl}${buildPageHref(SPECIAL_PAGE_IDS.YONSEI_MIRAE)}`,
+        lastModified,
+        changeFrequency: "daily",
+        priority: 0.9,
     }, {
         url: `${baseUrl}/schedule`, lastModified, changeFrequency: "daily", priority: 0.9,
     }, {

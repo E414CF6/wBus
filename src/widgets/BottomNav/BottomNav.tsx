@@ -1,8 +1,7 @@
 "use client";
 
-import React, {memo, useCallback, useEffect, useMemo, useState, useSyncExternalStore} from "react";
-import {Bus, Calendar, ChevronDown, Coffee, Compass, MapIcon, MapPin, Moon, Sparkles, Sun, X,} from "lucide-react";
-import {useTheme} from "next-themes";
+import React, {memo, useCallback, useEffect, useMemo, useState} from "react";
+import {Bus, ChevronDown, Compass, MapIcon, MapPin, Settings, Sparkles, X,} from "lucide-react";
 
 import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
@@ -12,6 +11,7 @@ import {useCityContext, useCityFeatures} from "@entities/city";
 import {getRouteMeta, YONSEI_ROUTE_SET} from "@entities/route";
 import {CitySelectModal} from "@features/city-select";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
+import {SettingsModal} from "@features/settings";
 import {triggerHaptic} from "@shared/utils/haptics";
 
 import {BusListDrawer} from "./BusListDrawer";
@@ -21,9 +21,6 @@ import type {DirectionCode} from "@entities/route/types";
 import type {DayMode} from "@shared/types/navigation";
 
 export type {DayMode};
-
-const emptySubscribe = () => () => {
-};
 
 export interface BottomNavProps {
     // Timetable day mode options (Wonju only)
@@ -52,13 +49,12 @@ export interface BottomNavProps {
  * - Brand Identity (Click to recenter current city)
  * - Region Selector Button (139-city modal + detected city indicator)
  * - Route Selector & Running Bus List Drawer Toggle
- * - Wonju Timetable DayMode Switcher (Auto / Weekday / Holiday)
- * - Theme Switcher (Light / Dark)
+ * - Settings Modal Trigger (Yonsei options, Theme, DayMode, Device Preferences)
  */
 function BottomNavComponent({
-                                dayMode = "AUTO",
-                                onDayModeChange,
-                                isTodayWeekendOrHoliday = false,
+                                dayMode: _dayMode = "AUTO",
+                                onDayModeChange: _onDayModeChange,
+                                isTodayWeekendOrHoliday: _isTodayWeekendOrHoliday = false,
                                 allRoutes = [],
                                 selectedRoute = "",
                                 onSelectRoute,
@@ -81,35 +77,13 @@ function BottomNavComponent({
         dismissDetectedCity,
     } = useCityContext();
 
-    // Theme state
-    const {setTheme, resolvedTheme} = useTheme();
-    const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
-    const isDark = mounted
-        ? resolvedTheme === "dark" ||
-        (typeof document !== "undefined" && document.documentElement.classList.contains("dark"))
-        : false;
-
-    const handleToggleTheme = useCallback(() => {
-        triggerHaptic("light");
-        const nextTheme = isDark ? "light" : "dark";
-        setTheme(nextTheme);
-        if (typeof document !== "undefined") {
-            if (nextTheme === "dark") {
-                document.documentElement.classList.add("dark");
-                document.documentElement.style.colorScheme = "dark";
-            } else {
-                document.documentElement.classList.remove("dark");
-                document.documentElement.style.colorScheme = "light";
-            }
-        }
-    }, [isDark, setTheme]);
-
     // SSR-safe desktop breakpoint subscription and modal/drawer states
     const isDesktop = useIsDesktop();
     const [isMobileBusListOpen, setIsMobileBusListOpen] = useState(false);
     const isBusListOpen = isDesktop || isMobileBusListOpen;
     const [isCityModalOpen, setIsCityModalOpen] = useState(false);
     const [isRoutePickerOpen, setIsRoutePickerOpen] = useState(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     const handleToggleBusList = useCallback(() => {
         if (isDesktop) {
@@ -162,31 +136,12 @@ function BottomNavComponent({
         });
     }, [map, currentCity]);
 
-    const handleCycleDayMode = useCallback(() => {
-        if (!onDayModeChange) return;
-        triggerHaptic("selection");
-        if (dayMode === "AUTO") {
-            onDayModeChange("WEEKDAY");
-        } else if (dayMode === "WEEKDAY") {
-            onDayModeChange("VACATION");
-        } else {
-            onDayModeChange("AUTO");
-        }
-    }, [dayMode, onDayModeChange]);
-
     const isConnecting = !hasFetched || connectionStatus === "connecting";
     const shortCityName = currentCity.name.split("/")[0];
     const hasPendingRegion = Boolean(detectedCity && detectedCity.code !== currentCity.code);
-    const {hasDetailedTimetable, hasUniversityShuttle} = useCityFeatures();
+    const {hasUniversityShuttle} = useCityFeatures();
     const isYonseiSelected = hasUniversityShuttle && YONSEI_ROUTE_SET.has(selectedRoute);
     const routeMeta = useMemo(() => getRouteMeta(selectedRoute, currentCity.code), [selectedRoute, currentCity.code]);
-
-    const dayModeTitle =
-        dayMode === "AUTO"
-            ? `시간표 기준: 자동 (오늘: ${isTodayWeekendOrHoliday ? "휴일" : "평일"}) · 클릭 시 평일로 변경`
-            : dayMode === "WEEKDAY"
-                ? "시간표 기준: 평일 · 클릭 시 휴일로 변경"
-                : "시간표 기준: 휴일 · 클릭 시 자동으로 변경";
 
     return (
         <>
@@ -206,6 +161,12 @@ function BottomNavComponent({
                     onSelectRoute?.(route);
                     setIsRoutePickerOpen(false);
                 }}
+            />
+
+            {/* 2-b. Cookie-backed Settings Modal */}
+            <SettingsModal
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
             />
 
             {/* 3. Click-outside Backdrop when BusListDrawer is open (Mobile & Tablet only) */}
@@ -386,45 +347,20 @@ function BottomNavComponent({
                             />
                         </button>
 
-                        {/* 3-state Day Mode Toggle (Auto / Weekday / Holiday for pin timetables) */}
-                        {hasDetailedTimetable && onDayModeChange && (
-                            <>
-                                <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
-                                <button
-                                    type="button"
-                                    onClick={handleCycleDayMode}
-                                    title={dayModeTitle}
-                                    aria-label={dayModeTitle}
-                                    className="p-1.5 sm:p-2 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0"
-                                >
-                                    {dayMode === "AUTO" && (
-                                        <Sparkles
-                                            className="w-4 h-4 text-blue-600 dark:text-blue-400 stroke-[2.2] animate-fadeIn"/>
-                                    )}
-                                    {dayMode === "WEEKDAY" && (
-                                        <Calendar
-                                            className="w-4 h-4 text-amber-600 dark:text-amber-400 stroke-[2.2] animate-fadeIn"/>
-                                    )}
-                                    {dayMode === "VACATION" && (
-                                        <Coffee
-                                            className="w-4 h-4 text-emerald-600 dark:text-emerald-400 stroke-[2.2] animate-fadeIn"/>
-                                    )}
-                                </button>
-                            </>
-                        )}
+                        <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
 
-                        {/* Theme Toggle Button */}
+                        {/* Settings Modal Button */}
                         <button
                             type="button"
-                            onClick={handleToggleTheme}
-                            aria-label={UI_TEXT.NAV.THEME_TOGGLE_LABEL}
+                            onClick={() => {
+                                triggerHaptic("light");
+                                setIsSettingsOpen(true);
+                            }}
+                            aria-label="환경설정 열기"
+                            title="환경설정"
                             className="p-1.5 sm:p-2 rounded-full text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0"
                         >
-                            {isDark ? (
-                                <Moon className="w-4 h-4 text-blue-400 stroke-[2.2] animate-fadeIn"/>
-                            ) : (
-                                <Sun className="w-4 h-4 text-amber-500 stroke-[2.2] animate-fadeIn"/>
-                            )}
+                            <Settings className="w-4 h-4 stroke-[2.2]"/>
                         </button>
                     </div>
                 </nav>

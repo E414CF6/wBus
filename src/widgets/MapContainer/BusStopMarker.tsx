@@ -19,6 +19,7 @@ export interface BusStopMarkerProps {
     onRouteChange?: (routeName: string) => void;
     cityCode?: string;
     showNearbyStops?: boolean;
+    showStopLabels?: boolean;
     focusedStopId?: string | null;
     onClearFocusedStop?: () => void;
 }
@@ -28,6 +29,7 @@ export const BusStopMarker = ({
     onRouteChange,
     cityCode,
     showNearbyStops = true,
+                                  showStopLabels = true,
     focusedStopId = null,
     onClearFocusedStop,
 }: BusStopMarkerProps) => {
@@ -169,6 +171,7 @@ export const BusStopMarker = ({
         favoriteStops,
         nearbyStops,
         showNearbyStops,
+        showStopLabels,
         bounds,
         zoom,
         stopColorMap,

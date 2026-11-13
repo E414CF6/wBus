@@ -252,11 +252,17 @@ export class BusLocationStore {
         }
     }
 
+    public restartPollingIfActive() {
+        if (!this.pollInterval) return;
+        this.stopPolling();
+        this.startPolling();
+    }
+
     private startPolling() {
         if (this.pollInterval) return;
         this.pollInterval = setInterval(() => {
             void this.fetchLocations();
-        }, API_CONFIG.LIVE.POLLING_INTERVAL_MS);
+        }, globalPollingIntervalMs);
     }
 
     private stopPolling() {
@@ -338,7 +344,21 @@ export class BusLocationStore {
     }
 }
 
+let globalPollingIntervalMs: number = API_CONFIG.LIVE.POLLING_INTERVAL_MS;
+
 const busLocationStores = new Map<string, BusLocationStore>();
+
+/**
+ * Updates the global live-tracking polling interval for all active and future BusLocationStore instances.
+ */
+export function setGlobalBusPollingIntervalMs(intervalMs: number): void {
+    if (!Number.isFinite(intervalMs) || intervalMs < 1000) return;
+    if (globalPollingIntervalMs === intervalMs) return;
+    globalPollingIntervalMs = intervalMs;
+    for (const store of busLocationStores.values()) {
+        store.restartPollingIfActive();
+    }
+}
 
 export function getBusLocationStore(routeIdsKey: string, cityCode: string = "32020"): BusLocationStore {
     const fullKey = `${cityCode}:${routeIdsKey}`;

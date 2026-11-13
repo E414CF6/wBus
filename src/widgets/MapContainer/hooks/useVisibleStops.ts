@@ -13,6 +13,7 @@ export interface UseVisibleStopsParams {
     favoriteStops: BusStop[];
     nearbyStops: BusStop[];
     showNearbyStops: boolean;
+    showStopLabels?: boolean;
     bounds: LngLatBounds | null;
     zoom: number;
     stopColorMap: Map<string, string>;
@@ -26,6 +27,7 @@ export function useVisibleStops({
     favoriteStops,
     nearbyStops,
     showNearbyStops,
+                                    showStopLabels = true,
     bounds,
     zoom,
     stopColorMap,
@@ -50,8 +52,8 @@ export function useVisibleStops({
 
         const stopsInView: VisibleStopItem[] = [];
         const addedNodeIds = new Set<string>();
-        const isRouteLabelVisible = zoom >= 14.2;
-        const isNearbyLabelVisible = zoom >= 15.6;
+        const isRouteLabelVisible = showStopLabels && zoom >= 14.2;
+        const isNearbyLabelVisible = showStopLabels && zoom >= 15.6;
 
         // 1. Include route stops that are inside current viewport bounds (or currently focused)
         if (zoom >= 12.2) {
@@ -85,7 +87,7 @@ export function useVisibleStops({
                     gpslati: fav.gpslati,
                     gpslong: fav.gpslong,
                     isRouteStop: false,
-                    showLabel: true,
+                    showLabel: showStopLabels || fav.nodeid === activeFocusedStopId,
                     color: "#f59e0b",
                 });
             }
@@ -129,6 +131,7 @@ export function useVisibleStops({
         favoriteStops,
         nearbyStops,
         showNearbyStops,
+        showStopLabels,
         bounds,
         zoom,
         stopColorMap,

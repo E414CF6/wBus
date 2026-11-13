@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import {useRouter, useSearchParams} from "next/navigation";
 import React, {useCallback, useEffect, useMemo, useState} from "react";
 
 import {useBusRouteMap} from "@entities/route/hooks";
@@ -9,7 +10,10 @@ import {useCityContext, useCityFeatures} from "@entities/city";
 import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
 import {RouteScheduleModal} from "@features/map-view/RouteScheduleModal";
+import {OnboardingModal} from "@features/onboarding";
 
+import {buildPageHref, resolveSpecialPageFromSearch, SPECIAL_PAGE_IDS,} from "@shared/config/pages";
+import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {isWeekend} from "@shared/lib/timeUtils";
 import {BottomNav} from "@widgets/BottomNav";
 import {buildMapUrl, useAppNavigation} from "./hooks/useAppNavigation";
@@ -20,8 +24,48 @@ const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
 const RouteLayer = dynamic(() => import("@widgets/MapContainer/RouteLayer"), {
     ssr: false,
 });
+const YonseiCampusPage = dynamic(
+    () => import("@widgets/YonseiCampusPage/YonseiCampusPage"),
+    {ssr: false}
+);
 
 export function AppShell() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const {settings, hasLoadedSettings, isOnboardingOpen} = useAppSettings();
+
+    const activeSpecialPage = useMemo(
+        () => resolveSpecialPageFromSearch(searchParams),
+        [searchParams]
+    );
+
+    // Redirect root "/" (with empty query string) to "/?page=yonsei_mirae" if configured as default start page
+    useEffect(() => {
+        if (!hasLoadedSettings) return;
+        if (isOnboardingOpen || !settings.hasCompletedOnboarding) return;
+        if (settings.defaultStartPage !== "yonsei") return;
+        if (activeSpecialPage !== null) return;
+        if (typeof window === "undefined") return;
+        if (window.location.pathname === "/" && window.location.search === "") {
+            router.replace(buildPageHref(SPECIAL_PAGE_IDS.YONSEI_MIRAE));
+        }
+    }, [
+        hasLoadedSettings,
+        isOnboardingOpen,
+        settings.hasCompletedOnboarding,
+        settings.defaultStartPage,
+        activeSpecialPage,
+        router,
+    ]);
+
+    if (activeSpecialPage === SPECIAL_PAGE_IDS.YONSEI_MIRAE) {
+        return <YonseiCampusPage/>;
+    }
+
+    return <MapAppShell/>;
+}
+
+function MapAppShell() {
     const {
         dayMode,
         setDayMode,
@@ -181,6 +225,9 @@ export function AppShell() {
                 lastUpdated={liveBusData.lastUpdated}
                 onReconnect={liveBusData.reconnect}
             />
+
+            {/* 4. First-Visit Onboarding Modal */}
+            <OnboardingModal/>
         </div>
     );
 }

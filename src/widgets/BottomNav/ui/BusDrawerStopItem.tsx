@@ -41,6 +41,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
 }) => {
     return (
         <div
+            data-stop-key={`${stop.nodeid}-${stop.nodeord ?? ""}`}
             data-has-bus={busesHere.length > 0 ? "true" : undefined}
             data-selected-stop={isSelected ? "true" : undefined}
             className={`cv-auto-stop relative flex items-center min-h-[58px] py-3 transition-colors cursor-pointer group border-b border-slate-100 dark:border-white/5 ${

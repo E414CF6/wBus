@@ -1,7 +1,8 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Bus, Clock, GraduationCap, MapPin, Navigation, Search, Star, X} from "lucide-react";
+import Link from "next/link";
+import {Bus, ChevronRight, Clock, GraduationCap, MapPin, Navigation, Search, Star, X} from "lucide-react";
 import {
     getRouteMeta,
     resolveRouteCategory,
@@ -13,6 +14,8 @@ import {
 } from "@entities/route";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {buildPageHref, SPECIAL_PAGE_IDS} from "@shared/config/pages";
+import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {useCityContext, useCityFeatures} from "@entities/city";
 import {useCityRoutes} from "@entities/route/hooks";
 import {useBusStop, useFavoriteStops} from "@entities/station/hooks";
@@ -54,6 +57,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
     const {currentCity} = useCityContext();
     const {hasUniversityShuttle} = useCityFeatures();
     const {map} = useAppMapContext();
+    const {settings} = useAppSettings();
 
     // Direct nationwide route list fetch for current city
     const {routes: cityRoutes = []} = useCityRoutes(currentCity.code);
@@ -223,7 +227,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             });
         }
 
-        if (hasUniversityShuttle) {
+        if (hasUniversityShuttle && settings.showYonseiFeatures) {
             list.push({
                 id: "YONSEI",
                 label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI,
@@ -238,7 +242,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         }
 
         return list;
-    }, [hasUniversityShuttle, sortedAllRoutes, bookmarks, favoriteStops.length, dynamicCategories]);
+    }, [hasUniversityShuttle, settings.showYonseiFeatures, sortedAllRoutes, bookmarks, favoriteStops.length, dynamicCategories]);
 
     // Fallback selected category to ALL if current category does not exist in active categories
     const effectiveCategory = useMemo(() => {
@@ -491,6 +495,30 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                 onScroll={handleScroll}
                 className="flex-1 overflow-y-auto p-4 sm:p-6 pt-2 sm:pt-3 custom-scrollbar space-y-4"
             >
+                {/* Yonsei Mirae Campus Dedicated Hub Banner (Wonju Only) */}
+                {hasUniversityShuttle && settings.showYonseiFeatures && !searchQuery && (
+                    <Link
+                        href={buildPageHref(SPECIAL_PAGE_IDS.YONSEI_MIRAE)}
+                        onClick={onClose}
+                        className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-[#003876] to-blue-800 text-white shadow-sm hover:shadow-md transition-all active:scale-[0.99] group"
+                    >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/15 shrink-0">
+                                <GraduationCap className="w-5 h-5"/>
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-xs sm:text-sm font-black tracking-tight truncate">
+                                    연세대학교 미래캠퍼스 전용 페이지
+                                </p>
+                                <p className="text-[11px] font-semibold text-sky-100/90 truncate">
+                                    무료 셔틀버스 · 30/34/34-1번 등·하교 통합 허브 바로가기
+                                </p>
+                            </div>
+                        </div>
+                        <ChevronRight
+                            className="w-4 h-4 shrink-0 text-white/80 group-hover:translate-x-0.5 transition-transform"/>
+                    </Link>
+                )}
                 {/* Matched Stops Section (Shown when searching or in FAV_STOPS category) */}
                 {matchedStops.length > 0 && (
                     <div>

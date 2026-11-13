@@ -4,6 +4,7 @@ import React from "react";
 import type {Metadata, Viewport} from "next";
 
 import {ThemeProvider} from "@shared/ui/ThemeProvider";
+import {AppSettingsProvider} from "@shared/context/AppSettingsContext";
 import {AppMapContextProvider} from "@shared/context/AppMapContext";
 import {CityContextProvider} from "@entities/city";
 import {ServiceWorkerRegister} from "@shared/ui/ServiceWorkerRegister";
@@ -107,11 +108,13 @@ export default function RootLayout({
     </head>
     <body className="min-h-screen bg-slate-50 text-slate-900 transition-colors duration-200">
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <AppMapContextProvider>
-            <CityContextProvider>
-                {children}
-            </CityContextProvider>
-        </AppMapContextProvider>
+        <AppSettingsProvider>
+            <AppMapContextProvider>
+                <CityContextProvider>
+                    {children}
+                </CityContextProvider>
+            </AppMapContextProvider>
+        </AppSettingsProvider>
     </ThemeProvider>
     <ServiceWorkerRegister/>
     <SpeedInsights/>

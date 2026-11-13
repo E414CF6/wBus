@@ -14,6 +14,7 @@ import {useBusData} from "@features/live-tracking/useBusData";
 import {API_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {useCityContext} from "@entities/city";
 
 import {LocateFixed, Navigation} from "lucide-react";
@@ -316,6 +317,7 @@ interface BusMarkerProps {
 export default function BusMarker({routeName, enabled = true, onPopupOpen, onPopupClose, cityCode}: BusMarkerProps) {
     const {currentCity} = useCityContext();
     const {map} = useAppMapContext();
+    const {settings} = useAppSettings();
     const effectiveCityCode = cityCode || currentCity?.code || "32020";
 
     // Data Fetching
@@ -354,8 +356,8 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
         setFollowedBusKey(null);
     }
 
-    const effectiveAnimationDuration = MAP_SETTINGS.ANIMATION.BUS_MOVE_MS;
-    const effectivePollingIntervalMs = API_CONFIG.LIVE.POLLING_INTERVAL_MS;
+    const effectiveAnimationDuration = settings.smoothBusAnimation ? MAP_SETTINGS.ANIMATION.BUS_MOVE_MS : 0;
+    const effectivePollingIntervalMs = settings.livePollingIntervalMs || API_CONFIG.LIVE.POLLING_INTERVAL_MS;
     const effectiveDataDelayMs = API_CONFIG.LIVE.DATA_DELAY_MS;
 
     const routeIndicesMap = useMemo(() => {

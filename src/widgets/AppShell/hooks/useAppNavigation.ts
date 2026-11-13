@@ -3,6 +3,7 @@
 import {useCallback, useEffect, useRef, useState} from "react";
 import {usePathname, useSearchParams} from "next/navigation";
 import {APP_CONFIG, getRecentRoutesStorageKey, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
+import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {useCityContext} from "@entities/city";
 import type {DayMode, NavTab, TimetableSubTab} from "@shared/types/navigation";
 
@@ -56,7 +57,13 @@ export function useAppNavigation() {
         return "yonsei";
     });
 
-    const [dayMode, setDayMode] = useState<DayMode>("AUTO");
+    const {settings} = useAppSettings();
+    const [dayMode, setDayMode] = useState<DayMode>(settings.defaultDayMode);
+    const [prevDefaultDayMode, setPrevDefaultDayMode] = useState<DayMode>(settings.defaultDayMode);
+    if (settings.defaultDayMode !== prevDefaultDayMode) {
+        setPrevDefaultDayMode(settings.defaultDayMode);
+        setDayMode(settings.defaultDayMode);
+    }
 
     // Route & Map Activation State
     const [selectedRoute, setSelectedRoute] = useState<string>(() => {

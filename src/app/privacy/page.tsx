@@ -174,9 +174,12 @@ export default function PrivacyPage() {
                         운용
                     </h2>
                     <div className="space-y-2 text-slate-600 dark:text-slate-300 text-sm">
-                        <p>서비스는 이용자의 편의성 증대를 위해 브라우저의 Local Storage 기술을 활용하여 다음의 설정값을 기기에 저장합니다:</p>
+                        <p>서비스는 이용자의 편의성 증대를 위해 브라우저의 Local Storage 및 쿠키 기술을 활용하여 다음의 설정값을 기기에 저장합니다:</p>
                         <ul className="list-disc list-inside pl-2 space-y-1 text-slate-500 dark:text-slate-400">
-                            <li>즐겨찾기한 버스 노선 목록</li>
+                            <li>사용자 맞춤 환경설정 쿠키 (<code className="font-mono">wbus_settings</code>: 기본 시작 화면, 연세대 기능 표시
+                                여부, 등·하교 기본 방향, 시간표 요일 기준, 지역 자동 감지, 햅틱 피드백)
+                            </li>
+                            <li>즐겨찾기한 버스 노선 및 정류장 목록</li>
                             <li>최근 조회한 노선 및 정류장</li>
                             <li>다크 모드 / 라이트 모드 테마 환경설정</li>
                         </ul>

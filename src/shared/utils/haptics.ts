@@ -6,6 +6,16 @@
 
 export type HapticFeedbackType = "light" | "medium" | "heavy" | "selection" | "success" | "warning";
 
+let isHapticEnabled = true;
+
+export function setHapticEnabled(enabled: boolean): void {
+    isHapticEnabled = enabled;
+}
+
+export function getHapticEnabled(): boolean {
+    return isHapticEnabled;
+}
+
 const HAPTIC_PATTERNS: Record<HapticFeedbackType, number | number[]> = {
     light: 8,
     medium: 18,
@@ -16,6 +26,10 @@ const HAPTIC_PATTERNS: Record<HapticFeedbackType, number | number[]> = {
 };
 
 export function triggerHaptic(type: HapticFeedbackType = "light"): boolean {
+    if (!isHapticEnabled) {
+        return false;
+    }
+
     if (typeof window === "undefined" || typeof navigator === "undefined") {
         return false;
     }

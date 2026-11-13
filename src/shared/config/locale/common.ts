@@ -169,6 +169,10 @@ export const ROUTE_MAP_STRINGS = {
 export const FOOTER_STRINGS = {
     COPYRIGHT: "© 2026 wBus",
     DESCRIPTION: "시내버스 정보 서비스",
-    LINKS: [{label: "이용약관", href: "/terms"}, {label: "개인정보처리방침", href: "/privacy"},],
+    LINKS: [
+        {label: "연세대 미래캠퍼스", href: "/?page=yonsei_mirae"},
+        {label: "이용약관", href: "/terms"},
+        {label: "개인정보처리방침", href: "/privacy"},
+    ],
     DISCLAIMER: "본 서비스는 참고용이며, 실제 운행 정보와 다를 수 있습니다.",
 } as const;

@@ -5,6 +5,7 @@ import type {CityInfo} from "../types";
 import {DEFAULT_CITY, findNearestCity, findNearestCityWithDistance, getCityByCode, NATIONWIDE_CITIES} from "../cities";
 import {STORAGE_KEYS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useAppSettings} from "@shared/context/AppSettingsContext";
 
 // ----------------------------------------------------------------------
 // Types
@@ -59,19 +60,25 @@ export function CityContextProvider({children}: CityContextProviderProps) {
         currentCityRef.current = currentCity;
     }, [currentCity]);
 
-    const [isAutoDetectEnabled, setIsAutoDetectEnabledState] = useState<boolean>(true);
+    const {settings, updateSettings} = useAppSettings();
+    const [isAutoDetectEnabled, setIsAutoDetectEnabledState] = useState<boolean>(settings.autoDetectCity);
+    const [prevSettingAutoDetect, setPrevSettingAutoDetect] = useState<boolean>(settings.autoDetectCity);
+
+    if (settings.autoDetectCity !== prevSettingAutoDetect) {
+        setPrevSettingAutoDetect(settings.autoDetectCity);
+        setIsAutoDetectEnabledState(settings.autoDetectCity);
+        if (!settings.autoDetectCity) {
+            setDetectedCity(null);
+        }
+    }
 
     const setIsAutoDetectEnabled = useCallback((enabled: boolean) => {
         setIsAutoDetectEnabledState(enabled);
         if (!enabled) {
             setDetectedCity(null);
         }
-        try {
-            localStorage.setItem(STORAGE_KEYS.CITY_AUTO_DETECT, String(enabled));
-        } catch {
-            // Ignore
-        }
-    }, []);
+        updateSettings({autoDetectCity: enabled});
+    }, [updateSettings]);
 
     // Restore saved city and preferences on initial mount without triggering SSR hydration mismatch
     useEffect(() => {

@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {triggerHaptic} from "./haptics";
+import {getHapticEnabled, setHapticEnabled, triggerHaptic} from "./haptics";
 
 describe("triggerHaptic", () => {
     let mockVibrate: ReturnType<typeof vi.fn>;
@@ -23,6 +23,7 @@ describe("triggerHaptic", () => {
     });
 
     afterEach(() => {
+        setHapticEnabled(true);
         vi.unstubAllGlobals();
         vi.restoreAllMocks();
     });
@@ -64,5 +65,12 @@ describe("triggerHaptic", () => {
 
         expect(() => triggerHaptic("heavy")).not.toThrow();
         expect(triggerHaptic("heavy")).toBe(false);
+    });
+
+    it("returns false and does not vibrate when haptic feedback is disabled", () => {
+        setHapticEnabled(false);
+        expect(getHapticEnabled()).toBe(false);
+        expect(triggerHaptic("light")).toBe(false);
+        expect(mockVibrate).not.toHaveBeenCalled();
     });
 });

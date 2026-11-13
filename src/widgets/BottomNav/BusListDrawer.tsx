@@ -79,6 +79,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const [isRefreshing, setIsRefreshing] = useState(false);
     const listRef = useRef<HTMLDivElement>(null);
     const hasAutoScrolledRef = useRef<string | null>(null);
+    const suppressNextMapSyncRef = useRef(false);
 
     // Listen to external focus stop event (from map marker click or search)
     useEffect(() => {
@@ -221,47 +222,53 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         getDirection,
     });
 
-    // Keep the route timeline aligned with the bus nearest to the current map center
-    const syncNearestBusToMapCenter = useCallback(() => {
-        if (!map || runningBuses.length === 0 || busesByStopKey.size === 0) return;
+    // Keep the route timeline aligned & scrolled to the stop nearest to the current map center
+    const syncNearestStopToMapCenter = useCallback(() => {
+        if (!map || !isOpen || stopSearchQuery.trim().length > 0) return;
+        if (suppressNextMapSyncRef.current) {
+            suppressNextMapSyncRef.current = false;
+            return;
+        }
+
+        const stopsPool = filteredStops.length > 0 ? filteredStops : currentStops;
+        if (stopsPool.length === 0) return;
 
         const center = map.getCenter();
-        let nearestBus: BusItem | null = null;
+        let nearestStop: RouteVariationStop | null = null;
         let nearestDistance = Infinity;
 
-        for (const bus of runningBuses) {
-            const distance = getHaversineDistance(center.lat, center.lng, bus.gpslati, bus.gpslong);
+        for (const stop of stopsPool) {
+            if (!stop.gpslati || !stop.gpslong) continue;
+            const distance = getHaversineDistance(center.lat, center.lng, stop.gpslati, stop.gpslong);
             if (distance < nearestDistance) {
                 nearestDistance = distance;
-                nearestBus = bus;
+                nearestStop = stop;
             }
         }
 
-        if (!nearestBus) return;
+        if (!nearestStop) return;
 
-        for (const [stopKey, buses] of busesByStopKey) {
-            if (buses.includes(nearestBus)) {
-                const matchedStop = currentStops.find(
-                    (stop) => `${stop.nodeid}-${stop.nodeord ?? ""}` === stopKey
-                );
-                if (matchedStop) setSelectedStopId(matchedStop.nodeid);
-                return;
+        setSelectedStopId(nearestStop.nodeid);
+        const stopKey = `${nearestStop.nodeid}-${nearestStop.nodeord ?? ""}`;
+        requestAnimationFrame(() => {
+            if (!listRef.current) return;
+            const targetEl = listRef.current.querySelector(
+                `[data-stop-key="${CSS.escape(stopKey)}"]`
+            );
+            if (targetEl) {
+                targetEl.scrollIntoView({behavior: "smooth", block: "center"});
             }
-        }
-    }, [map, runningBuses, busesByStopKey, currentStops]);
+        });
+    }, [map, isOpen, stopSearchQuery, filteredStops, currentStops]);
 
     useEffect(() => {
         if (!isOpen || !map) return;
 
-        const rafId = requestAnimationFrame(() => {
-            syncNearestBusToMapCenter();
-        });
-        map.on("moveend", syncNearestBusToMapCenter);
+        map.on("moveend", syncNearestStopToMapCenter);
         return () => {
-            cancelAnimationFrame(rafId);
-            map.off("moveend", syncNearestBusToMapCenter);
+            map.off("moveend", syncNearestStopToMapCenter);
         };
-    }, [isOpen, map, syncNearestBusToMapCenter]);
+    }, [isOpen, map, syncNearestStopToMapCenter]);
 
     // Auto-scroll on initial load to first running bus
     useEffect(() => {
@@ -295,6 +302,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             setSelectedStop(stop);
 
             if (map && stop.gpslong && stop.gpslati) {
+                suppressNextMapSyncRef.current = true;
                 map.flyTo({
                     center: [stop.gpslong, stop.gpslati],
                     zoom: Math.max(map.getZoom(), 16),
@@ -313,6 +321,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const handleBusBadgeClick = useCallback(
         (e: React.MouseEvent, lat: number, lng: number) => {
             e.stopPropagation();
+            suppressNextMapSyncRef.current = true;
             onBusClick(lat, lng);
             if (!isDesktop) {
                 onClose();
