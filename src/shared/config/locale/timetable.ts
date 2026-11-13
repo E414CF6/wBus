@@ -6,10 +6,10 @@ export const TIMETABLE_STRINGS = {
     STATS_TOTAL_ROUTES: "등록 노선",
     STATS_BOOKMARKS: "즐겨찾기",
 
-    BASE_DATETIME_LABEL: "기준 일시:",
+    BASE_DATETIME_LABEL: "시간표 갱신:",
     CACHE_REFRESH_BUTTON: "시간표 갱신",
     CACHE_REFRESHING: "갱신 중...",
-    CACHE_BANNER_TITLE: "기준 일시",
+    CACHE_BANNER_TITLE: "시간표 갱신",
 
     BOOKMARKS_BANNER_TITLE: "즐겨찾기 노선 모아보기",
     BOOKMARKS_BANNER_COUNT: (count: number) => `${count}개 노선`,

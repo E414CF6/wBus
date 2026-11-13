@@ -17,6 +17,7 @@ import {useVisibleStops} from "./hooks/useVisibleStops";
 export interface BusStopMarkerProps {
     routeName: string;
     onRouteChange?: (routeName: string) => void;
+    enabled?: boolean;
     cityCode?: string;
     showNearbyStops?: boolean;
     showStopLabels?: boolean;
@@ -27,6 +28,7 @@ export interface BusStopMarkerProps {
 export const BusStopMarker = ({
     routeName,
     onRouteChange,
+    enabled = true,
     cityCode,
     showNearbyStops = true,
                                   showStopLabels = true,
@@ -35,7 +37,8 @@ export const BusStopMarker = ({
 }: BusStopMarkerProps) => {
     const {currentCity} = useCityContext();
     const effectiveCityCode = cityCode || currentCity?.code || "32020";
-    const routeStops = useBusStop(routeName, effectiveCityCode);
+    const activeRouteName = enabled ? routeName : "";
+    const routeStops = useBusStop(activeRouteName, effectiveCityCode);
     const {favoriteStops, isFavoriteStop, toggleFavoriteStop} = useFavoriteStops(effectiveCityCode);
 
     const {map} = useAppMapContext();
@@ -57,7 +60,7 @@ export const BusStopMarker = ({
     );
 
     // Retrieve polyline data to synchronize stop marker & label colors with route segments
-    const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName, true, effectiveCityCode);
+    const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName, enabled, effectiveCityCode);
     const rawRouteIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo?.vehicleRouteIds]);
     const routeIds = useMemo(() => {
         if (effectiveCityCode === "32020") {
@@ -146,6 +149,11 @@ export const BusStopMarker = ({
     }, [map]);
 
     const [eventFocusedStop, setEventFocusedStop] = useState<BusStop | null>(null);
+    const [prevFocusedCityCode, setPrevFocusedCityCode] = useState(effectiveCityCode);
+    if (prevFocusedCityCode !== effectiveCityCode) {
+        setPrevFocusedCityCode(effectiveCityCode);
+        setEventFocusedStop(null);
+    }
     const activeFocusedStopId = focusedStopId || eventFocusedStop?.nodeid || null;
 
     useEffect(() => {

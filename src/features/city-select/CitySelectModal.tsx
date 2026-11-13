@@ -205,7 +205,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
             isOpen={isOpen}
             onClose={onClose}
             title="서비스 지역 선택"
-            subtitle="전국 138개 시·군 실시간 버스 노선 및 도착 정보 지원"
+            subtitle={`전국 ${NATIONWIDE_CITIES.length}개 시·군 실시간 버스 노선 및 도착 정보 지원`}
             icon={modalIcon}
             headerBadge={headerBadge}
             footer={modalFooter}
@@ -249,10 +249,13 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                         <Search className="w-4.5 h-4.5 absolute left-3.5 text-slate-400 pointer-events-none"/>
                         <input
                             ref={searchInputRef}
+                            id="city-search-input"
+                            name="city-search"
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="도시·지역 이름 검색 (예: 서울, 부산, 수원, 원주)"
+                            aria-label="도시·지역 이름 검색"
                             className="w-full pl-10 pr-10 py-2.5 sm:py-3 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 rounded-2xl text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
                         />
                         {searchQuery && (
@@ -366,16 +369,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                             return (
                                 <div
                                     key={city.code}
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => handleSelectCity(city)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter" || e.key === " ") {
-                                            e.preventDefault();
-                                            handleSelectCity(city);
-                                        }
-                                    }}
-                                    className={`cv-auto-city flex items-center justify-between p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer select-none active:scale-[0.98] ${
+                                    className={`cv-auto-city flex items-center justify-between rounded-2xl border text-left transition-all duration-200 select-none ${
                                         isSelected
                                             ? "bg-blue-50 dark:bg-blue-950/40 border-blue-500 dark:border-blue-400 ring-2 ring-blue-500/20 shadow-xs"
                                             : isDetected
@@ -383,7 +377,11 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                                 : "bg-black/[0.02] dark:bg-white/[0.03] border-black/5 dark:border-white/5 hover:border-blue-500/40 hover:bg-blue-500/[0.04] dark:hover:border-blue-400/40 dark:hover:bg-blue-400/[0.08]"
                                     }`}
                                 >
-                                    <div className="min-w-0 pr-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSelectCity(city)}
+                                        className="flex-1 min-w-0 p-3 pr-1 text-left cursor-pointer active:scale-[0.98] rounded-l-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                    >
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             <span
                                                 className={`font-black text-xs sm:text-sm truncate ${
@@ -410,19 +408,13 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                         <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 truncate mt-0.5">
                                             {city.province}
                                         </p>
-                                    </div>
+                                    </button>
 
                                     {/* Action Buttons: Favorite Star & Active Selection Check */}
-                                    <div className="flex items-center gap-1 shrink-0 ml-1">
+                                    <div className="flex items-center gap-1 shrink-0 pr-3 pl-1">
                                         <button
                                             type="button"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                toggleFavoriteCity(city.code);
-                                            }}
-                                            onKeyDown={(e) => {
-                                                e.stopPropagation();
-                                            }}
+                                            onClick={() => toggleFavoriteCity(city.code)}
                                             title={isFav ? "즐겨찾기 해제" : "즐겨찾기 등록"}
                                             aria-label={isFav ? `${city.name} 즐겨찾기 해제` : `${city.name} 즐겨찾기 등록`}
                                             className="p-1.5 -mr-1 rounded-xl text-slate-400 hover:text-amber-500 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer active:scale-125"

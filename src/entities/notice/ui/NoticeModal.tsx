@@ -158,10 +158,13 @@ export function NoticeModal({
                             <form onSubmit={handleSearchSubmit} className="relative flex items-center">
                                 <Search className="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none"/>
                                 <input
+                                    id="notice-search-input"
+                                    name="notice-search"
                                     type="text"
                                     value={searchInput}
                                     onChange={(e) => setSearchInput(e.target.value)}
                                     placeholder={UI_TEXT.NOTICE.SEARCH_PLACEHOLDER}
+                                    aria-label={UI_TEXT.NOTICE.SEARCH_PLACEHOLDER}
                                     className="
                                         w-full pl-10 pr-20 py-2 text-xs sm:text-sm rounded-xl
                                         bg-slate-100 dark:bg-white/5 border border-transparent focus:border-amber-500/50 focus:bg-white dark:focus:bg-black/50 

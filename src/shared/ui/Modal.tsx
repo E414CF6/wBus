@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useCallback, useEffect, useSyncExternalStore} from "react";
+import React, {useCallback, useEffect, useRef, useSyncExternalStore} from "react";
 import {createPortal} from "react-dom";
 import {X} from "lucide-react";
 import {useBodyScrollLock} from "./useBodyScrollLock";
@@ -63,6 +63,10 @@ export interface ModalProps {
      * 뒤로가기(popstate) 히스토리 연동 활성화 여부 (기본: true)
      */
     enableHistory?: boolean;
+    /**
+     * 하위 모달이 열린 동안 히스토리/스크롤 락은 유지한 채 현재 다이얼로그 표시와 키보드 이벤트를 일시 중단합니다.
+     */
+    suspended?: boolean;
 }
 
 const emptySubscribe = () => () => {
@@ -93,9 +97,11 @@ export function Modal({
                           modalId,
                           queryKey = "modal",
                           enableHistory = true,
+                          suspended = false,
                           children,
                       }: ModalProps) {
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
+    const dialogRef = useRef<HTMLDivElement>(null);
 
     useBodyScrollLock(isOpen);
 
@@ -110,26 +116,39 @@ export function Modal({
 
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
-            if (closeOnEscape && e.key === "Escape") {
+            if (closeOnEscape && !suspended && e.key === "Escape") {
                 onClose();
             }
         },
-        [closeOnEscape, onClose]
+        [closeOnEscape, suspended, onClose]
     );
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen || suspended) return;
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isOpen, handleKeyDown]);
+    }, [isOpen, suspended, handleKeyDown]);
 
-    if (!isOpen || !isClient) return null;
+    useEffect(() => {
+        if (!isOpen || suspended || !isClient) return;
+        const frameId = requestAnimationFrame(() => {
+            const dialog = dialogRef.current;
+            if (dialog && !dialog.contains(document.activeElement)) {
+                dialog.focus({preventScroll: true});
+            }
+        });
+        return () => cancelAnimationFrame(frameId);
+    }, [isOpen, suspended, isClient]);
+
+    if (!isOpen || suspended || !isClient) return null;
 
     const hasHeader = Boolean(title || icon || headerLeading || headerActions || !hideCloseButton);
 
     const modalContent = (
         <div
-            className={`fixed inset-0 ${zIndex} flex items-center justify-center pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] px-3 sm:p-4 select-none pointer-events-auto`}
+            ref={dialogRef}
+            tabIndex={-1}
+            className={`fixed inset-0 ${zIndex} flex items-center justify-center pt-[calc(env(safe-area-inset-top,0px)+0.75rem)] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] px-3 sm:p-4 select-none pointer-events-auto outline-none`}
             role="dialog"
             aria-modal="true"
             aria-label={ariaLabel}

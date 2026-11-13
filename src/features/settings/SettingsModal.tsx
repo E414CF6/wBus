@@ -212,6 +212,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                 maxWidth="lg"
                 height="default"
                 modalId="settings"
+                suspended={isYonseiModalOpen}
                 ariaLabel="wBus 환경설정 모달"
             >
                 {/* Segmented Tab Bar */}

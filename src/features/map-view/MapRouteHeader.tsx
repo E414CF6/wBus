@@ -35,6 +35,7 @@ interface MapRouteHeaderProps {
     /** @deprecated Use selectedVariantId / onSelectVariant instead */
     onSelectDirection?: (dir: "all" | "up" | "down") => void;
     onOpenScheduleModal?: (docOrSubTab?: string, initialLocation?: "origin" | "dest") => void;
+    enabled?: boolean;
 }
 
 const emptySubscribe = () => () => {
@@ -52,6 +53,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                                   selectedVariantId = null,
                                                                   onSelectVariant,
                                                                   onOpenScheduleModal,
+                                                                  enabled = true,
                                                               }) => {
     const {currentCity} = useCityContext();
     const {hasDetailedTimetable, hasUniversityShuttle, defaultQuickRoutes} = useCityFeatures();
@@ -67,7 +69,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
     const {routes: scheduleRoutes} = useSchedule(hasDetailedTimetable);
 
     // Fetch variations for current route (e.g. 30 has basic, via-Sangji, etc.)
-    const {variations} = useRouteVariations(selectedRoute, true, currentCity.code);
+    const {variations} = useRouteVariations(selectedRoute, enabled && Boolean(selectedRoute), currentCity.code);
 
     // Close dropdown on outside click
     useEffect(() => {

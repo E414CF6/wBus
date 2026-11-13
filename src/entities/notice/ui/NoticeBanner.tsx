@@ -195,7 +195,8 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({
                     )}
 
                     {/* View All Button */}
-                    <div
+                    <button
+                        type="button"
                         onClick={(e) => {
                             e.stopPropagation();
                             onClick();
@@ -204,7 +205,7 @@ export const NoticeBanner: React.FC<NoticeBannerProps> = ({
                     >
                         <span>{UI_TEXT.NOTICE.VIEW_ALL}</span>
                         <ChevronRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5"/>
-                    </div>
+                    </button>
                 </div>
             </div>
         </div>

@@ -411,10 +411,13 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                     <Search className="w-4.5 h-4.5 absolute left-3.5 text-slate-400 pointer-events-none"/>
                     <input
                         ref={searchInputRef}
+                        id="route-search-input"
+                        name="route-search"
                         type="text"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder={UI_TEXT.ROUTE_SELECT.SEARCH_PLACEHOLDER}
+                        aria-label={UI_TEXT.ROUTE_SELECT.SEARCH_PLACEHOLDER}
                         className="w-full pl-10 pr-10 py-2.5 sm:py-3 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 rounded-2xl text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all shadow-inner"
                     />
                     {searchQuery && (
@@ -616,14 +619,17 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                             return (
                                 <div
                                     key={route}
-                                    onClick={() => handleSelect(route)}
-                                    className={`cv-auto-route group relative flex items-start justify-between p-3.5 sm:p-4 rounded-2xl transition-all duration-200 cursor-pointer select-none active:scale-[0.98] border ${
+                                    className={`cv-auto-route group relative flex items-start justify-between rounded-2xl transition-all duration-200 select-none border ${
                                         isSelected
                                             ? `bg-slate-50/90 dark:bg-white/[0.06] ${meta.colorTheme.border} shadow-md ring-2 ${meta.colorTheme.ring || "ring-blue-500/30"}`
                                             : "bg-black/[0.02] dark:bg-white/[0.03] hover:bg-black/[0.05] dark:hover:bg-white/[0.06] border-black/5 dark:border-white/5 hover:border-black/15 dark:hover:border-white/15"
                                     }`}
                                 >
-                                    <div className="flex items-start gap-3 min-w-0 flex-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => handleSelect(route)}
+                                        className="flex items-start gap-3 min-w-0 flex-1 p-3.5 sm:p-4 pr-1 text-left cursor-pointer active:scale-[0.98] rounded-l-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                    >
                                         {/* Route Number Badge */}
                                         <div
                                             className={`flex items-center justify-center min-w-[50px] sm:min-w-[56px] px-2.5 py-1.5 rounded-xl font-black text-sm sm:text-base tracking-tight shrink-0 shadow-xs ${meta.colorTheme.bg} text-white`}
@@ -664,10 +670,10 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                 </p>
                                             )}
                                         </div>
-                                    </div>
+                                    </button>
 
                                     {/* Right Controls: Bookmark */}
-                                    <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                                    <div className="flex items-center gap-1.5 shrink-0 pt-3.5 sm:pt-4 pr-3.5 sm:pr-4 pl-1">
                                         <button
                                             type="button"
                                             onClick={(e) => toggleBookmark(e, route)}

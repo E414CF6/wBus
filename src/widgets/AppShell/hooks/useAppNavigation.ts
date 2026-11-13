@@ -38,7 +38,7 @@ export function buildScheduleUrl(cityCode?: string, subTab?: TimetableSubTab): s
 export function useAppNavigation() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
-    const {currentCity} = useCityContext();
+    const {currentCity, isCityReady} = useCityContext();
     const currentCityCode = currentCity.code;
     const locationKey = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
 
@@ -71,6 +71,18 @@ export function useAppNavigation() {
         if (queryRoute !== null && queryRoute !== "") return queryRoute;
         return MAP_SETTINGS.DEFAULT_ROUTE;
     });
+
+    // Clear stale route from the previous city when the user switches cities
+    const [prevCityCode, setPrevCityCode] = useState<string | null>(null);
+    if (isCityReady && prevCityCode === null) {
+        setPrevCityCode(currentCityCode);
+    } else if (isCityReady && prevCityCode !== null && prevCityCode !== currentCityCode) {
+        setPrevCityCode(currentCityCode);
+        const queryRoute = searchParams.get("route");
+        if (!queryRoute) {
+            setSelectedRoute("");
+        }
+    }
 
     const isMapActive = activeTab === "map";
 
@@ -109,16 +121,18 @@ export function useAppNavigation() {
         return () => window.removeEventListener("popstate", handlePopState);
     }, []);
 
-    // Restore saved preferences once on initial client mount if not in URL
+    // Restore saved preferences once initial city resolution completes if not in URL
     const hasRestoredRef = useRef(false);
     useEffect(() => {
-        if (hasRestoredRef.current) return;
+        if (!isCityReady || hasRestoredRef.current) return;
         hasRestoredRef.current = true;
         const frameId = requestAnimationFrame(() => {
             try {
                 const search = new URLSearchParams(window.location.search);
                 const savedRoute = localStorage.getItem(STORAGE_KEYS.ROUTE_ID);
-                if (savedRoute && !search.get("route")) {
+                const savedCityCode = localStorage.getItem(STORAGE_KEYS.CITY_CODE);
+                const canRestoreSavedRoute = !savedCityCode || savedCityCode === currentCityCode;
+                if (savedRoute && !search.get("route") && canRestoreSavedRoute) {
                     setSelectedRoute(savedRoute);
                 }
 
@@ -137,7 +151,7 @@ export function useAppNavigation() {
             }
         });
         return () => cancelAnimationFrame(frameId);
-    }, []);
+    }, [isCityReady, currentCityCode]);
 
     const handleScheduleSubTabChange = useCallback(
         (subTab: TimetableSubTab) => {
@@ -188,7 +202,11 @@ export function useAppNavigation() {
             } catch {
                 // Ignore
             }
-            if (typeof window !== "undefined" && activeTab === "map") {
+            if (
+                typeof window !== "undefined" &&
+                activeTab === "map" &&
+                window.location.pathname !== "/schedule"
+            ) {
                 const targetUrl = buildMapUrl(route, targetCityCode);
                 window.history.replaceState(null, "", targetUrl);
             }

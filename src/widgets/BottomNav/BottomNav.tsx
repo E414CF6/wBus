@@ -47,7 +47,7 @@ export interface BottomNavProps {
 /**
  * Unified Floating Pill Navigation Bar (Map-Centric Architecture):
  * - Brand Identity (Click to recenter current city)
- * - Region Selector Button (139-city modal + detected city indicator)
+ * - Region Selector Button (140-city modal + detected city indicator)
  * - Route Selector & Running Bus List Drawer Toggle
  * - Settings Modal Trigger (Yonsei options, Theme, DayMode, Device Preferences)
  */
@@ -145,7 +145,7 @@ function BottomNavComponent({
 
     return (
         <>
-            {/* 1. Region Selection Modal (139 Nationwide Cities) */}
+            {/* 1. Region Selection Modal (140 Nationwide Cities) */}
             <CitySelectModal
                 isOpen={isCityModalOpen}
                 onClose={() => setIsCityModalOpen(false)}

@@ -58,8 +58,10 @@ const RouteLayer = memo(({
     return (<>
         <BusMarker routeName={routeName} enabled={enabled} cityCode={cityCode}/>
         <BusStopMarker
+            key={cityCode || "default"}
             routeName={routeName}
             onRouteChange={onRouteChange}
+            enabled={enabled}
             cityCode={cityCode}
             showNearbyStops={effectiveShowNearbyStops}
             showStopLabels={settings.showStopLabels}
@@ -86,6 +88,7 @@ const RouteLayer = memo(({
         )}
         <BusRoutePolyline
             routeName={routeName}
+            enabled={enabled}
             selectedDirection={selectedDirection}
             selectedVariantId={selectedVariantId}
             cityCode={cityCode}

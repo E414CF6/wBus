@@ -14,6 +14,7 @@ import {Layer, Source} from "react-map-gl/maplibre";
 
 export interface BusRoutePolylineProps {
     routeName: string;
+    enabled?: boolean;
     selectedDirection?: "all" | "up" | "down";
     selectedVariantId?: string | null;
     cityCode?: string;
@@ -21,6 +22,7 @@ export interface BusRoutePolylineProps {
 
 export default function BusRoutePolyline({
                                              routeName,
+                                             enabled = true,
                                              selectedDirection = "all",
                                              selectedVariantId = null,
                                              cityCode,
@@ -33,7 +35,7 @@ export default function BusRoutePolyline({
     const {currentCity} = useCityContext();
     const effectiveCityCode = cityCode || currentCity?.code || "32020";
 
-    const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName, true, effectiveCityCode);
+    const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName, enabled, effectiveCityCode);
     const rawRouteIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo?.vehicleRouteIds]);
     const routeIds = useMemo(() => {
         if (effectiveCityCode === "32020") {

@@ -100,15 +100,23 @@ export function registerDynamicRouteMeta(
         const origin = r.startnodenm || "기점";
         const destination = r.endnodenm || "종점";
         const formatTime = (t?: string | number) => {
-            if (!t) return undefined;
-            const s = String(t).padStart(4, "0");
+            if (t === undefined || t === null || t === "") return undefined;
+            const digits = String(t).replace(/[^0-9]/g, "");
+            if (digits.length < 3) return undefined;
+            const s = digits.padStart(4, "0").slice(0, 4);
             return `${s.slice(0, 2)}:${s.slice(2, 4)}`;
         };
-        const firstTime = formatTime(r.startvehicletime);
-        const lastTime = formatTime(r.endvehicletime);
+        let firstTime = formatTime(r.startvehicletime);
+        let lastTime = formatTime(r.endvehicletime);
+        // MOLIT TAGO API uses "0000" for both start/end when schedule bounds are unknown
+        if (firstTime === "00:00" && lastTime === "00:00") {
+            firstTime = undefined;
+            lastTime = undefined;
+        }
         const routeType = r.routetp;
 
         const key = `${cityCode}:${routeNo}`;
+        const existing = DYNAMIC_ROUTE_METADATA.get(key);
         const genericType = classifyRouteType(routeNo, routeType);
         DYNAMIC_ROUTE_METADATA.set(key, {
             routeNo,
@@ -116,9 +124,9 @@ export function registerDynamicRouteMeta(
             destination,
             description: routeType ? `[${routeType}] ${origin} ↔ ${destination}` : `${origin} ↔ ${destination}`,
             isYonsei: cityCode === "32020" && YONSEI_ROUTE_SET.has(routeNo),
-            firstTime,
-            lastTime,
-            routeType,
+            firstTime: firstTime ?? existing?.firstTime,
+            lastTime: lastTime ?? existing?.lastTime,
+            routeType: routeType ?? existing?.routeType,
             genericType,
             colorTheme: ROUTE_TYPE_COLORS[genericType],
         });

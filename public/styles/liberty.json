@@ -2271,7 +2271,8 @@
       "minzoom": 8,
       "filter": [
         "all",
-        ["<=", ["get", "ref_length"], 6],
+        ["has", "ref_length"],
+        ["<=", ["number", ["get", "ref_length"], 99], 6],
         [
           "match",
           ["geometry-type"],
@@ -2307,7 +2308,8 @@
       "minzoom": 7,
       "filter": [
         "all",
-        ["<=", ["get", "ref_length"], 6],
+        ["has", "ref_length"],
+        ["<=", ["number", ["get", "ref_length"], 99], 6],
         [
           "match",
           ["geometry-type"],
@@ -2342,7 +2344,8 @@
       "minzoom": 9,
       "filter": [
         "all",
-        ["<=", ["get", "ref_length"], 6],
+        ["has", "ref_length"],
+        ["<=", ["number", ["get", "ref_length"], 99], 6],
         [
           "match",
           ["geometry-type"],

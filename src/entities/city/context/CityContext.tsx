@@ -2,7 +2,15 @@
 
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from "react";
 import type {CityInfo} from "../types";
-import {DEFAULT_CITY, findNearestCity, findNearestCityWithDistance, getCityByCode, NATIONWIDE_CITIES} from "../cities";
+import {
+    DEFAULT_CITY,
+    findCityByCode,
+    findNearestCity,
+    findNearestCityWithDistance,
+    getCityByCode,
+    NATIONWIDE_CITIES,
+    resolveInitialCity,
+} from "../cities";
 import {STORAGE_KEYS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
@@ -17,6 +25,7 @@ interface SetCityOptions {
 
 interface CityContextType {
     currentCity: CityInfo;
+    isCityReady: boolean;
     detectedCity: CityInfo | null;
     confirmDetectedCity: () => void;
     dismissDetectedCity: () => void;
@@ -53,6 +62,7 @@ export function useCityContext(): CityContextType {
 
 export function CityContextProvider({children}: CityContextProviderProps) {
     const [currentCity, setCurrentCityState] = useState<CityInfo>(DEFAULT_CITY);
+    const [isCityReady, setIsCityReady] = useState<boolean>(false);
     const [detectedCity, setDetectedCity] = useState<CityInfo | null>(null);
 
     const currentCityRef = useRef<CityInfo>(currentCity);
@@ -89,27 +99,19 @@ export function CityContextProvider({children}: CityContextProviderProps) {
                     setIsAutoDetectEnabledState(savedAuto !== "false");
                 }
 
-                const params = new URLSearchParams(window.location.search);
-                const queryCity = params.get("cityCode") || params.get("city");
-                if (queryCity) {
-                    const found = getCityByCode(queryCity);
-                    if (found && found.code !== currentCityRef.current.code) {
-                        currentCityRef.current = found;
-                        setCurrentCityState(found);
-                        return;
-                    }
-                }
-
-                const savedCode = localStorage.getItem(STORAGE_KEYS.CITY_CODE);
-                if (savedCode) {
-                    const found = getCityByCode(savedCode);
-                    if (found && found.code !== currentCityRef.current.code) {
-                        currentCityRef.current = found;
-                        setCurrentCityState(found);
-                    }
+                const resolvedCity = resolveInitialCity({
+                    search: window.location.search,
+                    pathname: window.location.pathname,
+                    savedCode: localStorage.getItem(STORAGE_KEYS.CITY_CODE),
+                });
+                if (resolvedCity.code !== currentCityRef.current.code) {
+                    currentCityRef.current = resolvedCity;
+                    setCurrentCityState(resolvedCity);
                 }
             } catch {
                 // Ignore localStorage errors
+            } finally {
+                setIsCityReady(true);
             }
         });
         return () => cancelAnimationFrame(frameId);
@@ -231,11 +233,9 @@ export function CityContextProvider({children}: CityContextProviderProps) {
             if (typeof window === "undefined") return;
             const params = new URLSearchParams(window.location.search);
             const queryCity = params.get("cityCode") || params.get("city");
-            if (queryCity && queryCity !== currentCityRef.current.code) {
-                const found = getCityByCode(queryCity);
-                if (found && found.code !== currentCityRef.current.code) {
-                    setCity(found, {skipFlyTo: true});
-                }
+            const found = findCityByCode(queryCity);
+            if (found && found.code !== currentCityRef.current.code) {
+                setCity(found, {skipFlyTo: true});
             }
         };
         window.addEventListener("popstate", handlePopState);
@@ -270,6 +270,7 @@ export function CityContextProvider({children}: CityContextProviderProps) {
     const value = useMemo(
         () => ({
             currentCity,
+            isCityReady,
             detectedCity,
             confirmDetectedCity,
             dismissDetectedCity,
@@ -283,6 +284,7 @@ export function CityContextProvider({children}: CityContextProviderProps) {
         }),
         [
             currentCity,
+            isCityReady,
             detectedCity,
             confirmDetectedCity,
             dismissDetectedCity,

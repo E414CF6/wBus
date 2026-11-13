@@ -1,11 +1,13 @@
 import {describe, expect, it} from "vitest";
 import {
     DEFAULT_CITY,
+    findCityByCode,
     findNearestCity,
     findNearestCityWithDistance,
     getCityByCode,
     NATIONWIDE_CITIES,
     resolveCityRegion,
+    resolveInitialCity,
     searchCities,
     sortCitiesByMajor,
 } from "./cities";
@@ -165,6 +167,50 @@ describe("cities entity & nearest city resolution", () => {
             expect(resolveCityRegion(gwangju)).toBe("JEOLLA");
             expect(resolveCityRegion(busan)).toBe("GYEONGSANG");
             expect(resolveCityRegion(jeju)).toBe("JEJU");
+        });
+    });
+
+    describe("findCityByCode & resolveInitialCity", () => {
+        it("returns null for unknown or empty codes in findCityByCode", () => {
+            expect(findCityByCode(null)).toBeNull();
+            expect(findCityByCode("99999")).toBeNull();
+            expect(findCityByCode("11")?.code).toBe("11");
+        });
+
+        it("keeps query cityCode 32020 even when localStorage saved another city", () => {
+            const resolved = resolveInitialCity({
+                search: "?cityCode=32020&route=30",
+                pathname: "/",
+                savedCode: "11",
+            });
+            expect(resolved.code).toBe("32020");
+        });
+
+        it("defaults /schedule without cityCode to Wonju even when another city is saved", () => {
+            const resolved = resolveInitialCity({
+                search: "",
+                pathname: "/schedule",
+                savedCode: "11",
+            });
+            expect(resolved.code).toBe("32020");
+        });
+
+        it("respects explicit cityCode on /schedule", () => {
+            const resolved = resolveInitialCity({
+                search: "?cityCode=11",
+                pathname: "/schedule",
+                savedCode: "32020",
+            });
+            expect(resolved.code).toBe("11");
+        });
+
+        it("falls back to saved city when query city is missing or invalid", () => {
+            expect(
+                resolveInitialCity({search: "", pathname: "/", savedCode: "11"}).code
+            ).toBe("11");
+            expect(
+                resolveInitialCity({search: "?cityCode=invalid", pathname: "/", savedCode: "11"}).code
+            ).toBe("11");
         });
     });
 });

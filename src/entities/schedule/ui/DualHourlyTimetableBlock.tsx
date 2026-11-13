@@ -140,10 +140,13 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
                 <div className={`relative w-full ${compact ? "" : "sm:w-52"}`}>
                     <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"/>
                     <input
+                        id={`timetable-search-${locationLabel}`}
+                        name="timetable-search"
                         type="text"
                         value={tableSearch}
                         onChange={(e) => setTableSearch(e.target.value)}
                         placeholder="시간·경유지 검색 (예: 08:, 원주역)"
+                        aria-label="시간·경유지 검색"
                         className="w-full pl-8 pr-7 py-1 text-xs rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#11141c] text-slate-900 dark:text-white focus:outline-none focus:border-blue-500"
                     />
                     {tableSearch && (

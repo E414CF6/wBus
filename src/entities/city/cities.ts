@@ -1,7 +1,7 @@
 import type {CityInfo} from "./types";
 
 /**
- * Standard nationwide city codes provided by MOLIT TAGO API & Seoul TOPIS (139 cities/counties)
+ * Standard nationwide city codes provided by MOLIT TAGO API & Seoul TOPIS (140 cities/counties)
  */
 export const NATIONWIDE_CITIES: CityInfo[] = [
     // 특별시 / 광역시 / 특별자치시 / 특별자치도
@@ -168,9 +168,36 @@ export const DEFAULT_CITY: CityInfo = NATIONWIDE_CITIES.find((c) => c.code === "
 const cityMapByCode = new Map<string, CityInfo>();
 NATIONWIDE_CITIES.forEach((c) => cityMapByCode.set(c.code, c));
 
+export function findCityByCode(code?: string | null): CityInfo | null {
+    if (!code) return null;
+    return cityMapByCode.get(code) ?? null;
+}
+
 export function getCityByCode(code?: string | null): CityInfo {
-    if (!code) return DEFAULT_CITY;
-    return cityMapByCode.get(code) || DEFAULT_CITY;
+    return findCityByCode(code) ?? DEFAULT_CITY;
+}
+
+export function resolveInitialCity({
+    search,
+    pathname,
+    savedCode,
+}: {
+    search?: string;
+    pathname?: string;
+    savedCode?: string | null;
+}): CityInfo {
+    const params = new URLSearchParams(search ?? "");
+    const queryCity = params.get("cityCode") || params.get("city");
+    const matchedQueryCity = findCityByCode(queryCity);
+    if (matchedQueryCity) {
+        return matchedQueryCity;
+    }
+
+    if (pathname === "/schedule") {
+        return DEFAULT_CITY;
+    }
+
+    return findCityByCode(savedCode) ?? DEFAULT_CITY;
 }
 
 export function searchCities(query: string): CityInfo[] {

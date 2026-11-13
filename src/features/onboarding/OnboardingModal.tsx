@@ -21,7 +21,7 @@ import {
     Sun,
 } from "lucide-react";
 
-import {useCityContext} from "@entities/city";
+import {NATIONWIDE_CITIES, useCityContext} from "@entities/city";
 import {ToggleSwitch} from "@features/settings/ToggleSwitch";
 import {buildPageHref, SPECIAL_PAGE_IDS} from "@shared/config/pages";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
@@ -221,7 +221,7 @@ export const OnboardingModal: React.FC = () => {
                             </div>
                             <div className="min-w-0 space-y-1">
                                 <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                    전국 139개 시·군 실시간 버스 지도 &amp; 도착정보
+                                    전국 {NATIONWIDE_CITIES.length}개 시·군 실시간 버스 지도 &amp; 도착정보
                                 </h3>
                                 <p className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
                                     초 단위 부드러운 버스 이동 애니메이션, 경유지 필터, 정류장별 실시간 도착 예정 정보와 카카오 로드뷰 연동을 제공합니다.

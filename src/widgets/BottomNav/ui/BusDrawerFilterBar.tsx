@@ -155,6 +155,8 @@ export const BusDrawerFilterBar: React.FC<BusDrawerFilterBarProps> = ({
                     <div className="relative flex items-center">
                         <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
                         <input
+                            id="bus-drawer-stop-search"
+                            name="bus-drawer-stop-search"
                             type="text"
                             value={stopSearchQuery}
                             onChange={(e) => onSearchQueryChange(e.target.value)}

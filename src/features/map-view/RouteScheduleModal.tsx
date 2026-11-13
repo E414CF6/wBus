@@ -464,10 +464,13 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                     <Search
                                         className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"/>
                                     <input
+                                        id="schedule-table-search"
+                                        name="schedule-table-search"
                                         type="text"
                                         value={tableSearch}
                                         onChange={(e) => setTableSearch(e.target.value)}
                                         placeholder="시각·비고 검색"
+                                        aria-label="시각·비고 검색"
                                         className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11131a] text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                     />
                                     {tableSearch && (
@@ -736,6 +739,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                 maxWidth="2xl"
                 height="default"
                 modalId="schedule"
+                suspended={isNoticeModalOpen}
                 ariaLabel={`${routeName}번 버스 시간표`}
             >
                 {renderBodyContent()}

@@ -88,16 +88,18 @@ function MapAppShell() {
         return () => clearInterval(timer);
     }, []);
 
-    const {currentCity} = useCityContext();
+    const {currentCity, isCityReady} = useCityContext();
     const {hasDetailedTimetable, defaultQuickRoutes, defaultRoute} = useCityFeatures();
 
-    // Fetch route map for current city
-    const routeMap = useBusRouteMap(true, currentCity.code);
+    // Fetch route map for current city once URL/localStorage city has resolved
+    const routeMap = useBusRouteMap(isCityReady, currentCity.code);
+    const hasRouteMap = Boolean(routeMap && Object.keys(routeMap).length > 0);
     const allRoutes = useMemo(
         () => (routeMap ? Object.keys(routeMap) : defaultQuickRoutes),
         [routeMap, defaultQuickRoutes]
     );
     const activeRoute = useMemo(() => {
+        if (!isCityReady) return selectedRoute;
         if (!routeMap || Object.keys(routeMap).length === 0) return selectedRoute;
         if (typeof window !== "undefined") {
             const params = new URLSearchParams(window.location.search);
@@ -112,7 +114,8 @@ function MapAppShell() {
             return defaultRoute;
         }
         return Object.keys(routeMap)[0] ?? selectedRoute;
-    }, [routeMap, selectedRoute, defaultRoute, currentCity.code]);
+    }, [isCityReady, routeMap, selectedRoute, defaultRoute, currentCity.code]);
+    const isRouteDataEnabled = isCityReady && hasRouteMap && Boolean(activeRoute);
 
     // Centered floating RouteScheduleModal state (for cities with detailed timetable or direct /schedule visit)
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(isScheduleRoute);
@@ -141,7 +144,7 @@ function MapAppShell() {
     );
 
     // Live telemetry for active map route
-    const liveBusData = useBusSortedList(activeRoute, true, currentCity.code);
+    const liveBusData = useBusSortedList(activeRoute, isRouteDataEnabled, currentCity.code);
 
     // Route Variation state scoped per active route (e.g. 30 base route vs via-Sangji)
     const [variantMap, setVariantMap] = useState<Record<string, string | null>>({});
@@ -151,8 +154,9 @@ function MapAppShell() {
     }, [activeRoute]);
 
     useEffect(() => {
-        if (!routeMap || Object.keys(routeMap).length === 0) return;
+        if (!isCityReady || !hasRouteMap) return;
         if (!activeRoute || activeRoute === selectedRoute) return;
+        if (isScheduleRoute && isScheduleModalOpen) return;
         if (typeof window !== "undefined") {
             const params = new URLSearchParams(window.location.search);
             const urlCityCode = params.get("cityCode") || params.get("city");
@@ -161,7 +165,16 @@ function MapAppShell() {
             }
         }
         handleRouteChange(activeRoute, currentCity.code);
-    }, [routeMap, activeRoute, selectedRoute, currentCity.code, handleRouteChange]);
+    }, [
+        isCityReady,
+        hasRouteMap,
+        activeRoute,
+        selectedRoute,
+        isScheduleRoute,
+        isScheduleModalOpen,
+        currentCity.code,
+        handleRouteChange,
+    ]);
 
     return (
         <div className="fixed inset-0 w-full h-full overflow-hidden bg-slate-50 dark:bg-[#090d16]">
@@ -179,6 +192,7 @@ function MapAppShell() {
                     selectedVariantId={selectedVariantId}
                     onSelectVariant={handleSelectVariant}
                     onOpenScheduleModal={handleOpenSchedule}
+                    enabled={isRouteDataEnabled}
                 />
 
                 <MapWrapper>
@@ -186,7 +200,7 @@ function MapAppShell() {
                         routeName={activeRoute}
                         onRouteChange={handleRouteChange}
                         onOpenScheduleModal={handleOpenSchedule}
-                        enabled={true}
+                        enabled={isRouteDataEnabled}
                         selectedVariantId={selectedVariantId}
                         cityCode={currentCity.code}
                         dayMode={dayMode}
@@ -195,8 +209,8 @@ function MapAppShell() {
                 </MapWrapper>
             </div>
 
-            {/* 2. Centered Floating Full Route Timetable Modal (Cities with detailed timetable) */}
-            {hasDetailedTimetable && (
+            {/* 2. Centered Floating Full Route Timetable Modal (Cities with detailed timetable or /schedule) */}
+            {(hasDetailedTimetable || isScheduleRoute) && (
                 <RouteScheduleModal
                     isOpen={isScheduleModalOpen}
                     routeName={activeRoute}
