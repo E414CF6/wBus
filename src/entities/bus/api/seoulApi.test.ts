@@ -297,5 +297,42 @@ describe("Seoul Bus OpenAPI (ws.bus.go.kr / TOPIS) parser & normalizer", () => {
                 global.fetch = originalFetch;
             }
         });
+
+        it("marks cooldown on the exact failed key index rather than advancing to the next key", async () => {
+            const {fetchSeoulBusLocations} = await import("./seoulApi");
+            const originalFetch = global.fetch;
+            let keyCall = 0;
+            const getKey = () => {
+                keyCall += 1;
+                return {key: `KEY_${keyCall}`, index: keyCall - 1};
+            };
+            const cooledDown: number[] = [];
+
+            global.fetch = async (input) => {
+                const url = String(input);
+                if (url.includes("ws.bus.go.kr")) {
+                    return new Response(
+                        JSON.stringify({
+                            msgHeader: {headerCd: "22", headerMsg: "LIMITED NUMBER OF SERVICE REQUESTS EXCEEDS ERROR."},
+                        }),
+                        {status: 200, headers: {"Content-Type": "application/json"}}
+                    );
+                }
+                return new Response(
+                    JSON.stringify({
+                        ResponseVO: {code: 0, data: {resultList: []}},
+                    }),
+                    {status: 200, headers: {"Content-Type": "application/json"}}
+                );
+            };
+
+            try {
+                await fetchSeoulBusLocations("100100118", getKey, (idx) => cooledDown.push(idx));
+                expect(keyCall).toBe(1);
+                expect(cooledDown).toEqual([0]);
+            } finally {
+                global.fetch = originalFetch;
+            }
+        });
     });
 });

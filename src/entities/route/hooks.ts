@@ -1,6 +1,7 @@
 "use client";
 
 import type {RouteInfo, RouteVariation} from "@entities/route/types";
+import {filterRouteIdsByCity, filterRouteNumbersMapByCity, filterRoutesByCity} from "@entities/city/routeBoundary";
 import {
     type CityRoutesPayload,
     fetchCityRoutesData,
@@ -50,13 +51,9 @@ export function useRouteInfo(routeName: string, enabled: boolean = true, cityCod
 
     const resolvedFromMap = useMemo<RouteInfo | null>(() => {
         if (!isHydrated || !enabled || !routeName) return null;
-        let mapIds = routeMap?.[routeName];
-        if (mapIds && mapIds.length > 0) {
-            if (cityCode === "32020") mapIds = mapIds.filter((id) => !id.startsWith("WJB258"));
-            else if (cityCode === "32320") mapIds = mapIds.filter((id) => id.startsWith("WJB258"));
-            if (mapIds.length > 0) {
-                return {routeName, vehicleRouteIds: mapIds};
-            }
+        const mapIds = filterRouteIdsByCity(cityCode, routeMap?.[routeName] || []);
+        if (mapIds.length > 0) {
+            return {routeName, vehicleRouteIds: mapIds};
         }
         return getCachedRouteInfoSync(routeName, cityCode);
     }, [isHydrated, enabled, routeName, routeMap, cityCode]);
@@ -70,9 +67,7 @@ export function useRouteInfo(routeName: string, enabled: boolean = true, cityCod
         async ([, cCode, name]: [string, string, string]) => {
             const info = await getRouteInfo(name, cCode);
             if (info && info.vehicleRouteIds.length > 0) {
-                let vIds = info.vehicleRouteIds;
-                if (cCode === "32020") vIds = vIds.filter((id) => !id.startsWith("WJB258"));
-                else if (cCode === "32320") vIds = vIds.filter((id) => id.startsWith("WJB258"));
+                const vIds = filterRouteIdsByCity(cCode, info.vehicleRouteIds);
                 return {routeName: name, vehicleRouteIds: vIds};
             }
             return {routeName: name, vehicleRouteIds: [name]};
@@ -91,9 +86,7 @@ export function useRouteIds(routeName: string, enabled: boolean = true, cityCode
     const routeInfo = useRouteInfo(routeName, enabled, cityCode);
     return useMemo(() => {
         const ids = routeInfo?.vehicleRouteIds ?? (routeName ? [routeName] : []);
-        if (cityCode === "32020") return ids.filter((id) => !id.startsWith("WJB258"));
-        if (cityCode === "32320") return ids.filter((id) => id.startsWith("WJB258"));
-        return ids;
+        return filterRouteIdsByCity(cityCode, ids);
     }, [routeInfo, routeName, cityCode]);
 }
 
@@ -124,23 +117,11 @@ export function useBusRouteMap(enabled: boolean = true, cityCode: string = "3202
         console.error("[useBusRouteMap] Error fetching route map", error);
     }
 
+    const routeNumbers = data?.route_numbers;
     return useMemo(() => {
-        if (!isHydrated || !data?.route_numbers) return null;
-        const rawMap = data.route_numbers;
-        const cleanMap: Record<string, string[]> = {};
-        for (const [routeNo, ids] of Object.entries(rawMap)) {
-            let filtered = ids;
-            if (cityCode === "32020") {
-                filtered = ids.filter((id) => !id.startsWith("WJB258"));
-            } else if (cityCode === "32320") {
-                filtered = ids.filter((id) => id.startsWith("WJB258"));
-            }
-            if (filtered.length > 0) {
-                cleanMap[routeNo] = filtered;
-            }
-        }
-        return cleanMap;
-    }, [isHydrated, data?.route_numbers, cityCode]);
+        if (!isHydrated || !routeNumbers) return null;
+        return filterRouteNumbersMapByCity(cityCode, routeNumbers).cleaned;
+    }, [isHydrated, routeNumbers, cityCode]);
 }
 
 /**
@@ -169,27 +150,10 @@ export function useCityRoutes(cityCode: string = "32020", enabled: boolean = tru
     const {filteredRoutes, filteredMap} = useMemo(() => {
         const rawRoutes = (hydratedData?.routes || []) as RawCityRoute[];
         const rawMap = (hydratedData?.route_numbers || {}) as Record<string, string[]>;
-
-        let routes = rawRoutes;
-        const cleanMap: Record<string, string[]> = {};
-
-        if (cityCode === "32020") {
-            routes = rawRoutes.filter((r) => !String(r.routeid).startsWith("WJB258"));
-            for (const [k, v] of Object.entries(rawMap)) {
-                const filtered = v.filter((id) => !id.startsWith("WJB258"));
-                if (filtered.length > 0) cleanMap[k] = filtered;
-            }
-        } else if (cityCode === "32320") {
-            routes = rawRoutes.filter((r) => String(r.routeid).startsWith("WJB258"));
-            for (const [k, v] of Object.entries(rawMap)) {
-                const filtered = v.filter((id) => id.startsWith("WJB258"));
-                if (filtered.length > 0) cleanMap[k] = filtered;
-            }
-        } else {
-            Object.assign(cleanMap, rawMap);
-        }
-
-        return {filteredRoutes: routes, filteredMap: cleanMap};
+        return {
+            filteredRoutes: filterRoutesByCity(cityCode, rawRoutes),
+            filteredMap: filterRouteNumbersMapByCity(cityCode, rawMap).cleaned,
+        };
     }, [hydratedData?.routes, hydratedData?.route_numbers, cityCode]);
 
     return {

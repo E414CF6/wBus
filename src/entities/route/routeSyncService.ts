@@ -1,10 +1,11 @@
 import "server-only";
 
-import fs from "fs";
-import path from "path";
 import {revalidatePath} from "next/cache";
 
+import {OsrmRouteResponseSchema} from "@shared/api/schemas";
+import {fetchWithRetry, SharedCircuitBreaker} from "@shared/api/upstreamClient";
 import {CacheManager, getCachedOrFetch, invalidateCacheByPrefix, setCached} from "@shared/cache";
+import {artifactStore} from "@shared/cache/artifactStore";
 import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import {invalidateRouteCaches} from "./api";
 import type {GeoPolyline} from "./types";
@@ -19,9 +20,11 @@ import {
 } from "./polylineChunker";
 
 const DEFAULT_CITY_CODE = "32020"; // Wonju
-const DEFAULT_TAGO_URL = "https://apis.data.go.kr/1613000/BusRouteInfoInqireService";
 const DEFAULT_OSRM_URL = process.env.OSRM_API_URL || "https://router.project-osrm.org/route/v1/driving";
 const OSRM_CHUNK_SIZE = 18;
+const OSRM_DETOUR_TTL_MS = 15 * 60 * 1000; // Short 15-min TTL when OSRM detours
+
+const osrmBreaker = new SharedCircuitBreaker("OSRM", 5, 20_000);
 
 // L1 cache for OSRM road-snapped coordinate chunks (shared across sub-routes & re-syncs)
 const osrmChunkCache = new CacheManager<[number, number][] | null>({
@@ -35,11 +38,18 @@ const polylineGenerationCache = new CacheManager<GeoPolyline | null>({
     ttlMs: 24 * 60 * 60 * 1000, // 24 hours
 });
 
-function getServiceKey(): string | null {
-    return (
+export function getRouteSyncHealth() {
+    return {
+        osrmCircuit: osrmBreaker.getState(),
+        osrmChunkCacheSize: osrmChunkCache.size,
+        polylineGenerationCacheSize: polylineGenerationCache.size,
+    };
+}
+
+function hasPublicApiKey(): boolean {
+    return Boolean(
         process.env.DATA_GO_KR_SERVICE_KEY?.trim() ||
-        process.env.DATA_GO_KR_SERVICE_KEYS?.split(",")[0]?.trim() ||
-        null
+        process.env.DATA_GO_KR_SERVICE_KEYS?.split(",")[0]?.trim()
     );
 }
 
@@ -48,17 +58,21 @@ async function fetchOsrmSingleChunk(chunk: [number, number][]): Promise<[number,
     const coordsStr = chunk.map((c) => `${c[0].toFixed(6)},${c[1].toFixed(6)}`).join(";");
 
     let hadNetworkError = false;
+    let hadDetour = false;
     const result = await osrmChunkCache.getOrFetch(coordsStr, async () => {
         try {
             const radiuses = chunk.map(() => 45).join(";");
             const url = `${DEFAULT_OSRM_URL}/${coordsStr}?overview=full&geometries=geojson&steps=false&continue_straight=false&radiuses=${radiuses}`;
-            const res = await fetch(url, {
+            const res = await fetchWithRetry(url, {
                 headers: {"User-Agent": "wBus-Transit-Pipeline/2.0"},
-                signal: AbortSignal.timeout(5000),
+                timeoutMs: 5000,
+                maxAttempts: 2,
+                circuitBreaker: osrmBreaker,
             });
             if (res.ok) {
-                const json = await res.json();
-                const routeCoords = json?.routes?.[0]?.geometry?.coordinates as [number, number][] | undefined;
+                const rawJson = await res.json();
+                const parsed = OsrmRouteResponseSchema.safeParse(rawJson);
+                const routeCoords = parsed.success ? parsed.data.routes?.[0]?.geometry?.coordinates : undefined;
                 if (Array.isArray(routeCoords) && routeCoords.length >= 2) {
                     const straightDist = calculatePolylineMeters(chunk);
                     const routedDist = calculatePolylineMeters(routeCoords);
@@ -66,6 +80,7 @@ async function fetchOsrmSingleChunk(chunk: [number, number][]): Promise<[number,
                         console.warn(
                             `[RouteSyncService] OSRM detour detected (${routedDist.toFixed(0)}m vs straight ${straightDist.toFixed(0)}m). Falling back to smoothed spline.`
                         );
+                        hadDetour = true;
                         return null;
                     }
                     return routeCoords;
@@ -81,6 +96,9 @@ async function fetchOsrmSingleChunk(chunk: [number, number][]): Promise<[number,
 
     if (hadNetworkError && result === null) {
         osrmChunkCache.delete(coordsStr);
+    } else if (hadDetour && result === null) {
+        // Override default 7d TTL with short 15m TTL so transient routing glitches self-heal quickly
+        osrmChunkCache.set(coordsStr, null, OSRM_DETOUR_TTL_MS);
     }
     return result;
 }
@@ -120,44 +138,6 @@ interface TagoRouteItem {
     endnodenm?: string;
 }
 
-interface TagoStopItem {
-    nodeid: string;
-    nodenm: string;
-    nodeord?: number;
-    nodeno?: string | number;
-    gpslati: number;
-    gpslong: number;
-    updowncd?: number;
-}
-
-async function fetchTago<T>(endpoint: string, params: Record<string, string | number>): Promise<T[]> {
-    const serviceKey = getServiceKey();
-    if (!serviceKey) {
-        throw new Error("DATA_GO_KR_SERVICE_KEY 환경변수가 설정되지 않았습니다.");
-    }
-
-    const url = new URL(`${DEFAULT_TAGO_URL}/${endpoint}`);
-    url.searchParams.set("serviceKey", serviceKey);
-    url.searchParams.set("_type", "json");
-    for (const [k, v] of Object.entries(params)) {
-        url.searchParams.set(k, String(v));
-    }
-
-    const res = await fetch(url.toString(), {
-        headers: {"User-Agent": "wBus-Polly/2.0"},
-        signal: AbortSignal.timeout(10000),
-    });
-
-    if (!res.ok) {
-        throw new Error(`TAGO API HTTP ${res.status}: ${res.statusText}`);
-    }
-
-    const json = await res.json();
-    const items = json?.response?.body?.items?.item;
-    if (!items) return [];
-    return Array.isArray(items) ? items : [items];
-}
-
 function calculatePolylineDistanceMeters(coords: [number, number][]): number {
     return calculatePolylineMeters(coords);
 }
@@ -185,8 +165,7 @@ export async function refreshRouteData(
     const cityCode = options.cityCode || DEFAULT_CITY_CODE;
     const isQuick = options.mode === "quick";
 
-    const serviceKey = getServiceKey();
-    if (!serviceKey) {
+    if (cityCode !== "11" && !hasPublicApiKey()) {
         return {
             success: false,
             refreshed: false,
@@ -201,28 +180,20 @@ export async function refreshRouteData(
 
     const {fetchCityRoutes, fetchRouteStops} = await import("@entities/bus");
 
-    // 1. Fetch route list via resilient TAGO client (multi-key rotation + rate limiting) with raw fallback
+    // 1. Fetch route list via unified TAGO/Seoul client (key rotation + rate limiting + circuit breaker)
     let allRoutes: TagoRouteItem[];
     try {
         allRoutes = await fetchCityRoutes(cityCode);
-    } catch {
-        try {
-            allRoutes = await fetchTago<TagoRouteItem>("getRouteNoList", {
-                cityCode,
-                numOfRows: 2048,
-                pageNo: 1,
-            });
-        } catch (err) {
-            console.error("[RouteSyncService] Failed to fetch route list:", err);
-            return {
-                success: false,
-                refreshed: false,
-                message: `공공데이터포털 노선 목록 조회 실패: ${err instanceof Error ? err.message : String(err)}`,
-                totalRoutesProcessed: 0,
-                routesCount: 0,
-                elapsedMs: Date.now() - startTime,
-            };
-        }
+    } catch (err) {
+        console.error("[RouteSyncService] Failed to fetch route list:", err);
+        return {
+            success: false,
+            refreshed: false,
+            message: `공공데이터포털 노선 목록 조회 실패: ${err instanceof Error ? err.message : String(err)}`,
+            totalRoutesProcessed: 0,
+            routesCount: 0,
+            elapsedMs: Date.now() - startTime,
+        };
     }
 
     let targetRoutes = allRoutes.filter((r) => {
@@ -255,17 +226,7 @@ export async function refreshRouteData(
                 const routeNo = String(route.routeno);
 
                 try {
-                    let stopItems: TagoStopItem[] = [];
-                    try {
-                        stopItems = await fetchRouteStops(routeId, cityCode);
-                    } catch {
-                        stopItems = await fetchTago<TagoStopItem>("getRouteAcctoThrghSttnList", {
-                            cityCode,
-                            routeId,
-                            numOfRows: 2048,
-                        });
-                    }
-
+                    const stopItems = await fetchRouteStops(routeId, cityCode);
                     if (stopItems.length === 0) return;
 
                     const stops = stopItems
@@ -333,29 +294,8 @@ export async function refreshRouteData(
                         })),
                     };
 
-                    // Save route JSON to /tmp/routes/{routeId}.json
-                    const tmpRouteDir = "/tmp/routes";
-                    if (!fs.existsSync(tmpRouteDir)) {
-                        fs.mkdirSync(tmpRouteDir, {recursive: true});
-                    }
-                    fs.writeFileSync(
-                        path.join(tmpRouteDir, `${routeId}.json`),
-                        JSON.stringify(polylineData, null, 2),
-                        "utf-8"
-                    );
-
-                    // If writable local dev environment, also save to public/routes/
-                    if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
-                        const localRouteDir = path.join(process.cwd(), "public", "routes");
-                        if (!fs.existsSync(localRouteDir)) {
-                            fs.mkdirSync(localRouteDir, {recursive: true});
-                        }
-                        fs.writeFileSync(
-                            path.join(localRouteDir, `${routeId}.json`),
-                            JSON.stringify(polylineData, null, 2),
-                            "utf-8"
-                        );
-                    }
+                    // Save route JSON to /tmp, Vercel Blob (when configured), and public/routes (local dev)
+                    await artifactStore.putJson(`routes/${routeId}.json`, polylineData, {pretty: true});
 
                     processedCount++;
                 } catch (err) {
@@ -425,9 +365,9 @@ export async function generateSingleRoutePolyline(
                 updowncd: number;
             }> = [];
 
-            // 1. Try standard transit bus stop service with L1 cache & key rotation
+            // 1. Fetch route through-stations via unified transit client (with L1 + Redis cache)
             try {
-                const {fetchRouteStops} = await import("@entities/bus");
+                const {fetchRouteStops, getCachedCityRoutes} = await import("@entities/bus");
                 const cachedStops = await getCachedOrFetch(
                     `bus-stops:${cityCode}:${routeId}`,
                     () => fetchRouteStops(routeId, cityCode),
@@ -435,6 +375,8 @@ export async function generateSingleRoutePolyline(
                         ttlSeconds: 3600,
                         staleWhileRevalidateSeconds: 86400,
                         staleIfErrorSeconds: 86400,
+                        shouldCache: (items) => Array.isArray(items) && items.length > 0,
+                        useDistributedCache: true,
                     }
                 );
                 const rawStops = cachedStops.data;
@@ -449,32 +391,17 @@ export async function generateSingleRoutePolyline(
                         updowncd: Number(s.updowncd ?? 0),
                     }));
                 }
-            } catch {
-                // Fall through to raw fetchTago
-            }
 
-            // 2. Direct TAGO fallback if needed
-            if (stops.length === 0) {
-                try {
-                    const stopItems = await fetchTago<TagoStopItem>("getRouteAcctoThrghSttnList", {
-                        cityCode,
-                        routeId,
-                        numOfRows: 2048,
-                    });
-                    if (stopItems && stopItems.length > 0) {
-                        stops = stopItems.map((item) => ({
-                            nodeid: String(item.nodeid || ""),
-                            nodenm: String(item.nodenm || ""),
-                            nodeord: Number(item.nodeord || 0),
-                            nodeno: String(item.nodeno || ""),
-                            gpslati: Number(item.gpslati || 0),
-                            gpslong: Number(item.gpslong || 0),
-                            updowncd: Number(item.updowncd ?? 0),
-                        }));
+                // Enrich route_no from city route directory if caller omitted it
+                if (!routeNo) {
+                    const cityRoutes = await getCachedCityRoutes(cityCode);
+                    const matched = cityRoutes.data?.find((r) => r.routeid === routeId);
+                    if (matched?.routeno) {
+                        routeNo = String(matched.routeno);
                     }
-                } catch {
-                    // Ignore
                 }
+            } catch {
+                // Handled below if stops remain empty
             }
 
             if (stops.length === 0) return null;
@@ -551,24 +478,8 @@ export async function generateSingleRoutePolyline(
             // Seed server L1 memory cache for /api/polyline/[routeId]
             setCached(`polyline:${cityCode}:${routeId}`, polylineData);
 
-            // Cache in /tmp/routes/{routeId}.json and public/routes/{routeId}.json
-            try {
-                const tmpDir = "/tmp/routes";
-                if (!fs.existsSync(tmpDir)) {
-                    fs.mkdirSync(tmpDir, {recursive: true});
-                }
-                fs.writeFileSync(path.join(tmpDir, `${routeId}.json`), JSON.stringify(polylineData), "utf-8");
-
-                if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
-                    const localDir = path.join(process.cwd(), "public", "routes");
-                    if (!fs.existsSync(localDir)) {
-                        fs.mkdirSync(localDir, {recursive: true});
-                    }
-                    fs.writeFileSync(path.join(localDir, `${routeId}.json`), JSON.stringify(polylineData, null, 2), "utf-8");
-                }
-            } catch {
-                // Read-only filesystem fallback
-            }
+            // Persist in /tmp, Vercel Blob (if configured), and public/routes (local dev)
+            await artifactStore.putJson(`routes/${routeId}.json`, polylineData, {pretty: true});
 
             return polylineData;
         } catch (err) {

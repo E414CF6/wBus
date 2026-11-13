@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "schedules": {
+    "daily-refresh": {
+      "schedule": "0 19 * * *",
+      "path": "/api/cron/refresh",
+      "requestMethod": "GET"
+    }
+  }
+}

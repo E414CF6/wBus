@@ -5,6 +5,9 @@ import path from "path";
 import {revalidateTag, unstable_cache} from "next/cache";
 
 import type {CacheMetadata, RouteDataset} from "./types";
+import {invalidateRouteWindowScheduleCache} from "@entities/bus/api/routeWindow";
+import {RouteDatasetSchema} from "@shared/api/schemas";
+import {artifactStore} from "@shared/cache/artifactStore";
 import {LOCALE} from "@shared/config/locale";
 import {scrapeWonjuBusDataset, scrapeWonjuItsYonsei} from "./itsScraper";
 
@@ -108,34 +111,16 @@ export function getCacheMetadata(data?: RouteDataset | null): CacheMetadata {
 }
 
 export async function saveCache(data: RouteDataset): Promise<void> {
-    const jsonStr = JSON.stringify(data, null, 2);
     const meta = getCacheMetadata(data);
 
-    // 1. Update in-memory cache
+    // 1. Update in-memory cache and invalidate routeWindow schedule cache
     inMemoryCache = {
         data, meta, timestamp: Date.now(),
     };
+    invalidateRouteWindowScheduleCache();
 
-    // 2. Save to /tmp for serverless container caching
-    try {
-        fs.writeFileSync(/*turbopackIgnore: true*/ "/tmp/schedule.json", jsonStr, "utf-8");
-    } catch {
-        // Ignore
-    }
-
-    // 3. Save to public/schedule.json only in writable local development/build environments
-    if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
-        try {
-            const p = getLocalCachePath();
-            const dir = path.dirname(p);
-            if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
-                fs.mkdirSync(/*turbopackIgnore: true*/ dir, {recursive: true});
-            }
-            fs.writeFileSync(/*turbopackIgnore: true*/ p, jsonStr, "utf-8");
-        } catch {
-            // Silently ignore if filesystem is unexpectedly read-only
-        }
-    }
+    // 2. Persist to /tmp, Vercel Blob (when configured), and public/schedule.json (local dev)
+    await artifactStore.putJson("schedule.json", data, {pretty: true});
 }
 
 /**
@@ -155,33 +140,48 @@ export function invalidateScheduleTag(): void {
 
 async function fetchScheduleDataset(): Promise<{ data: RouteDataset; meta: CacheMetadata }> {
     const local = loadFromLocalFile();
-    if (local) {
-        const meta = getCacheMetadata(local);
-        if (!meta.canRefresh) {
-            return {data: local, meta};
+    let storedDataset: RouteDataset | null = null;
+    try {
+        const stored = await artifactStore.getJson<RouteDataset>("schedule.json");
+        if (stored?.data) {
+            const validated = RouteDatasetSchema.safeParse(stored.data);
+            if (validated.success && validated.data.routes.length > 0) {
+                storedDataset = validated.data as RouteDataset;
+            }
         }
+    } catch {
+        // Ignore artifact read failures
     }
 
-    // If local cache is missing or older than 3 days, attempt scrape
-    console.log("[ScheduleService] Fetching timetable dataset from Wonju ITS...");
+    const localTime = local?.updatedAt ? new Date(local.updatedAt).getTime() : 0;
+    const storedTime = storedDataset?.updatedAt ? new Date(storedDataset.updatedAt).getTime() : 0;
+    const existing = storedDataset && storedTime >= localTime ? storedDataset : local;
+
+    if (storedDataset && storedTime > localTime) {
+        invalidateRouteWindowScheduleCache();
+    }
+
+    // On normal GET /api/schedule requests, return existing snapshot immediately rather than
+    // running a slow synchronous full-scrape inside user traffic (/api/cron/refresh handles updates).
+    if (existing && existing.routes.length > 0) {
+        return {data: existing, meta: getCacheMetadata(existing)};
+    }
+
+    // Only attempt bootstrap scrape when no snapshot exists anywhere
+    console.log("[ScheduleService] No existing timetable snapshot found; bootstrapping from Wonju ITS...");
     try {
         const freshData = await scrapeWonjuBusDataset();
         freshData.updatedAt = new Date().toISOString();
         await saveCache(freshData);
         return {data: freshData, meta: getCacheMetadata(freshData)};
     } catch (err) {
-        console.warn("[ScheduleService] Full scrape failed, attempting fast scrape:", err);
+        console.warn("[ScheduleService] Full bootstrap scrape failed, attempting fast Yonsei scrape:", err);
         try {
             const yonseiData = await scrapeWonjuItsYonsei();
-            // Protect full dataset: merge partial scrape with existing local cache instead of replacing
-            const dataToSave = local ? mergeRouteDatasets(local, yonseiData) : yonseiData;
-            await saveCache(dataToSave);
-            return {data: dataToSave, meta: getCacheMetadata(dataToSave)};
+            await saveCache(yonseiData);
+            return {data: yonseiData, meta: getCacheMetadata(yonseiData)};
         } catch (fallbackErr) {
-            console.warn("[ScheduleService] Scraping failed, falling back to local file:", fallbackErr);
-            if (local) {
-                return {data: local, meta: getCacheMetadata(local)};
-            }
+            console.warn("[ScheduleService] Bootstrap scraping failed:", fallbackErr);
             const emptyDataset: RouteDataset = {
                 updatedAt: new Date().toISOString(), sourceUrl: "", totalRoutes: 0, routes: [],
             };

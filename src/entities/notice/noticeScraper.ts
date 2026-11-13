@@ -1,5 +1,6 @@
 import "server-only";
 
+import {parse} from "node-html-parser";
 import type {NoticeDetail, NoticeItem, NoticeListResponse} from "./types";
 import {APP_LOCALE, UI_TEXT} from "@shared/config/locale";
 import {getCachedOrFetch} from "@shared/cache";
@@ -19,13 +20,167 @@ const NOTICE_LIST_CACHE_OPTIONS = {
     ttlSeconds: 600, // 10 minutes fresh
     staleWhileRevalidateSeconds: 1800, // 30 minutes SWR
     staleIfErrorSeconds: 86400, // 24 hours fallback on upstream failure
+    useDistributedCache: true,
 };
 
 const NOTICE_DETAIL_CACHE_OPTIONS = {
     ttlSeconds: 7200, // 2 hours fresh
     staleWhileRevalidateSeconds: 86400, // 24 hours SWR
     staleIfErrorSeconds: 86400 * 7, // 7 days fallback
+    useDistributedCache: true,
 };
+
+export function parseNoticeListHtml(html: string, page = 1, searchText = ""): NoticeListResponse {
+    const root = parse(html);
+    const notices: NoticeItem[] = [];
+
+    const tbody = root.querySelector("tbody") ?? root;
+    for (const tr of tbody.querySelectorAll("tr")) {
+        const tds = tr.querySelectorAll("td");
+        if (tds.length < 4) continue;
+
+        const firstCellHtml = tds[0].innerHTML;
+        const firstCellText = tds[0].textContent.trim();
+        const isNotice =
+            firstCellHtml.includes("공지") ||
+            firstCellHtml.includes("icon_notice") ||
+            firstCellHtml.includes('class="notice"') ||
+            firstCellText.includes("공지");
+
+        const num = firstCellText || (isNotice ? "공지" : "");
+
+        const titleCell = tds[1];
+        const titleCellHtml = titleCell.innerHTML;
+        const anchor = titleCell.querySelector("a");
+        const href = anchor?.getAttribute("href") || "";
+        const onclick = anchor?.getAttribute("onclick") || "";
+
+        let id = "";
+        const bdIdxMatch = (href || titleCellHtml).match(/bdIdx=([a-zA-Z0-9_-]+)/i);
+        const jsDetailMatch = (onclick || titleCellHtml).match(/detailView\(['"]([^'"]+)['"]\)/i);
+        if (bdIdxMatch) {
+            id = bdIdxMatch[1].trim();
+        } else if (jsDetailMatch) {
+            id = jsDetailMatch[1].trim();
+        }
+
+        const rawTitle = (anchor ? anchor.textContent : titleCell.textContent).trim();
+        if (!id || !rawTitle) continue;
+
+        const rowHtml = tr.innerHTML;
+        const thirdCellHtml = tds[2]?.innerHTML || "";
+        const thirdCellText = tds[2]?.textContent || "";
+        const hasFile =
+            rowHtml.includes("icon_file") ||
+            rowHtml.includes('class="file"') ||
+            thirdCellHtml.includes("file") ||
+            thirdCellText.includes("첨부");
+
+        const date = tds[tds.length - 2]?.textContent.trim() || "";
+        const views = tds[tds.length - 1]?.textContent.trim() || "0";
+
+        notices.push({
+            id, num, isNotice, title: rawTitle, hasFile, date, views,
+        });
+    }
+
+    const paginateEl = root.querySelector(".paginate");
+    const paginationHtml = paginateEl ? paginateEl.innerHTML : "";
+    const pageNums = [...paginationHtml.matchAll(/goSearch\((\d+)\)|<strong>(\d+)<\/strong>/g)]
+        .map((m) => parseInt(m[1] || m[2], 10))
+        .filter((n) => !isNaN(n));
+    const totalPages = pageNums.length > 0 ? Math.max(...pageNums) : 1;
+
+    let totalCount = notices.length;
+    if (!searchText) {
+        const firstRegular = notices.find((n) => !n.isNotice && /^\d+$/.test(n.num));
+        if (firstRegular) {
+            totalCount = parseInt(firstRegular.num, 10);
+        } else if (totalPages > 1) {
+            totalCount = totalPages * 10;
+        }
+    } else {
+        totalCount = totalPages > 1 ? totalPages * 10 : notices.filter((n) => !n.isNotice).length;
+    }
+
+    return {
+        notices, page, totalPages, totalCount,
+    };
+}
+
+export function parseNoticeDetailHtml(html: string, id: string): NoticeDetail {
+    const root = parse(html);
+
+    const titleEl =
+        root.querySelector("p.title, .title") ||
+        root.querySelector("th.subject, td.subject");
+    const title = titleEl ? titleEl.textContent.trim() : "";
+
+    const dateEl = root.querySelector("span.date, .date");
+    let date = dateEl ? dateEl.textContent.trim() : "";
+    if (!date) {
+        const dateFallback = html.match(/(\d{4}-\d{2}-\d{2})/);
+        date = dateFallback ? dateFallback[1].trim() : "";
+    }
+
+    const writerEl = root.querySelector("span.writer, .writer");
+    const writer = writerEl?.textContent.trim() || UI_TEXT.NOTICE.DEFAULT_WRITER;
+
+    const viewsEl = root.querySelector("span.hit, .hit");
+    const views = viewsEl?.textContent.trim() || "0";
+
+    // DOM-balanced extraction avoids premature truncation on nested <div> tags
+    const contentEl =
+        root.querySelector(".cont_area") ||
+        root.querySelector(".board_view_con, .view_con, .con_area") ||
+        root.querySelector("td.view[colspan]");
+    let content = contentEl ? contentEl.innerHTML.trim() : "";
+
+    content = content.replace(/src="\/([^"]+)"/g, `src="${BASE_URL}/$1"`);
+    content = content.replace(/href="\/([^"]+)"/g, `href="${BASE_URL}/$1"`);
+    content = sanitizeHtml(content);
+
+    const files: Array<{ name: string; url: string }> = [];
+    for (const anchor of root.querySelectorAll("a")) {
+        const href = anchor.getAttribute("href") || "";
+        if (!/(?:noticeAttach\.do|fileDown|download)/i.test(href)) continue;
+
+        const downloadUrl = href.startsWith("/") ? `${BASE_URL}${href}` : href;
+        const fileName = anchor.textContent.trim();
+        if (fileName && !fileName.includes("이전") && !fileName.includes("다음")) {
+            files.push({name: fileName, url: downloadUrl});
+        }
+    }
+
+    const prevAnchor = root.querySelector("dl.prev a");
+    const prevHref = prevAnchor?.getAttribute("href") || "";
+    const prevIdMatch = prevHref.match(/bdIdx=([^"'&]+)/i);
+    const prevId = prevIdMatch ? prevIdMatch[1].trim() : undefined;
+    const prevTitle = prevAnchor ? prevAnchor.textContent.trim() : undefined;
+
+    const nextAnchor = root.querySelector("dl.next a");
+    const nextHref = nextAnchor?.getAttribute("href") || "";
+    const nextIdMatch = nextHref.match(/bdIdx=([^"'&]+)/i);
+    const nextId = nextIdMatch ? nextIdMatch[1].trim() : undefined;
+    const nextTitle = nextAnchor ? nextAnchor.textContent.trim() : undefined;
+
+    return {
+        id,
+        num: id,
+        isNotice: false,
+        title,
+        date,
+        content,
+        writer,
+        views,
+        hasFile: files.length > 0,
+        files,
+        prevId,
+        prevTitle,
+        nextId,
+        nextTitle,
+    };
+}
 
 async function rawFetchNoticeList(page = 1, searchText = "", searchGb = "title", maxRetries = 3): Promise<NoticeListResponse> {
     const params = new URLSearchParams();
@@ -49,76 +204,7 @@ async function rawFetchNoticeList(page = 1, searchText = "", searchGb = "title",
             }
 
             const html = await res.text();
-            const notices: NoticeItem[] = [];
-
-            // Extract table rows from tbody
-            const tbodyMatch = html.match(/<tbody>([\s\S]*?)<\/tbody>/i);
-            const tableHtml = tbodyMatch ? tbodyMatch[1] : html;
-
-            const trRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
-            let trMatch: RegExpExecArray | null;
-
-            while ((trMatch = trRegex.exec(tableHtml)) !== null) {
-                const row = trMatch[1];
-                const tds = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((m) => m[1].trim());
-                if (tds.length < 4) continue;
-
-                // Check if explicitly marked as pinned notice
-                const isNotice = tds[0].includes("공지") || tds[0].includes("icon_notice") || tds[0].includes('class="notice"');
-
-                const num = tds[0].replace(/<[^>]+>/g, "").trim() || (isNotice ? "공지" : "");
-
-                // Robust notice ID and title extraction
-                let id = "";
-                const bdIdxMatch = tds[1].match(/bdIdx=([a-zA-Z0-9_-]+)/i);
-                const jsDetailMatch = tds[1].match(/detailView\(['"]([^'"]+)['"]\)/i);
-                if (bdIdxMatch) {
-                    id = bdIdxMatch[1].trim();
-                } else if (jsDetailMatch) {
-                    id = jsDetailMatch[1].trim();
-                }
-
-                const titleMatch = tds[1].match(/<a[^>]*>([\s\S]*?)<\/a>/i);
-                const rawTitle = (titleMatch ? titleMatch[1] : tds[1]).replace(/<[^>]+>/g, "").trim();
-
-                if (!id || !rawTitle) continue;
-
-                // Check attachment
-                const hasFile = row.includes("icon_file") || row.includes('class="file"') || tds[2]?.includes("file") || tds[2]?.includes("첨부");
-
-                // Date and views
-                const date = tds[tds.length - 2]?.replace(/<[^>]+>/g, "").trim() || "";
-                const views = tds[tds.length - 1]?.replace(/<[^>]+>/g, "").trim() || "0";
-
-                notices.push({
-                    id, num, isNotice, title: rawTitle, hasFile, date, views,
-                });
-            }
-
-            // Extract totalPages and totalCount
-            const paginateMatch = html.match(/<div[^>]*class=['"][^'"]*paginate[^'"]*['"][\s\S]*?<\/div>/i);
-            const paginationHtml = paginateMatch ? paginateMatch[0] : "";
-            const pageNums = [...paginationHtml.matchAll(/goSearch\((\d+)\)|<strong>(\d+)<\/strong>/g)]
-                .map((m) => parseInt(m[1] || m[2], 10))
-                .filter((n) => !isNaN(n));
-            const totalPages = pageNums.length > 0 ? Math.max(...pageNums) : 1;
-
-            let totalCount = notices.length;
-            if (!searchText) {
-                // If not searching, find highest regular notice number (e.g. 214)
-                const firstRegular = notices.find((n) => !n.isNotice && /^\d+$/.test(n.num));
-                if (firstRegular) {
-                    totalCount = parseInt(firstRegular.num, 10);
-                } else if (totalPages > 1) {
-                    totalCount = totalPages * 10;
-                }
-            } else {
-                totalCount = totalPages > 1 ? totalPages * 10 : notices.filter((n) => !n.isNotice).length;
-            }
-
-            return {
-                notices, page, totalPages, totalCount,
-            };
+            return parseNoticeListHtml(html, page, searchText);
         } catch (err) {
             lastError = err;
             if (attempt < maxRetries) {
@@ -158,76 +244,7 @@ async function rawFetchNoticeDetail(id: string, maxRetries = 3): Promise<NoticeD
             }
 
             const html = await res.text();
-
-            const titleMatch = html.match(/<p[^>]*class="[^"]*title[^"]*"[^>]*>([\s\S]*?)<\/p>/i) || html.match(/<th[^>]*class="[^"]*subject[^"]*"[^>]*>(.*?)<\/th>/i) || html.match(/<td[^>]*class="[^"]*subject[^"]*"[^>]*>(.*?)<\/td>/i);
-            const title = titleMatch ? (titleMatch[1] || titleMatch[2] || "").replace(/<[^>]+>/g, "").trim() : "";
-
-            const dateMatch = html.match(/<span[^>]*class="[^"]*date[^"]*"[^>]*>([^<]+)<\/span>/i) || html.match(/(\d{4}-\d{2}-\d{2})/);
-            const date = dateMatch ? (dateMatch[1] || "").trim() : "";
-
-            const writerMatch = html.match(/<span[^>]*class="[^"]*writer[^"]*"[^>]*>([^<]+)<\/span>/i);
-            const writer = writerMatch ? writerMatch[1].trim() : UI_TEXT.NOTICE.DEFAULT_WRITER;
-
-            const viewsMatch = html.match(/<span[^>]*class="[^"]*hit[^"]*"[^>]*>([^<]+)<\/span>/i);
-            const views = viewsMatch ? viewsMatch[1].trim() : "0";
-
-            const contentMatch = html.match(/<div[^>]*class="[^"]*cont_area[^"]*"[^>]*>([\s\S]*?)<\/div>/i) || html.match(/<div[^>]*class="[^"]*(?:board_view_con|view_con|con_area)[^"]*"[^>]*>(.*?)<\/div>/i);
-            let content = contentMatch ? contentMatch[1].trim() : "";
-
-            if (!content) {
-                const bodyContentMatch = html.match(/<td[^>]*colspan="[^"]*"[^>]*class="[^"]*view[^"]*"[^>]*>(.*?)<\/td>/i);
-                if (bodyContentMatch) {
-                    content = bodyContentMatch[1].trim();
-                }
-            }
-
-            // Clean up relative images/links to absolute and sanitize content
-            content = content.replace(/src="\/([^"]+)"/g, `src="${BASE_URL}/$1"`);
-            content = content.replace(/href="\/([^"]+)"/g, `href="${BASE_URL}/$1"`);
-            content = sanitizeHtml(content);
-
-            const files: Array<{ name: string; url: string }> = [];
-            const fileRegex = /<a[^>]*href="([^"]*(?:noticeAttach\.do|fileDown|download)[^"]*)"[^>]*>([\s\S]*?)<\/a>/gi;
-            let fileMatch: RegExpExecArray | null;
-
-            while ((fileMatch = fileRegex.exec(html)) !== null) {
-                let downloadUrl = fileMatch[1];
-                if (downloadUrl.startsWith("/")) {
-                    downloadUrl = `${BASE_URL}${downloadUrl}`;
-                }
-                const fileName = fileMatch[2].replace(/<[^>]+>/g, "").trim();
-                if (fileName && !fileName.includes("이전") && !fileName.includes("다음")) {
-                    files.push({
-                        name: fileName, url: downloadUrl,
-                    });
-                }
-            }
-
-            // Extract prev / next article links
-            const prevMatch = html.match(/<dl[^>]*class=["']prev["'][^>]*>[\s\S]*?<a[^>]*href=["'][^"']*bdIdx=([^"'&]+)[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
-            const prevId = prevMatch ? prevMatch[1].trim() : undefined;
-            const prevTitle = prevMatch ? prevMatch[2].replace(/<[^>]+>/g, "").trim() : undefined;
-
-            const nextMatch = html.match(/<dl[^>]*class=["']next["'][^>]*>[\s\S]*?<a[^>]*href=["'][^"']*bdIdx=([^"'&]+)[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
-            const nextId = nextMatch ? nextMatch[1].trim() : undefined;
-            const nextTitle = nextMatch ? nextMatch[2].replace(/<[^>]+>/g, "").trim() : undefined;
-
-            return {
-                id,
-                num: id,
-                isNotice: false,
-                title,
-                date,
-                content,
-                writer,
-                views,
-                hasFile: files.length > 0,
-                files,
-                prevId,
-                prevTitle,
-                nextId,
-                nextTitle,
-            };
+            return parseNoticeDetailHtml(html, id);
         } catch (err) {
             lastError = err;
             if (attempt < maxRetries) {

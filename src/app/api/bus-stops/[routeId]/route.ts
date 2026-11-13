@@ -29,8 +29,12 @@ export const GET = createApiHandler<RawBusStop[]>({
     cacheControl: CACHE_CONTROL,
     loggerPrefix: "bus-stops",
     validate: ApiValidators.isValidRouteId,
+    shouldCache: (stops) => Array.isArray(stops) && stops.length > 0,
+    resolveCacheControl: (res) =>
+        !res.data || res.data.length === 0 || res.meta?.degraded ? "no-store" : CACHE_CONTROL,
     cacheOptions: {
         staleWhileRevalidateSeconds: 86400,
         staleIfErrorSeconds: 86400,
+        useDistributedCache: true,
     },
 });

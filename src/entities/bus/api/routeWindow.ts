@@ -38,10 +38,13 @@ export interface ServiceStatus {
     retryAfterSeconds: number;
 }
 
-// In-memory cache for computed route windows
+// In-memory cache for computed route windows (keyed by city:routeNo:dayBucket)
 const windowCache = new Map<string, RouteOperatingWindow>();
 // In-memory activity tracking for dynamic window extension
 const lastActiveBusTimestamp = new Map<string, number>();
+// Mapping from canonical cityCode:routeId -> human-readable routeNo (e.g. "32020:WJB251000068" -> "30")
+const routeIdToNumberMap = new Map<string, string>();
+const unresolvedRouteIds = new Set<string>();
 
 export {
     formatMinutesToTime,
@@ -64,6 +67,94 @@ export function extractRouteNumber(routeIdOrNo: string): string {
 }
 
 /**
+ * Register an authoritative routeId -> routeNo mapping (e.g. from TAGO getRouteNoList or live telemetry)
+ * so routes with opaque serial IDs like WJB251000068 resolve to their actual timetable/schedule row.
+ */
+export function registerRouteIdMapping(cityCode: string, routeId: string, routeNo: string): void {
+    const normalizedCity = cityCode || "32020";
+    const cleanId = String(routeId || "").trim();
+    const cleanNo = extractRouteNumber(String(routeNo || "").trim());
+    if (!cleanId || !cleanNo || cleanNo === cleanId) return;
+
+    const mapKey = `${normalizedCity}:${cleanId}`;
+    if (routeIdToNumberMap.get(mapKey) === cleanNo) return;
+
+    routeIdToNumberMap.set(mapKey, cleanNo);
+    unresolvedRouteIds.delete(mapKey);
+
+    // Clear stale default entries keyed under the raw routeId so next lookup uses cleanNo
+    for (const bucket of ["weekday", "weekend"]) {
+        windowCache.delete(`${normalizedCity}:${cleanId}:${bucket}`);
+    }
+}
+
+/**
+ * Bulk-register routeId -> routeNo mappings from a city route directory.
+ */
+export function registerCityRoutesMapping(
+    cityCode: string,
+    routes: Array<{ routeid: string; routeno: string | number }>
+): void {
+    for (const r of routes) {
+        if (r?.routeid && r?.routeno !== undefined && r?.routeno !== null) {
+            registerRouteIdMapping(cityCode, r.routeid, String(r.routeno));
+        }
+    }
+}
+
+/**
+ * Resolve a routeId or routeNo to its canonical routeNo using hints, dynamic map, and local route snapshots.
+ */
+export function resolveRouteNumber(routeIdOrNo: string, cityCode: string = "32020", routeNoHint?: string): string {
+    if (routeNoHint) {
+        const hintClean = extractRouteNumber(routeNoHint);
+        if (hintClean) {
+            registerRouteIdMapping(cityCode, routeIdOrNo, hintClean);
+            return hintClean;
+        }
+    }
+
+    const normalizedCity = cityCode || "32020";
+    const cleanInput = extractRouteNumber(routeIdOrNo);
+    const mapKey = `${normalizedCity}:${cleanInput}`;
+    const mapped = routeIdToNumberMap.get(mapKey);
+    if (mapped) return mapped;
+
+    // Best-effort lookup from prebuilt public/routes/{routeId}.json on local/serverless bundle
+    if (
+        normalizedCity === "32020" &&
+        cleanInput.startsWith("WJB") &&
+        !unresolvedRouteIds.has(mapKey)
+    ) {
+        try {
+            const routePath = path.join(process.cwd(), "public", "routes", `${cleanInput}.json`);
+            if (fs.existsSync(/*turbopackIgnore: true*/ routePath)) {
+                const raw = fs.readFileSync(/*turbopackIgnore: true*/ routePath, "utf-8");
+                const parsed = JSON.parse(raw) as { route_no?: string };
+                if (parsed?.route_no && parsed.route_no !== cleanInput) {
+                    const resolved = extractRouteNumber(parsed.route_no);
+                    registerRouteIdMapping(normalizedCity, cleanInput, resolved);
+                    return resolved;
+                }
+            }
+        } catch {
+            // Ignore FS read failures
+        }
+        unresolvedRouteIds.add(mapKey);
+    }
+
+    return cleanInput;
+}
+
+/**
+ * Invalidate in-memory schedule.json and computed operating window caches when timetables are refreshed.
+ */
+export function invalidateRouteWindowScheduleCache(): void {
+    cachedScheduleJson = null;
+    windowCache.clear();
+}
+
+/**
  * Load static schedule database if available locally
  */
 let cachedScheduleJson: {
@@ -72,7 +163,11 @@ let cachedScheduleJson: {
 
 function getScheduleData() {
     if (cachedScheduleJson) return cachedScheduleJson;
-    const candidates = [path.join(process.cwd(), "public", "schedule.json"), path.join(process.cwd(), "public", "data", "schedule.json"),];
+    const candidates = [
+        "/tmp/schedule.json",
+        path.join(process.cwd(), "public", "schedule.json"),
+        path.join(process.cwd(), "public", "data", "schedule.json"),
+    ];
     for (const localPath of candidates) {
         try {
             if (fs.existsSync(/*turbopackIgnore: true*/ localPath)) {
@@ -89,7 +184,23 @@ function getScheduleData() {
 
 // Strategy Interface for City-scoped Operating Window resolution
 interface CityWindowStrategy {
-    resolve(routeNo: string): RouteOperatingWindow | null;
+    resolve(routeNo: string, now?: Date): RouteOperatingWindow | null;
+}
+
+function isKstWeekend(now: Date = new Date()): boolean {
+    const kstDate = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    const day = kstDate.getUTCDay();
+    return day === 0 || day === 6;
+}
+
+function matchesDayType(dayType: string | undefined, isWeekend: boolean): boolean {
+    if (!dayType) return true;
+    const normalized = dayType.trim();
+    if (!normalized || normalized.includes("매일")) return true;
+    if (isWeekend) {
+        return /토|일|주말|휴일|공휴일/.test(normalized);
+    }
+    return /평일|방학/.test(normalized) || !/^(토|일|주말|휴일|공휴일)/.test(normalized);
 }
 
 const nightRouteStrategy: CityWindowStrategy = {
@@ -107,7 +218,7 @@ const nightRouteStrategy: CityWindowStrategy = {
 };
 
 const wonjuStrategy: CityWindowStrategy = {
-    resolve(routeNo: string): RouteOperatingWindow | null {
+    resolve(routeNo: string, now: Date = new Date()): RouteOperatingWindow | null {
         // 1. Check Yonsei Static Timetables (30, 34, 34-1) - Wonju only
         const yonseiKey = routeNo as keyof typeof YONSEI_STATIC_TIMETABLES;
         if (YONSEI_STATIC_TIMETABLES[yonseiKey]) {
@@ -142,16 +253,19 @@ const wonjuStrategy: CityWindowStrategy = {
         // 2. Check full schedule.json dataset for Wonju routes
         const schedule = getScheduleData();
         if (schedule?.routes) {
+            const weekend = isKstWeekend(now);
+            const allMatching = schedule.routes.filter((r) => extractRouteNumber(r.routeNo) === routeNo);
+            const dayMatching = allMatching.filter((r) => matchesDayType(r.dayType, weekend));
+            const targetRows = dayMatching.length > 0 ? dayMatching : allMatching;
+
             let earliestMin = Infinity;
             let latestMin = -Infinity;
 
-            schedule.routes.forEach((r) => {
-                if (extractRouteNumber(r.routeNo) === routeNo) {
-                    const firstMin = parseTimeToMinutes(r.firstBus);
-                    const lastMin = parseTimeToMinutes(r.lastBus);
-                    if (firstMin !== null && firstMin < earliestMin) earliestMin = firstMin;
-                    if (lastMin !== null && lastMin > latestMin) latestMin = lastMin;
-                }
+            targetRows.forEach((r) => {
+                const firstMin = parseTimeToMinutes(r.firstBus);
+                const lastMin = parseTimeToMinutes(r.lastBus);
+                if (firstMin !== null && firstMin < earliestMin) earliestMin = firstMin;
+                if (lastMin !== null && lastMin > latestMin) latestMin = lastMin;
             });
 
             if (earliestMin !== Infinity && latestMin !== -Infinity) {
@@ -191,16 +305,22 @@ const cityStrategies: Record<string, CityWindowStrategy> = {
  * Compute the operating service window for a given route.
  * Wonju ("32020") routes use Yonsei static timetables and schedule.json; other cities use default window.
  */
-export function getRouteOperatingWindow(routeIdOrNo: string, cityCode: string = "32020"): RouteOperatingWindow {
-    const routeNo = extractRouteNumber(routeIdOrNo);
+export function getRouteOperatingWindow(
+    routeIdOrNo: string,
+    cityCode: string = "32020",
+    options?: { routeNoHint?: string; now?: Date }
+): RouteOperatingWindow {
     const normalizedCity = cityCode || "32020";
-    const cacheKey = `${normalizedCity}:${routeNo}`;
+    const routeNo = resolveRouteNumber(routeIdOrNo, normalizedCity, options?.routeNoHint);
+    const now = options?.now ?? new Date();
+    const dayBucket = isKstWeekend(now) ? "weekend" : "weekday";
+    const cacheKey = `${normalizedCity}:${routeNo}:${dayBucket}`;
 
     const cached = windowCache.get(cacheKey);
     if (cached) return cached;
 
     // 1. Check Night / Autonomous routes first across all cities
-    const nightMatch = nightRouteStrategy.resolve(routeNo);
+    const nightMatch = nightRouteStrategy.resolve(routeNo, now);
     if (nightMatch) {
         windowCache.set(cacheKey, nightMatch);
         return nightMatch;
@@ -209,7 +329,7 @@ export function getRouteOperatingWindow(routeIdOrNo: string, cityCode: string = 
     // 2. Delegate to city-specific strategy if registered
     const strategy = cityStrategies[normalizedCity];
     if (strategy) {
-        const result = strategy.resolve(routeNo);
+        const result = strategy.resolve(routeNo, now);
         if (result) {
             windowCache.set(cacheKey, result);
             return result;
@@ -232,9 +352,14 @@ export function getRouteOperatingWindow(routeIdOrNo: string, cityCode: string = 
 /**
  * Record active bus telemetry to dynamically extend service window if a bus is still running late.
  */
-export function recordRouteBusActivity(routeIdOrNo: string, busCount: number, cityCode: string = "32020"): void {
-    const routeNo = extractRouteNumber(routeIdOrNo);
+export function recordRouteBusActivity(
+    routeIdOrNo: string,
+    busCount: number,
+    cityCode: string = "32020",
+    routeNoHint?: string
+): void {
     const normalizedCity = cityCode || "32020";
+    const routeNo = resolveRouteNumber(routeIdOrNo, normalizedCity, routeNoHint);
     if (busCount > 0) {
         const now = Date.now();
         lastActiveBusTimestamp.set(`${normalizedCity}:${routeNo}`, now);
@@ -245,10 +370,15 @@ export function recordRouteBusActivity(routeIdOrNo: string, busCount: number, ci
 /**
  * Determines whether a route is currently in its active operating service window.
  */
-export function isRouteInServiceWindow(routeIdOrNo: string, now: Date = new Date(), cityCode: string = "32020"): ServiceStatus {
-    const routeNo = extractRouteNumber(routeIdOrNo);
+export function isRouteInServiceWindow(
+    routeIdOrNo: string,
+    now: Date = new Date(),
+    cityCode: string = "32020",
+    routeNoHint?: string
+): ServiceStatus {
     const normalizedCity = cityCode || "32020";
-    const window = getRouteOperatingWindow(routeIdOrNo, normalizedCity);
+    const routeNo = resolveRouteNumber(routeIdOrNo, normalizedCity, routeNoHint);
+    const window = getRouteOperatingWindow(routeIdOrNo, normalizedCity, {routeNoHint, now});
     const currentKst = getCurrentKstMinutes(now);
 
     // 1. Check dynamic activity override (a bus was recently seen running within last 15 min)

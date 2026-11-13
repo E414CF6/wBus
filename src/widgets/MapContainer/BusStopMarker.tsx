@@ -7,6 +7,7 @@ import {computeOptimalLabelPlacements} from "@entities/station/busStopMarkerUtil
 import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useCityContext} from "@entities/city";
+import {filterRouteIdsByCity, isRouteAllowedInCity} from "@entities/city/routeBoundary";
 import {useRoutePolylineData} from "@features/live-tracking";
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {buildSegmentedRouteGeoJson} from "@entities/route/polylineService";
@@ -62,15 +63,7 @@ export const BusStopMarker = ({
     // Retrieve polyline data to synchronize stop marker & label colors with route segments
     const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName, enabled, effectiveCityCode);
     const rawRouteIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo?.vehicleRouteIds]);
-    const routeIds = useMemo(() => {
-        if (effectiveCityCode === "32020") {
-            return rawRouteIds.filter((id) => !id.startsWith("WJB258"));
-        }
-        if (effectiveCityCode === "32320") {
-            return rawRouteIds.filter((id) => id.startsWith("WJB258"));
-        }
-        return rawRouteIds;
-    }, [rawRouteIds, effectiveCityCode]);
+    const routeIds = useMemo(() => filterRouteIdsByCity(effectiveCityCode, rawRouteIds), [rawRouteIds, effectiveCityCode]);
 
     const routeMainColor = useMemo(
         () => getRouteMeta(routeName, effectiveCityCode).colorTheme.main,
@@ -79,15 +72,13 @@ export const BusStopMarker = ({
 
     const validRouteIds = useMemo(() => {
         const available = routeIds.filter((id) => {
-            if (effectiveCityCode === "32020" && id.startsWith("WJB258")) return false;
-            if (effectiveCityCode === "32320" && !id.startsWith("WJB258")) return false;
+            if (!isRouteAllowedInCity(effectiveCityCode, id)) return false;
             const data = polylineMap.get(id);
             return data && (data.upPolyline.length > 0 || data.downPolyline.length > 0);
         });
         if (available.length > 0) return available;
         if (activeRouteId && polylineMap.has(activeRouteId)) {
-            if (effectiveCityCode === "32020" && activeRouteId.startsWith("WJB258")) return [];
-            if (effectiveCityCode === "32320" && !activeRouteId.startsWith("WJB258")) return [];
+            if (!isRouteAllowedInCity(effectiveCityCode, activeRouteId)) return [];
             const data = polylineMap.get(activeRouteId);
             if (data && (data.upPolyline.length > 0 || data.downPolyline.length > 0)) {
                 return [activeRouteId];

@@ -103,6 +103,7 @@ export class BusLocationStore {
         options?: {
             degraded?: boolean;
             timestamp?: number;
+            ageMs?: number | null;
             targetRouteIds?: string[];
         }
     ) {
@@ -147,6 +148,7 @@ export class BusLocationStore {
             hasFetched: true,
             connectionStatus: degraded ? "fallback" : "connected",
             lastUpdated: timestamp,
+            serverAgeMs: typeof options?.ageMs === "number" && Number.isFinite(options.ageMs) ? options.ageMs : null,
             isDegraded: degraded,
             reconnect: this.state.reconnect,
         });
@@ -170,18 +172,52 @@ export class BusLocationStore {
                 this.applyData(items, {
                     degraded: Boolean(res.meta?.degraded),
                     timestamp: res.timestamp,
+                    ageMs: res.meta?.ageMs ?? null,
                     targetRouteIds: [routeId],
                 });
             } else {
-                // Multi-route batched call (single HTTP roundtrip)
+                // Multi-route batched call: split into chunks of 15 to match /api/bus limit
+                const BATCH_CHUNK_SIZE = 15;
+                const chunks: string[][] = [];
+                for (let i = 0; i < this.routeIds.length; i += BATCH_CHUNK_SIZE) {
+                    chunks.push(this.routeIds.slice(i, i + BATCH_CHUNK_SIZE));
+                }
+
                 try {
-                    const batchUrl = `/api/bus?routeIds=${encodeURIComponent(this.routeIds.join(","))}&${cityParam}`;
-                    const res = await fetchRouteData(batchUrl, signal);
+                    const chunkResponses = await Promise.all(
+                        chunks.map((chunk) =>
+                            fetchRouteData(
+                                `/api/bus?routeIds=${encodeURIComponent(chunk.join(","))}&${cityParam}`,
+                                signal
+                            )
+                        )
+                    );
                     if (signal.aborted) return;
-                    const items = Array.isArray(res.data) ? res.data : [];
+
+                    const items: BusItem[] = [];
+                    let anyDegraded = false;
+                    let latestTimestamp = 0;
+                    let maxAgeMs: number | null = null;
+
+                    for (const res of chunkResponses) {
+                        if (Array.isArray(res.data)) {
+                            items.push(...res.data);
+                        }
+                        if (res.meta?.degraded) {
+                            anyDegraded = true;
+                        }
+                        if (typeof res.timestamp === "number" && res.timestamp > latestTimestamp) {
+                            latestTimestamp = res.timestamp;
+                        }
+                        if (typeof res.meta?.ageMs === "number" && Number.isFinite(res.meta.ageMs)) {
+                            maxAgeMs = maxAgeMs === null ? res.meta.ageMs : Math.max(maxAgeMs, res.meta.ageMs);
+                        }
+                    }
+
                     this.applyData(items, {
-                        degraded: Boolean(res.meta?.degraded),
-                        timestamp: res.timestamp,
+                        degraded: anyDegraded,
+                        timestamp: latestTimestamp || Date.now(),
+                        ageMs: maxAgeMs,
                         targetRouteIds: this.routeIds,
                     });
                 } catch (batchErr) {
@@ -201,6 +237,7 @@ export class BusLocationStore {
                     const fulfilledResults: BusItem[] = [];
                     const fulfilledRouteIds: string[] = [];
                     let hasFailures = false;
+                    let maxAgeMs: number | null = null;
 
                     settled.forEach((result, idx) => {
                         const routeId = this.routeIds[idx];
@@ -210,6 +247,10 @@ export class BusLocationStore {
                             if (Array.isArray(items)) {
                                 fulfilledResults.push(...items);
                             }
+                            const ageMs = result.value.meta?.ageMs;
+                            if (typeof ageMs === "number" && Number.isFinite(ageMs)) {
+                                maxAgeMs = maxAgeMs === null ? ageMs : Math.max(maxAgeMs, ageMs);
+                            }
                         } else {
                             hasFailures = true;
                         }
@@ -218,6 +259,7 @@ export class BusLocationStore {
                     if (fulfilledRouteIds.length > 0) {
                         this.applyData(fulfilledResults, {
                             degraded: hasFailures,
+                            ageMs: maxAgeMs,
                             targetRouteIds: fulfilledRouteIds,
                         });
                     } else if (this.routeIds.length > 0) {
@@ -310,7 +352,7 @@ export class BusLocationStore {
         }
         if (typeof window !== "undefined") {
             window.removeEventListener("online", this.handleActivityChange);
-            window.addEventListener("offline", this.handleActivityChange);
+            window.removeEventListener("offline", this.handleActivityChange);
         }
     }
 

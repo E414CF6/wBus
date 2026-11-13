@@ -8,6 +8,7 @@ import {isDesktopViewport} from "@shared/ui/useIsDesktop";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {useCityContext} from "@entities/city";
+import {filterRouteIdsByCity, isRouteAllowedInCity} from "@entities/city/routeBoundary";
 import {useTheme} from "next-themes";
 import {useEffect, useMemo, useRef} from "react";
 import {Layer, Source} from "react-map-gl/maplibre";
@@ -37,23 +38,14 @@ export default function BusRoutePolyline({
 
     const {routeInfo, polylineMap, activeRouteId} = useRoutePolylineData(routeName, enabled, effectiveCityCode);
     const rawRouteIds = useMemo(() => routeInfo?.vehicleRouteIds ?? [], [routeInfo?.vehicleRouteIds]);
-    const routeIds = useMemo(() => {
-        if (effectiveCityCode === "32020") {
-            return rawRouteIds.filter((id) => !id.startsWith("WJB258"));
-        }
-        if (effectiveCityCode === "32320") {
-            return rawRouteIds.filter((id) => id.startsWith("WJB258"));
-        }
-        return rawRouteIds;
-    }, [rawRouteIds, effectiveCityCode]);
+    const routeIds = useMemo(() => filterRouteIdsByCity(effectiveCityCode, rawRouteIds), [rawRouteIds, effectiveCityCode]);
     const lastBoundsKeyRef = useRef<string | null>(null);
     const needsVisibleFitRef = useRef(false);
 
     // Filter to render available route IDs for this route number, respecting selectedVariantId if provided
     const validRouteIds = useMemo(() => {
         const available = routeIds.filter((id) => {
-            if (effectiveCityCode === "32020" && id.startsWith("WJB258")) return false;
-            if (effectiveCityCode === "32320" && !id.startsWith("WJB258")) return false;
+            if (!isRouteAllowedInCity(effectiveCityCode, id)) return false;
             const data = polylineMap.get(id);
             return data && (data.upPolyline.length > 0 || data.downPolyline.length > 0);
         });
@@ -70,8 +62,7 @@ export default function BusRoutePolyline({
 
         if (available.length > 0) return available;
         if (activeRouteId && polylineMap.has(activeRouteId)) {
-            if (effectiveCityCode === "32020" && activeRouteId.startsWith("WJB258")) return [];
-            if (effectiveCityCode === "32320" && !activeRouteId.startsWith("WJB258")) return [];
+            if (!isRouteAllowedInCity(effectiveCityCode, activeRouteId)) return [];
             const data = polylineMap.get(activeRouteId);
             if (data && (data.upPolyline.length > 0 || data.downPolyline.length > 0)) {
                 return [activeRouteId];

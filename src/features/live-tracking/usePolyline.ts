@@ -8,6 +8,7 @@
 import {fetchRoutePolylines, getCachedRoutePolylinesSync, type PolylineData,} from "@entities/route/polylineService";
 
 import type {Coordinate} from "@entities/route/types";
+import {filterRouteIdsByCity} from "@entities/city/routeBoundary";
 import {useRouteInfo} from "@entities/route/hooks";
 import {buildRouteIdsKey} from "@shared/utils/routeIds";
 import {useEffect, useMemo, useState} from "react";
@@ -111,14 +112,7 @@ export function getFallbackPolylines(polylineMap: Map<string, BusPolylineSet>, a
 export function useRoutePolylineData(routeName: string, enabled: boolean = true, cityCode: string = "32020") {
     const routeInfo = useRouteInfo(routeName, enabled, cityCode);
     const routeIds = useMemo(() => {
-        const ids = routeInfo?.vehicleRouteIds ?? [];
-        if (cityCode === "32020") {
-            return ids.filter((id) => !id.startsWith("WJB258"));
-        }
-        if (cityCode === "32320") {
-            return ids.filter((id) => id.startsWith("WJB258"));
-        }
-        return ids;
+        return filterRouteIdsByCity(cityCode, routeInfo?.vehicleRouteIds ?? []);
     }, [routeInfo?.vehicleRouteIds, cityCode]);
     const polylineMap = useBusPolylineMap(routeIds, cityCode);
     const activeRouteId = routeIds[0] ?? null;

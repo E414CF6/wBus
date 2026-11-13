@@ -1,5 +1,5 @@
 import {buildCacheControl} from "@shared/cache/cachePolicy";
-import {type CacheOptions, getCachedOrFetch} from "@shared/cache";
+import {type CachedData, type CacheOptions, getCachedOrFetch} from "@shared/cache";
 import {NextResponse} from "next/server";
 
 export interface ApiHandlerConfig<T> {
@@ -9,7 +9,9 @@ export interface ApiHandlerConfig<T> {
     ttl: number | ((id: string, req?: Request) => number);
     errorMessage: string;
     cacheControl?: string;
-    cacheOptions?: Omit<CacheOptions, "ttlSeconds">;
+    resolveCacheControl?: (result: CachedData<T>) => string | undefined;
+    shouldCache?: (data: T) => boolean;
+    cacheOptions?: Omit<CacheOptions<T>, "ttlSeconds" | "shouldCache">;
     loggerPrefix: string;
     validate?: (id: string) => boolean;
 }
@@ -36,19 +38,27 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
             const url = new URL(request.url);
             const forceRefresh = url.searchParams.get("refresh") === "true";
             const resolvedTtl = typeof config.ttl === "function" ? config.ttl(id, request) : config.ttl;
-            const cacheOptions: CacheOptions = {
+            const cacheOptions: CacheOptions<T> = {
                 ttlSeconds: resolvedTtl,
                 ...config.cacheOptions,
+                ...(config.shouldCache ? {shouldCache: config.shouldCache} : {}),
                 forceRefresh,
             };
             const result = await getCachedOrFetch<T>(config.cacheKey(id, request), () => config.fetcher(id, request), cacheOptions);
 
             const headers: Record<string, string> = {};
-            headers["Cache-Control"] = config.cacheControl ?? buildCacheControl({
-                ttlSeconds: cacheOptions.ttlSeconds ?? resolvedTtl,
-                staleWhileRevalidateSeconds: cacheOptions.staleWhileRevalidateSeconds,
-                staleIfErrorSeconds: cacheOptions.staleIfErrorSeconds,
-            });
+            const dynamicCacheControl = config.resolveCacheControl?.(result);
+            if (dynamicCacheControl) {
+                headers["Cache-Control"] = dynamicCacheControl;
+            } else if (result.meta?.degraded) {
+                headers["Cache-Control"] = "no-store";
+            } else {
+                headers["Cache-Control"] = config.cacheControl ?? buildCacheControl({
+                    ttlSeconds: cacheOptions.ttlSeconds ?? resolvedTtl,
+                    staleWhileRevalidateSeconds: cacheOptions.staleWhileRevalidateSeconds,
+                    staleIfErrorSeconds: cacheOptions.staleIfErrorSeconds,
+                });
+            }
             if (result.meta) {
                 headers["X-Cache-Status"] = result.meta.status;
                 headers["X-Cache-Layer"] = result.meta.layer;

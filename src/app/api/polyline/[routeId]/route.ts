@@ -1,6 +1,8 @@
 import {type NextRequest, NextResponse} from "next/server";
+import {getCityBoundaryErrorMessage} from "@entities/city";
 import {ApiValidators} from "@shared/api";
 import {peekCached, setCached} from "@shared/cache";
+import {artifactStore} from "@shared/cache/artifactStore";
 import {generateSingleRoutePolyline} from "@entities/route/routeSyncService";
 import type {GeoPolyline} from "@entities/route/types";
 
@@ -33,17 +35,9 @@ export async function GET(
     const routeNo = searchParams.get("routeNo") || undefined;
 
     // Boundary check: Wonju (32020) and Hoengseong (32320)
-    if (cityCode === "32020" && routeId.startsWith("WJB258")) {
-        return NextResponse.json(
-            {error: `Route ${routeId} belongs to Hoengseong (32320), not Wonju (32020)`},
-            {status: 404}
-        );
-    }
-    if (cityCode === "32320" && !routeId.startsWith("WJB258")) {
-        return NextResponse.json(
-            {error: `Route ${routeId} belongs to Wonju (32020), not Hoengseong (32320)`},
-            {status: 404}
-        );
+    const boundaryError = getCityBoundaryErrorMessage(cityCode, routeId);
+    if (boundaryError) {
+        return NextResponse.json({error: boundaryError}, {status: 404});
     }
 
     const cacheKey = `polyline:${cityCode}:${routeId}`;
@@ -61,38 +55,19 @@ export async function GET(
         });
     }
 
-    // 2. Try local filesystem (public/routes/ or /tmp/routes/)
+    // 2. Check /tmp, Vercel Blob (when configured), and bundled public/routes/
     try {
-        const {readFile} = await import("fs/promises");
-        const {existsSync} = await import("fs");
-        const {join} = await import("path");
-
-        const localPaths = [
-            join(process.cwd(), "public", "routes", `${routeId}.json`),
-            join("/tmp", "routes", `${routeId}.json`),
-        ];
-
-        for (const localPath of localPaths) {
-            if (existsSync(/*turbopackIgnore: true*/ localPath)) {
-                const content = await readFile(/*turbopackIgnore: true*/ localPath, "utf-8");
-                try {
-                    const parsed = JSON.parse(content) as GeoPolyline;
-                    if (parsed && Array.isArray(parsed.stops) && parsed.stops.length > 0) {
-                        setCached(cacheKey, parsed);
-                        return new NextResponse(content, {
-                            status: 200,
-                            headers: {
-                                "Content-Type": "application/json; charset=utf-8",
-                                "Cache-Control": CACHE_CONTROL_HEADER,
-                                "X-Cache-Status": "hit",
-                                "X-Cache-Layer": "disk",
-                            },
-                        });
-                    }
-                } catch {
-                    // Corrupted disk file: fall through to on-demand regeneration (self-healing)
-                }
-            }
+        const stored = await artifactStore.getJson<GeoPolyline>(`routes/${routeId}.json`);
+        if (stored?.data && Array.isArray(stored.data.stops) && stored.data.stops.length > 0) {
+            setCached(cacheKey, stored.data);
+            return NextResponse.json(stored.data, {
+                status: 200,
+                headers: {
+                    "Cache-Control": CACHE_CONTROL_HEADER,
+                    "X-Cache-Status": "hit",
+                    "X-Cache-Layer": stored.source === "blob" ? "blob" : "disk",
+                },
+            });
         }
     } catch {
         // Continue to generator

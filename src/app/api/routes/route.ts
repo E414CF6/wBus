@@ -1,5 +1,6 @@
 import {type NextRequest, NextResponse} from "next/server";
 import {getCachedCityRoutes} from "@entities/bus";
+import {filterRoutesByCity} from "@entities/city";
 import {ApiValidators} from "@shared/api";
 import {invalidateCacheByPrefix} from "@shared/cache";
 
@@ -37,12 +38,7 @@ export async function GET(request: NextRequest) {
             invalidateCacheByPrefix(`routes:${cityCode}`);
         }
 
-        let routes = result.data || [];
-        if (cityCode === "32020") {
-            routes = routes.filter((r) => !String(r.routeid).startsWith("WJB258"));
-        } else if (cityCode === "32320") {
-            routes = routes.filter((r) => String(r.routeid).startsWith("WJB258"));
-        }
+        const routes = filterRoutesByCity(cityCode, result.data || []);
 
         // Group into route_numbers mapping { [routeNo]: [routeId1, routeId2, ...] }
         const routeNumbersMap: Record<string, string[]> = {};
@@ -56,6 +52,8 @@ export async function GET(request: NextRequest) {
             }
         }
 
+        const shouldSkipCdnCache = routes.length === 0 || Boolean(result.meta?.degraded);
+
         return NextResponse.json(
             {
                 cityCode,
@@ -65,10 +63,11 @@ export async function GET(request: NextRequest) {
             },
             {
                 headers: {
-                    "Cache-Control": CACHE_CONTROL_HEADER,
+                    "Cache-Control": shouldSkipCdnCache ? "no-store" : CACHE_CONTROL_HEADER,
                     ...(result.meta ? {
                         "X-Cache-Status": result.meta.status,
                         "X-Cache-Layer": result.meta.layer,
+                        ...(result.meta.degraded ? {"X-Cache-Degraded": "true"} : {}),
                     } : {}),
                 },
             }

@@ -1,5 +1,5 @@
-// wBus Lightweight Offline & Static Asset Service Worker (v2)
-const CACHE_NAME = "wbus-v2";
+// wBus Lightweight Offline & Static Asset Service Worker (v3)
+const CACHE_NAME = "wbus-v3";
 
 const PRECACHE_ASSETS = [
     "/favicon.ico",
@@ -68,7 +68,8 @@ self.addEventListener("fetch", (event) => {
                     return networkResponse;
                 }).catch(() => null);
 
-                return cachedResponse || fetchPromise || new Response("Asset not found", {status: 404});
+                const networkResponse = await fetchPromise;
+                return cachedResponse || networkResponse || new Response("Offline / Asset not found", {status: 503});
             })
         );
         return;

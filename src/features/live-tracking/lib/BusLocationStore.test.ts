@@ -104,4 +104,68 @@ describe("BusLocationStore", () => {
         expect(snapshot.hasFetched).toBe(true);
         expect(snapshot.data.length).toBeGreaterThan(0);
     });
+
+    it("removes both online and offline event listeners on final unsubscribe", () => {
+        const addSpy = vi.fn();
+        const removeSpy = vi.fn();
+        const docAddSpy = vi.fn();
+        const docRemoveSpy = vi.fn();
+
+        vi.stubGlobal("window", {
+            addEventListener: addSpy,
+            removeEventListener: removeSpy,
+        });
+        vi.stubGlobal("document", {
+            hidden: false,
+            addEventListener: docAddSpy,
+            removeEventListener: docRemoveSpy,
+        });
+
+        try {
+            const store = new BusLocationStore(["1001"], "unsub-test", "32020");
+            const unsubscribe = store.subscribe(() => undefined);
+
+            expect(addSpy).toHaveBeenCalledWith("online", expect.any(Function));
+            expect(addSpy).toHaveBeenCalledWith("offline", expect.any(Function));
+            expect(docAddSpy).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
+
+            unsubscribe();
+
+            expect(removeSpy).toHaveBeenCalledWith("online", expect.any(Function));
+            expect(removeSpy).toHaveBeenCalledWith("offline", expect.any(Function));
+            expect(docRemoveSpy).toHaveBeenCalledWith("visibilitychange", expect.any(Function));
+        } finally {
+            vi.unstubAllGlobals();
+        }
+    });
+
+    it("chunks routeIds into batches of 15 when more than 15 routes are subscribed", async () => {
+        const requestedUrls: string[] = [];
+        vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+            requestedUrls.push(String(input));
+            return {
+                ok: true,
+                json: async () => ({
+                    data: [{
+                        routeid: "R01", vehicleno: "1111", nodenm: "Stop 1", gpslati: 37.34, gpslong: 127.92,
+                    }],
+                    timestamp: Date.now(),
+                    meta: {status: "hit", layer: "memory", ageMs: 1250},
+                }),
+            } as Response;
+        });
+
+        const twentyIds = Array.from({length: 20}, (_, i) => `R${String(i + 1).padStart(2, "0")}`);
+        const store = new BusLocationStore(twentyIds, twentyIds.join(","), "32020");
+        store.manualReconnect();
+        await vi.advanceTimersByTimeAsync(50);
+
+        const batchCalls = requestedUrls.filter((u) => u.startsWith("/api/bus?routeIds="));
+        expect(batchCalls).toHaveLength(2);
+        expect(decodeURIComponent(batchCalls[0])).toContain("R15");
+        expect(decodeURIComponent(batchCalls[0])).not.toContain("R16");
+        expect(decodeURIComponent(batchCalls[1])).toContain("R16");
+        expect(decodeURIComponent(batchCalls[1])).toContain("R20");
+        expect(store.getSnapshot().serverAgeMs).toBe(1250);
+    });
 });

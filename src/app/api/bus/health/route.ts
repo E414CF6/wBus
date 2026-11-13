@@ -1,5 +1,8 @@
-import {getPublicApiHealth} from "@entities/bus";
+import {getPublicApiHealth, getSeoulApiHealth} from "@entities/bus";
+import {getRouteSyncHealth} from "@entities/route/routeSyncService";
 import {getCacheMetadata, loadFromLocalFile} from "@entities/schedule/server";
+import {distributedCache, getL1CacheMetrics} from "@shared/cache";
+import {artifactStore} from "@shared/cache/artifactStore";
 import {NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -7,6 +10,11 @@ export const dynamic = "force-dynamic";
 export async function GET() {
     try {
         const publicApiMetrics = getPublicApiHealth();
+        const seoulApiMetrics = getSeoulApiHealth();
+        const routeSyncMetrics = getRouteSyncHealth();
+        const l1Cache = getL1CacheMetrics();
+        const distributedStatus = distributedCache.getStatus();
+        const artifactStatus = artifactStore.getStatus();
 
         let scheduleMetrics = null;
         try {
@@ -31,6 +39,13 @@ export async function GET() {
             timestamp: new Date().toISOString(),
             metrics: {
                 ...publicApiMetrics,
+                seoulApi: seoulApiMetrics,
+                routeSync: routeSyncMetrics,
+                cache: l1Cache,
+                storage: {
+                    distributedCache: distributedStatus,
+                    artifactStore: artifactStatus,
+                },
                 schedule: scheduleMetrics,
             },
         }, {status});

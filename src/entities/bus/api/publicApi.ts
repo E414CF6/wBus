@@ -1,6 +1,19 @@
+import {filterRoutesByCity, isRouteAllowedInCity} from "@entities/city/routeBoundary";
+import {
+    filterValidItems,
+    TagoBusArrivalSchema,
+    TagoBusLocationSchema,
+    TagoBusStopSchema,
+    TagoCityRouteSchema,
+} from "@shared/api/schemas";
 import {type CachedData, getCachedOrFetch, peekCached} from "@shared/cache";
 import {API_PRIORITY, TaskQueue} from "@shared/utils/concurrency";
-import {isRouteInServiceWindow, recordRouteBusActivity} from "./routeWindow";
+import {
+    isRouteInServiceWindow,
+    recordRouteBusActivity,
+    registerCityRoutesMapping,
+    registerRouteIdMapping,
+} from "./routeWindow";
 import {
     fetchSeoulBusArrivals,
     fetchSeoulBusLocations,
@@ -529,10 +542,7 @@ export async function fetchBusLocations(routeId: string, options?: {
         return items;
     }
 
-    if (cityCode === "32020" && routeId.startsWith("WJB258")) {
-        return [];
-    }
-    if (cityCode === "32320" && !routeId.startsWith("WJB258")) {
+    if (!isRouteAllowedInCity(cityCode, routeId)) {
         return [];
     }
 
@@ -544,20 +554,27 @@ export async function fetchBusLocations(routeId: string, options?: {
     );
 
     const items = extractItems(data, `getRouteAcctoBusLcList:${cityCode}:${routeId}`);
-
-    // Update bus count metrics & activity timestamp for dynamic window extension
-    routeBusMetricsMap.set(metricsKey, {
-        busCount: items.length, lastFetchedAt: Date.now(),
-    });
-    recordRouteBusActivity(routeId, items.length, cityCode);
-
-    return items.map((bus) => ({
+    const mapped = items.map((bus) => ({
         ...bus,
         routeid: routeId,
         gpslati: Number(bus.gpslati),
         gpslong: Number(bus.gpslong),
         routenm: String(bus.routenm ?? ""),
     }));
+    const validItems = filterValidItems(mapped, TagoBusLocationSchema, `bus-loc:${cityCode}:${routeId}`) as RawBusLocation[];
+
+    const discoveredRouteNo = validItems.find((b) => b.routenm)?.routenm;
+    if (discoveredRouteNo) {
+        registerRouteIdMapping(cityCode, routeId, String(discoveredRouteNo));
+    }
+
+    // Update bus count metrics & activity timestamp for dynamic window extension
+    routeBusMetricsMap.set(metricsKey, {
+        busCount: validItems.length, lastFetchedAt: Date.now(),
+    });
+    recordRouteBusActivity(routeId, validItems.length, cityCode, discoveredRouteNo ? String(discoveredRouteNo) : undefined);
+
+    return validItems;
 }
 
 export interface RawBusArrival {
@@ -583,12 +600,16 @@ export async function fetchBusArrivals(nodeId: string, cityCode = CITY_CODE): Pr
     );
 
     const items = extractItems(data, `getSttnAcctoArvlPrearngeInfoList:${cityCode}:${nodeId}`);
-    return items.map((item) => ({
-        ...item,
-        routeno: String(item.routeno ?? ""),
-        arrprevstationcnt: Number(item.arrprevstationcnt ?? 0),
-        arrtime: Number(item.arrtime ?? 0),
-    }));
+    return filterValidItems(
+        items.map((item) => ({
+            ...item,
+            routeno: String(item.routeno ?? ""),
+            arrprevstationcnt: Number(item.arrprevstationcnt ?? 0),
+            arrtime: Number(item.arrtime ?? 0),
+        })),
+        TagoBusArrivalSchema,
+        `bus-arrival:${cityCode}:${nodeId}`
+    ) as RawBusArrival[];
 }
 
 export interface RawBusStop {
@@ -606,10 +627,7 @@ export async function fetchRouteStops(routeId: string, cityCode = CITY_CODE): Pr
         return fetchSeoulRouteStops(routeId);
     }
 
-    if (cityCode === "32020" && routeId.startsWith("WJB258")) {
-        return [];
-    }
-    if (cityCode === "32320" && !routeId.startsWith("WJB258")) {
+    if (!isRouteAllowedInCity(cityCode, routeId)) {
         return [];
     }
 
@@ -621,13 +639,17 @@ export async function fetchRouteStops(routeId: string, cityCode = CITY_CODE): Pr
     );
 
     const items = extractItems(data, `getRouteAcctoThrghSttnList:${cityCode}:${routeId}`);
-    return items.map((stop) => ({
-        ...stop,
-        gpslati: Number(stop.gpslati),
-        gpslong: Number(stop.gpslong),
-        nodeord: Number(stop.nodeord ?? 0),
-        updowncd: Number(stop.updowncd ?? 0),
-    }));
+    return filterValidItems(
+        items.map((stop) => ({
+            ...stop,
+            gpslati: Number(stop.gpslati),
+            gpslong: Number(stop.gpslong),
+            nodeord: Number(stop.nodeord ?? 0),
+            updowncd: Number(stop.updowncd ?? 0),
+        })),
+        TagoBusStopSchema,
+        `route-stops:${cityCode}:${routeId}`
+    ) as RawBusStop[];
 }
 
 export interface RawNearbyStop {
@@ -703,25 +725,29 @@ export async function fetchCityRoutes(cityCode: string, routeNo?: string): Promi
     );
 
     const items = extractItems(data, `getRouteNoList:${cityCode}:${routeNo ?? "all"}`);
-    let mapped = items.map((r) => ({
-        ...r,
-        routeno: String(r.routeno ?? ""),
-    }));
+    const mapped = filterValidItems(
+        items.map((r) => ({
+            ...r,
+            routeno: String(r.routeno ?? ""),
+        })),
+        TagoCityRouteSchema,
+        `city-routes:${cityCode}`
+    ) as RawCityRoute[];
 
     // Split Wonju (WJB251) and Hoengseong (WJB258)
-    if (cityCode === "32020") {
-        mapped = mapped.filter((r) => !String(r.routeid).startsWith("WJB258"));
-    } else if (cityCode === "32320") {
-        mapped = mapped.filter((r) => String(r.routeid).startsWith("WJB258"));
+    const filtered = filterRoutesByCity(cityCode, mapped);
+    if (filtered.length > 0) {
+        registerCityRoutesMapping(cityCode, filtered);
     }
 
-    return mapped;
+    return filtered;
 }
 
 const ROUTE_CACHE_OPTIONS = {
     ttlSeconds: 86400,
     staleWhileRevalidateSeconds: 604800,
     staleIfErrorSeconds: 604800,
+    useDistributedCache: true,
 } as const;
 
 /**
@@ -737,6 +763,7 @@ export async function getCachedCityRoutes(cityCode: string, routeNo?: string) {
             ROUTE_CACHE_OPTIONS.ttlSeconds + ROUTE_CACHE_OPTIONS.staleWhileRevalidateSeconds
         );
         if (cachedAll?.data && cachedAll.data.length > 0) {
+            registerCityRoutesMapping(cityCode, cachedAll.data);
             const exact = cachedAll.data.filter((r) => String(r.routeno) === routeNo);
             if (exact.length > 0) {
                 return {
@@ -761,6 +788,9 @@ export async function getCachedCityRoutes(cityCode: string, routeNo?: string) {
             },
             ROUTE_CACHE_OPTIONS
         );
+        if (allResult.data && allResult.data.length > 0) {
+            registerCityRoutesMapping(cityCode, allResult.data);
+        }
     } catch {
         allResult = {data: [], timestamp: Date.now()};
     }
@@ -777,7 +807,7 @@ export async function getCachedCityRoutes(cityCode: string, routeNo?: string) {
         };
     }
 
-    // 3. Fallback: query specific routeNo if not present in the city-wide list
+    // 3. Fallback: query specific routeNo if not present in the city-wide list (never cache empty [] in L1)
     const specificKey = `routes:${cityCode}:${routeNo}`;
     return getCachedOrFetch<RawCityRoute[]>(
         specificKey,
@@ -785,7 +815,10 @@ export async function getCachedCityRoutes(cityCode: string, routeNo?: string) {
             const fetched = await fetchCityRoutes(cityCode, routeNo);
             return fetched && fetched.length > 0 ? fetched : [];
         },
-        ROUTE_CACHE_OPTIONS
+        {
+            ...ROUTE_CACHE_OPTIONS,
+            shouldCache: (items) => Array.isArray(items) && items.length > 0,
+        }
     );
 }
 

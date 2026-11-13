@@ -5,16 +5,18 @@ import {getCachedPolylineSync, getCachedRouteInfoSync} from "@entities/route/api
 import type {BusStop, BusStopArrival, FavoriteStop, NearbyStop} from "@entities/station/types";
 import type {CachedData} from "@shared/cache";
 import {CacheManager} from "@shared/cache/CacheManager";
+import {idbGet, idbSet} from "@shared/cache/idbStorage";
 import {getFavoriteStopsStorageKey, STORAGE_KEYS} from "@shared/config/env";
 import {triggerHaptic} from "@shared/utils/haptics";
 
 import {UI_TEXT} from "@shared/config/locale";
 
+const ROUTE_STOPS_TTL_MS = 24 * 60 * 60 * 1000;
+
+// Keep routeStops in L1 memory + async IndexedDB instead of duplicating stops in synchronous localStorage
 const routeStopsCache = new CacheManager<BusStop[]>({
     maxSize: 150,
-    ttlMs: 24 * 60 * 60 * 1000,
-    storagePrefix: STORAGE_KEYS.ROUTE_STOPS_PREFIX,
-    maxStorageEntries: 80,
+    ttlMs: ROUTE_STOPS_TTL_MS,
 });
 
 function deriveStopsFromCachedPolylines(routeName: string, cityCode: string): BusStop[] | null {
@@ -44,10 +46,22 @@ function deriveStopsFromCachedPolylines(routeName: string, cityCode: string): Bu
     return allStops;
 }
 
-// Fetcher for the new API
+// Fetcher for route stops with L1 memory -> IndexedDB -> polyline derivation -> API
 const fetchRouteStops = async (routeName: string, cityCode: string): Promise<BusStop[]> => {
     const cacheKey = `${cityCode}:${routeName}`;
     return routeStopsCache.getOrFetch(cacheKey, async () => {
+        const idbKey = `${STORAGE_KEYS.ROUTE_STOPS_PREFIX}${cacheKey}`;
+        const idbCached = await idbGet<BusStop[]>(idbKey);
+        if (idbCached && idbCached.length > 0) {
+            return idbCached;
+        }
+
+        const derived = deriveStopsFromCachedPolylines(routeName, cityCode);
+        if (derived && derived.length > 0) {
+            void idbSet(idbKey, derived, ROUTE_STOPS_TTL_MS);
+            return derived;
+        }
+
         const url =
             cityCode === "32020"
                 ? `/api/route-stops/${encodeURIComponent(routeName)}`
@@ -55,7 +69,11 @@ const fetchRouteStops = async (routeName: string, cityCode: string): Promise<Bus
         const res = await fetch(url);
         if (!res.ok) throw new Error("Failed to fetch stops");
         const data = await res.json();
-        return (data.data ?? []) as BusStop[];
+        const stops = (data.data ?? []) as BusStop[];
+        if (stops.length > 0) {
+            void idbSet(idbKey, stops, ROUTE_STOPS_TTL_MS);
+        }
+        return stops;
     });
 };
 

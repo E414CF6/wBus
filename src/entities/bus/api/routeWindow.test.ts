@@ -4,9 +4,12 @@ import {
     formatMinutesToTime,
     getCurrentKstMinutes,
     getRouteOperatingWindow,
+    invalidateRouteWindowScheduleCache,
     isRouteInServiceWindow,
     parseTimeToMinutes,
     recordRouteBusActivity,
+    registerRouteIdMapping,
+    resolveRouteNumber,
 } from "./routeWindow";
 
 describe("routeWindow utility functions", () => {
@@ -110,6 +113,24 @@ describe("routeWindow utility functions", () => {
             expect(wonjuStatus.reason).toBe("activity_override");
             expect(otherCityStatus.inService).toBe(false);
             expect(otherCityStatus.reason).toBe("outside_window");
+        });
+    });
+
+    describe("routeId to routeNo mapping and cache invalidation", () => {
+        it("resolves WJB serial routeIds to registered route numbers for timetable windows", () => {
+            registerRouteIdMapping("32020", "WJB251000999", "30");
+            expect(resolveRouteNumber("WJB251000999", "32020")).toBe("30");
+
+            const win = getRouteOperatingWindow("WJB251000999", "32020");
+            expect(win.routeNo).toBe("30");
+            expect(win.source).toBe("yonsei_static");
+        });
+
+        it("uses routeNoHint when provided and invalidates windows cleanly", () => {
+            invalidateRouteWindowScheduleCache();
+            const win = getRouteOperatingWindow("WJB251000888", "32020", {routeNoHint: "34"});
+            expect(win.routeNo).toBe("34");
+            expect(win.source).toBe("yonsei_static");
         });
     });
 });

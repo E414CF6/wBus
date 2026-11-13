@@ -282,7 +282,6 @@ protection.
 | `GET`      | `/api/notice`                                  | Official Wonju ITS transit notices and advisories list         | `s-maxage=900` (15 min)        |
 | `GET`      | `/api/notice/[id]`                             | Detailed body content for a specific Wonju ITS transit notice  | `s-maxage=600` (10 min)        |
 | `GET/POST` | `/api/cron/refresh?target=...`                 | Unified Vercel Cron trigger (daily schedules + weekly routes)  | `no-store` (Bearer Auth)       |
-| `GET`      | `/data/[...path]`                              | Static geometry asset and on-demand vector file proxy          | `s-maxage=604800` (7 days)     |
 
 ---
 

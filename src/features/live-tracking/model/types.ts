@@ -8,6 +8,7 @@ export interface BusLocationState {
     hasFetched: boolean;
     connectionStatus: LiveConnectionStatus;
     lastUpdated: number | null;
+    serverAgeMs: number | null;
     isDegraded: boolean;
     reconnect: () => void;
 }
@@ -22,6 +23,7 @@ export const EMPTY_STATE: BusLocationState = {
     hasFetched: false,
     connectionStatus: "connecting",
     lastUpdated: null,
+    serverAgeMs: null,
     isDegraded: false,
     reconnect: () => undefined,
 };

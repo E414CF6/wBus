@@ -1,3 +1,4 @@
+import {fetchWithRetry, SharedCircuitBreaker} from "@shared/api/upstreamClient";
 import {getCachedOrFetch, peekCached, setCached} from "@shared/cache";
 import {calculatePolylineMeters} from "@entities/route/polylineChunker";
 import type {GeoPolyline} from "@entities/route/types";
@@ -17,6 +18,16 @@ import type {RawBusArrival, RawBusLocation, RawBusStop, RawCityRoute, RawNearbyS
 export const SEOUL_CITY_CODE = "11";
 const WS_BUS_API_BASE = "http://ws.bus.go.kr/api/rest";
 const SBUS_WEB_BASE = "https://bus.go.kr/sbus/bus";
+
+const seoulWsBreaker = new SharedCircuitBreaker("SeoulWS", 5, 15_000);
+const seoulTopisBreaker = new SharedCircuitBreaker("SeoulTOPIS", 5, 15_000);
+
+export function getSeoulApiHealth() {
+    return {
+        ws: seoulWsBreaker.getState(),
+        topis: seoulTopisBreaker.getState(),
+    };
+}
 
 export interface SeoulBusPosItem {
     sectOrd?: string | number;
@@ -276,13 +287,15 @@ export async function fetchSeoulWsBusPos(
         url.searchParams.set(k, v);
     }
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithRetry(url.toString(), {
         headers: {
             Client: "wBus",
             Connection: "keep-alive",
         },
-        signal: AbortSignal.timeout(4500),
+        timeoutMs: 4500,
+        maxAttempts: 2,
         cache: "no-store",
+        circuitBreaker: seoulWsBreaker,
     });
 
     if (!res.ok) {
@@ -306,12 +319,14 @@ async function getSeoulRouteBundle(routeId: string): Promise<{
         bundleCacheKey,
         async () => {
             const url = `${SBUS_WEB_BASE}/selectBusposInfo.do?routeId=${encodeURIComponent(routeId)}&isLowBus=N`;
-            const res = await fetch(url, {
+            const res = await fetchWithRetry(url, {
                 headers: {
                     "User-Agent": "Mozilla/5.0 (compatible; wBus/2.0)",
                     Accept: "application/json",
                 },
-                signal: AbortSignal.timeout(6000),
+                timeoutMs: 6000,
+                maxAttempts: 2,
+                circuitBreaker: seoulTopisBreaker,
             });
 
             if (!res.ok) {
@@ -484,18 +499,18 @@ export async function fetchSeoulBusLocations(
     }
 
     let rawItems: SeoulBusPosItem[];
+    let usedKeyIndex: number | null = null;
 
     // Primary: Official ws.bus.go.kr/api/rest/buspos/getBusPosByRtid using TAGO serviceKey
     try {
         const {key, index} = getServiceKey();
+        usedKeyIndex = index;
         rawItems = await fetchSeoulWsBusPos("getBusPosByRtid", {busRouteId: routeId}, key);
-        void index;
     } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        if (/LIMITED|TRAFFIC|EXCEED|429|Code:\s*22/i.test(msg) && onKeyRateLimited) {
+        if (/LIMITED|TRAFFIC|EXCEED|429|Code:\s*22/i.test(msg) && onKeyRateLimited && usedKeyIndex !== null) {
             try {
-                const {index} = getServiceKey();
-                onKeyRateLimited(index);
+                onKeyRateLimited(usedKeyIndex);
             } catch {
                 // Ignore
             }
@@ -503,13 +518,15 @@ export async function fetchSeoulBusLocations(
 
         // Fallback: TOPIS selectBusposByRtid.do
         const fallbackUrl = `${SBUS_WEB_BASE}/selectBusposByRtid.do?routeId=${encodeURIComponent(routeId)}&isLowBus=N`;
-        const res = await fetch(fallbackUrl, {
+        const res = await fetchWithRetry(fallbackUrl, {
             headers: {
                 "User-Agent": "Mozilla/5.0 (compatible; wBus/2.0)",
                 Accept: "application/json",
             },
-            signal: AbortSignal.timeout(4500),
+            timeoutMs: 4500,
+            maxAttempts: 2,
             cache: "no-store",
+            circuitBreaker: seoulTopisBreaker,
         });
 
         if (!res.ok) {
@@ -576,12 +593,14 @@ export async function fetchSeoulCityRoutes(routeNo?: string): Promise<RawCityRou
     url.searchParams.set("strkey", routeNo || "");
     url.searchParams.set("strdiv", "1");
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithRetry(url.toString(), {
         headers: {
             "User-Agent": "Mozilla/5.0 (compatible; wBus/2.0)",
             Accept: "application/json",
         },
-        signal: AbortSignal.timeout(8000),
+        timeoutMs: 8000,
+        maxAttempts: 2,
+        circuitBreaker: seoulTopisBreaker,
     });
 
     if (!res.ok) {
@@ -679,13 +698,15 @@ export async function fetchSeoulBusArrivals(nodeId: string): Promise<RawBusArriv
         url.searchParams.set("stopId", trimmed);
     }
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithRetry(url.toString(), {
         headers: {
             "User-Agent": "Mozilla/5.0 (compatible; wBus/2.0)",
             Accept: "application/json",
         },
-        signal: AbortSignal.timeout(4500),
+        timeoutMs: 4500,
+        maxAttempts: 2,
         cache: "no-store",
+        circuitBreaker: seoulTopisBreaker,
     });
 
     if (!res.ok) {
@@ -765,12 +786,14 @@ export async function fetchSeoulNearbyStops(params: {
     url.searchParams.set("lati", String(params.gpsLati));
     url.searchParams.set("longi", String(params.gpsLong));
 
-    const res = await fetch(url.toString(), {
+    const res = await fetchWithRetry(url.toString(), {
         headers: {
             "User-Agent": "Mozilla/5.0 (compatible; wBus/2.0)",
             Accept: "application/json",
         },
-        signal: AbortSignal.timeout(4500),
+        timeoutMs: 4500,
+        maxAttempts: 2,
+        circuitBreaker: seoulTopisBreaker,
     });
 
     if (!res.ok) {

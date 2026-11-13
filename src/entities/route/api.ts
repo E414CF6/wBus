@@ -1,5 +1,6 @@
 import type {GeoPolyline, RouteDetail, RouteInfo, RouteVariation, RouteVariationStop} from "@entities/route/types";
 import type {RawCityRoute} from "@entities/bus/api/publicApi";
+import {filterRouteIdsByCity, filterRouteNumbersMapByCity, filterRoutesByCity} from "@entities/city/routeBoundary";
 import {getRouteMeta, registerDynamicRouteMeta} from "@entities/route/routeMetadata";
 
 import {fetchAPI, HttpError} from "@shared/api/fetchAPI";
@@ -43,32 +44,13 @@ export function getCachedCityRoutesSync(cityCode?: string): CityRoutesPayload | 
     const cCode = resolveCityCode(cityCode);
     const cached = cityRoutesCache.get(cCode);
     if (cached) {
-        if (cCode === "32020") {
-            const hasContamination = cached.routes?.some((r) => String(r.routeid).startsWith("WJB258")) || Object.values(cached.route_numbers || {}).some((ids) => ids.some((id) => id.startsWith("WJB258")));
-            if (hasContamination) {
-                cached.routes = (cached.routes || []).filter((r) => !String(r.routeid).startsWith("WJB258"));
-                const cleanedMap: Record<string, string[]> = {};
-                for (const [k, v] of Object.entries(cached.route_numbers || {})) {
-                    const filtered = v.filter((id) => !id.startsWith("WJB258"));
-                    if (filtered.length > 0) cleanedMap[k] = filtered;
-                }
-                cached.route_numbers = cleanedMap;
-                cached.count = cached.routes.length;
-                cityRoutesCache.set(cCode, cached);
-            }
-        } else if (cCode === "32320") {
-            const hasContamination = cached.routes?.some((r) => !String(r.routeid).startsWith("WJB258")) || Object.values(cached.route_numbers || {}).some((ids) => ids.some((id) => !id.startsWith("WJB258")));
-            if (hasContamination) {
-                cached.routes = (cached.routes || []).filter((r) => String(r.routeid).startsWith("WJB258"));
-                const cleanedMap: Record<string, string[]> = {};
-                for (const [k, v] of Object.entries(cached.route_numbers || {})) {
-                    const filtered = v.filter((id) => id.startsWith("WJB258"));
-                    if (filtered.length > 0) cleanedMap[k] = filtered;
-                }
-                cached.route_numbers = cleanedMap;
-                cached.count = cached.routes.length;
-                cityRoutesCache.set(cCode, cached);
-            }
+        const filteredRoutes = filterRoutesByCity(cCode, cached.routes || []);
+        const {cleaned: cleanedMap, hadContamination} = filterRouteNumbersMapByCity(cCode, cached.route_numbers || {});
+        if (hadContamination || filteredRoutes.length !== (cached.routes || []).length) {
+            cached.routes = filteredRoutes;
+            cached.route_numbers = cleanedMap;
+            cached.count = filteredRoutes.length;
+            cityRoutesCache.set(cCode, cached);
         }
         if (cached.routes?.length) {
             registerDynamicRouteMeta(cCode, cached.routes);
@@ -85,18 +67,14 @@ export function getCachedRouteInfoSync(routeName: string, cityCode?: string): Ro
     const cCode = resolveCityCode(cityCode);
 
     const cityData = getCachedCityRoutesSync(cCode);
-    let idsFromCity = cityData?.route_numbers?.[routeName];
-    if (idsFromCity && idsFromCity.length > 0) {
-        if (cCode === "32020") idsFromCity = idsFromCity.filter((id) => !id.startsWith("WJB258")); else if (cCode === "32320") idsFromCity = idsFromCity.filter((id) => id.startsWith("WJB258"));
-        if (idsFromCity.length > 0) {
-            return {routeName, vehicleRouteIds: idsFromCity};
-        }
+    const idsFromCity = filterRouteIdsByCity(cCode, cityData?.route_numbers?.[routeName] || []);
+    if (idsFromCity.length > 0) {
+        return {routeName, vehicleRouteIds: idsFromCity};
     }
 
     const cached = routeInfoCache.get(`${cCode}:${routeName}`);
     if (cached?.vehicleRouteIds) {
-        let vIds = cached.vehicleRouteIds;
-        if (cCode === "32020") vIds = vIds.filter((id) => !id.startsWith("WJB258")); else if (cCode === "32320") vIds = vIds.filter((id) => id.startsWith("WJB258"));
+        const vIds = filterRouteIdsByCity(cCode, cached.vehicleRouteIds);
         if (vIds.length > 0) {
             return {routeName, vehicleRouteIds: vIds};
         }
@@ -124,26 +102,8 @@ export async function fetchCityRoutesData(cityCode?: string): Promise<CityRoutes
     }
 
     const json = await fetchAPI<Partial<CityRoutesPayload>>(`/api/routes?cityCode=${cCode}`);
-    let routes = Array.isArray(json.routes) ? json.routes : [];
-    let routeNumbers = json.route_numbers || {};
-
-    if (cCode === "32020") {
-        routes = routes.filter((r) => !String(r.routeid).startsWith("WJB258"));
-        const cleaned: Record<string, string[]> = {};
-        for (const [k, v] of Object.entries(routeNumbers)) {
-            const filtered = v.filter((id) => !id.startsWith("WJB258"));
-            if (filtered.length > 0) cleaned[k] = filtered;
-        }
-        routeNumbers = cleaned;
-    } else if (cCode === "32320") {
-        routes = routes.filter((r) => String(r.routeid).startsWith("WJB258"));
-        const cleaned: Record<string, string[]> = {};
-        for (const [k, v] of Object.entries(routeNumbers)) {
-            const filtered = v.filter((id) => id.startsWith("WJB258"));
-            if (filtered.length > 0) cleaned[k] = filtered;
-        }
-        routeNumbers = cleaned;
-    }
+    const routes = filterRoutesByCity(cCode, Array.isArray(json.routes) ? json.routes : []);
+    const {cleaned: routeNumbers} = filterRouteNumbersMapByCity(cCode, json.route_numbers || {});
 
     if (routes.length > 0) {
         registerDynamicRouteMeta(cCode, routes);
@@ -189,7 +149,7 @@ export async function getRouteInfo(routeName: string, cityCode?: string): Promis
     const cachedCity = getCachedCityRoutesSync(cCode);
     let cachedIds = cachedCity?.route_numbers?.[routeName];
     if (cachedIds && cachedIds.length > 0) {
-        if (cCode === "32020") cachedIds = cachedIds.filter((id) => !id.startsWith("WJB258")); else if (cCode === "32320") cachedIds = cachedIds.filter((id) => id.startsWith("WJB258"));
+        cachedIds = filterRouteIdsByCity(cCode, cachedIds);
         if (cachedIds.length > 0) {
             return {routeName, vehicleRouteIds: cachedIds};
         }
@@ -204,7 +164,7 @@ export async function getRouteInfo(routeName: string, cityCode?: string): Promis
             }>(`/api/routes?cityCode=${cCode}&routeNo=${encodeURIComponent(routeName)}`);
             let ids = json?.route_numbers?.[routeName] || (json?.routes?.[0]?.routeid ? [json.routes[0].routeid] : null);
             if (ids && ids.length > 0) {
-                if (cCode === "32020") ids = ids.filter((id) => !id.startsWith("WJB258")); else if (cCode === "32320") ids = ids.filter((id) => id.startsWith("WJB258"));
+                ids = filterRouteIdsByCity(cCode, ids);
                 if (ids.length > 0) {
                     return {routeName, vehicleRouteIds: ids};
                 }
@@ -239,8 +199,7 @@ export async function getRouteVariations(routeName: string, cityCode?: string): 
     return variationsCache.getOrFetch(cacheKey, async () => {
         const routeInfo = await getRouteInfo(routeName, cCode);
         if (!routeInfo || !routeInfo.vehicleRouteIds?.length) return [];
-        let vIds = routeInfo.vehicleRouteIds;
-        if (cCode === "32020") vIds = vIds.filter((id) => !id.startsWith("WJB258")); else if (cCode === "32320") vIds = vIds.filter((id) => id.startsWith("WJB258"));
+        const vIds = filterRouteIdsByCity(cCode, routeInfo.vehicleRouteIds);
         if (vIds.length === 0) return [];
 
         const polylines = await Promise.all(vIds.map(async (id) => {

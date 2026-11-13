@@ -1,4 +1,5 @@
 import type {BusDataError, BusItem} from "@entities/bus/types";
+import {filterRouteIdsByCity} from "@entities/city";
 import {useRouteInfo} from "@entities/route/hooks";
 import type {RouteInfo} from "@entities/route/types";
 
@@ -20,6 +21,7 @@ interface UseBusData {
     hasFetched: boolean;
     error: BusDataError;
     lastUpdated: number | null;
+    serverAgeMs: number | null;
     isDegraded: boolean;
     reconnect: () => void;
 }
@@ -36,13 +38,11 @@ export function useBusData(routeName: string, enabled: boolean = true, cityCode:
     const routeInfo = useRouteInfo(routeName, enabled, cityCode);
     const routeIds = useMemo(() => {
         const ids = routeInfo?.vehicleRouteIds ?? [];
-        if (cityCode === "32020") return ids.filter((id) => !id.startsWith("WJB258"));
-        if (cityCode === "32320") return ids.filter((id) => id.startsWith("WJB258"));
-        return ids;
+        return filterRouteIdsByCity(cityCode, ids);
     }, [routeInfo?.vehicleRouteIds, cityCode]);
     const activeRouteIds = useMemo(() => (enabled ? routeIds : []), [enabled, routeIds]);
     const {
-        data: busList, connectionStatus, hasFetched, error, lastUpdated, isDegraded, reconnect
+        data: busList, connectionStatus, hasFetched, error, lastUpdated, serverAgeMs, isDegraded, reconnect
     } = useBusLocationData(activeRouteIds, cityCode);
     const directionFn = useBusDirection(routeName, cityCode);
 
@@ -66,6 +66,7 @@ export function useBusData(routeName: string, enabled: boolean = true, cityCode:
         hasFetched,
         error,
         lastUpdated,
+        serverAgeMs,
         isDegraded,
         reconnect,
     };

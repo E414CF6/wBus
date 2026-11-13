@@ -5,6 +5,7 @@ import {buildCacheControl} from "@shared/cache/cachePolicy";
 import {getCachedOrFetch, peekCached} from "@shared/cache";
 import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import {fetchRouteStops, getCachedCityRoutes} from "@entities/bus";
+import {filterRouteIdsByCity} from "@entities/city";
 
 // Always treat this route as dynamic to avoid static build-time serialization
 export const dynamic = "force-dynamic";
@@ -15,12 +16,7 @@ async function getRouteStopsForCity(routeName: string, cityCode: string): Promis
         const rawRoutes = routesResult.data || [];
         const matched = rawRoutes.filter((r) => String(r.routeno) === routeName || r.routeid === routeName);
         if (matched.length === 0) return [];
-        let routeIds = matched.map((r) => r.routeid);
-        if (cityCode === "32020") {
-            routeIds = routeIds.filter((id) => !id.startsWith("WJB258"));
-        } else if (cityCode === "32320") {
-            routeIds = routeIds.filter((id) => id.startsWith("WJB258"));
-        }
+        const routeIds = filterRouteIdsByCity(cityCode, matched.map((r) => r.routeid));
         if (routeIds.length === 0) return [];
 
         const stopMap = new Map<string, BusStop>();
@@ -42,7 +38,7 @@ async function getRouteStopsForCity(routeName: string, cityCode: string): Promis
                     }));
                 }
 
-                // 2. Otherwise use shared bus-stops L1 cache
+                // 2. Otherwise use shared bus-stops L1 + Redis cache
                 const cachedStops = await getCachedOrFetch(
                     `bus-stops:${cityCode}:${rId}`,
                     () => fetchRouteStops(rId, cityCode),
@@ -50,6 +46,8 @@ async function getRouteStopsForCity(routeName: string, cityCode: string): Promis
                         ttlSeconds: 3600,
                         staleWhileRevalidateSeconds: 86400,
                         staleIfErrorSeconds: 86400,
+                        shouldCache: (stops) => Array.isArray(stops) && stops.length > 0,
+                        useDistributedCache: true,
                     }
                 );
                 return cachedStops.data || [];
@@ -104,10 +102,14 @@ export const GET = createApiHandler<BusStop[]>({
     ttl: 3600,
     errorMessage: "Failed to fetch route stops",
     cacheControl: CACHE_CONTROL,
+    shouldCache: (data) => Array.isArray(data) && data.length > 0,
+    resolveCacheControl: (result) =>
+        !result.data || result.data.length === 0 || result.meta?.degraded ? "no-store" : CACHE_CONTROL,
     loggerPrefix: "route-stops",
     validate: ApiValidators.isValidRouteName,
     cacheOptions: {
         staleWhileRevalidateSeconds: 86400,
         staleIfErrorSeconds: 86400,
+        useDistributedCache: true,
     },
 });

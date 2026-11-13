@@ -6,7 +6,7 @@ export type CacheStatus = "hit" | "stale" | "miss" | "fallback";
 
 export interface CacheMeta {
     status: CacheStatus;
-    layer: "memory" | "origin";
+    layer: "memory" | "redis" | "origin";
     ageMs: number;
     degraded?: boolean;
 }

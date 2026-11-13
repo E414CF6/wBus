@@ -43,3 +43,4 @@ scripts/cache/*
 public/routes/
 public/data/comments.json
 *.zip
+.env*

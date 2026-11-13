@@ -339,6 +339,7 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
         polylineMap,
         fallbackPolylines,
         activeRouteId,
+        serverAgeMs,
     } = useBusData(routeName, enabled, effectiveCityCode);
 
     const [selectedBusKey, setSelectedBusKey] = useState<string | null>(null);
@@ -370,7 +371,10 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
     const effectiveAnimationDuration =
         settings.smoothBusAnimation && !settings.reduceMotion ? MAP_SETTINGS.ANIMATION.BUS_MOVE_MS : 0;
     const effectivePollingIntervalMs = settings.livePollingIntervalMs || API_CONFIG.LIVE.POLLING_INTERVAL_MS;
-    const effectiveDataDelayMs = API_CONFIG.LIVE.DATA_DELAY_MS;
+    const effectiveDataDelayMs =
+        typeof serverAgeMs === "number" && Number.isFinite(serverAgeMs)
+            ? Math.min(30000, Math.max(0, API_CONFIG.LIVE.DATA_DELAY_MS + serverAgeMs))
+            : API_CONFIG.LIVE.DATA_DELAY_MS;
 
     const routeIndicesMap = useMemo(() => {
         if (!routeInfo) return new Map();
