@@ -1,7 +1,7 @@
 import {describe, expect, it} from "vitest";
 import type {BusItem} from "@entities/bus/types";
 import type {RouteVariationStop} from "@entities/route/types";
-import {matchSingleBusToStop} from "./useBusStopMatcher";
+import {findNearestBusEntity, type MatchedBusStopEntry, matchSingleBusToStop} from "./useBusStopMatcher";
 
 describe("useBusStopMatcher pure logic", () => {
     const mockStops: RouteVariationStop[] = [
@@ -113,5 +113,58 @@ describe("useBusStopMatcher pure logic", () => {
         };
         const matched = matchSingleBusToStop(bus, mockStops);
         expect(matched?.nodeid).toBe("STOP2");
+    });
+
+    describe("findNearestBusEntity", () => {
+        const candidates: MatchedBusStopEntry[] = [
+            {
+                stopKey: "STOP1-1",
+                stop: mockStops[0],
+                plateDigits: "1001",
+                bus: {
+                    routenm: "30",
+                    vehicleno: "강원70사1001",
+                    nodeid: "STOP1",
+                    nodeord: 1,
+                    gpslati: 37.35,
+                    gpslong: 127.95,
+                },
+            },
+            {
+                stopKey: "STOP2-2",
+                stop: mockStops[1],
+                plateDigits: "1002",
+                bus: {
+                    routenm: "30",
+                    vehicleno: "강원70사1002",
+                    nodeid: "STOP2",
+                    nodeord: 2,
+                    gpslati: 37.362,
+                    gpslong: 127.962,
+                },
+            },
+        ];
+
+        it("returns null when candidates array is empty", () => {
+            expect(findNearestBusEntity({lat: 37.35, lng: 127.95}, [])).toBeNull();
+        });
+
+        it("picks the running bus closest to the map center using live bus coordinates", () => {
+            const nearest = findNearestBusEntity({lat: 37.3618, lng: 127.9619}, candidates);
+            expect(nearest?.bus.vehicleno).toBe("강원70사1002");
+            expect(nearest?.stopKey).toBe("STOP2-2");
+        });
+
+        it("falls back to stop coordinates when bus GPS coordinates are missing", () => {
+            const withMissingGps: MatchedBusStopEntry[] = [
+                {
+                    ...candidates[0],
+                    bus: {...candidates[0].bus, gpslati: 0, gpslong: 0},
+                },
+                candidates[1],
+            ];
+            const nearest = findNearestBusEntity({lat: 37.3502, lng: 127.9502}, withMissingGps);
+            expect(nearest?.bus.vehicleno).toBe("강원70사1001");
+        });
     });
 });

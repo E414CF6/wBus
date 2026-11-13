@@ -94,6 +94,39 @@ export function makeStopKey(stop: RouteVariationStop): string {
     return `${stop.nodeid}-${stop.nodeord ?? ""}`;
 }
 
+export interface MatchedBusStopEntry {
+    stopKey: string;
+    stop: RouteVariationStop;
+    plateDigits: string;
+    bus: BusItem;
+}
+
+/**
+ * Find the matched live bus entry closest to a given map center coordinate.
+ * Uses the live bus GPS coordinates first, falling back to its matched stop coordinates.
+ */
+export function findNearestBusEntity(
+    center: { lat: number; lng: number },
+    candidates: MatchedBusStopEntry[]
+): MatchedBusStopEntry | null {
+    let nearest: MatchedBusStopEntry | null = null;
+    let nearestDistance = Infinity;
+
+    for (const entry of candidates) {
+        const lat = entry.bus.gpslati || entry.stop.gpslati;
+        const lng = entry.bus.gpslong || entry.stop.gpslong;
+        if (!lat || !lng) continue;
+
+        const distance = getHaversineDistance(center.lat, center.lng, lat, lng);
+        if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearest = entry;
+        }
+    }
+
+    return nearest;
+}
+
 export interface UseBusStopMatcherParams {
     runningBuses: BusItem[];
     currentStops: RouteVariationStop[];

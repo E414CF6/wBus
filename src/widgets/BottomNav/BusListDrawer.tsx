@@ -14,9 +14,8 @@ import {useCityContext, useCityFeatures} from "@entities/city";
 import {findPairedOppositeStop, useBusStop, useFavoriteStops} from "@entities/station";
 import type {BusItem} from "@entities/bus/types";
 import type {BusStop} from "@entities/station/types";
-import {getHaversineDistance} from "@shared/utils/geo";
 
-import {useBusStopMatcher} from "./hooks/useBusStopMatcher";
+import {findNearestBusEntity, type MatchedBusStopEntry, useBusStopMatcher} from "./hooks/useBusStopMatcher";
 import {useStopSearchFilter} from "./hooks/useStopSearchFilter";
 import {useElapsedTimeAgo} from "./hooks/useElapsedTimeAgo";
 import {BusDrawerHeader} from "./ui/BusDrawerHeader";
@@ -76,12 +75,14 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const setSelectedVariantId = onSelectVariant ?? setInternalVariantId;
     const [selectedStopId, setSelectedStopId] = useState<string | null>(null);
     const [selectedStop, setSelectedStop] = useState<BusStop | null>(null);
+    const [nearestBusVehicleNo, setNearestBusVehicleNo] = useState<string | null>(null);
     const [isSplitCollapsed, setIsSplitCollapsed] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [dragOffsetY, setDragOffsetY] = useState(0);
     const [isDraggingSheet, setIsDraggingSheet] = useState(false);
     const dragStartRef = useRef<{ y: number; time: number } | null>(null);
     const listRef = useRef<HTMLDivElement>(null);
+    const jumpStripRef = useRef<HTMLDivElement>(null);
     const hasAutoScrolledRef = useRef<string | null>(null);
     const suppressNextMapSyncRef = useRef(false);
 
@@ -131,6 +132,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         setPrevRoute(selectedRoute);
         setSelectedStop(null);
         setSelectedStopId(null);
+        setNearestBusVehicleNo(null);
         setIsSplitCollapsed(false);
     }
 
@@ -235,55 +237,74 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         getDirection,
     });
 
-    // Keep the route timeline aligned & scrolled to the stop nearest to the current map center
-    const syncNearestStopToMapCenter = useCallback(() => {
+    // Running buses quick-jump list derived from currently visible stops
+    const matchedBusesForJump = useMemo<MatchedBusStopEntry[]>(() => {
+        const items: MatchedBusStopEntry[] = [];
+        for (const stop of filteredStops) {
+            const stopKey = `${stop.nodeid}-${stop.nodeord ?? ""}`;
+            const busesHere = busesByStopKey.get(stopKey);
+            if (!busesHere || busesHere.length === 0) continue;
+            for (const bus of busesHere) {
+                const plateDigits =
+                    bus.vehicleno.replace(/[^0-9]/g, "").slice(-4) || bus.vehicleno.slice(-4);
+                items.push({stopKey, stop, plateDigits, bus});
+            }
+        }
+        return items;
+    }, [filteredStops, busesByStopKey]);
+
+    const scrollTimelineToBusEntry = useCallback((entry: MatchedBusStopEntry) => {
+        requestAnimationFrame(() => {
+            if (listRef.current) {
+                const targetEl = listRef.current.querySelector(
+                    `[data-stop-key="${CSS.escape(entry.stopKey)}"]`
+                );
+                if (targetEl) {
+                    targetEl.scrollIntoView({behavior: "smooth", block: "center"});
+                }
+            }
+            if (jumpStripRef.current) {
+                const jumpChip = jumpStripRef.current.querySelector(
+                    `[data-bus-jump="${CSS.escape(entry.bus.vehicleno)}"]`
+                );
+                if (jumpChip) {
+                    jumpChip.scrollIntoView({behavior: "smooth", block: "nearest", inline: "nearest"});
+                }
+            }
+        });
+    }, []);
+
+    // Keep the route timeline aligned & scrolled to the running bus entity nearest to the current map center
+    const syncNearestBusToMapCenter = useCallback(() => {
         if (!map || !isOpen || stopSearchQuery.trim().length > 0) return;
         if (suppressNextMapSyncRef.current) {
             suppressNextMapSyncRef.current = false;
             return;
         }
 
-        const stopsPool = filteredStops.length > 0 ? filteredStops : currentStops;
-        if (stopsPool.length === 0) return;
-
-        const center = map.getCenter();
-        let nearestStop: RouteVariationStop | null = null;
-        let nearestDistance = Infinity;
-
-        for (const stop of stopsPool) {
-            if (!stop.gpslati || !stop.gpslong) continue;
-            const distance = getHaversineDistance(center.lat, center.lng, stop.gpslati, stop.gpslong);
-            if (distance < nearestDistance) {
-                nearestDistance = distance;
-                nearestStop = stop;
-            }
+        if (matchedBusesForJump.length === 0) {
+            setNearestBusVehicleNo(null);
+            return;
         }
 
-        if (!nearestStop) return;
+        const center = map.getCenter();
+        const nearestBus = findNearestBusEntity(center, matchedBusesForJump);
+        if (!nearestBus) return;
 
-        setSelectedStopId(nearestStop.nodeid);
-        const stopKey = `${nearestStop.nodeid}-${nearestStop.nodeord ?? ""}`;
-        requestAnimationFrame(() => {
-            if (!listRef.current) return;
-            const targetEl = listRef.current.querySelector(
-                `[data-stop-key="${CSS.escape(stopKey)}"]`
-            );
-            if (targetEl) {
-                targetEl.scrollIntoView({behavior: "smooth", block: "center"});
-            }
-        });
-    }, [map, isOpen, stopSearchQuery, filteredStops, currentStops]);
+        setNearestBusVehicleNo(nearestBus.bus.vehicleno);
+        scrollTimelineToBusEntry(nearestBus);
+    }, [map, isOpen, stopSearchQuery, matchedBusesForJump, scrollTimelineToBusEntry]);
 
     useEffect(() => {
         if (!isOpen || !map) return;
 
-        map.on("moveend", syncNearestStopToMapCenter);
+        map.on("moveend", syncNearestBusToMapCenter);
         return () => {
-            map.off("moveend", syncNearestStopToMapCenter);
+            map.off("moveend", syncNearestBusToMapCenter);
         };
-    }, [isOpen, map, syncNearestStopToMapCenter]);
+    }, [isOpen, map, syncNearestBusToMapCenter]);
 
-    // Auto-scroll on initial load to first running bus
+    // Auto-scroll on initial load to the running bus nearest to the map center (or first running bus)
     useEffect(() => {
         if (!isOpen) {
             hasAutoScrolledRef.current = null;
@@ -295,6 +316,17 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
         const timer = setTimeout(() => {
             if (!listRef.current) return;
+
+            if (map && matchedBusesForJump.length > 0) {
+                const nearestBus = findNearestBusEntity(map.getCenter(), matchedBusesForJump);
+                if (nearestBus) {
+                    setNearestBusVehicleNo(nearestBus.bus.vehicleno);
+                    scrollTimelineToBusEntry(nearestBus);
+                    hasAutoScrolledRef.current = selectedRoute;
+                    return;
+                }
+            }
+
             const targetEl =
                 listRef.current.querySelector('[data-has-bus="true"]') ||
                 listRef.current.querySelector('[data-selected-stop="true"]');
@@ -306,7 +338,15 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         }, 150);
 
         return () => clearTimeout(timer);
-    }, [isOpen, selectedRoute, currentStops.length, busesByStopKey.size]);
+    }, [
+        isOpen,
+        selectedRoute,
+        currentStops.length,
+        busesByStopKey.size,
+        map,
+        matchedBusesForJump,
+        scrollTimelineToBusEntry,
+    ]);
 
     // Interaction handlers
     const handleStopClick = useCallback(
@@ -349,25 +389,12 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         setTimeout(() => setIsRefreshing(false), 800);
     }, [onReconnect]);
 
-    // Running buses quick-jump list derived from currently visible stops
-    const matchedBusesForJump = useMemo(() => {
-        const items: { stopKey: string; stop: RouteVariationStop; plateDigits: string; bus: BusItem }[] = [];
-        for (const stop of filteredStops) {
-            const stopKey = `${stop.nodeid}-${stop.nodeord ?? ""}`;
-            const busesHere = busesByStopKey.get(stopKey);
-            if (!busesHere || busesHere.length === 0) continue;
-            for (const bus of busesHere) {
-                const plateDigits =
-                    bus.vehicleno.replace(/[^0-9]/g, "").slice(-4) || bus.vehicleno.slice(-4);
-                items.push({stopKey, stop, plateDigits, bus});
-            }
-        }
-        return items;
-    }, [filteredStops, busesByStopKey]);
-
-    const handleJumpToBusStop = useCallback((stopKey: string, stop: RouteVariationStop) => {
+    const handleJumpToBusStop = useCallback((stopKey: string, stop: RouteVariationStop, vehicleno?: string) => {
         triggerHaptic("selection");
         setSelectedStopId(stop.nodeid);
+        if (vehicleno) {
+            setNearestBusVehicleNo(vehicleno);
+        }
         requestAnimationFrame(() => {
             if (!listRef.current) return;
             const targetEl = listRef.current.querySelector(
@@ -515,31 +542,34 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                 {/* 2.5 Live Running Buses Quick-Jump Strip */}
                 {matchedBusesForJump.length > 0 && (
                     <div
+                        ref={jumpStripRef}
                         className="flex items-center gap-1.5 px-4 pb-2.5 overflow-x-auto custom-scrollbar-hidden shrink-0">
                         <span
                             className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0 mr-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"/>
                             운행중
                         </span>
-                        {matchedBusesForJump.map(({stopKey, stop, plateDigits, bus}) => (
-                            <button
-                                key={`${bus.vehicleno}-${stopKey}`}
-                                type="button"
-                                onClick={() => handleJumpToBusStop(stopKey, stop)}
-                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border transition cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
-                                    meta?.colorTheme?.badgeBg || "bg-blue-500/10 dark:bg-blue-500/20"
-                                } ${
-                                    meta?.colorTheme?.text || "text-blue-700 dark:text-blue-300"
-                                } ${
-                                    meta?.colorTheme?.border || "border-blue-500/25"
-                                }`}
-                                title={`${bus.vehicleno} (${stop.nodenm}) 위치로 스크롤`}
-                            >
-                                <Bus className="w-3 h-3 shrink-0"/>
-                                <span className="font-mono font-black">{plateDigits}</span>
-                                <span className="opacity-75 max-w-[90px] truncate">· {stop.nodenm}</span>
-                            </button>
-                        ))}
+                        {matchedBusesForJump.map(({stopKey, stop, plateDigits, bus}) => {
+                            const isNearestBus = nearestBusVehicleNo === bus.vehicleno;
+                            return (
+                                <button
+                                    key={`${bus.vehicleno}-${stopKey}`}
+                                    type="button"
+                                    data-bus-jump={bus.vehicleno}
+                                    onClick={() => handleJumpToBusStop(stopKey, stop, bus.vehicleno)}
+                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border transition cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
+                                        isNearestBus
+                                            ? `${meta?.colorTheme?.bg || "bg-blue-600"} text-white border-transparent shadow-xs`
+                                            : `${meta?.colorTheme?.badgeBg || "bg-blue-500/10 dark:bg-blue-500/20"} ${meta?.colorTheme?.text || "text-blue-700 dark:text-blue-300"} ${meta?.colorTheme?.border || "border-blue-500/25"}`
+                                    }`}
+                                    title={`${bus.vehicleno} (${stop.nodenm}) 위치로 스크롤`}
+                                >
+                                    <Bus className="w-3 h-3 shrink-0"/>
+                                    <span className="font-mono font-black">{plateDigits}</span>
+                                    <span className="opacity-75 max-w-[90px] truncate">· {stop.nodenm}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
 
@@ -586,6 +616,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                                     isTurningStop={isTurning}
                                     isFavStop={isFav}
                                     busesHere={busesHere}
+                                    nearestBusVehicleNo={nearestBusVehicleNo}
                                     metaThemeMainColor={meta?.colorTheme?.main}
                                     metaThemeBadgeBg={meta?.colorTheme?.badgeBg}
                                     metaThemeBg={meta?.colorTheme?.bg}

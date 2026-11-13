@@ -12,6 +12,7 @@ export interface BusDrawerStopItemProps {
     isTurningStop: boolean;
     isFavStop: boolean;
     busesHere: BusItem[];
+    nearestBusVehicleNo?: string | null;
     metaThemeMainColor?: string;
     metaThemeBadgeBg?: string;
     metaThemeBg?: string;
@@ -30,6 +31,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                                                                    isTurningStop,
                                                                    isFavStop,
                                                                    busesHere,
+                                                                   nearestBusVehicleNo = null,
                                                                    metaThemeMainColor = "#2563eb",
                                                                    metaThemeBadgeBg = "bg-blue-50/80 dark:bg-blue-950/40",
                                                                    metaThemeBg = "bg-blue-600 dark:bg-blue-500",
@@ -151,15 +153,25 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                     {busesHere.map((bus) => {
                         const plateDigits =
                             bus.vehicleno.replace(/[^0-9]/g, "").slice(-4) || bus.vehicleno.slice(-4);
+                        const isNearestBus = nearestBusVehicleNo === bus.vehicleno;
 
                         return (
                             <button
                                 key={`${bus.vehicleno}-${bus.nodeord}`}
                                 type="button"
+                                data-nearest-bus={isNearestBus ? "true" : undefined}
                                 onClick={(e) => onBusBadgeClick(e, bus.gpslati, bus.gpslong)}
-                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-black text-white shadow-xs ${metaThemeShadow} cursor-pointer active:scale-95 transition-transform whitespace-nowrap`}
+                                className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-black text-white shadow-xs ${metaThemeShadow} cursor-pointer active:scale-95 transition-transform whitespace-nowrap ${
+                                    isNearestBus
+                                        ? "ring-2 ring-offset-1 ring-slate-900/40 dark:ring-white/80 dark:ring-offset-[#11131a]"
+                                        : ""
+                                }`}
                                 style={{backgroundColor: metaThemeMainColor}}
-                                title={`${bus.vehicleno} 실시간 위치로 이동`}
+                                title={
+                                    isNearestBus
+                                        ? `${bus.vehicleno} (지도 중심과 가장 가까운 버스) 실시간 위치로 이동`
+                                        : `${bus.vehicleno} 실시간 위치로 이동`
+                                }
                             >
                                 <Bus className="w-3 h-3 shrink-0"/>
                                 <span className="font-mono tracking-tight leading-none">{plateDigits}</span>
