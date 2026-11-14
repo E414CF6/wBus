@@ -16,10 +16,10 @@
 
 - [Overview](#-overview)
 - [Key Features](#-key-features)
-  - [1. Real-Time Interactive Map & Telemetry](#1-real-time-interactive-map--telemetry)
-  - [2. Nationwide Coverage (140 Cities & Counties)](#2-nationwide-coverage-140-cities--counties)
-  - [3. Dynamic OSRM Road-Snapped Geometries](#3-dynamic-osrm-road-snapped-geometries)
-  - [4. Multi-Tier Caching & Fault-Tolerant Pipeline](#4-multi-tier-caching--fault-tolerant-pipeline)
+    - [1. Real-Time Interactive Map & Telemetry](#1-real-time-interactive-map--telemetry)
+    - [2. Nationwide Coverage (140 Cities & Counties)](#2-nationwide-coverage-140-cities--counties)
+    - [3. Dynamic OSRM Road-Snapped Geometries](#3-dynamic-osrm-road-snapped-geometries)
+    - [4. Multi-Tier Caching & Fault-Tolerant Pipeline](#4-multi-tier-caching--fault-tolerant-pipeline)
 - [System Architecture](#-system-architecture)
 - [Data Pipeline](#-data-pipeline)
 - [Technology Stack](#-technology-stack)
@@ -60,57 +60,61 @@ Core engineering pillars:
 ### 1. Real-Time Interactive Map & Telemetry
 
 - **Hardware-Accelerated Rendering (`MapLibre GL 6`)**:
-  - WebGL vector map rendering with smooth 60fps pan, zoom, pitch, and bearing interactions.
-  - Automatic synchronization between dark (`Darker`) and light (`Liberty`) map themes via `next-themes`.
+    - WebGL vector map rendering with smooth 60fps pan, zoom, pitch, and bearing interactions.
+    - Automatic synchronization between dark (`Darker`) and light (`Liberty`) map themes via `next-themes`.
 - **Road-Snapped Dead Reckoning (`useAnimatedPosition`)**:
-  - Projects live vehicle positions along road-snapped route polylines between 10-second polling intervals.
-  - Accounts for upstream/cache response age (`serverAgeMs`) to compensate for telemetry delay, filters backward GPS
-    jitter, and smoothly interpolates bearing angles.
+    - Projects live vehicle positions along road-snapped route polylines between 10-second polling intervals.
+    - Accounts for upstream/cache response age (`serverAgeMs`) to compensate for telemetry delay, filters backward GPS
+      jitter, and smoothly interpolates bearing angles.
 - **Route Variations & Active Bus Drawer**:
-  - Detects and groups sub-route variations under a shared route number with per-branch active vehicle counts.
-  - Synchronizes the directional stop timeline with the active vehicle closest to the viewport center.
+    - Detects and groups sub-route variations under a shared route number with per-branch active vehicle counts.
+    - Synchronizes the directional stop timeline with the active vehicle closest to the viewport center.
 - **Stop Arrival Predictions & Spatial Search**:
-  - Live stop arrival ETAs and remaining stop counts (`/api/bus-arrival/[busStopId]`).
-  - Coordinate-based nearby stop discovery sorted by Haversine distance (`/api/stops/nearby`).
+    - Live stop arrival ETAs and remaining stop counts (`/api/bus-arrival/[busStopId]`).
+    - Coordinate-based nearby stop discovery sorted by Haversine distance (`/api/stops/nearby`).
 
 ### 2. Nationwide Coverage (140 Cities & Counties)
 
 - **Centralized City Directory (`/api/cities`)**:
-  - Covers Special & Metropolitan Cities (Seoul, Sejong, Busan, Daegu, Incheon, Gwangju, Daejeon/Gyeryong, Ulsan, Jeju)
-    and 131 provincial cities and counties nationwide.
+    - Covers Special & Metropolitan Cities (Seoul, Sejong, Busan, Daegu, Incheon, Gwangju, Daejeon/Gyeryong, Ulsan,
+      Jeju)
+      and 131 provincial cities and counties nationwide.
 - **City Switcher & GPS Auto-Detection (`CitySelectModal`)**:
-  - Province-categorized browser with Korean initial-consonant (Choseong) search and one-click GPS city detection.
+    - Province-categorized browser with Korean initial-consonant (Choseong) search and one-click GPS city detection.
 - **City Boundary Integrity**:
-  - Enforces strict municipal boundary filters (`src/entities/city/routeBoundary.ts`) to keep cross-border route
-    prefixes isolated cleanly per selected city.
+    - Enforces strict municipal boundary filters (`src/entities/city/routeBoundary.ts`) to keep cross-border route
+      prefixes isolated cleanly per selected city.
 
 ### 3. Dynamic OSRM Road-Snapped Geometries
 
 - **On-Demand Polyline Synthesis (`/api/polyline/[routeId]`)**:
-  - Chunks ordered TAGO/TOPIS stop sequences through the OSRM routing engine to generate road-snapped vector geometries
-    on demand.
-  - Detects routing detours (`OSRM_DETOUR_TTL_MS = 15 min` temporary cache) and falls back gracefully to smooth spline
-    geometry when needed.
-  - Persists generated route geometries across serverless cold starts via **Vercel Blob** (with `/tmp` and `public/`
-    filesystem fallbacks).
+    - Chunks ordered TAGO/TOPIS stop sequences through the OSRM routing engine to generate road-snapped vector
+      geometries
+      on demand.
+    - Detects routing detours (`OSRM_DETOUR_TTL_MS = 15 min` temporary cache) and falls back gracefully to smooth spline
+      geometry when needed.
+    - Persists generated route geometries across serverless cold starts via **Vercel Blob** (with `/tmp` and `public/`
+      filesystem fallbacks).
 
 ### 4. Multi-Tier Caching & Fault-Tolerant Pipeline
 
 - **3-Tier Server Cache + Durable Artifact Store**:
-  - **L1 Memory LRU (`CacheManager`)**: Sub-millisecond hits per warm serverless instance with bounded revalidation
-    tracking (max 2,000 keys) and in-flight request deduplication.
-  - **L2 Distributed Cache (`Upstash Redis`)**: Shared cache state across serverless instances (`KV_REST_API_*` /
-    `UPSTASH_REDIS_REST_*`), including L2 `stale-if-error` fallback on cold starts.
-  - **CDN Edge Micro-Caching & Poisoning Protection**: Prevents empty arrays (`[]`) or degraded fallback responses from
-    entering shared caches (`Cache-Control: no-store` on degraded responses).
-  - **Durable Artifact Store (`Vercel Blob`)**: Persists JSON route and dataset snapshots across deployments and cold
-    starts.
+    - **L1 Memory LRU (`CacheManager`)**: Sub-millisecond hits per warm serverless instance with bounded revalidation
+      tracking (max 2,000 keys) and in-flight request deduplication.
+    - **L2 Distributed Cache (`Upstash Redis`)**: Shared cache state across serverless instances (`KV_REST_API_*` /
+      `UPSTASH_REDIS_REST_*`), including L2 `stale-if-error` fallback on cold starts.
+    - **CDN Edge Micro-Caching & Poisoning Protection**: Prevents empty arrays (`[]`) or degraded fallback responses
+      from
+      entering shared caches (`Cache-Control: no-store` on degraded responses).
+    - **Durable Artifact Store (`Vercel Blob`)**: Persists JSON route and dataset snapshots across deployments and cold
+      starts.
 - **Upstream Resiliency (`SharedCircuitBreaker` & `fetchWithRetry`)**:
-  - 3-state circuit breakers (`CLOSED` ➔ `OPEN` ➔ `HALF_OPEN`), exponential backoff with jitter, bounded concurrency
-    (`mapWithConcurrencyLimit`), and round-robin `DATA_GO_KR_SERVICE_KEYS` rotation with per-key rate-limit cooldowns.
+    - 3-state circuit breakers (`CLOSED` ➔ `OPEN` ➔ `HALF_OPEN`), exponential backoff with jitter, bounded concurrency
+      (`mapWithConcurrencyLimit`), and round-robin `DATA_GO_KR_SERVICE_KEYS` rotation with per-key rate-limit cooldowns.
 - **Client Offline & Storage Optimization**:
-  - IndexedDB storage (`src/shared/cache/idbStorage.ts`) for large stop datasets instead of synchronous `localStorage`.
-  - Service Worker (`public/sw.js`) static asset pre-caching and PWA Add-to-Home-Screen support.
+    - IndexedDB storage (`src/shared/cache/idbStorage.ts`) for large stop datasets instead of synchronous
+      `localStorage`.
+    - Service Worker (`public/sw.js`) static asset pre-caching and PWA Add-to-Home-Screen support.
 
 ---
 
@@ -171,40 +175,40 @@ src/
 
 ```mermaid
 flowchart TD
-  subgraph External["Upstream Data Sources"]
-    TAGO["MOLIT TAGO OpenAPI<br/>(National Regional Transit Data)"]
-    TOPIS["Seoul TOPIS API<br/>(Seoul Metropolitan Bus Telemetry)"]
-    OSRM["OSRM Routing Engine<br/>(Road-Network Map Matching)"]
-  end
+    subgraph External["Upstream Data Sources"]
+        TAGO["MOLIT TAGO OpenAPI<br/>(National Regional Transit Data)"]
+        TOPIS["Seoul TOPIS API<br/>(Seoul Metropolitan Bus Telemetry)"]
+        OSRM["OSRM Routing Engine<br/>(Road-Network Map Matching)"]
+    end
 
-  subgraph Server["Next.js 16 Serverless API Layer"]
-    VALID["Zod Runtime Validation<br/>+ SharedCircuitBreaker + Retry"]
-    L1["L1 Memory Cache (LRU)<br/>+ In-Flight Coalescing"]
-    L2["L2 Upstash Redis<br/>(Distributed Serverless Cache)"]
-    BLOB["Vercel Blob Store<br/>(Durable JSON Artifacts)"]
-    ROUTES["API Route Handlers<br/>(/api/bus, /api/bus-arrival, /api/routes, /api/polyline)"]
-  end
+    subgraph Server["Next.js 16 Serverless API Layer"]
+        VALID["Zod Runtime Validation<br/>+ SharedCircuitBreaker + Retry"]
+        L1["L1 Memory Cache (LRU)<br/>+ In-Flight Coalescing"]
+        L2["L2 Upstash Redis<br/>(Distributed Serverless Cache)"]
+        BLOB["Vercel Blob Store<br/>(Durable JSON Artifacts)"]
+        ROUTES["API Route Handlers<br/>(/api/bus, /api/bus-arrival, /api/routes, /api/polyline)"]
+    end
 
-  subgraph Client["Browser Runtime (React 19 & MapLibre GL 6)"]
-    STORE["BusLocationStore<br/>(15-Route Chunking / Visibility Sleep)"]
-    IDB["IndexedDB Stop Cache"]
-    PHYSICS["useAnimatedPosition<br/>(Road Snapping & Latency Compensation)"]
-    MAP["MapLibre GL 6 WebGL Canvas<br/>(60fps Markers & Directional Polylines)"]
-  end
+    subgraph Client["Browser Runtime (React 19 & MapLibre GL 6)"]
+        STORE["BusLocationStore<br/>(15-Route Chunking / Visibility Sleep)"]
+        IDB["IndexedDB Stop Cache"]
+        PHYSICS["useAnimatedPosition<br/>(Road Snapping & Latency Compensation)"]
+        MAP["MapLibre GL 6 WebGL Canvas<br/>(60fps Markers & Directional Polylines)"]
+    end
 
-  TAGO --> VALID
-  TOPIS --> VALID
-  OSRM --> VALID
-  VALID --> L1
-  L1 <--> L2
-  VALID --> BLOB
-  L1 --> ROUTES
-  BLOB --> ROUTES
-  ROUTES --> STORE
-  ROUTES --> IDB
-  ROUTES --> PHYSICS
-  STORE --> PHYSICS
-  PHYSICS --> MAP
+    TAGO --> VALID
+    TOPIS --> VALID
+    OSRM --> VALID
+    VALID --> L1
+    L1 <--> L2
+    VALID --> BLOB
+    L1 --> ROUTES
+    BLOB --> ROUTES
+    ROUTES --> STORE
+    ROUTES --> IDB
+    ROUTES --> PHYSICS
+    STORE --> PHYSICS
+    PHYSICS --> MAP
 ```
 
 ---
@@ -344,11 +348,11 @@ npm run test
 `wBus` uses **Vercel Schedules** configured in [`vercel.json`](./vercel.json) to synchronize datasets automatically:
 
 - **`daily-refresh` (`0 19 * * *` UTC / `04:00 KST`)**:
-  - Triggers `GET /api/cron/refresh`, updates timetable snapshots, invalidates Next.js cache tags (`revalidatePath`),
-    and runs weekly route catalog synchronization (`?target=auto` on Sundays UTC, or on demand via `?target=all` /
-    `?target=routes`).
+    - Triggers `GET /api/cron/refresh`, updates timetable snapshots, invalidates Next.js cache tags (`revalidatePath`),
+      and runs weekly route catalog synchronization (`?target=auto` on Sundays UTC, or on demand via `?target=all` /
+      `?target=routes`).
 - **Authentication**:
-  - Protected in production via `Authorization: Bearer <CRON_SECRET>` (or `ADMIN_KEY`).
+    - Protected in production via `Authorization: Bearer <CRON_SECRET>` (or `ADMIN_KEY`).
 
 ```bash
 # Example: Manually trigger a full refresh against a deployed instance
