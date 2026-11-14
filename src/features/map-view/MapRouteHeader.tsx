@@ -242,9 +242,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
         [map]
     );
 
-    // Active variant bus count
-    const activeVariantBusCount = activeVariant ? (busesPerVariation.get(activeVariant.routeId) ?? 0) : runningCount;
-
     const headerRef = useRef<HTMLElement>(null);
 
     // Measure actual floating header bottom so mobile top-right MapLibre controls never collide with it
@@ -283,9 +280,9 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
         <>
             <header
                 ref={headerRef}
-                className={`absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 lg:left-[calc(50%+166px)] xl:left-[calc(50%+186px)] -translate-x-1/2 ${
+                className={`absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 lg:left-[calc(50%+198px)] xl:left-[calc(50%+218px)] -translate-x-1/2 ${
                     isVariantMenuOpen ? "z-[80]" : "z-50"
-                } pointer-events-auto flex flex-col items-center gap-1.5 w-[calc(100vw-1rem)] sm:w-auto sm:max-w-[calc(100vw-9rem)] lg:max-w-[calc(100vw-492px)] xl:max-w-[calc(100vw-532px)] animate-fadeIn select-none`}
+                } pointer-events-auto flex flex-col items-center gap-1.5 w-[calc(100vw-1rem)] sm:w-auto sm:max-w-[calc(100vw-9rem)] lg:max-w-[calc(100vw-460px)] xl:max-w-[calc(100vw-500px)] animate-fadeIn select-none`}
             >
                 {/* 1. Main Route Overview Glass Card */}
                 <div
@@ -353,10 +350,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                     ? "전체"
                                                     : `${currentVariantIndex + 1}/${effectiveVariations.length}`}
                                             </span>
-                                            {activeVariantBusCount > 0 && selectedVariantId !== "all" && (
-                                                <span
-                                                    className="ml-0.5 opacity-90 font-mono">({activeVariantBusCount}대)</span>
-                                            )}
                                         </span>
                                     )}
 

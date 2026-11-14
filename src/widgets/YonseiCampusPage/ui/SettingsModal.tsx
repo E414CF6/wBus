@@ -1,23 +1,28 @@
 "use client";
 
-import React, {useId, useRef} from "react";
+import React, {useId, useRef, useSyncExternalStore} from "react";
 import Link from "next/link";
 import {useTheme} from "next-themes";
 import {ArrowDownLeft, ArrowUpRight, Calendar, Check, Monitor, Moon, Settings, Sun, X,} from "lucide-react";
 
 import {UI_TEXT} from "@shared/config/locale";
+import type {AppSettings} from "@shared/config/settingsCookie";
 import {useDialogModal} from "@shared/lib/useDialogModal";
 import type {DayMode} from "@shared/types/navigation";
 import {triggerHaptic} from "@shared/utils/haptics";
-import type {CampusDirectionMode} from "../lib/yonseiShuttleUtils";
+
+const emptySubscribe = () => () => {
+};
+
+export type YonseiDirectionPreference = AppSettings["yonseiDefaultDirection"];
 
 export interface SettingsModalProps {
     isOpen: boolean;
     dayMode: DayMode;
     isTodayWeekendOrHoliday: boolean;
-    directionMode: CampusDirectionMode;
+    directionPreference: YonseiDirectionPreference;
     onDayModeChange: (mode: DayMode) => void;
-    onDirectionModeChange: (mode: CampusDirectionMode) => void;
+    onDirectionPreferenceChange: (pref: YonseiDirectionPreference) => void;
     onClose: () => void;
 }
 
@@ -25,14 +30,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                                                 isOpen,
                                                                 dayMode,
                                                                 isTodayWeekendOrHoliday,
-                                                                directionMode,
+                                                                directionPreference,
                                                                 onDayModeChange,
-                                                                onDirectionModeChange,
+                                                                onDirectionPreferenceChange,
                                                                 onClose,
                                                             }) => {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const titleId = useId();
     const {theme, setTheme} = useTheme();
+    const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
     useDialogModal(dialogRef, isOpen);
 
@@ -142,41 +148,61 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     </div>
                 </div>
 
-                {/* Direction Quick Toggle */}
+                {/* Direction Default Setting */}
                 <div className="space-y-2">
-                    <div className="text-xs font-black text-slate-700 dark:text-slate-200">
-                        이동 방향
+                    <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs font-black text-slate-700 dark:text-slate-200">
+                            기본 이동 방향
+                        </span>
+                        <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                            오전 등교 · 오후 하교
+                        </span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                         <button
                             type="button"
                             onClick={() => {
                                 triggerHaptic("selection");
-                                onDirectionModeChange("OUTBOUND");
+                                onDirectionPreferenceChange("AUTO");
                             }}
-                            className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl border text-xs font-black transition-all cursor-pointer ${
-                                directionMode === "OUTBOUND"
-                                    ? "bg-[#003876] text-white border-transparent shadow-xs"
+                            className={`flex flex-col items-center justify-center gap-1 py-2.5 px-2 rounded-2xl border text-[11px] sm:text-xs font-black transition-all cursor-pointer ${
+                                directionPreference === "AUTO"
+                                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-xs"
                                     : "bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-white/10"
                             }`}
                         >
-                            <ArrowUpRight className="w-3.5 h-3.5"/>
-                            <span>하교 (연세대 발)</span>
+                            <Calendar className="w-3.5 h-3.5"/>
+                            <span>자동</span>
                         </button>
                         <button
                             type="button"
                             onClick={() => {
                                 triggerHaptic("selection");
-                                onDirectionModeChange("INBOUND");
+                                onDirectionPreferenceChange("OUTBOUND");
                             }}
-                            className={`flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-2xl border text-xs font-black transition-all cursor-pointer ${
-                                directionMode === "INBOUND"
+                            className={`flex flex-col items-center justify-center gap-1 py-2.5 px-2 rounded-2xl border text-[11px] sm:text-xs font-black transition-all cursor-pointer ${
+                                directionPreference === "OUTBOUND"
+                                    ? "bg-[#003876] text-white border-transparent shadow-xs"
+                                    : "bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-white/10"
+                            }`}
+                        >
+                            <ArrowUpRight className="w-3.5 h-3.5"/>
+                            <span>하교 (발)</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                triggerHaptic("selection");
+                                onDirectionPreferenceChange("INBOUND");
+                            }}
+                            className={`flex flex-col items-center justify-center gap-1 py-2.5 px-2 rounded-2xl border text-[11px] sm:text-xs font-black transition-all cursor-pointer ${
+                                directionPreference === "INBOUND"
                                     ? "bg-indigo-600 text-white border-transparent shadow-xs"
                                     : "bg-slate-50 dark:bg-white/[0.04] text-slate-700 dark:text-slate-300 border-slate-200/80 dark:border-white/10"
                             }`}
                         >
                             <ArrowDownLeft className="w-3.5 h-3.5"/>
-                            <span>등교 (학교 방면)</span>
+                            <span>등교 (행)</span>
                         </button>
                     </div>
                 </div>
@@ -189,7 +215,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     <div className="grid grid-cols-3 gap-2">
                         {themeOptions.map((opt) => {
                             const Icon = opt.icon;
-                            const selected = (theme ?? "system") === opt.id;
+                            const selected = mounted ? (theme ?? "system") === opt.id : false;
                             return (
                                 <button
                                     key={opt.id}

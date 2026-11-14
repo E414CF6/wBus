@@ -150,10 +150,10 @@ export default function BusRoutePolyline({
                 ],
                 {
                     padding: {
-                        top: isCompact ? 156 : 130,
-                        bottom: isCompact ? 130 : 120,
+                        top: isCompact ? 196 : 168,
+                        bottom: isCompact ? 124 : 116,
                         left: isCompact ? 56 : isDesktop ? 440 : 64,
-                        right: isCompact ? 68 : 76,
+                        right: isCompact ? 76 : 84,
                     },
                     duration: settings.reduceMotion ? 0 : MAP_SETTINGS.ANIMATION.FLY_TO_MS,
                 }

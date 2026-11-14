@@ -1,8 +1,9 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useState, useSyncExternalStore} from "react";
+import Link from "next/link";
 import {useTheme} from "next-themes";
-import {ArrowRight, Bus, Calendar, Clock, GraduationCap, Moon, Sun,} from "lucide-react";
+import {ArrowRight, Bus, Calendar, Clock, GraduationCap, Map as MapIcon, Moon, Sun,} from "lucide-react";
 
 import {TARGET_ROUTE_NUMBERS} from "@entities/route";
 import {
@@ -12,12 +13,13 @@ import {
     YONSEI_SHUTTLE_SCHEDULE,
 } from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
+import {resolveInitialCampusDirection} from "@shared/config/settingsCookie";
+import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {isWeekend} from "@shared/lib/timeUtils";
-import type {DayMode} from "@shared/types/navigation";
 import {Footer} from "@shared/ui/Footer";
 import {triggerHaptic} from "@shared/utils/haptics";
 
-import {formatHeaderClock, getDefaultDirection} from "./lib/campusPageHelpers";
+import {formatHeaderClock} from "./lib/campusPageHelpers";
 import {type CampusDirectionMode, getNextShuttleDepartures} from "./lib/yonseiShuttleUtils";
 import {CampusDirectionBar} from "./ui/CampusDirectionBar";
 import {CityBusTimetableModal} from "./ui/CityBusTimetableModal";
@@ -32,11 +34,14 @@ const emptySubscribe = () => () => {
 };
 
 export function YonseiCampusPage() {
+    const {settings, updateSettings} = useAppSettings();
     const [now, setNow] = useState<Date>(() => new Date());
-    const [directionMode, setDirectionMode] = useState<CampusDirectionMode>(() =>
-        getDefaultDirection(new Date())
+    const [directionOverride, setDirectionOverride] = useState<CampusDirectionMode | null>(null);
+    const dayMode = settings.defaultDayMode;
+    const directionMode = useMemo(
+        () => directionOverride ?? resolveInitialCampusDirection(settings.yonseiDefaultDirection, now),
+        [directionOverride, settings.yonseiDefaultDirection, now]
     );
-    const [dayMode, setDayMode] = useState<DayMode>("AUTO");
 
     // Live clock update every 15 seconds
     useEffect(() => {
@@ -145,7 +150,7 @@ export function YonseiCampusPage() {
 
     return (
         <div
-            className="min-h-dvh pb-28 bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 transition-colors">
+            className="min-h-dvh pb-28 sm:pb-32 bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 transition-colors">
             {/* Minimal Sticky Header */}
             <header
                 className="sticky top-0 z-30 bg-white/85 dark:bg-[#090d16]/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/10">
@@ -157,7 +162,8 @@ export function YonseiCampusPage() {
                         </div>
                         <div className="min-w-0">
                             <h1 className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white truncate">
-                                {UI_TEXT.YONSEI.TITLE}
+                                <span className="sm:hidden">연세대 미래캠</span>
+                                <span className="hidden sm:inline">{UI_TEXT.YONSEI.TITLE}</span>
                             </h1>
                         </div>
                     </div>
@@ -170,6 +176,16 @@ export function YonseiCampusPage() {
                                 <span>{formatHeaderClock(now)}</span>
                             </span>
                         )}
+
+                        <Link
+                            href="/?cityCode=32020"
+                            title="실시간 버스 지도"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border border-emerald-200/80 dark:border-emerald-400/25 text-[11px] sm:text-xs font-extrabold text-emerald-800 dark:text-emerald-300 transition-colors shrink-0"
+                        >
+                            <MapIcon className="w-3.5 h-3.5 shrink-0"/>
+                            <span className="hidden sm:inline">실시간 지도</span>
+                            <span className="sm:hidden">지도</span>
+                        </Link>
 
                         <button
                             type="button"
@@ -209,7 +225,7 @@ export function YonseiCampusPage() {
                 <CampusDirectionBar
                     directionMode={directionMode}
                     dayModeBadgeLabel={dayModeBadgeLabel}
-                    onDirectionChange={setDirectionMode}
+                    onDirectionChange={setDirectionOverride}
                     onOpenSettings={() => setIsSettingsModalOpen(true)}
                 />
 
@@ -262,7 +278,7 @@ export function YonseiCampusPage() {
                 />
             </main>
 
-            <Footer/>
+            <Footer isCampusPage/>
 
             {/* Floating Pill Bottom Navigation Bar */}
             <FloatingBottomNav
@@ -295,6 +311,7 @@ export function YonseiCampusPage() {
                 initialRouteNo={cityModalState.routeNo}
                 initialLocation={cityModalState.location}
                 allRoutes={allRoutes}
+                isHolidayOrVacation={isHolidayOrVacation}
                 now={now}
                 onClose={() => setCityModalState((prev) => ({...prev, isOpen: false}))}
             />
@@ -319,9 +336,12 @@ export function YonseiCampusPage() {
                 isOpen={isSettingsModalOpen}
                 dayMode={dayMode}
                 isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-                directionMode={directionMode}
-                onDayModeChange={setDayMode}
-                onDirectionModeChange={setDirectionMode}
+                directionPreference={settings.yonseiDefaultDirection}
+                onDayModeChange={(mode) => updateSettings({defaultDayMode: mode})}
+                onDirectionPreferenceChange={(pref) => {
+                    setDirectionOverride(null);
+                    updateSettings({yonseiDefaultDirection: pref});
+                }}
                 onClose={() => setIsSettingsModalOpen(false)}
             />
         </div>

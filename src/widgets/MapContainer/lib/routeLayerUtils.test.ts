@@ -30,6 +30,12 @@ describe("routeLayerUtils", () => {
         expect(findFirstLabelLayerId([])).toBeUndefined();
         expect(findFirstLabelLayerId(null)).toBeUndefined();
         expect(findFirstLabelLayerId([{id: "road_one_way_arrow", type: "symbol"}])).toBeUndefined();
+        expect(
+            findFirstLabelLayerId([
+                {id: "polyline-active-arrows", type: "symbol"},
+                {id: "wbus-custom-symbol", type: "symbol"},
+            ])
+        ).toBeUndefined();
     });
 
     it("verifies liberty.json and darker.json share matching layer structure and darker.json is fully themed", () => {

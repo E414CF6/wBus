@@ -319,7 +319,7 @@ function BottomNavComponent({
                         <button
                             type="button"
                             onClick={handleToggleBusList}
-                            className={`flex lg:hidden items-center justify-center p-1.5 sm:p-2 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 ${
+                            className={`flex lg:hidden items-center justify-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 ${
                                 isBusListOpen
                                     ? "bg-indigo-600 text-white shadow-xs"
                                     : "hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
@@ -338,6 +338,17 @@ function BottomNavComponent({
                                                 : "text-slate-400 dark:text-slate-500"
                                 }`}
                             />
+                            {runningBuses.length > 0 && (
+                                <span
+                                    className={`text-[10px] font-black tabular-nums leading-none px-1 py-0.5 rounded-full ${
+                                        isBusListOpen
+                                            ? "bg-white/20 text-white"
+                                            : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                                    }`}
+                                >
+                                    {runningBuses.length}
+                                </span>
+                            )}
                         </button>
 
                         <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>

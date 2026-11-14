@@ -97,15 +97,42 @@ export const ShuttleSpotlightSection: React.FC<ShuttleSpotlightSectionProps> = (
                 </div>
             </div>
 
-            {shuttleDayType.isSaturday && (
-                <div className="p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/30 flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-200">
-                    <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0"/>
-                    <span>{UI_TEXT.YONSEI_SHUTTLE.SATURDAY_NO_RUN_DESC}</span>
+            {shuttleDayType.isSaturday ? (
+                <div className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-start sm:items-center gap-2.5 text-xs font-bold text-amber-900 dark:text-amber-200">
+                        <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 sm:mt-0"/>
+                        <div>
+                            <div className="font-black">토요일 셔틀 휴무</div>
+                            <p className="text-[11px] font-semibold text-amber-800/90 dark:text-amber-200/80 mt-0.5">
+                                {UI_TEXT.YONSEI_SHUTTLE.SATURDAY_NO_RUN_DESC}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => onOpenShuttleModal(directionMode)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 hover:bg-white dark:bg-white/10 dark:hover:bg-white/15 border border-amber-200 dark:border-amber-400/25 text-xs font-extrabold text-amber-950 dark:text-amber-100 transition-colors cursor-pointer"
+                        >
+                            <Table2 className="w-3.5 h-3.5"/>
+                            <span>평일 시간표 보기</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                triggerHaptic("light");
+                                onOpenStopsModal();
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/90 hover:bg-white dark:bg-white/10 dark:hover:bg-white/15 border border-amber-200 dark:border-amber-400/25 text-xs font-extrabold text-amber-950 dark:text-amber-100 transition-colors cursor-pointer"
+                        >
+                            <MapPin className="w-3.5 h-3.5"/>
+                            <span>탑승 장소</span>
+                        </button>
+                    </div>
                 </div>
-            )}
-
-            {/* Dual Next Shuttle Spotlight Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            ) : (
+                /* Dual Next Shuttle Spotlight Cards */
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button
                     type="button"
                     onClick={() => onOpenShuttleModal("OUTBOUND")}
@@ -151,9 +178,7 @@ export const ShuttleSpotlightSection: React.FC<ShuttleSpotlightSectionProps> = (
                         </div>
                     ) : (
                         <p className="text-xs font-bold text-slate-400 dark:text-slate-500 py-1.5">
-                            {shuttleDayType.isSaturday
-                                ? "토요일은 셔틀 운행이 없습니다"
-                                : "금일 하교 셔틀 운행이 종료되었습니다"}
+                            금일 하교 셔틀 운행이 종료되었습니다
                         </p>
                     )}
                 </button>
@@ -210,13 +235,12 @@ export const ShuttleSpotlightSection: React.FC<ShuttleSpotlightSectionProps> = (
                         </div>
                     ) : (
                         <p className="text-xs font-bold text-slate-400 dark:text-slate-500 py-1.5">
-                            {shuttleDayType.isSaturday
-                                ? "토요일은 셔틀 운행이 없습니다"
-                                : "금일 등교 셔틀 운행이 종료되었습니다"}
+                            금일 등교 셔틀 운행이 종료되었습니다
                         </p>
                     )}
                 </button>
-            </div>
+                </div>
+            )}
         </section>
     );
 };

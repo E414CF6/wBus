@@ -10,7 +10,10 @@ export interface StyleLayerLike {
 const NON_LABEL_SYMBOL_LAYERS = new Set([
     "road_one_way_arrow",
     "road_one_way_arrow_opposite",
+    "polyline-active-arrows",
 ]);
+
+const NON_LABEL_LAYER_PREFIXES = ["polyline-", "wbus-"];
 
 /**
  * Finds the first map typography/symbol layer ID in a MapLibre style so route polylines
@@ -22,7 +25,11 @@ export function findFirstLabelLayerId(
     if (!layers || layers.length === 0) return undefined;
 
     for (const layer of layers) {
-        if (layer.type === "symbol" && !NON_LABEL_SYMBOL_LAYERS.has(layer.id)) {
+        if (
+            layer.type === "symbol" &&
+            !NON_LABEL_SYMBOL_LAYERS.has(layer.id) &&
+            !NON_LABEL_LAYER_PREFIXES.some((prefix) => layer.id.startsWith(prefix))
+        ) {
             return layer.id;
         }
     }

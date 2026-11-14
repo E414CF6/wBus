@@ -13,7 +13,7 @@ import {
     resolveWeekdayAndVacationRoutes,
 } from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
-import {parseTimeToMinutes} from "@shared/lib/timeUtils";
+import {isWeekend, parseTimeToMinutes} from "@shared/lib/timeUtils";
 import {useDialogModal} from "@shared/lib/useDialogModal";
 
 export interface CityBusTimetableModalProps {
@@ -21,6 +21,7 @@ export interface CityBusTimetableModalProps {
     initialRouteNo: string;
     initialLocation: "origin" | "dest";
     allRoutes: BusRoute[];
+    isHolidayOrVacation?: boolean;
     now: Date;
     onClose: () => void;
 }
@@ -30,9 +31,11 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                                                                                 initialRouteNo,
                                                                                 initialLocation,
                                                                                 allRoutes,
+                                                                                isHolidayOrVacation,
                                                                                 now,
                                                                                 onClose,
                                                                             }) => {
+    const activeIsVacation = isHolidayOrVacation ?? isWeekend(now);
     const [routeNo, setRouteNo] = useState(initialRouteNo);
     const [location, setLocation] = useState<"origin" | "dest">(initialLocation);
     const [searchQuery, setSearchQuery] = useState("");
@@ -393,15 +396,39 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                             </th>
                             <th
                                 scope="col"
-                                className="px-3 py-2.5 text-left border-y border-l border-slate-200/80 dark:border-white/10"
+                                className={`px-3 py-2.5 text-left border-y border-l border-slate-200/80 dark:border-white/10 ${
+                                    !activeIsVacation
+                                        ? "bg-blue-50/90 dark:bg-blue-950/45 text-[#003876] dark:text-blue-200"
+                                        : ""
+                                }`}
                             >
-                                {UI_TEXT.YONSEI.WEEKDAY_COLUMN}
+                                <span className="inline-flex items-center gap-1.5">
+                                    <span>{UI_TEXT.YONSEI.WEEKDAY_COLUMN}</span>
+                                    {!activeIsVacation && (
+                                        <span
+                                            className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-[#003876] text-white dark:bg-blue-500">
+                                            오늘 적용
+                                        </span>
+                                    )}
+                                </span>
                             </th>
                             <th
                                 scope="col"
-                                className="px-3 py-2.5 text-left border border-slate-200/80 dark:border-white/10 rounded-tr-xl"
+                                className={`px-3 py-2.5 text-left border border-slate-200/80 dark:border-white/10 rounded-tr-xl ${
+                                    activeIsVacation
+                                        ? "bg-blue-50/90 dark:bg-blue-950/45 text-[#003876] dark:text-blue-200"
+                                        : ""
+                                }`}
                             >
-                                {UI_TEXT.YONSEI.VACATION_COLUMN}
+                                <span className="inline-flex items-center gap-1.5">
+                                    <span>{UI_TEXT.YONSEI.VACATION_COLUMN}</span>
+                                    {activeIsVacation && (
+                                        <span
+                                            className="px-1.5 py-0.5 rounded-full text-[9px] font-black bg-[#003876] text-white dark:bg-blue-500">
+                                            오늘 적용
+                                        </span>
+                                    )}
+                                </span>
                             </th>
                         </tr>
                         </thead>
@@ -437,7 +464,11 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                                 </th>
 
                                 {/* Weekday minutes */}
-                                <td className="px-3 py-2.5 border-b border-l border-slate-200/70 dark:border-white/10 align-middle">
+                                <td
+                                    className={`px-3 py-2.5 border-b border-l border-slate-200/70 dark:border-white/10 align-middle ${
+                                        !activeIsVacation ? "bg-blue-50/25 dark:bg-blue-950/10" : ""
+                                    }`}
+                                >
                                     <div className="flex flex-wrap gap-1.5 items-center">
                                         {row.weekdayMinutes.length === 0 ? (
                                             <span className="text-[11px] text-slate-300 dark:text-slate-700">
@@ -452,7 +483,11 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                                 </td>
 
                                 {/* Vacation / Holiday minutes */}
-                                <td className="px-3 py-2.5 border-b border-x border-slate-200/70 dark:border-white/10 align-middle">
+                                <td
+                                    className={`px-3 py-2.5 border-b border-x border-slate-200/70 dark:border-white/10 align-middle ${
+                                        activeIsVacation ? "bg-blue-50/25 dark:bg-blue-950/10" : ""
+                                    }`}
+                                >
                                     <div className="flex flex-wrap gap-1.5 items-center">
                                         {row.vacationMinutes.length === 0 ? (
                                             <span className="text-[11px] text-slate-300 dark:text-slate-700">

@@ -1,11 +1,13 @@
 "use client";
 
 import React, {memo, useMemo} from "react";
-import {ArrowRight, Clock, Table2} from "lucide-react";
+import Link from "next/link";
+import {ArrowRight, Clock, Map as MapIcon, Table2} from "lucide-react";
 
 import {ROUTE_CONFIG} from "@entities/route";
 import {type BusRoute, getUpcomingDepartures} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
+import {buildMapUrl} from "@widgets/AppShell/hooks/useAppNavigation";
 import type {CampusDirectionMode} from "../lib/yonseiShuttleUtils";
 
 export interface YonseiCityBusCardProps {
@@ -135,6 +137,12 @@ export const YonseiCityBusCard: React.FC<YonseiCityBusCardProps> = memo(function
                                         className="px-1.5 py-0.5 rounded-md text-[10px] font-black bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
                                         {dayTypeLabel}
                                     </span>
+                                    {routeNo === "34-1" && directionMode === "OUTBOUND" && (
+                                        <span
+                                            className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 shrink-0">
+                                            연세대 경유
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -205,11 +213,11 @@ export const YonseiCityBusCard: React.FC<YonseiCityBusCardProps> = memo(function
                                             className="text-[10px] font-bold text-slate-400 dark:text-slate-500 shrink-0">
                                             {UI_TEXT.YONSEI.UPCOMING_DEP_TIMES}
                                         </span>
-                                        <div className="flex items-center gap-1 flex-wrap justify-end">
+                                        <div className="grid grid-cols-3 gap-1 shrink-0">
                                             {subsequentDepartures.slice(0, 3).map((dep) => (
                                                 <span
                                                     key={`${dep.entry.seq}-${dep.timeStr}`}
-                                                    className="px-2 py-0.5 rounded-lg text-[11px] font-extrabold bg-white dark:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 tabular-nums"
+                                                    className="px-1.5 py-0.5 rounded-lg text-[11px] font-extrabold text-center bg-white dark:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200/80 dark:border-white/10 tabular-nums whitespace-nowrap"
                                                 >
                                                     {dep.timeStr}
                                                 </span>
@@ -229,17 +237,29 @@ export const YonseiCityBusCard: React.FC<YonseiCityBusCardProps> = memo(function
                 </div>
 
                 {/* Footer CTA */}
-                <button
-                    type="button"
-                    onClick={() => onOpenTimetable(routeNo, modalLocation)}
-                    className="w-full inline-flex items-center justify-between py-2.5 px-4 rounded-2xl bg-slate-100/90 hover:bg-[#003876] text-slate-800 hover:text-white dark:bg-white/[0.06] dark:hover:bg-blue-600 dark:text-slate-100 text-xs font-extrabold transition-colors cursor-pointer"
-                >
-                    <span className="inline-flex items-center gap-1.5">
-                        <Table2 className="w-3.5 h-3.5 opacity-80"/>
-                        <span>{UI_TEXT.YONSEI.VIEW_TIMETABLE_BTN}</span>
-                    </span>
-                    <ArrowRight className="w-3.5 h-3.5 opacity-70 group-hover:translate-x-0.5 transition-transform"/>
-                </button>
+                <div className="flex items-center gap-2">
+                    <button
+                        type="button"
+                        onClick={() => onOpenTimetable(routeNo, modalLocation)}
+                        className="flex-1 min-w-0 inline-flex items-center justify-between py-2.5 px-3.5 rounded-2xl bg-slate-100/90 hover:bg-[#003876] text-slate-800 hover:text-white dark:bg-white/[0.06] dark:hover:bg-blue-600 dark:text-slate-100 text-xs font-extrabold transition-colors cursor-pointer"
+                    >
+                        <span className="inline-flex items-center gap-1.5 truncate">
+                            <Table2 className="w-3.5 h-3.5 opacity-80 shrink-0"/>
+                            <span className="truncate">{UI_TEXT.YONSEI.VIEW_TIMETABLE_BTN}</span>
+                        </span>
+                        <ArrowRight
+                            className="w-3.5 h-3.5 opacity-70 group-hover:translate-x-0.5 transition-transform shrink-0"/>
+                    </button>
+
+                    <Link
+                        href={buildMapUrl(routeNo, "32020")}
+                        aria-label={`${routeNo}번 실시간 위치 지도에서 보기`}
+                        className="shrink-0 inline-flex items-center gap-1 py-2.5 px-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border border-emerald-200/80 dark:border-emerald-400/25 text-emerald-800 dark:text-emerald-300 text-xs font-extrabold transition-colors"
+                    >
+                        <MapIcon className="w-3.5 h-3.5 shrink-0"/>
+                        <span>실시간</span>
+                    </Link>
+                </div>
             </div>
         </article>
     );

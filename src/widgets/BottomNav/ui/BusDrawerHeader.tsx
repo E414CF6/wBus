@@ -68,7 +68,7 @@ export const BusDrawerHeader: React.FC<BusDrawerHeaderProps> = ({
                         )}
                     </div>
                     <p
-                        className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[210px] sm:max-w-[280px] mt-0.5"
+                        className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium truncate max-w-[245px] sm:max-w-[300px] mt-0.5"
                         title={routeSubInfo}
                     >
                         {routeSubInfo}
