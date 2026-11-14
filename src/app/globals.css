@@ -14,6 +14,7 @@
     --border-strong: rgba(0, 0, 0, 0.14);
     --color-background: var(--background);
     --color-foreground: var(--foreground);
+    --wbus-header-bottom: calc(env(safe-area-inset-top, 0px) + 124px);
 }
 
 /* Class-based dark mode to match next-themes (attribute="class") */
