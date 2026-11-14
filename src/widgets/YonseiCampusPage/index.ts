@@ -1,1 +1,1 @@
-export {YonseiCampusPage, default} from "./YonseiCampusPage";
+export {YonseiCampusPage} from "./YonseiCampusPage";

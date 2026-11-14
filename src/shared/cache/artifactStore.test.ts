@@ -1,4 +1,5 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
+import {artifactStore} from "./artifactStore";
 
 const {mockBlobGet, mockBlobHead, mockBlobPut, mockFs} = vi.hoisted(() => ({
     mockBlobGet: vi.fn(),
@@ -23,8 +24,6 @@ vi.mock("fs", () => ({
     default: mockFs,
     ...mockFs,
 }));
-
-import {artifactStore} from "./artifactStore";
 
 describe("artifactStore durability and /tmp freshness", () => {
     afterEach(() => {

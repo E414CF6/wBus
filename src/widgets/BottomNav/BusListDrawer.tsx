@@ -432,60 +432,60 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                     : "flex-1 min-h-0"
             }`}
         >
-                {/* 1.5 Variation Tabs & 2. Direction Filter / Search */}
-                <BusDrawerFilterBar
-                    effectiveVariations={effectiveVariations}
-                    currentVariant={currentVariant}
-                    busesPerVariation={busesPerVariation}
-                    onSelectVariant={setSelectedVariantId}
-                    hasDirections={hasDirections}
-                    directionFilter={directionFilter}
-                    onDirectionFilterChange={setDirectionFilter}
-                    favoriteStopsCountInRoute={favoriteStopsCountInRoute}
-                    stopCount={currentStops.length}
-                    stopSearchQuery={stopSearchQuery}
-                    onSearchQueryChange={setStopSearchQuery}
-                    turningStop={turningStop}
-                    metaThemeMainColor={meta?.colorTheme?.main}
-                    metaThemeBadgeBg={meta?.colorTheme?.badgeBg}
-                    metaThemeBg={meta?.colorTheme?.bg}
-                    metaThemeText={meta?.colorTheme?.text}
-                    metaThemeBorder={meta?.colorTheme?.border}
-                />
+            {/* 1.5 Variation Tabs & 2. Direction Filter / Search */}
+            <BusDrawerFilterBar
+                effectiveVariations={effectiveVariations}
+                currentVariant={currentVariant}
+                busesPerVariation={busesPerVariation}
+                onSelectVariant={setSelectedVariantId}
+                hasDirections={hasDirections}
+                directionFilter={directionFilter}
+                onDirectionFilterChange={setDirectionFilter}
+                favoriteStopsCountInRoute={favoriteStopsCountInRoute}
+                stopCount={currentStops.length}
+                stopSearchQuery={stopSearchQuery}
+                onSearchQueryChange={setStopSearchQuery}
+                turningStop={turningStop}
+                metaThemeMainColor={meta?.colorTheme?.main}
+                metaThemeBadgeBg={meta?.colorTheme?.badgeBg}
+                metaThemeBg={meta?.colorTheme?.bg}
+                metaThemeText={meta?.colorTheme?.text}
+                metaThemeBorder={meta?.colorTheme?.border}
+            />
 
-                {/* 2.5 Live Running Buses Quick-Jump Strip */}
-                {matchedBusesForJump.length > 0 && (
-                    <div
-                        ref={jumpStripRef}
-                        className="flex items-center gap-1.5 px-4 pb-2.5 overflow-x-auto custom-scrollbar-hidden shrink-0">
+            {/* 2.5 Live Running Buses Quick-Jump Strip */}
+            {matchedBusesForJump.length > 0 && (
+                <div
+                    ref={jumpStripRef}
+                    className="flex items-center gap-1.5 px-4 pb-2.5 overflow-x-auto custom-scrollbar-hidden shrink-0">
                         <span
                             className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0 mr-0.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"/>
                             운행중
                         </span>
-                        {matchedBusesForJump.map(({stopKey, stop, plateDigits, bus}) => {
-                            const isNearestBus = nearestBusVehicleNo === bus.vehicleno;
-                            return (
-                                <button
-                                    key={`${bus.vehicleno}-${stopKey}`}
-                                    type="button"
-                                    data-bus-jump={bus.vehicleno}
-                                    onClick={() => handleJumpToBusStop(stopKey, stop, bus.vehicleno)}
-                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border transition cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
-                                        isNearestBus
-                                            ? `${meta?.colorTheme?.bg || "bg-blue-600"} text-white border-transparent shadow-xs`
-                                            : `${meta?.colorTheme?.badgeBg || "bg-blue-500/10 dark:bg-blue-500/20"} ${meta?.colorTheme?.text || "text-blue-700 dark:text-blue-300"} ${meta?.colorTheme?.border || "border-blue-500/25"}`
-                                    }`}
-                                    title={`${bus.vehicleno} (${stop.nodenm}) 위치로 스크롤`}
-                                >
-                                    <Bus className="w-3 h-3 shrink-0"/>
-                                    <span className="font-mono font-black">{plateDigits}</span>
-                                    <span className="opacity-75 max-w-[90px] truncate">· {stop.nodenm}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                )}
+                    {matchedBusesForJump.map(({stopKey, stop, plateDigits, bus}) => {
+                        const isNearestBus = nearestBusVehicleNo === bus.vehicleno;
+                        return (
+                            <button
+                                key={`${bus.vehicleno}-${stopKey}`}
+                                type="button"
+                                data-bus-jump={bus.vehicleno}
+                                onClick={() => handleJumpToBusStop(stopKey, stop, bus.vehicleno)}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border transition cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
+                                    isNearestBus
+                                        ? `${meta?.colorTheme?.bg || "bg-blue-600"} text-white border-transparent shadow-xs`
+                                        : `${meta?.colorTheme?.badgeBg || "bg-blue-500/10 dark:bg-blue-500/20"} ${meta?.colorTheme?.text || "text-blue-700 dark:text-blue-300"} ${meta?.colorTheme?.border || "border-blue-500/25"}`
+                                }`}
+                                title={`${bus.vehicleno} (${stop.nodenm}) 위치로 스크롤`}
+                            >
+                                <Bus className="w-3 h-3 shrink-0"/>
+                                <span className="font-mono font-black">{plateDigits}</span>
+                                <span className="opacity-75 max-w-[90px] truncate">· {stop.nodenm}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
 
             {/* 3. Bus Stop Timeline List Body */}
             <div

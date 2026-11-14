@@ -1,6 +1,14 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
+import {computeStopsHash, refreshRouteData} from "./routeSyncService";
 
-const {mockFetchCityRoutes, mockFetchRouteStops, mockGetJson, mockPutJson, mockDistributedSet, mockDistributedGet} = vi.hoisted(() => ({
+const {
+    mockFetchCityRoutes,
+    mockFetchRouteStops,
+    mockGetJson,
+    mockPutJson,
+    mockDistributedSet,
+    mockDistributedGet
+} = vi.hoisted(() => ({
     mockFetchCityRoutes: vi.fn(),
     mockFetchRouteStops: vi.fn(),
     mockGetJson: vi.fn(),
@@ -30,8 +38,6 @@ vi.mock("@shared/cache/distributedCache", () => ({
         getStatus: vi.fn().mockReturnValue({configured: false, backend: "memory"}),
     },
 }));
-
-import {computeStopsHash, refreshRouteData} from "./routeSyncService";
 
 describe("routeSyncService incremental sync & cursor pagination", () => {
     afterEach(() => {

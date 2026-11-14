@@ -1,66 +1,91 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useState, useSyncExternalStore} from "react";
-import Link from "next/link";
 import {useTheme} from "next-themes";
 import {
-    ArrowLeft,
+    AlertCircle,
+    ArrowDownLeft,
+    ArrowRight,
+    ArrowUpRight,
     Bus,
     Calendar,
-    CheckCircle2,
-    Coffee,
+    Clock,
     GraduationCap,
     Info,
+    MapPin,
     Moon,
-    Settings,
-    Sparkles,
     Sun,
-    X,
+    Table2,
 } from "lucide-react";
 
-import {NoticeBanner, NoticeModal} from "@entities/notice";
 import {TARGET_ROUTE_NUMBERS} from "@entities/route";
-import {type BusRoute, CacheInfoBanner, resolveActiveScheduleVariant, useSchedule,} from "@entities/schedule";
-import {RouteScheduleModal} from "@features/map-view/RouteScheduleModal";
-import {OnboardingModal} from "@features/onboarding";
-import {SettingsModal} from "@features/settings";
-import {resolveInitialCampusDirection} from "@shared/config/settingsCookie";
+import {
+    type BusRoute,
+    getStaticYonseiBusRoutes,
+    selectRouteVariant,
+    YONSEI_SHUTTLE_SCHEDULE,
+} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
-import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {isWeekend} from "@shared/lib/timeUtils";
 import type {DayMode} from "@shared/types/navigation";
 import {Footer} from "@shared/ui/Footer";
 import {triggerHaptic} from "@shared/utils/haptics";
 
-import type {CampusDirectionMode} from "./lib/yonseiShuttleUtils";
+import {type CampusDirectionMode, getNextShuttleDepartures} from "./lib/yonseiShuttleUtils";
+import {CityBusTimetableModal} from "./ui/CityBusTimetableModal";
+import {FloatingBottomNav} from "./ui/FloatingBottomNav";
+import {SettingsModal} from "./ui/SettingsModal";
+import {ShuttleStopsModal} from "./ui/ShuttleStopsModal";
+import {ShuttleTimetableModal} from "./ui/ShuttleTimetableModal";
 import {YonseiCityBusCard} from "./ui/YonseiCityBusCard";
-import {YonseiShuttleSection} from "./ui/YonseiShuttleSection";
-import {YonseiShuttleStopsSection} from "./ui/YonseiShuttleStopsSection";
 
-const emptySubscribe = () => () => {
-};
+const emptySubscribe = () => () => {};
+const KOREAN_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
+
+function getDefaultDirection(now: Date): CampusDirectionMode {
+    return now.getHours() < 12 ? "INBOUND" : "OUTBOUND";
+}
+
+function formatHeaderClock(date: Date): string {
+    const hh = date.getHours().toString().padStart(2, "0");
+    const mm = date.getMinutes().toString().padStart(2, "0");
+    const dayName = KOREAN_WEEKDAYS[date.getDay()];
+    return `${hh}:${mm} (${dayName})`;
+}
+
+function getShuttleWaitBadge(waitMins: number): {
+    pillClass: string;
+    dotClass: string | null;
+    label: string;
+} {
+    if (waitMins <= 10) {
+        return {
+            pillClass: "bg-rose-500/12 text-rose-700 dark:text-rose-300 border-rose-500/30 font-black",
+            dotClass: "bg-rose-500",
+            label: waitMins === 0 ? "곧 출발" : `${waitMins}분 후`,
+        };
+    }
+    if (waitMins <= 30) {
+        return {
+            pillClass:
+                "bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-black",
+            dotClass: null,
+            label: `${waitMins}분 후`,
+        };
+    }
+    return {
+        pillClass: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/25 font-extrabold",
+        dotClass: null,
+        label: `${waitMins}분 후`,
+    };
+}
 
 export function YonseiCampusPage() {
-    const {settings} = useAppSettings();
     const [now, setNow] = useState<Date>(() => new Date());
     const [directionMode, setDirectionMode] = useState<CampusDirectionMode>(() =>
-        resolveInitialCampusDirection(settings.yonseiDefaultDirection)
+        getDefaultDirection(new Date())
     );
-    const [dayMode, setDayMode] = useState<DayMode>(settings.defaultDayMode);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-    // Sync directionMode and dayMode when cookie settings change (render-phase state sync)
-    const [prevDefaultDirection, setPrevDefaultDirection] = useState(settings.yonseiDefaultDirection);
-    if (settings.yonseiDefaultDirection !== prevDefaultDirection) {
-        setPrevDefaultDirection(settings.yonseiDefaultDirection);
-        setDirectionMode(resolveInitialCampusDirection(settings.yonseiDefaultDirection, now));
-    }
-
-    const [prevDefaultDayMode, setPrevDefaultDayMode] = useState(settings.defaultDayMode);
-    if (settings.defaultDayMode !== prevDefaultDayMode) {
-        setPrevDefaultDayMode(settings.defaultDayMode);
-        setDayMode(settings.defaultDayMode);
-    }
+    const [dayMode, setDayMode] = useState<DayMode>("AUTO");
 
     // Live clock update every 15 seconds
     useEffect(() => {
@@ -75,367 +100,566 @@ export function YonseiCampusPage() {
     const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const isDark = mounted
         ? resolvedTheme === "dark" ||
-        (typeof document !== "undefined" && document.documentElement.classList.contains("dark"))
+          (typeof document !== "undefined" && document.documentElement.classList.contains("dark"))
         : false;
 
     const handleToggleTheme = useCallback(() => {
         triggerHaptic("light");
-        const nextTheme = isDark ? "light" : "dark";
-        setTheme(nextTheme);
-        if (typeof document !== "undefined") {
-            if (nextTheme === "dark") {
-                document.documentElement.classList.add("dark");
-                document.documentElement.style.colorScheme = "dark";
-            } else {
-                document.documentElement.classList.remove("dark");
-                document.documentElement.style.colorScheme = "light";
-            }
-        }
+        setTheme(isDark ? "light" : "dark");
     }, [isDark, setTheme]);
 
-    const handleCycleDayMode = useCallback(() => {
-        triggerHaptic("selection");
-        setDayMode((prev) =>
-            prev === "AUTO" ? "WEEKDAY" : prev === "WEEKDAY" ? "VACATION" : "AUTO"
-        );
-    }, []);
-
     const isTodayWeekendOrHoliday = useMemo(() => isWeekend(now), [now]);
+    const isHolidayOrVacation = useMemo(() => {
+        if (dayMode === "WEEKDAY") return false;
+        if (dayMode === "VACATION") return true;
+        return isTodayWeekendOrHoliday;
+    }, [dayMode, isTodayWeekendOrHoliday]);
 
-    // Fetch Wonju bus schedule data
-    const {
-        routes,
-        meta,
-        isLoading,
-        isRefreshing,
-        refresh,
-        refreshToast,
-        clearRefreshToast,
-    } = useSchedule(true);
+    const allRoutes = useMemo(() => getStaticYonseiBusRoutes(), []);
 
-    // Resolve active variant per target route (30, 34, 34-1)
     const routeScheduleMap = useMemo(() => {
         const map = new Map<string, BusRoute | null>();
         for (const routeNo of TARGET_ROUTE_NUMBERS) {
-            const variants = routes.filter((r) => r.routeNo === routeNo);
-            map.set(
-                routeNo,
-                resolveActiveScheduleVariant(variants, null, dayMode, isTodayWeekendOrHoliday)
-            );
+            if (routeNo === "30") {
+                const variants = allRoutes.filter((r) => r.routeNo === "30");
+                const targetDayType = isHolidayOrVacation ? "방학,휴일" : "평일";
+                map.set("30", variants.find((v) => v.dayType === targetDayType) ?? variants[0] ?? null);
+            } else {
+                map.set(routeNo, selectRouteVariant(allRoutes, routeNo, isHolidayOrVacation));
+            }
         }
         return map;
-    }, [routes, dayMode, isTodayWeekendOrHoliday]);
+    }, [allRoutes, isHolidayOrVacation]);
 
-    // Schedule modal state
-    const [scheduleModalState, setScheduleModalState] = useState<{
+    const {dayType: shuttleDayType, nextInbound, nextOutbound} = useMemo(
+        () => getNextShuttleDepartures(YONSEI_SHUTTLE_SCHEDULE, dayMode, now),
+        [dayMode, now]
+    );
+
+    // Modal states
+    const [cityModalState, setCityModalState] = useState<{
         isOpen: boolean;
-        routeName: string;
+        routeNo: string;
         location: "origin" | "dest";
     }>({
         isOpen: false,
-        routeName: "30",
+        routeNo: "30",
         location: "dest",
     });
 
-    const handleOpenTimetable = useCallback((routeNo: string, location: "origin" | "dest") => {
+    const [shuttleModalState, setShuttleModalState] = useState<{
+        isOpen: boolean;
+        tab: "OUTBOUND" | "INBOUND" | "GUIDELINES";
+    }>({
+        isOpen: false,
+        tab: "OUTBOUND",
+    });
+
+    const [isStopsModalOpen, setIsStopsModalOpen] = useState(false);
+    const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+
+    const handleOpenCityTimetable = useCallback((routeNo: string, location: "origin" | "dest") => {
         triggerHaptic("light");
-        setScheduleModalState({
+        setCityModalState({
             isOpen: true,
-            routeName: routeNo,
+            routeNo,
             location,
         });
     }, []);
 
-    // Notice modal state
-    const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
-    const [selectedNoticeId, setSelectedNoticeId] = useState<string | null>(null);
-
-    const handleOpenNoticeModal = useCallback((noticeId?: string) => {
-        setSelectedNoticeId(noticeId || null);
-        setIsNoticeModalOpen(true);
+    const handleOpenShuttleModal = useCallback((tab: "OUTBOUND" | "INBOUND" | "GUIDELINES") => {
+        triggerHaptic("light");
+        setShuttleModalState({
+            isOpen: true,
+            tab,
+        });
     }, []);
 
-    const dayModeLabel =
+    const activeModal: "city" | "shuttle" | "stops" | "settings" | null = cityModalState.isOpen
+        ? "city"
+        : shuttleModalState.isOpen
+            ? "shuttle"
+            : isStopsModalOpen
+                ? "stops"
+                : isSettingsModalOpen
+                    ? "settings"
+                    : null;
+
+    const dayModeBadgeLabel =
         dayMode === "AUTO"
             ? `자동 (${isTodayWeekendOrHoliday ? "휴일" : "평일"})`
             : dayMode === "WEEKDAY"
-                ? "평일 기준"
-                : "휴일·방학";
+              ? UI_TEXT.YONSEI.MODE_WEEKDAY
+              : UI_TEXT.YONSEI.MODE_VACATION;
 
-    const currentTimeText = useMemo(() => {
-        const hh = now.getHours().toString().padStart(2, "0");
-        const mm = now.getMinutes().toString().padStart(2, "0");
-        return `${hh}:${mm}`;
-    }, [now]);
+    const outboundWait = nextOutbound ? getShuttleWaitBadge(nextOutbound.waitMins) : null;
+    const inboundWait = nextInbound ? getShuttleWaitBadge(nextInbound.waitMins) : null;
 
     return (
         <div
-            className="h-dvh w-full overflow-y-auto overflow-x-hidden bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 transition-colors custom-scrollbar">
-            {/* Sticky Header */}
+            className="min-h-dvh pb-28 bg-slate-50 dark:bg-[#090d16] text-slate-900 dark:text-slate-100 transition-colors">
+            {/* Minimal Sticky Header */}
             <header
-                className="sticky top-0 z-40 bg-white/85 dark:bg-[#090d16]/85 backdrop-blur-2xl border-b border-slate-200/80 dark:border-white/10">
-                <div
-                    className="max-w-6xl mx-auto px-3.5 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-2.5">
-                    {/* Left: Back to Map + Yonsei Brand */}
+                className="sticky top-0 z-30 bg-white/85 dark:bg-[#090d16]/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/10">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
-                        <Link
-                            href="/?cityCode=32020"
-                            className="flex items-center justify-center w-9 h-9 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 transition-colors shrink-0"
-                            aria-label="실시간 지도로 돌아가기"
-                            title="실시간 지도로 돌아가기"
-                        >
-                            <ArrowLeft className="w-4 h-4"/>
-                        </Link>
-                        <div className="flex items-center gap-2 min-w-0">
-                            <div
-                                className="w-8 h-8 rounded-xl bg-[#003876] flex items-center justify-center text-white shadow-xs shrink-0">
-                                <GraduationCap className="w-4 h-4"/>
-                            </div>
-                            <div className="min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                    <span
-                                        className="font-black text-sm sm:text-base tracking-tight text-slate-900 dark:text-white truncate">
-                                        연세대학교 미래캠퍼스
-                                    </span>
-                                    <span
-                                        className="hidden md:inline-flex px-2 py-0.5 rounded-full text-[10px] font-black bg-[#003876]/10 dark:bg-blue-500/20 text-[#003876] dark:text-blue-300">
-                                        교통 허브
-                                    </span>
-                                </div>
-                                <p className="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
-                                    무료 셔틀버스 · 30 · 34 · 34-1번 실시간 운행 &amp; 시간표
-                                </p>
-                            </div>
+                        <div
+                            className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#003876] to-blue-700 flex items-center justify-center text-white shadow-xs shrink-0">
+                            <GraduationCap className="w-4 h-4"/>
+                        </div>
+                        <div className="min-w-0">
+                            <h1 className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white truncate">
+                                {UI_TEXT.YONSEI.TITLE}
+                            </h1>
                         </div>
                     </div>
 
-                    {/* Right: Direction Toggle + DayMode Toggle + Theme Toggle */}
-                    <div
-                        className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-1.5 sm:gap-2 sm:ml-auto">
-                        {/* One-Click Outbound / Inbound Mode Switcher */}
-                        <div
-                            className="flex items-center gap-0.5 p-0.5 rounded-full bg-slate-100 dark:bg-white/10 border border-black/5 dark:border-white/10"
-                            role="group"
-                            aria-label="등교 및 하교 모드 선택"
-                        >
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    triggerHaptic("selection");
-                                    setDirectionMode("OUTBOUND");
-                                }}
-                                className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
-                                    directionMode === "OUTBOUND"
-                                        ? "bg-[#003876] text-white shadow-xs"
-                                        : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-                                }`}
-                            >
-                                하교 (학교 출발)
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    triggerHaptic("selection");
-                                    setDirectionMode("INBOUND");
-                                }}
-                                className={`px-2.5 sm:px-3 py-1 rounded-full text-[11px] sm:text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
-                                    directionMode === "INBOUND"
-                                        ? "bg-indigo-600 text-white shadow-xs"
-                                        : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
-                                }`}
-                            >
-                                등교 (학교 도착)
-                            </button>
-                        </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                        {mounted && (
+                            <span
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100/90 dark:bg-white/[0.06] text-[11px] sm:text-xs font-extrabold text-slate-600 dark:text-slate-300 tabular-nums">
+                                <Clock className="w-3 h-3 text-[#003876] dark:text-blue-400"/>
+                                <span>{formatHeaderClock(now)}</span>
+                            </span>
+                        )}
 
-                        {/* DayMode Cycle Pill */}
-                        <button
-                            type="button"
-                            onClick={handleCycleDayMode}
-                            title="운행 요일 기준 전환 (자동 / 평일 / 휴일·방학)"
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200/80 dark:hover:bg-white/15 text-[11px] font-black text-slate-700 dark:text-slate-200 transition cursor-pointer active:scale-95 shrink-0"
-                        >
-                            {dayMode === "AUTO" && (
-                                <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400"/>
-                            )}
-                            {dayMode === "WEEKDAY" && (
-                                <Calendar className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"/>
-                            )}
-                            {dayMode === "VACATION" && (
-                                <Coffee className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"/>
-                            )}
-                            <span className="hidden sm:inline whitespace-nowrap">{dayModeLabel}</span>
-                        </button>
-
-                        {/* Theme Toggle */}
-                        <button
-                            type="button"
-                            onClick={handleToggleTheme}
-                            aria-label={UI_TEXT.NAV.THEME_TOGGLE_LABEL}
-                            className="p-2 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200/80 dark:hover:bg-white/15 text-slate-600 dark:text-slate-300 transition cursor-pointer active:scale-90 shrink-0"
-                        >
-                            {isDark ? (
-                                <Moon className="w-4 h-4 text-blue-400"/>
-                            ) : (
-                                <Sun className="w-4 h-4 text-amber-500"/>
-                            )}
-                        </button>
-
-                        {/* Settings Modal Trigger */}
                         <button
                             type="button"
                             onClick={() => {
                                 triggerHaptic("light");
-                                setIsSettingsOpen(true);
+                                setIsSettingsModalOpen(true);
                             }}
-                            aria-label="환경설정 열기"
-                            title="환경설정"
-                            className="p-2 rounded-full bg-slate-100 dark:bg-white/10 hover:bg-slate-200/80 dark:hover:bg-white/15 text-slate-600 dark:text-slate-300 transition cursor-pointer active:scale-90 shrink-0"
+                            title={UI_TEXT.YONSEI.MODE_OVERRIDE_LABEL}
+                            className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/[0.07] dark:hover:bg-white/15 text-xs font-extrabold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                         >
-                            <Settings className="w-4 h-4"/>
+                            <Calendar className="w-3.5 h-3.5 text-[#003876] dark:text-blue-400"/>
+                            <span>{dayModeBadgeLabel}</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={handleToggleTheme}
+                            aria-label={UI_TEXT.ACCESSIBILITY.THEME_SWITCH}
+                            className="flex items-center justify-center w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/[0.07] dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                        >
+                            {mounted ? (
+                                isDark ? (
+                                    <Sun className="w-4 h-4 text-amber-400"/>
+                                ) : (
+                                    <Moon className="w-4 h-4 text-slate-700"/>
+                                )
+                            ) : (
+                                <span className="w-4 h-4"/>
+                            )}
                         </button>
                     </div>
                 </div>
             </header>
 
-            {/* Main Content */}
-            <main className="max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-7 space-y-6">
-                {/* Toast Message Notification */}
-                {refreshToast && (
+            <main className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-6 space-y-5">
+                {/* Compact Direction Command Bar */}
+                <section
+                    className="relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-white dark:bg-[#111623] border border-slate-200/85 dark:border-white/10 shadow-xs">
                     <div
-                        className={`p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between transition-all shadow-sm ${
-                            refreshToast.type === "success"
-                                ? "bg-emerald-50 dark:bg-emerald-950/50 border-emerald-300 dark:border-emerald-500/40 text-emerald-800 dark:text-emerald-200"
-                                : refreshToast.type === "error"
-                                    ? "bg-rose-50 dark:bg-rose-950/50 border-rose-300 dark:border-rose-500/40 text-rose-800 dark:text-rose-200"
-                                    : "bg-blue-50 dark:bg-blue-950/50 border-blue-300 dark:border-blue-500/40 text-blue-800 dark:text-blue-200"
-                        }`}
-                    >
-                        <div className="flex items-center gap-2.5">
-                            {refreshToast.type === "success" ? (
-                                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"/>
-                            ) : (
-                                <Info className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400"/>
-                            )}
-                            <span className="text-xs sm:text-sm font-semibold">
-                                {refreshToast.message}
-                            </span>
+                        aria-hidden="true"
+                        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#003876]/[0.07] via-blue-500/[0.03] to-transparent dark:from-[#003876]/30 dark:via-blue-900/15 dark:to-transparent"
+                    />
+                    <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
+                        <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                                <span
+                                    className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-[#003876] text-white">
+                                    {UI_TEXT.YONSEI.HERO_BADGE}
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsSettingsModalOpen(true)}
+                                    className="sm:hidden inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300"
+                                >
+                                    <Calendar className="w-2.5 h-2.5"/>
+                                    {dayModeBadgeLabel}
+                                </button>
+                            </div>
+                            <h2 className="text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white">
+                                지금 탈 수 있는 버스
+                            </h2>
+                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                핵심 출발 시각만 한눈에 보고, 전체 시간표는 눌러서 확인하세요
+                            </p>
+                        </div>
+
+                        {/* Segmented Direction Switcher */}
+                        <div
+                            role="tablist"
+                            aria-label="이동 방향 선택"
+                            className="grid grid-cols-2 gap-1.5 p-1.5 rounded-2xl bg-slate-100/90 dark:bg-white/[0.06] border border-slate-200/60 dark:border-white/[0.06] shrink-0"
+                        >
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={directionMode === "OUTBOUND"}
+                                onClick={() => {
+                                    triggerHaptic("selection");
+                                    setDirectionMode("OUTBOUND");
+                                }}
+                                className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                    directionMode === "OUTBOUND"
+                                        ? "bg-[#003876] text-white shadow-sm"
+                                        : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                                }`}
+                            >
+                                <ArrowUpRight className="w-3.5 h-3.5 shrink-0"/>
+                                <div className="text-left leading-tight">
+                                    <div>하교 · 시내방면</div>
+                                    <div
+                                        className={`text-[10px] font-bold ${
+                                            directionMode === "OUTBOUND"
+                                                ? "text-blue-200"
+                                                : "text-slate-400 dark:text-slate-500"
+                                        }`}
+                                    >
+                                        연세대 출발
+                                    </div>
+                                </div>
+                            </button>
+
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={directionMode === "INBOUND"}
+                                onClick={() => {
+                                    triggerHaptic("selection");
+                                    setDirectionMode("INBOUND");
+                                }}
+                                className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                                    directionMode === "INBOUND"
+                                        ? "bg-indigo-600 text-white shadow-sm"
+                                        : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                                }`}
+                            >
+                                <ArrowDownLeft className="w-3.5 h-3.5 shrink-0"/>
+                                <div className="text-left leading-tight">
+                                    <div>등교 · 학교방면</div>
+                                    <div
+                                        className={`text-[10px] font-bold ${
+                                            directionMode === "INBOUND"
+                                                ? "text-indigo-200"
+                                                : "text-slate-400 dark:text-slate-500"
+                                        }`}
+                                    >
+                                        장양리·시내 출발
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Core 1: City Bus Live Next Departures */}
+                <section className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                        <div className="flex items-center gap-2">
+                            <Bus className="w-4 h-4 text-[#003876] dark:text-blue-400"/>
+                            <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+                                시내버스 (30 · 34 · 34-1)
+                            </h2>
                         </div>
                         <button
                             type="button"
-                            onClick={clearRefreshToast}
-                            className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-slate-500 cursor-pointer"
-                            aria-label="알림 닫기"
+                            onClick={() =>
+                                handleOpenCityTimetable(
+                                    "30",
+                                    directionMode === "OUTBOUND" ? "dest" : "origin"
+                                )
+                            }
+                            className="inline-flex items-center gap-1 text-[11px] font-extrabold text-[#003876] dark:text-blue-400 hover:underline cursor-pointer"
                         >
-                            <X className="h-4 w-4"/>
+                            <span>전체 시간표</span>
+                            <ArrowRight className="w-3 h-3"/>
                         </button>
                     </div>
-                )}
 
-                {/* Criteria & Live Notice Banners */}
-                <div className="space-y-3">
-                    <CacheInfoBanner
-                        meta={meta}
-                        onRefresh={() => refresh(true)}
-                        isRefreshing={isRefreshing}
-                        variant="banner"
-                    />
-                    <NoticeBanner onClick={handleOpenNoticeModal}/>
-                </div>
-
-                {/* Section 1: City Bus 30, 34, 34-1 Live & Next Departures */}
-                <section className="space-y-3.5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
-                        <div className="flex items-center gap-2">
-                            <Bus className="w-5 h-5 text-[#003876] dark:text-blue-400"/>
-                            <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
-                                캠퍼스 경유 시내버스 (30 · 34 · 34-1번)
-                            </h2>
-                        </div>
-                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                            {directionMode === "OUTBOUND"
-                                ? "기준: 연세대·회촌 출발 시각 (하교)"
-                                : "기준: 장양리 기점 출발 시각 (등교)"}
-                        </span>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {TARGET_ROUTE_NUMBERS.map((routeNo) => (
+                            <YonseiCityBusCard
+                                key={routeNo}
+                                routeNo={routeNo}
+                                scheduleRoute={routeScheduleMap.get(routeNo) ?? null}
+                                directionMode={directionMode}
+                                now={now}
+                                onOpenTimetable={handleOpenCityTimetable}
+                            />
+                        ))}
                     </div>
-
-                    {isLoading && routes.length === 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {[1, 2, 3].map((i) => (
-                                <div
-                                    key={i}
-                                    className="rounded-3xl p-5 space-y-4 animate-pulse bg-white/80 dark:bg-[#111520]/80 border border-slate-200/80 dark:border-white/10"
-                                >
-                                    <div className="h-7 w-1/3 bg-slate-200 dark:bg-white/10 rounded-xl"/>
-                                    <div className="h-4 w-2/3 bg-slate-200 dark:bg-white/10 rounded"/>
-                                    <div className="h-24 w-full bg-slate-200 dark:bg-white/10 rounded-2xl"/>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            {TARGET_ROUTE_NUMBERS.map((routeNo) => (
-                                <YonseiCityBusCard
-                                    key={routeNo}
-                                    routeNo={routeNo}
-                                    scheduleRoute={routeScheduleMap.get(routeNo) ?? null}
-                                    directionMode={directionMode}
-                                    now={now}
-                                    onOpenTimetable={handleOpenTimetable}
-                                />
-                            ))}
-                        </div>
-                    )}
                 </section>
 
-                {/* Section 2: Free Shuttle Bus Timetable & Search */}
-                <YonseiShuttleSection
-                    directionMode={directionMode}
-                    onDirectionModeChange={setDirectionMode}
-                    dayMode={dayMode}
-                    now={now}
-                />
+                {/* Core 2: Free Shuttle Next Spotlight (Details in Modals) */}
+                <section
+                    className="rounded-3xl p-4 sm:p-5 bg-white dark:bg-[#111623] border border-slate-200/85 dark:border-white/10 shadow-xs space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                            <span
+                                className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#003876] to-blue-700 text-white flex items-center justify-center shadow-xs shrink-0">
+                                <GraduationCap className="w-4 h-4"/>
+                            </span>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+                                        {YONSEI_SHUTTLE_SCHEDULE.title}
+                                    </h2>
+                                    <span
+                                        className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
+                                            shuttleDayType.isSaturday
+                                                ? "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30"
+                                                : shuttleDayType.isSunday
+                                                    ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30"
+                                                    : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                                        }`}
+                                    >
+                                        {shuttleDayType.label}
+                                    </span>
+                                </div>
+                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                    학생·교직원 무료 · 세부 시간표와 탑승 위치는 모달에서 확인
+                                </p>
+                            </div>
+                        </div>
 
-                {/* Section 3: Shuttle Stop Guide & Interactive MiniMap */}
-                <YonseiShuttleStopsSection directionMode={directionMode}/>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <button
+                                type="button"
+                                onClick={() => handleOpenShuttleModal(directionMode)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/[0.06] dark:hover:bg-white/12 text-xs font-extrabold text-slate-800 dark:text-slate-100 transition-colors cursor-pointer"
+                            >
+                                <Table2 className="w-3.5 h-3.5 text-[#003876] dark:text-blue-400"/>
+                                <span>전체 시간표</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    triggerHaptic("light");
+                                    setIsStopsModalOpen(true);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/[0.06] dark:hover:bg-white/12 text-xs font-extrabold text-slate-800 dark:text-slate-100 transition-colors cursor-pointer"
+                            >
+                                <MapPin className="w-3.5 h-3.5 text-[#003876] dark:text-blue-400"/>
+                                <span>탑승 장소</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleOpenShuttleModal("GUIDELINES")}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/[0.06] dark:hover:bg-white/12 text-xs font-extrabold text-slate-800 dark:text-slate-100 transition-colors cursor-pointer"
+                            >
+                                <Info className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400"/>
+                                <span>이용 안내</span>
+                            </button>
+                        </div>
+                    </div>
 
-                {/* Footer */}
-                <Footer/>
+                    {shuttleDayType.isSaturday && (
+                        <div
+                            className="p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/30 flex items-center gap-2 text-xs font-bold text-amber-800 dark:text-amber-200">
+                            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0"/>
+                            <span>{UI_TEXT.YONSEI_SHUTTLE.SATURDAY_NO_RUN_DESC}</span>
+                        </div>
+                    )}
+
+                    {/* Dual Next Shuttle Spotlight Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <button
+                            type="button"
+                            onClick={() => handleOpenShuttleModal("OUTBOUND")}
+                            className={`text-left p-4 rounded-2xl border transition-all cursor-pointer active:scale-[0.99] ${
+                                directionMode === "OUTBOUND"
+                                    ? "bg-gradient-to-br from-blue-50/95 to-slate-50/80 dark:from-blue-950/40 dark:to-[#151c2e] border-[#003876] dark:border-blue-500 ring-1 ring-blue-500/20"
+                                    : "bg-slate-50/80 dark:bg-white/[0.03] border-slate-200/80 dark:border-white/10 hover:bg-blue-50/40 dark:hover:bg-blue-950/20"
+                            }`}
+                        >
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                                <span
+                                    className="flex items-center gap-1.5 text-xs font-black text-[#003876] dark:text-blue-300">
+                                    <Clock className="w-3.5 h-3.5 shrink-0"/>
+                                    <span>{UI_TEXT.YONSEI_SHUTTLE.NEXT_FROM_CAMPUS}</span>
+                                </span>
+                                {outboundWait && (
+                                    <span
+                                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] border tabular-nums ${outboundWait.pillClass}`}
+                                    >
+                                        {outboundWait.dotClass && (
+                                            <span className="relative flex h-1.5 w-1.5">
+                                                <span
+                                                    className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${outboundWait.dotClass}`}
+                                                />
+                                                <span
+                                                    className={`relative inline-flex rounded-full h-1.5 w-1.5 ${outboundWait.dotClass}`}
+                                                />
+                                            </span>
+                                        )}
+                                        <span>{outboundWait.label}</span>
+                                    </span>
+                                )}
+                            </div>
+
+                            {nextOutbound ? (
+                                <div className="space-y-1">
+                                    <div className="flex items-baseline justify-between gap-2">
+                                        <span
+                                            className="text-2xl font-black tabular-nums tracking-tight text-slate-900 dark:text-white">
+                                            {nextOutbound.item.departure_time}
+                                        </span>
+                                        <span
+                                            className="text-xs font-extrabold text-blue-700 dark:text-blue-300 truncate">
+                                            {nextOutbound.item.departure_point} → {nextOutbound.item.destination}
+                                        </span>
+                                    </div>
+                                    {nextOutbound.item.via.length > 0 && (
+                                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                                            경유: {nextOutbound.item.via.map((v) => v.name).join(" → ")}
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 py-1.5">
+                                    {shuttleDayType.isSaturday
+                                        ? "토요일은 셔틀 운행이 없습니다"
+                                        : "금일 하교 셔틀 운행이 종료되었습니다"}
+                                </p>
+                            )}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => handleOpenShuttleModal("INBOUND")}
+                            className={`text-left p-4 rounded-2xl border transition-all cursor-pointer active:scale-[0.99] ${
+                                directionMode === "INBOUND"
+                                    ? "bg-gradient-to-br from-indigo-50/95 to-slate-50/80 dark:from-indigo-950/40 dark:to-[#151c2e] border-indigo-600 dark:border-indigo-400 ring-1 ring-indigo-500/20"
+                                    : "bg-slate-50/80 dark:bg-white/[0.03] border-slate-200/80 dark:border-white/10 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20"
+                            }`}
+                        >
+                            <div className="flex items-center justify-between gap-2 mb-1.5">
+                                <span
+                                    className="flex items-center gap-1.5 text-xs font-black text-indigo-700 dark:text-indigo-300">
+                                    <Bus className="w-3.5 h-3.5 shrink-0"/>
+                                    <span>{UI_TEXT.YONSEI_SHUTTLE.NEXT_TO_CAMPUS}</span>
+                                </span>
+                                {inboundWait && (
+                                    <span
+                                        className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] border tabular-nums ${inboundWait.pillClass}`}
+                                    >
+                                        {inboundWait.dotClass && (
+                                            <span className="relative flex h-1.5 w-1.5">
+                                                <span
+                                                    className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${inboundWait.dotClass}`}
+                                                />
+                                                <span
+                                                    className={`relative inline-flex rounded-full h-1.5 w-1.5 ${inboundWait.dotClass}`}
+                                                />
+                                            </span>
+                                        )}
+                                        <span>{inboundWait.label}</span>
+                                    </span>
+                                )}
+                            </div>
+
+                            {nextInbound ? (
+                                <div className="space-y-1">
+                                    <div className="flex items-baseline justify-between gap-2">
+                                        <span
+                                            className="text-2xl font-black tabular-nums tracking-tight text-slate-900 dark:text-white">
+                                            {nextInbound.item.departure_time}
+                                        </span>
+                                        <span
+                                            className="text-xs font-extrabold text-indigo-700 dark:text-indigo-300 truncate">
+                                            {nextInbound.item.departure_point} 발 → 미래캠퍼스
+                                        </span>
+                                    </div>
+                                    {nextInbound.item.via.length > 0 ? (
+                                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                                            경유:{" "}
+                                            {nextInbound.item.via
+                                                .map((v) => (v.time ? `${v.name}(${v.time})` : v.name))
+                                                .join(" → ")}
+                                        </p>
+                                    ) : (
+                                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                                            {nextInbound.item.note || UI_TEXT.YONSEI_SHUTTLE.NO_VIA_EXPRESS}
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 py-1.5">
+                                    {shuttleDayType.isSaturday
+                                        ? "토요일은 셔틀 운행이 없습니다"
+                                        : "금일 등교 셔틀 운행이 종료되었습니다"}
+                                </p>
+                            )}
+                        </button>
+                    </div>
+                </section>
             </main>
 
-            {/* Full City Bus Timetable Modal */}
-            <RouteScheduleModal
-                isOpen={scheduleModalState.isOpen}
-                routeName={scheduleModalState.routeName}
-                onClose={() =>
-                    setScheduleModalState((prev) => ({
-                        ...prev,
-                        isOpen: false,
-                    }))
+            <Footer/>
+
+            {/* Floating Pill Bottom Navigation Bar */}
+            <FloatingBottomNav
+                activeModal={activeModal}
+                onScrollTop={() => {
+                    triggerHaptic("light");
+                    window.scrollTo({top: 0, behavior: "smooth"});
+                }}
+                onOpenCityBusModal={() =>
+                    handleOpenCityTimetable(
+                        "30",
+                        directionMode === "OUTBOUND" ? "dest" : "origin"
+                    )
                 }
+                onOpenShuttleModal={() => handleOpenShuttleModal(directionMode)}
+                onOpenStopsModal={() => {
+                    triggerHaptic("light");
+                    setIsStopsModalOpen(true);
+                }}
+                onOpenSettingsModal={() => {
+                    triggerHaptic("light");
+                    setIsSettingsModalOpen(true);
+                }}
+            />
+
+            {/* Detail Modals */}
+            <CityBusTimetableModal
+                key={`${cityModalState.routeNo}-${cityModalState.location}-${cityModalState.isOpen}`}
+                isOpen={cityModalState.isOpen}
+                initialRouteNo={cityModalState.routeNo}
+                initialLocation={cityModalState.location}
+                allRoutes={allRoutes}
+                now={now}
+                onClose={() => setCityModalState((prev) => ({...prev, isOpen: false}))}
+            />
+
+            <ShuttleTimetableModal
+                key={`shuttle-${shuttleModalState.tab}-${shuttleModalState.isOpen}`}
+                isOpen={shuttleModalState.isOpen}
+                initialTab={shuttleModalState.tab}
+                dayMode={dayMode}
+                now={now}
+                onClose={() => setShuttleModalState((prev) => ({...prev, isOpen: false}))}
+            />
+
+            <ShuttleStopsModal
+                key={`stops-${directionMode}-${isStopsModalOpen}`}
+                isOpen={isStopsModalOpen}
+                initialDirectionMode={directionMode}
+                onClose={() => setIsStopsModalOpen(false)}
+            />
+
+            <SettingsModal
+                isOpen={isSettingsModalOpen}
                 dayMode={dayMode}
                 isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-                initialLocation={scheduleModalState.location}
+                directionMode={directionMode}
+                onDayModeChange={setDayMode}
+                onDirectionModeChange={setDirectionMode}
+                onClose={() => setIsSettingsModalOpen(false)}
             />
-
-            {/* Wonju ITS Notice Modal */}
-            <NoticeModal
-                isOpen={isNoticeModalOpen}
-                onClose={() => {
-                    setIsNoticeModalOpen(false);
-                    setSelectedNoticeId(null);
-                }}
-                initialNoticeId={selectedNoticeId}
-            />
-
-            {/* Cookie-backed Settings Modal */}
-            <SettingsModal
-                isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
-            />
-
-            {/* First-Visit Onboarding Modal */}
-            <OnboardingModal/>
         </div>
     );
 }

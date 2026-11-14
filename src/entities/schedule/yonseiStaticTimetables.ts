@@ -1,3 +1,5 @@
+import type {BusRoute, TimetableEntry} from "./types";
+
 export interface YonseiDaySchedule {
     origin: string[];
     dest: string[];
@@ -32,3 +34,97 @@ export const YONSEI_STATIC_TIMETABLES: Record<string, {
         },
     },
 };
+
+function toTimetableEntries(schedule: YonseiDaySchedule): TimetableEntry[] {
+    const count = Math.max(schedule.origin.length, schedule.dest.length);
+    const entries: TimetableEntry[] = [];
+    for (let i = 0; i < count; i++) {
+        entries.push({
+            seq: i + 1,
+            originDepTime: schedule.origin[i] ?? "-",
+            destDepTime: schedule.dest[i] ?? "-",
+            type: "",
+            notes: "",
+        });
+    }
+    return entries;
+}
+
+/**
+ * Builds static BusRoute objects for Yonsei Mirae Campus routes (30, 34, 34-1).
+ */
+export function getStaticYonseiBusRoutes(): BusRoute[] {
+    const routeMeta: Record<string, {origin: string; destination: string}> = {
+        "30": {origin: "장양리", destination: "연세대학교"},
+        "34": {origin: "장양리", destination: "연세대학교"},
+        "34-1": {origin: "장양리", destination: "회촌"},
+    };
+
+    const routes: BusRoute[] = [];
+    for (const [routeNo, schedules] of Object.entries(YONSEI_STATIC_TIMETABLES)) {
+        const meta = routeMeta[routeNo] ?? {origin: "장양리", destination: "연세대학교"};
+        if (routeNo === "30") {
+            // 30 runs weekday & vacation schedules; expose both for full timetable modal
+            const weekdayEntries = toTimetableEntries(schedules.weekday);
+            routes.push({
+                id: `${routeNo}-weekday`,
+                rawNo: routeNo,
+                routeNo,
+                dayType: "평일",
+                origin: meta.origin,
+                destination: meta.destination,
+                firstBus: schedules.weekday.origin[0] ?? "-",
+                lastBus: schedules.weekday.origin[schedules.weekday.origin.length - 1] ?? "-",
+                runCount: `${weekdayEntries.length}회`,
+                interval: "",
+                timetable: weekdayEntries,
+            });
+            const vacationEntries = toTimetableEntries(schedules.vacation);
+            routes.push({
+                id: `${routeNo}-vacation`,
+                rawNo: routeNo,
+                routeNo,
+                dayType: "방학,휴일",
+                origin: meta.origin,
+                destination: meta.destination,
+                firstBus: schedules.vacation.origin[0] ?? "-",
+                lastBus: schedules.vacation.origin[schedules.vacation.origin.length - 1] ?? "-",
+                runCount: `${vacationEntries.length}회`,
+                interval: "",
+                timetable: vacationEntries,
+            });
+            continue;
+        }
+
+        const weekdayEntries = toTimetableEntries(schedules.weekday);
+        routes.push({
+            id: `${routeNo}-weekday`,
+            rawNo: routeNo,
+            routeNo,
+            dayType: "평일",
+            origin: meta.origin,
+            destination: meta.destination,
+            firstBus: schedules.weekday.origin[0] ?? "-",
+            lastBus: schedules.weekday.origin[schedules.weekday.origin.length - 1] ?? "-",
+            runCount: `${weekdayEntries.length}회`,
+            interval: "",
+            timetable: weekdayEntries,
+        });
+
+        const vacationEntries = toTimetableEntries(schedules.vacation);
+        routes.push({
+            id: `${routeNo}-vacation`,
+            rawNo: routeNo,
+            routeNo,
+            dayType: "방학,휴일",
+            origin: meta.origin,
+            destination: meta.destination,
+            firstBus: schedules.vacation.origin[0] ?? "-",
+            lastBus: schedules.vacation.origin[schedules.vacation.origin.length - 1] ?? "-",
+            runCount: `${vacationEntries.length}회`,
+            interval: "",
+            timetable: vacationEntries,
+        });
+    }
+    return routes;
+}
