@@ -9,6 +9,8 @@ export interface CacheMeta {
     layer: "memory" | "redis" | "origin";
     ageMs: number;
     degraded?: boolean;
+    inService?: boolean;
+    nextPollAfterMs?: number;
 }
 
 export interface CachedData<T> {

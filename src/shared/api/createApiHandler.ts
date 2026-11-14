@@ -1,5 +1,5 @@
 import {buildCacheControl} from "@shared/cache/cachePolicy";
-import {type CachedData, type CacheOptions, getCachedOrFetch} from "@shared/cache";
+import {type CachedData, type CacheMeta, type CacheOptions, getCachedOrFetch} from "@shared/cache";
 import {NextResponse} from "next/server";
 
 export interface ApiHandlerConfig<T> {
@@ -10,6 +10,7 @@ export interface ApiHandlerConfig<T> {
     errorMessage: string;
     cacheControl?: string;
     resolveCacheControl?: (result: CachedData<T>) => string | undefined;
+    resolveMeta?: (id: string, req: Request, result: CachedData<T>) => Partial<CacheMeta> | undefined;
     shouldCache?: (data: T) => boolean;
     cacheOptions?: Omit<CacheOptions<T>, "ttlSeconds" | "shouldCache">;
     loggerPrefix: string;
@@ -46,11 +47,17 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
             };
             const result = await getCachedOrFetch<T>(config.cacheKey(id, request), () => config.fetcher(id, request), cacheOptions);
 
+            const extraMeta = config.resolveMeta?.(id, request, result);
+            const finalResult: CachedData<T> =
+                extraMeta && result.meta
+                    ? {...result, meta: {...result.meta, ...extraMeta}}
+                    : result;
+
             const headers: Record<string, string> = {};
-            const dynamicCacheControl = config.resolveCacheControl?.(result);
+            const dynamicCacheControl = config.resolveCacheControl?.(finalResult);
             if (dynamicCacheControl) {
                 headers["Cache-Control"] = dynamicCacheControl;
-            } else if (result.meta?.degraded) {
+            } else if (finalResult.meta?.degraded) {
                 headers["Cache-Control"] = "no-store";
             } else {
                 headers["Cache-Control"] = config.cacheControl ?? buildCacheControl({
@@ -59,19 +66,19 @@ export function createApiHandler<T>(config: ApiHandlerConfig<T>) {
                     staleIfErrorSeconds: cacheOptions.staleIfErrorSeconds,
                 });
             }
-            if (result.meta) {
-                headers["X-Cache-Status"] = result.meta.status;
-                headers["X-Cache-Layer"] = result.meta.layer;
-                headers["X-Cache-Age-Ms"] = String(result.meta.ageMs);
-                if (result.meta.degraded) {
+            if (finalResult.meta) {
+                headers["X-Cache-Status"] = finalResult.meta.status;
+                headers["X-Cache-Layer"] = finalResult.meta.layer;
+                headers["X-Cache-Age-Ms"] = String(finalResult.meta.ageMs);
+                if (finalResult.meta.degraded) {
                     headers["X-Cache-Degraded"] = "true";
                 }
 
                 // Server logging for request tracing
-                console.log(`[API ${config.loggerPrefix}/${id}] ${result.meta.status.toUpperCase()} (${result.meta.layer}) - Age: ${result.meta.ageMs}ms`);
+                console.log(`[API ${config.loggerPrefix}/${id}] ${finalResult.meta.status.toUpperCase()} (${finalResult.meta.layer}) - Age: ${finalResult.meta.ageMs}ms`);
             }
 
-            return NextResponse.json(result, {headers});
+            return NextResponse.json(finalResult, {headers});
         } catch (err) {
             console.error(`[API ${config.loggerPrefix}/${id}]`, err);
 

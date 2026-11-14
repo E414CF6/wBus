@@ -5,6 +5,7 @@ import {getRouteMeta, registerDynamicRouteMeta} from "@entities/route/routeMetad
 
 import {fetchAPI, HttpError} from "@shared/api/fetchAPI";
 import {CacheManager} from "@shared/cache/CacheManager";
+import {idbGet, idbSet} from "@shared/cache/idbStorage";
 import {APP_CONFIG, STORAGE_KEYS} from "@shared/config/env";
 
 export interface CityRoutesPayload {
@@ -15,10 +16,34 @@ export interface CityRoutesPayload {
 }
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+let legacyRouteStorageCleaned = false;
 
-// Caches (L1 Memory + L2 Persistent localStorage)
+/**
+ * One-time cleanup of legacy large localStorage caches now persisted in IndexedDB.
+ */
+function cleanupLegacyRouteLocalStorage(): void {
+    if (legacyRouteStorageCleaned || typeof window === "undefined") return;
+    legacyRouteStorageCleaned = true;
+    try {
+        const toRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (!key) continue;
+            if (key.startsWith(STORAGE_KEYS.CITY_ROUTES_PREFIX) || key.startsWith(STORAGE_KEYS.POLYLINE_PREFIX)) {
+                toRemove.push(key);
+            }
+        }
+        for (const key of toRemove) {
+            localStorage.removeItem(key);
+        }
+    } catch {
+        // Ignore storage errors
+    }
+}
+
+// L1 fast synchronous in-memory caches (L2 persistence backed by IndexedDB)
 const cityRoutesCache = new CacheManager<CityRoutesPayload>({
-    maxSize: 30, ttlMs: ONE_DAY_MS, storagePrefix: STORAGE_KEYS.CITY_ROUTES_PREFIX, maxStorageEntries: 15,
+    maxSize: 30, ttlMs: ONE_DAY_MS,
 });
 
 const routeInfoCache = new CacheManager<RouteInfo | null>({
@@ -26,7 +51,7 @@ const routeInfoCache = new CacheManager<RouteInfo | null>({
 });
 
 const polylineCache = new CacheManager<GeoPolyline | null>({
-    maxSize: 150, ttlMs: ONE_DAY_MS, storagePrefix: STORAGE_KEYS.POLYLINE_PREFIX, maxStorageEntries: 35,
+    maxSize: 150, ttlMs: ONE_DAY_MS,
 });
 
 const variationsCache = new CacheManager<RouteVariation[]>({
@@ -37,26 +62,34 @@ function resolveCityCode(cityCode?: string): string {
     return (cityCode || (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEYS.CITY_CODE) || "32020" : "32020"));
 }
 
+function sanitizeCityRoutesPayload(cCode: string, payload: CityRoutesPayload): {
+    sanitized: CityRoutesPayload; changed: boolean;
+} {
+    const filteredRoutes = filterRoutesByCity(cCode, payload.routes || []);
+    const {cleaned: cleanedMap, hadContamination} = filterRouteNumbersMapByCity(cCode, payload.route_numbers || {});
+    const changed = hadContamination || filteredRoutes.length !== (payload.routes || []).length;
+    const sanitized: CityRoutesPayload = changed
+        ? {cityCode: cCode, route_numbers: cleanedMap, routes: filteredRoutes, count: filteredRoutes.length}
+        : payload;
+    if (sanitized.routes?.length) {
+        registerDynamicRouteMeta(cCode, sanitized.routes);
+    }
+    return {sanitized, changed};
+}
+
 /**
- * Synchronously inspect cached city routes (L1 Memory or L2 localStorage)
+ * Synchronously inspect cached city routes (L1 Memory)
  */
 export function getCachedCityRoutesSync(cityCode?: string): CityRoutesPayload | null {
     const cCode = resolveCityCode(cityCode);
     const cached = cityRoutesCache.get(cCode);
-    if (cached) {
-        const filteredRoutes = filterRoutesByCity(cCode, cached.routes || []);
-        const {cleaned: cleanedMap, hadContamination} = filterRouteNumbersMapByCity(cCode, cached.route_numbers || {});
-        if (hadContamination || filteredRoutes.length !== (cached.routes || []).length) {
-            cached.routes = filteredRoutes;
-            cached.route_numbers = cleanedMap;
-            cached.count = filteredRoutes.length;
-            cityRoutesCache.set(cCode, cached);
-        }
-        if (cached.routes?.length) {
-            registerDynamicRouteMeta(cCode, cached.routes);
-        }
+    if (!cached) return null;
+
+    const {sanitized, changed} = sanitizeCityRoutesPayload(cCode, cached);
+    if (changed) {
+        cityRoutesCache.set(cCode, sanitized);
     }
-    return cached;
+    return sanitized;
 }
 
 /**
@@ -91,40 +124,70 @@ export function getCachedPolylineSync(routeKey: string, cityCode?: string): GeoP
 }
 
 /**
- * Fetch and cache full city routes list & route_numbers map (with request coalescing + L2 persistence)
+ * Fetch and cache full city routes list & route_numbers map (with request coalescing + L2 IndexedDB persistence)
  */
 export async function fetchCityRoutesData(cityCode?: string): Promise<CityRoutesPayload> {
     const cCode = resolveCityCode(cityCode);
+    cleanupLegacyRouteLocalStorage();
+
     const cached = getCachedCityRoutesSync(cCode);
     if (cached && cached.routes && cached.routes.length > 0) {
-        registerDynamicRouteMeta(cCode, cached.routes);
         return cached;
     }
 
-    const json = await fetchAPI<Partial<CityRoutesPayload>>(`/api/routes?cityCode=${cCode}`);
-    const routes = filterRoutesByCity(cCode, Array.isArray(json.routes) ? json.routes : []);
-    const {cleaned: routeNumbers} = filterRouteNumbersMapByCity(cCode, json.route_numbers || {});
+    const result = await cityRoutesCache.getOrFetch(cCode, async () => {
+        const idbKey = `${STORAGE_KEYS.CITY_ROUTES_PREFIX}${cCode}`;
+        const fromIdb = await idbGet<CityRoutesPayload>(idbKey);
+        if (fromIdb && Array.isArray(fromIdb.routes) && fromIdb.routes.length > 0) {
+            const {sanitized, changed} = sanitizeCityRoutesPayload(cCode, fromIdb);
+            if (sanitized.routes.length > 0) {
+                if (changed) {
+                    void idbSet(idbKey, sanitized, ONE_DAY_MS);
+                }
+                return sanitized;
+            }
+        }
 
-    if (routes.length > 0) {
-        registerDynamicRouteMeta(cCode, routes);
+        const json = await fetchAPI<Partial<CityRoutesPayload>>(`/api/routes?cityCode=${cCode}`);
+        const rawPayload: CityRoutesPayload = {
+            cityCode: cCode,
+            route_numbers: json.route_numbers || {},
+            routes: Array.isArray(json.routes) ? json.routes : [],
+            count: json.count ?? (Array.isArray(json.routes) ? json.routes.length : 0),
+        };
+        const {sanitized} = sanitizeCityRoutesPayload(cCode, rawPayload);
+        if (sanitized.routes.length > 0) {
+            void idbSet(idbKey, sanitized, ONE_DAY_MS);
+        }
+        return sanitized;
+    });
+
+    if (!result || result.routes.length === 0) {
+        cityRoutesCache.delete(cCode);
     }
-    const payload: CityRoutesPayload = {
-        cityCode: cCode, route_numbers: routeNumbers, routes, count: json.count ?? routes.length,
-    };
-    if (routes.length > 0) {
-        cityRoutesCache.set(cCode, payload);
-    }
-    return payload;
+    return result;
 }
 
 // Public API
 
 export async function getPolyline(routeKey: string, cityCode?: string): Promise<GeoPolyline | null> {
     const cCode = resolveCityCode(cityCode);
+    cleanupLegacyRouteLocalStorage();
+
     const cacheKey = `${cCode}:${routeKey}`;
     const result = await polylineCache.getOrFetch(cacheKey, async () => {
+        const idbKey = `${STORAGE_KEYS.POLYLINE_PREFIX}${cacheKey}`;
+        const fromIdb = await idbGet<GeoPolyline>(idbKey);
+        if (fromIdb && Array.isArray(fromIdb.stops) && fromIdb.stops.length > 0) {
+            return fromIdb;
+        }
+
         try {
-            return await fetchAPI<GeoPolyline>(`/api/polyline/${encodeURIComponent(routeKey)}?cityCode=${cCode}`);
+            const poly = await fetchAPI<GeoPolyline>(`/api/polyline/${encodeURIComponent(routeKey)}?cityCode=${cCode}`);
+            if (poly && Array.isArray(poly.stops) && poly.stops.length > 0) {
+                void idbSet(idbKey, poly, ONE_DAY_MS);
+            }
+            return poly;
         } catch (error) {
             if (error instanceof HttpError && error.status === 404) {
                 if (APP_CONFIG.IS_DEV) {

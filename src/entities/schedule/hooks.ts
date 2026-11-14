@@ -4,7 +4,21 @@ import useSWR from "swr";
 import {useCallback, useEffect, useState} from "react";
 
 import type {BusCacheData, CacheMetadata, ScheduleApiResponse} from "./types";
+import {idbGet, idbSet} from "@shared/cache/idbStorage";
 import {STORAGE_KEYS} from "@shared/config/env";
+
+const SCHEDULE_IDB_TTL_MS = 24 * 60 * 60 * 1000;
+let legacyScheduleCleaned = false;
+
+function cleanupLegacyScheduleStorage(): void {
+    if (legacyScheduleCleaned || typeof window === "undefined") return;
+    legacyScheduleCleaned = true;
+    try {
+        localStorage.removeItem(STORAGE_KEYS.SCHEDULE_CACHE);
+    } catch {
+        // Ignore storage errors
+    }
+}
 
 const SCHEDULE_SWR_OPTIONS = {
     revalidateOnFocus: false,
@@ -14,40 +28,33 @@ const SCHEDULE_SWR_OPTIONS = {
     errorRetryCount: 2,
 } as const;
 
-function getLocalScheduleFallback(): { data: BusCacheData; meta: CacheMetadata | null } | undefined {
+type CachedScheduleSnapshot = { data: BusCacheData; meta: CacheMetadata | null };
+
+async function getIdbScheduleFallback(): Promise<CachedScheduleSnapshot | undefined> {
     if (typeof window === "undefined") return undefined;
-    try {
-        const raw = localStorage.getItem(STORAGE_KEYS.SCHEDULE_CACHE);
-        if (raw) {
-            const parsed = JSON.parse(raw);
-            if (parsed?.data?.routes?.length) {
-                return {
-                    data: parsed.data,
-                    meta: parsed.meta || null,
-                };
-            }
-        }
-    } catch {
-        // Ignore
+    cleanupLegacyScheduleStorage();
+    const cached = await idbGet<CachedScheduleSnapshot>(STORAGE_KEYS.SCHEDULE_CACHE);
+    if (cached?.data?.routes?.length) {
+        return {
+            data: cached.data,
+            meta: cached.meta || null,
+        };
     }
     return undefined;
 }
 
-async function fetchScheduleApi(): Promise<{ data: BusCacheData; meta: CacheMetadata | null }> {
+async function fetchScheduleApi(): Promise<CachedScheduleSnapshot> {
+    cleanupLegacyScheduleStorage();
     const res = await fetch("/api/schedule");
     if (res.status === 304) {
-        const local = getLocalScheduleFallback();
+        const local = await getIdbScheduleFallback();
         if (local) return local;
         // If 304 received without body and local cache is missing, refetch without conditional cache
         const freshRes = await fetch("/api/schedule", {cache: "reload"});
         const freshJson: ScheduleApiResponse = await freshRes.json();
         if (freshJson.success && freshJson.data) {
             const freshResult = {data: freshJson.data, meta: freshJson.meta || null};
-            try {
-                localStorage.setItem(STORAGE_KEYS.SCHEDULE_CACHE, JSON.stringify(freshResult));
-            } catch {
-                // Ignore storage error
-            }
+            void idbSet(STORAGE_KEYS.SCHEDULE_CACHE, freshResult, SCHEDULE_IDB_TTL_MS);
             return freshResult;
         }
     }
@@ -59,11 +66,7 @@ async function fetchScheduleApi(): Promise<{ data: BusCacheData; meta: CacheMeta
         data: json.data,
         meta: json.meta || null,
     };
-    try {
-        localStorage.setItem(STORAGE_KEYS.SCHEDULE_CACHE, JSON.stringify(result));
-    } catch {
-        // Storage limit
-    }
+    void idbSet(STORAGE_KEYS.SCHEDULE_CACHE, result, SCHEDULE_IDB_TTL_MS);
     return result;
 }
 
@@ -81,13 +84,18 @@ export function useSchedule(enabled: boolean = true) {
     );
 
     useEffect(() => {
-        if (!data) {
-            const local = getLocalScheduleFallback();
-            if (local) {
-                mutate(local, false);
-            }
+        let cancelled = false;
+        if (enabled && !data) {
+            void getIdbScheduleFallback().then((local) => {
+                if (!cancelled && local) {
+                    void mutate(local, false);
+                }
+            });
         }
-    }, [data, mutate]);
+        return () => {
+            cancelled = true;
+        };
+    }, [enabled, data, mutate]);
 
     const refresh = useCallback(async (force = true) => {
         setIsRefreshing(true);
@@ -106,11 +114,7 @@ export function useSchedule(enabled: boolean = true) {
                 data: json.data,
                 meta: json.meta || null,
             };
-            try {
-                localStorage.setItem(STORAGE_KEYS.SCHEDULE_CACHE, JSON.stringify(updated));
-            } catch {
-                // Storage limit
-            }
+            void idbSet(STORAGE_KEYS.SCHEDULE_CACHE, updated, SCHEDULE_IDB_TTL_MS);
             await mutate(updated, false);
             if (force) {
                 setRefreshToast({

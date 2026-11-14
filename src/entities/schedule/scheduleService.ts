@@ -8,10 +8,13 @@ import type {CacheMetadata, RouteDataset} from "./types";
 import {invalidateRouteWindowScheduleCache} from "@entities/bus/api/routeWindow";
 import {RouteDatasetSchema} from "@shared/api/schemas";
 import {artifactStore} from "@shared/cache/artifactStore";
+import {distributedCache} from "@shared/cache/distributedCache";
 import {LOCALE} from "@shared/config/locale";
-import {scrapeWonjuBusDataset, scrapeWonjuItsYonsei} from "./itsScraper";
+import {type ScrapeDatasetResult, scrapeWonjuBusDataset, scrapeWonjuItsYonsei} from "./itsScraper";
 
 export const SCHEDULE_CACHE_TAG = "schedule";
+const SCHEDULE_REDIS_KEY = "schedule:wonju";
+const SCHEDULE_CRON_STATUS_KEY = "cron:status:schedule";
 export const MIN_REFRESH_INTERVAL_DAYS = 3;
 export const MIN_REFRESH_INTERVAL_MS = MIN_REFRESH_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
 export const FORCE_REFRESH_COOLDOWN_MS = 30 * 1000; // 30 seconds cooldown between non-admin force refreshes
@@ -110,6 +113,83 @@ export function getCacheMetadata(data?: RouteDataset | null): CacheMetadata {
     };
 }
 
+function loadBundledLocalFile(): RouteDataset | null {
+    const bundledPath = getLocalCachePath();
+    if (!fs.existsSync(/*turbopackIgnore: true*/ bundledPath)) return null;
+    try {
+        const raw = fs.readFileSync(/*turbopackIgnore: true*/ bundledPath, "utf-8");
+        const parsed: RouteDataset = JSON.parse(raw);
+        return parsed && Array.isArray(parsed.routes) && parsed.routes.length > 0 ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+export interface ReconcileResult {
+    accepted: boolean;
+    reason?: string;
+    dataset?: RouteDataset;
+    preservedRoutes: number;
+}
+
+/**
+ * Guards schedule refreshes against empty scrapes or massive route drops,
+ * and preserves prior non-empty timetables for individual routes whose detail fetch failed.
+ */
+export function reconcileScrapedDataset(
+    scraped: ScrapeDatasetResult,
+    previous?: RouteDataset | null
+): ReconcileResult {
+    if (!scraped || !Array.isArray(scraped.routes) || scraped.routes.length === 0) {
+        return {accepted: false, reason: "empty-dataset", preservedRoutes: 0};
+    }
+
+    const prevRoutes = previous?.routes || [];
+    if (prevRoutes.length > 0 && scraped.routes.length < Math.floor(prevRoutes.length * 0.7)) {
+        return {
+            accepted: false,
+            reason: `route-count-drop:${scraped.routes.length}/${prevRoutes.length}`,
+            preservedRoutes: 0,
+        };
+    }
+
+    const prevMap = new Map<string, (typeof prevRoutes)[0]>();
+    for (const r of prevRoutes) {
+        prevMap.set(`${r.routeNo}_${r.dayType || "매일"}`, r);
+    }
+
+    let preservedRoutes = 0;
+    const failedSet = new Set(scraped.failedRouteNos || []);
+    const reconciledRoutes = scraped.routes.map((route) => {
+        if (route.timetable.length === 0) {
+            const prev = prevMap.get(`${route.routeNo}_${route.dayType || "매일"}`);
+            if (prev && prev.timetable.length > 0 && (failedSet.size === 0 || failedSet.has(route.rawNo))) {
+                preservedRoutes += 1;
+                return {...route, timetable: prev.timetable};
+            }
+        }
+        return route;
+    });
+
+    const candidate: RouteDataset = {
+        updatedAt: scraped.updatedAt || new Date().toISOString(),
+        sourceUrl: scraped.sourceUrl || previous?.sourceUrl || "",
+        totalRoutes: reconciledRoutes.length,
+        routes: reconciledRoutes,
+    };
+
+    const validated = RouteDatasetSchema.safeParse(candidate);
+    if (!validated.success || validated.data.routes.length === 0) {
+        return {accepted: false, reason: "schema-validation-failed", preservedRoutes: 0};
+    }
+
+    return {
+        accepted: true,
+        dataset: validated.data as RouteDataset,
+        preservedRoutes,
+    };
+}
+
 export async function saveCache(data: RouteDataset): Promise<void> {
     const meta = getCacheMetadata(data);
 
@@ -119,8 +199,11 @@ export async function saveCache(data: RouteDataset): Promise<void> {
     };
     invalidateRouteWindowScheduleCache();
 
-    // 2. Persist to /tmp, Vercel Blob (when configured), and public/schedule.json (local dev)
-    await artifactStore.putJson("schedule.json", data, {pretty: true});
+    // 2. Persist to /tmp, Vercel Blob (minified), and L2 Redis
+    await Promise.all([
+        artifactStore.putJson("schedule.json", data, {pretty: false}),
+        distributedCache.set(SCHEDULE_REDIS_KEY, data, 24 * 60 * 60).catch(() => false),
+    ]);
 }
 
 /**
@@ -139,31 +222,42 @@ export function invalidateScheduleTag(): void {
 }
 
 async function fetchScheduleDataset(): Promise<{ data: RouteDataset; meta: CacheMetadata }> {
-    const local = loadFromLocalFile();
-    let storedDataset: RouteDataset | null = null;
-    try {
-        const stored = await artifactStore.getJson<RouteDataset>("schedule.json");
-        if (stored?.data) {
-            const validated = RouteDatasetSchema.safeParse(stored.data);
-            if (validated.success && validated.data.routes.length > 0) {
-                storedDataset = validated.data as RouteDataset;
-            }
+    const local = loadBundledLocalFile();
+    const [redisResult, artifactResult] = await Promise.all([
+        distributedCache.get<RouteDataset>(SCHEDULE_REDIS_KEY, 400).catch(() => null),
+        artifactStore.getJson<RouteDataset>("schedule.json").catch(() => null),
+    ]);
+
+    const candidates: RouteDataset[] = [];
+    if (local) candidates.push(local);
+
+    for (const raw of [redisResult, artifactResult?.data]) {
+        if (!raw) continue;
+        const validated = RouteDatasetSchema.safeParse(raw);
+        if (validated.success && validated.data.routes.length > 0) {
+            candidates.push(validated.data as RouteDataset);
         }
-    } catch {
-        // Ignore artifact read failures
     }
 
-    const localTime = local?.updatedAt ? new Date(local.updatedAt).getTime() : 0;
-    const storedTime = storedDataset?.updatedAt ? new Date(storedDataset.updatedAt).getTime() : 0;
-    const existing = storedDataset && storedTime >= localTime ? storedDataset : local;
+    const existing = candidates.length > 0
+        ? candidates.reduce((latest, current) => {
+            const latestTime = latest.updatedAt ? new Date(latest.updatedAt).getTime() : 0;
+            const currentTime = current.updatedAt ? new Date(current.updatedAt).getTime() : 0;
+            return currentTime > latestTime ? current : latest;
+        })
+        : null;
 
-    if (storedDataset && storedTime > localTime) {
-        invalidateRouteWindowScheduleCache();
-    }
-
-    // On normal GET /api/schedule requests, return existing snapshot immediately rather than
-    // running a slow synchronous full-scrape inside user traffic (/api/cron/refresh handles updates).
     if (existing && existing.routes.length > 0) {
+        const localTime = local?.updatedAt ? new Date(local.updatedAt).getTime() : 0;
+        const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+        if (existingTime > localTime) {
+            invalidateRouteWindowScheduleCache();
+        }
+        // Seed Redis if missing or stale compared to Blob/bundled snapshot
+        const redisTime = redisResult?.updatedAt ? new Date(redisResult.updatedAt).getTime() : 0;
+        if (existingTime > redisTime) {
+            void distributedCache.set(SCHEDULE_REDIS_KEY, existing, 24 * 60 * 60).catch(() => false);
+        }
         return {data: existing, meta: getCacheMetadata(existing)};
     }
 
@@ -172,8 +266,10 @@ async function fetchScheduleDataset(): Promise<{ data: RouteDataset; meta: Cache
     try {
         const freshData = await scrapeWonjuBusDataset();
         freshData.updatedAt = new Date().toISOString();
-        await saveCache(freshData);
-        return {data: freshData, meta: getCacheMetadata(freshData)};
+        const reconciled = reconcileScrapedDataset(freshData, null);
+        const datasetToSave = reconciled.accepted && reconciled.dataset ? reconciled.dataset : freshData;
+        await saveCache(datasetToSave);
+        return {data: datasetToSave, meta: getCacheMetadata(datasetToSave)};
     } catch (err) {
         console.warn("[ScheduleService] Full bootstrap scrape failed, attempting fast Yonsei scrape:", err);
         try {
@@ -253,22 +349,55 @@ export async function refreshSchedule(force = true, isAuthorized = false): Promi
         lastScrapeAttemptTime = now;
         console.log("[ScheduleService] Triggering Wonju ITS scraper for timetable update...");
         try {
-            const newData = await scrapeWonjuBusDataset();
-            newData.updatedAt = new Date().toISOString();
-            await saveCache(newData);
-            const updatedMeta = getCacheMetadata(newData);
+            const scraped = await scrapeWonjuBusDataset();
+            scraped.updatedAt = new Date().toISOString();
+            const reconciled = reconcileScrapedDataset(scraped, current.data);
+
+            if (!reconciled.accepted || !reconciled.dataset) {
+                console.warn(`[ScheduleService] Aborting schedule overwrite (${reconciled.reason}); keeping previous snapshot.`);
+                await distributedCache.set(SCHEDULE_CRON_STATUS_KEY, {
+                    ok: false,
+                    reason: reconciled.reason || "reconcile-rejected",
+                    checkedAt: new Date().toISOString(),
+                    previousRoutes: current.data.totalRoutes,
+                }, 7 * 24 * 60 * 60).catch(() => false);
+
+                return {
+                    refreshed: false,
+                    message: `수집 데이터 검증 실패(${reconciled.reason})로 기존 시간표를 유지합니다.`,
+                    data: current.data,
+                    meta: current.meta,
+                };
+            }
+
+            const cleanData = reconciled.dataset;
+            await saveCache(cleanData);
+            const updatedMeta = getCacheMetadata(cleanData);
 
             // Invalidate Next.js Data Cache Tag
             invalidateScheduleTag();
 
+            await distributedCache.set(SCHEDULE_CRON_STATUS_KEY, {
+                ok: true,
+                updatedAt: cleanData.updatedAt,
+                totalRoutes: cleanData.totalRoutes,
+                preservedRoutes: reconciled.preservedRoutes,
+                failedCount: scraped.failedRouteNos?.length ?? 0,
+            }, 7 * 24 * 60 * 60).catch(() => false);
+
             return {
                 refreshed: true,
-                message: `최신 시간표 (${newData.totalRoutes}개 노선)를 성공적으로 수집하여 갱신했습니다.`,
-                data: newData,
+                message: `최신 시간표 (${cleanData.totalRoutes}개 노선)를 성공적으로 수집하여 갱신했습니다.`,
+                data: cleanData,
                 meta: updatedMeta,
             };
         } catch (err) {
             console.warn("[ScheduleService] Full scraper failed. Falling back to existing cache:", err instanceof Error ? err.message : err);
+            await distributedCache.set(SCHEDULE_CRON_STATUS_KEY, {
+                ok: false,
+                reason: err instanceof Error ? err.message : String(err),
+                checkedAt: new Date().toISOString(),
+            }, 7 * 24 * 60 * 60).catch(() => false);
             return {
                 refreshed: false,
                 message: "서버 응답 지연으로 기존 저장된 최신 시간표를 유지합니다.",

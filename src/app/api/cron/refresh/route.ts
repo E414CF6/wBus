@@ -29,30 +29,59 @@ async function handleUnifiedCron(request: NextRequest) {
             );
         }
 
-        const target = request.nextUrl.searchParams.get("target") || "auto";
+        const searchParams = request.nextUrl.searchParams;
+        const target = searchParams.get("target") || "auto";
         const todayDayOfWeek = new Date().getUTCDay(); // 0 is Sunday
+        const runSchedule = target === "schedule" || target === "all" || target === "auto";
+        const runRoutes =
+            target === "routes" ||
+            target === "all" ||
+            (target === "auto" && todayDayOfWeek === 0);
 
-        // 1. Refresh bus schedules (always executed on cron trigger)
-        const scheduleResult = await refreshSchedule(true, true);
-        if (scheduleResult.refreshed) {
-            try {
-                invalidateScheduleTag();
-                revalidatePath("/api/schedule");
-                revalidatePath("/schedule");
-            } catch (revalErr) {
-                console.warn("[CronRefresh] Schedule revalidate error:", revalErr);
+        let scheduleResult: {
+            refreshed: boolean;
+            message: string;
+            totalRoutes?: number;
+        } | null = null;
+
+        // 1. Refresh bus schedules when target includes schedules
+        if (runSchedule) {
+            const res = await refreshSchedule(true, true);
+            scheduleResult = {
+                refreshed: res.refreshed,
+                message: res.message,
+                totalRoutes: res.data?.totalRoutes,
+            };
+            if (res.refreshed) {
+                try {
+                    invalidateScheduleTag();
+                    revalidatePath("/api/schedule");
+                    revalidatePath("/schedule");
+                } catch (revalErr) {
+                    console.warn("[CronRefresh] Schedule revalidate error:", revalErr);
+                }
             }
         }
 
-        // 2. Check if route dataset sync should also be executed:
-        // - explicitly requested with ?target=all or ?target=routes
-        // - or auto mode on Sundays (UTC day 0)
+        // 2. Refresh route/polyline dataset when target includes routes
         let routeResult = null;
-        const shouldSyncRoutes = target === "all" || target === "routes" || (target === "auto" && todayDayOfWeek === 0);
+        if (runRoutes) {
+            const mode = (searchParams.get("mode") as "quick" | "full") || "quick";
+            const cityCode = searchParams.get("cityCode") || undefined;
+            const cursorParam = searchParams.get("cursor");
+            const cursor = cursorParam ? parseInt(cursorParam, 10) : undefined;
+            const maxRoutesParam = searchParams.get("maxRoutes");
+            const maxRoutes = maxRoutesParam ? parseInt(maxRoutesParam, 10) : undefined;
+            const force = searchParams.get("force") === "true";
 
-        if (shouldSyncRoutes) {
             try {
-                routeResult = await refreshRouteData({mode: "quick"});
+                routeResult = await refreshRouteData({
+                    mode,
+                    cityCode,
+                    cursor: Number.isFinite(cursor) ? cursor : undefined,
+                    maxRoutes: Number.isFinite(maxRoutes) ? maxRoutes : undefined,
+                    force,
+                });
             } catch (routeErr) {
                 console.warn("[CronRefresh] Route sync warning:", routeErr);
                 routeResult = {
@@ -70,11 +99,7 @@ async function handleUnifiedCron(request: NextRequest) {
             {
                 success: true,
                 target,
-                schedule: {
-                    refreshed: scheduleResult.refreshed,
-                    message: scheduleResult.message,
-                    totalRoutes: scheduleResult.data?.totalRoutes,
-                },
+                schedule: scheduleResult,
                 routes: routeResult,
                 elapsedMs: Date.now() - startTime,
             },

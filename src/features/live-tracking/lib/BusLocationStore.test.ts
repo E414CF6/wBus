@@ -168,4 +168,40 @@ describe("BusLocationStore", () => {
         expect(decodeURIComponent(batchCalls[1])).toContain("R20");
         expect(store.getSnapshot().serverAgeMs).toBe(1250);
     });
+
+    it("adapts polling interval from server inService/nextPollAfterMs hints and backs off on errors", async () => {
+        const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+                data: [],
+                timestamp: Date.now(),
+                meta: {status: "hit", layer: "memory", ageMs: 0, inService: false, nextPollAfterMs: 120_000},
+            }),
+        } as Response);
+
+        const store = new BusLocationStore(["R30"], "adaptive-poll-test", "32020");
+        const unsubscribe = store.subscribe(() => undefined);
+        await vi.advanceTimersByTimeAsync(20);
+
+        expect(store.getCurrentPollDelayMs()).toBe(120_000);
+
+        // Next fetch rejects -> exponential backoff kicks in, manualReconnect resets error count
+        fetchMock.mockRejectedValueOnce(new Error("Network down"));
+        await vi.advanceTimersByTimeAsync(120_000);
+        expect(store.getCurrentPollDelayMs()).toBeGreaterThan(10_000);
+
+        fetchMock.mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+                data: [],
+                timestamp: Date.now(),
+                meta: {status: "miss", layer: "origin", ageMs: 0, inService: true},
+            }),
+        } as Response);
+        store.manualReconnect();
+        await vi.advanceTimersByTimeAsync(20);
+        expect(store.getCurrentPollDelayMs()).toBeLessThan(20_000);
+
+        unsubscribe();
+    });
 });

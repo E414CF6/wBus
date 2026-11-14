@@ -28,12 +28,20 @@ async function handleRefresh(request: NextRequest) {
         const cityCode = searchParams.get("cityCode") || "32020";
         const maxRoutesParam = searchParams.get("maxRoutes");
         const maxRoutes = maxRoutesParam ? parseInt(maxRoutesParam, 10) : undefined;
+        const cursorParam = searchParams.get("cursor");
+        const cursor = cursorParam ? parseInt(cursorParam, 10) : undefined;
+        const timeBudgetParam = searchParams.get("timeBudgetMs");
+        const timeBudgetMs = timeBudgetParam ? parseInt(timeBudgetParam, 10) : undefined;
+        const force = searchParams.get("force") === "true";
 
         const result = await refreshRouteData({
             routeFilter,
             mode,
             cityCode,
-            maxRoutes,
+            maxRoutes: Number.isFinite(maxRoutes) ? maxRoutes : undefined,
+            cursor: Number.isFinite(cursor) ? cursor : undefined,
+            timeBudgetMs: Number.isFinite(timeBudgetMs) ? timeBudgetMs : undefined,
+            force,
         });
 
         return NextResponse.json(

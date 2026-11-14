@@ -4,7 +4,10 @@ import {fetchBusArrivals, type RawBusArrival} from "@entities/bus";
 export const dynamic = "force-dynamic";
 
 const LIVE_CACHE_OPTIONS = {
-    staleWhileRevalidateSeconds: 5, staleIfErrorSeconds: 60,
+    staleWhileRevalidateSeconds: 5,
+    staleIfErrorSeconds: 60,
+    useDistributedCache: true,
+    l2TimeoutMs: 250,
 };
 
 export const GET = createApiHandler<RawBusArrival[]>({

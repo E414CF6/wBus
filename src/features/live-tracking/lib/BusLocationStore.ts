@@ -27,7 +27,10 @@ export class BusLocationStore {
     private readonly cityCode: string;
     private state: BusLocationState;
     private listeners = new Set<Listener>();
-    private pollInterval: ReturnType<typeof setInterval> | null = null;
+    private pollTimer: ReturnType<typeof setTimeout> | null = null;
+    private isPollingActive = false;
+    private consecutiveErrors = 0;
+    private serverSuggestedDelayMs: number | null = null;
     private abortController: AbortController | null = null;
     private isFetching = false;
     private isSuspended = false;
@@ -65,16 +68,22 @@ export class BusLocationStore {
         this.abortInflight();
         this.routeDataMap.clear();
         this.stopPolling();
+        this.consecutiveErrors = 0;
+        this.serverSuggestedDelayMs = null;
         this.isSuspended = false;
         this.updateState({connectionStatus: "connecting"});
-        void this.fetchLocations();
-        this.startPolling();
+        this.isPollingActive = true;
+        void this.runPollCycle();
     };
 
     public restartPollingIfActive() {
-        if (!this.pollInterval) return;
-        this.stopPolling();
-        this.startPolling();
+        if (!this.isPollingActive || this.isSuspended) return;
+        this.clearPollTimer();
+        this.scheduleNextPoll();
+    }
+
+    public getCurrentPollDelayMs(): number {
+        return this.computeNextDelayMs();
     }
 
     private abortInflight() {
@@ -175,6 +184,8 @@ export class BusLocationStore {
                 const res = await fetchRouteData(`/api/bus/${routeId}?${cityParam}`, signal);
                 if (signal.aborted) return;
                 const items = Array.isArray(res.data) ? res.data : [];
+                this.consecutiveErrors = 0;
+                this.serverSuggestedDelayMs = this.resolvePollHintDelayMs([res.meta]);
                 this.applyData(items, {
                     degraded: Boolean(res.meta?.degraded),
                     timestamp: res.timestamp,
@@ -204,6 +215,7 @@ export class BusLocationStore {
                     let anyDegraded = false;
                     let latestTimestamp = 0;
                     let maxAgeMs: number | null = null;
+                    const metas: Array<CachedData<BusItem[]>["meta"]> = [];
 
                     for (const res of chunkResponses) {
                         if (Array.isArray(res.data)) {
@@ -218,8 +230,11 @@ export class BusLocationStore {
                         if (typeof res.meta?.ageMs === "number" && Number.isFinite(res.meta.ageMs)) {
                             maxAgeMs = maxAgeMs === null ? res.meta.ageMs : Math.max(maxAgeMs, res.meta.ageMs);
                         }
+                        metas.push(res.meta);
                     }
 
+                    this.consecutiveErrors = 0;
+                    this.serverSuggestedDelayMs = this.resolvePollHintDelayMs(metas);
                     this.applyData(items, {
                         degraded: anyDegraded,
                         timestamp: latestTimestamp || Date.now(),
@@ -244,6 +259,7 @@ export class BusLocationStore {
                     const fulfilledRouteIds: string[] = [];
                     let hasFailures = false;
                     let maxAgeMs: number | null = null;
+                    const metas: Array<CachedData<BusItem[]>["meta"]> = [];
 
                     settled.forEach((result, idx) => {
                         const routeId = this.routeIds[idx];
@@ -257,12 +273,15 @@ export class BusLocationStore {
                             if (typeof ageMs === "number" && Number.isFinite(ageMs)) {
                                 maxAgeMs = maxAgeMs === null ? ageMs : Math.max(maxAgeMs, ageMs);
                             }
+                            metas.push(result.value.meta);
                         } else {
                             hasFailures = true;
                         }
                     });
 
                     if (fulfilledRouteIds.length > 0) {
+                        this.consecutiveErrors = hasFailures ? this.consecutiveErrors + 1 : 0;
+                        this.serverSuggestedDelayMs = this.resolvePollHintDelayMs(metas);
                         this.applyData(fulfilledResults, {
                             degraded: hasFailures,
                             ageMs: maxAgeMs,
@@ -275,6 +294,7 @@ export class BusLocationStore {
             }
         } catch (err) {
             if (signal.aborted) return;
+            this.consecutiveErrors += 1;
             console.error("[useBusLocationData] Micro-cache fetch failed", err);
             if (this.state.data.length === 0) {
                 this.setState({
@@ -300,31 +320,75 @@ export class BusLocationStore {
         }
     }
 
-    private startPolling() {
-        if (this.pollInterval) return;
-        this.pollInterval = setInterval(() => {
-            void this.fetchLocations();
-        }, globalPollingIntervalMs);
+    private resolvePollHintDelayMs(metas: Array<CachedData<BusItem[]>["meta"]>): number | null {
+        const validMetas = metas.filter((m): m is NonNullable<CachedData<BusItem[]>["meta"]> => Boolean(m));
+        if (validMetas.length === 0) return null;
+        // If any route is actively in service, use normal fast polling
+        if (validMetas.some((m) => m.inService === true)) {
+            return null;
+        }
+        const hints = validMetas
+            .map((m) => (typeof m.nextPollAfterMs === "number" && Number.isFinite(m.nextPollAfterMs) ? m.nextPollAfterMs : null))
+            .filter((n): n is number => n !== null && n > 0);
+        if (hints.length > 0) {
+            return Math.min(180_000, Math.max(globalPollingIntervalMs, Math.min(...hints)));
+        }
+        if (validMetas.every((m) => m.inService === false)) {
+            return Math.min(180_000, Math.max(globalPollingIntervalMs, 60_000));
+        }
+        return null;
+    }
+
+    private computeNextDelayMs(): number {
+        if (this.consecutiveErrors > 0) {
+            return Math.min(60_000, globalPollingIntervalMs * 2 ** Math.min(this.consecutiveErrors, 3));
+        }
+        if (this.serverSuggestedDelayMs !== null && this.serverSuggestedDelayMs > globalPollingIntervalMs) {
+            return this.serverSuggestedDelayMs;
+        }
+        return globalPollingIntervalMs;
+    }
+
+    private clearPollTimer() {
+        if (this.pollTimer) {
+            clearTimeout(this.pollTimer);
+            this.pollTimer = null;
+        }
+    }
+
+    private scheduleNextPoll() {
+        if (!this.isPollingActive || this.isSuspended) return;
+        this.clearPollTimer();
+        const delayMs = this.computeNextDelayMs();
+        this.pollTimer = setTimeout(() => {
+            this.pollTimer = null;
+            void this.runPollCycle();
+        }, delayMs);
+    }
+
+    private async runPollCycle() {
+        if (!this.isPollingActive || this.isSuspended) return;
+        await this.fetchLocations();
+        this.scheduleNextPoll();
     }
 
     private stopPolling() {
-        if (this.pollInterval) {
-            clearInterval(this.pollInterval);
-            this.pollInterval = null;
-        }
+        this.isPollingActive = false;
+        this.clearPollTimer();
     }
 
     private handleActivityChange = () => {
         if (typeof document === "undefined") return;
         const isVisible = document.visibilityState === "visible";
-        const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
+        const isOnline = typeof navigator !== "undefined" && typeof navigator.onLine === "boolean" ? navigator.onLine : true;
 
         if (isVisible && isOnline) {
             if (this.isSuspended) {
                 this.isSuspended = false;
+                this.consecutiveErrors = 0;
                 this.updateState({connectionStatus: "connected"});
-                void this.fetchLocations();
-                this.startPolling();
+                this.isPollingActive = true;
+                void this.runPollCycle();
             }
         } else {
             if (!this.isSuspended) {
@@ -364,7 +428,7 @@ export class BusLocationStore {
 
         const isVisible =
             typeof document !== "undefined" ? document.visibilityState === "visible" : true;
-        const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
+        const isOnline = typeof navigator !== "undefined" && typeof navigator.onLine === "boolean" ? navigator.onLine : true;
 
         if (!isVisible || !isOnline) {
             this.isSuspended = true;
@@ -373,9 +437,10 @@ export class BusLocationStore {
         }
 
         this.isSuspended = false;
+        this.consecutiveErrors = 0;
         this.updateState({connectionStatus: "connecting"});
-        void this.fetchLocations();
-        this.startPolling();
+        this.isPollingActive = true;
+        void this.runPollCycle();
     }
 
     private stop() {

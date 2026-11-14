@@ -1,10 +1,11 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {distributedCache, resetDistributedCacheClientForTest} from "./distributedCache";
-import {getCachedOrFetch, invalidateCacheByPrefix} from "./client";
+import {getCachedOrFetch, invalidateCacheByPrefix, invalidateCacheByPrefixAsync} from "./client";
 
 describe("distributedCache & L1/L2 integration", () => {
     afterEach(() => {
         vi.unstubAllEnvs();
+        vi.useRealTimers();
         resetDistributedCacheClientForTest();
         invalidateCacheByPrefix("dist-test:");
     });
@@ -63,5 +64,39 @@ describe("distributedCache & L1/L2 integration", () => {
         expect(res.meta?.layer).toBe("redis");
         expect(res.meta?.degraded).toBe(true);
         getSpy.mockRestore();
+    });
+
+    it("guards L2 lookup with l2TimeoutMs so slow Redis does not stall origin fetch", async () => {
+        const neverSettling = new Promise<null>(() => undefined);
+        const getSpy = vi.spyOn(distributedCache, "get").mockReturnValueOnce(neverSettling);
+        const originFetcher = vi.fn().mockResolvedValue(["origin-ok"]);
+
+        const res = await getCachedOrFetch("dist-test:timeout", originFetcher, {
+            ttlSeconds: 30,
+            useDistributedCache: true,
+            l2TimeoutMs: 25,
+        });
+
+        expect(res.data).toEqual(["origin-ok"]);
+        expect(res.meta?.layer).toBe("origin");
+        expect(originFetcher).toHaveBeenCalledTimes(1);
+        getSpy.mockRestore();
+    });
+
+    it("invalidates both L1 and L2 prefixes via invalidateCacheByPrefixAsync", async () => {
+        const delByPrefixSpy = vi.spyOn(distributedCache, "delByPrefix").mockResolvedValueOnce(2);
+        const fetcher = vi.fn().mockResolvedValue(["v1"]);
+
+        await getCachedOrFetch("dist-test:purge:1", fetcher, {ttlSeconds: 60});
+        const removed = await invalidateCacheByPrefixAsync(["dist-test:purge:"]);
+
+        expect(delByPrefixSpy).toHaveBeenCalledWith("dist-test:purge:");
+        expect(removed).toEqual({l1Removed: 1, l2Removed: 2});
+
+        fetcher.mockResolvedValueOnce(["v2"]);
+        const reloaded = await getCachedOrFetch("dist-test:purge:1", fetcher, {ttlSeconds: 60});
+        expect(reloaded.data).toEqual(["v2"]);
+        expect(fetcher).toHaveBeenCalledTimes(2);
+        delByPrefixSpy.mockRestore();
     });
 });

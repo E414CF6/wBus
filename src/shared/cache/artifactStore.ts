@@ -1,16 +1,18 @@
 import "server-only";
 
-import {get as blobGet, put as blobPut} from "@vercel/blob";
+import {get as blobGet, head as blobHead, put as blobPut} from "@vercel/blob";
 import fs from "fs";
 import path from "path";
 
 /**
  * Durable Artifact Store Adapter
  *
- * Persists semi-static JSON artifacts (`schedule.json`, `routes/{routeId}.json`)
+ * Persists semi-static JSON artifacts (`schedule.json`, `routes/{cityCode}/{routeId}.json`)
  * across Vercel serverless cold starts via `@vercel/blob` when configured,
- * with automatic fallback to `/tmp` and `public/` on the local filesystem.
+ * with TTL-bounded `/tmp` container cache and `public/` fallback on the local filesystem.
  */
+
+const DEFAULT_TMP_MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes before re-validating against Vercel Blob
 
 function isBlobConfigured(): boolean {
     return Boolean(
@@ -37,6 +39,13 @@ export interface ArtifactStoreStatus {
     access: "public" | "private";
 }
 
+export interface ArtifactGetOptions {
+    /** Max age for ephemeral /tmp cache before checking Vercel Blob (default: 5 min when Blob is configured) */
+    tmpMaxAgeMs?: number;
+    /** Skip /tmp read and fetch directly from Blob/public */
+    bypassTmp?: boolean;
+}
+
 export const artifactStore = {
     getStatus(): ArtifactStoreStatus {
         const configured = isBlobConfigured();
@@ -47,39 +56,73 @@ export const artifactStore = {
         };
     },
 
-    async getJson<T>(relativeKey: string): Promise<{ data: T; source: "tmp" | "public" | "blob" } | null> {
-        const cleanKey = relativeKey.replace(/^\/+/, "");
+    async checkHealth(): Promise<{ ok: boolean; latencyMs: number; backend: "vercel-blob" | "filesystem" }> {
+        const start = Date.now();
+        if (!isBlobConfigured()) {
+            return {ok: true, latencyMs: Date.now() - start, backend: "filesystem"};
+        }
 
-        // 1. Check ephemeral /tmp container cache first (sub-ms)
-        const tmpPath = path.join("/tmp", cleanKey);
         try {
-            if (fs.existsSync(/*turbopackIgnore: true*/ tmpPath)) {
-                const content = fs.readFileSync(/*turbopackIgnore: true*/ tmpPath, "utf-8");
-                return {data: JSON.parse(content) as T, source: "tmp"};
+            await blobHead("schedule.json");
+            return {ok: true, latencyMs: Date.now() - start, backend: "vercel-blob"};
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            // BlobNotFoundError still confirms Blob API connectivity & auth succeeded
+            const isNotFound = /not\s*found|404/i.test(msg);
+            return {ok: isNotFound, latencyMs: Date.now() - start, backend: "vercel-blob"};
+        }
+    },
+
+    async getJson<T>(
+        relativeKey: string,
+        options?: ArtifactGetOptions
+    ): Promise<{ data: T; source: "tmp" | "public" | "blob" } | null> {
+        const cleanKey = relativeKey.replace(/^\/+/, "");
+        const blobConfigured = isBlobConfigured();
+        const tmpMaxAgeMs = options?.tmpMaxAgeMs ?? DEFAULT_TMP_MAX_AGE_MS;
+
+        // 1. Check ephemeral /tmp container cache first (bounded by tmpMaxAgeMs when Blob is active)
+        const tmpPath = path.join("/tmp", cleanKey);
+        let staleTmpData: T | null = null;
+        if (!options?.bypassTmp) {
+            try {
+                if (fs.existsSync(/*turbopackIgnore: true*/ tmpPath)) {
+                    const stats = fs.statSync(/*turbopackIgnore: true*/ tmpPath);
+                    const ageMs = Date.now() - stats.mtimeMs;
+                    const content = fs.readFileSync(/*turbopackIgnore: true*/ tmpPath, "utf-8");
+                    const parsed = JSON.parse(content) as T;
+                    if (!blobConfigured || ageMs <= tmpMaxAgeMs) {
+                        return {data: parsed, source: "tmp"};
+                    }
+                    staleTmpData = parsed;
+                }
+            } catch {
+                // Corrupted /tmp entry: continue to durable store / bundled public asset
             }
-        } catch {
-            // Corrupted /tmp entry: continue to durable store / bundled public asset
         }
 
         // 2. Check Vercel Blob if configured
-        if (isBlobConfigured()) {
+        if (blobConfigured) {
             const access = getBlobAccessMode();
             try {
                 const res = await blobGet(cleanKey, {access});
                 if (res && res.statusCode === 200 && res.stream) {
                     const text = await new Response(res.stream).text();
                     const parsed = JSON.parse(text) as T;
-                    // Warm /tmp for subsequent requests on the same container
+                    // Warm /tmp and refresh mtime for subsequent requests on the same container
                     try {
                         fs.mkdirSync(path.dirname(tmpPath), {recursive: true});
-                        fs.writeFileSync(tmpPath, text, "utf-8");
+                        fs.writeFileSync(/*turbopackIgnore: true*/ tmpPath, text, "utf-8");
                     } catch {
                         // Ignore /tmp write error
                     }
                     return {data: parsed, source: "blob"};
                 }
             } catch {
-                // Blob missing or transient failure: fall through to bundled public/ asset
+                // Blob missing or transient failure: fall back to expired /tmp if present, then bundled public/ asset
+                if (staleTmpData !== null) {
+                    return {data: staleTmpData, source: "tmp"};
+                }
             }
         }
 
@@ -94,12 +137,17 @@ export const artifactStore = {
             // Ignore
         }
 
+        if (staleTmpData !== null) {
+            return {data: staleTmpData, source: "tmp"};
+        }
+
         return null;
     },
 
     async putJson<T>(relativeKey: string, value: T, options?: { pretty?: boolean }): Promise<void> {
         const cleanKey = relativeKey.replace(/^\/+/, "");
-        const serialized = options?.pretty ? JSON.stringify(value, null, 2) : JSON.stringify(value);
+        const usePretty = options?.pretty ?? false;
+        const serialized = usePretty ? JSON.stringify(value, null, 2) : JSON.stringify(value);
         const [tmpPath, publicPath] = resolveFsCandidates(cleanKey);
 
         // 1. Write /tmp container cache

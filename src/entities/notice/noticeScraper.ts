@@ -2,6 +2,7 @@ import "server-only";
 
 import {parse} from "node-html-parser";
 import type {NoticeDetail, NoticeItem, NoticeListResponse} from "./types";
+import {fetchWithRetry, SharedCircuitBreaker} from "@shared/api/upstreamClient";
 import {APP_LOCALE, UI_TEXT} from "@shared/config/locale";
 import {getCachedOrFetch} from "@shared/cache";
 import {sanitizeHtml} from "@shared/utils/sanitizer";
@@ -9,6 +10,8 @@ import {sanitizeHtml} from "@shared/utils/sanitizer";
 const BASE_URL = "http://its.wonju.go.kr";
 const NOTICE_LIST_URL = `${BASE_URL}/center/notice.do`;
 const NOTICE_VIEW_URL = `${BASE_URL}/center/noticeView.do`;
+
+const wonjuNoticeBreaker = new SharedCircuitBreaker("WonjuNotice", 5, 20_000);
 
 const HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -182,6 +185,22 @@ export function parseNoticeDetailHtml(html: string, id: string): NoticeDetail {
     };
 }
 
+async function fetchNoticeHtml(url: string, errorPrefix: string, maxRetries = 3): Promise<string> {
+    const res = await fetchWithRetry(url, {
+        maxAttempts: maxRetries,
+        baseDelayMs: 600,
+        timeoutMs: 12_000,
+        headers: HEADERS,
+        circuitBreaker: wonjuNoticeBreaker,
+    });
+
+    if (!res.ok) {
+        throw new Error(`${errorPrefix} (Status: ${res.status})`);
+    }
+
+    return res.text();
+}
+
 async function rawFetchNoticeList(page = 1, searchText = "", searchGb = "title", maxRetries = 3): Promise<NoticeListResponse> {
     const params = new URLSearchParams();
     if (page > 1) params.set("pageNo", String(page));
@@ -191,29 +210,8 @@ async function rawFetchNoticeList(page = 1, searchText = "", searchGb = "title",
     }
 
     const url = `${NOTICE_LIST_URL}${params.toString() ? `?${params.toString()}` : ""}`;
-    let lastError: unknown;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const res = await fetch(url, {
-                headers: HEADERS, signal: AbortSignal.timeout(12000),
-            });
-
-            if (!res.ok) {
-                throw new Error(`Failed to fetch notice list from Wonju ITS (Status: ${res.status})`);
-            }
-
-            const html = await res.text();
-            return parseNoticeListHtml(html, page, searchText);
-        } catch (err) {
-            lastError = err;
-            if (attempt < maxRetries) {
-                await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
-            }
-        }
-    }
-
-    throw lastError instanceof Error ? lastError : new Error("Failed to fetch notice list from Wonju ITS");
+    const html = await fetchNoticeHtml(url, "Failed to fetch notice list from Wonju ITS", maxRetries);
+    return parseNoticeListHtml(html, page, searchText);
 }
 
 /**
@@ -231,29 +229,8 @@ export async function scrapeWonjuNoticeList(page = 1, searchText = "", searchGb 
 
 async function rawFetchNoticeDetail(id: string, maxRetries = 3): Promise<NoticeDetail> {
     const url = `${NOTICE_VIEW_URL}?bdIdx=${encodeURIComponent(id)}`;
-    let lastError: unknown;
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const res = await fetch(url, {
-                headers: HEADERS, signal: AbortSignal.timeout(12000),
-            });
-
-            if (!res.ok) {
-                throw new Error(`Failed to fetch notice detail for ID ${id} (Status: ${res.status})`);
-            }
-
-            const html = await res.text();
-            return parseNoticeDetailHtml(html, id);
-        } catch (err) {
-            lastError = err;
-            if (attempt < maxRetries) {
-                await new Promise((resolve) => setTimeout(resolve, 600 * attempt));
-            }
-        }
-    }
-
-    throw lastError instanceof Error ? lastError : new Error(`Failed to fetch notice detail for ID ${id}`);
+    const html = await fetchNoticeHtml(url, `Failed to fetch notice detail for ID ${id}`, maxRetries);
+    return parseNoticeDetailHtml(html, id);
 }
 
 /**

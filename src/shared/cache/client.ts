@@ -22,6 +22,7 @@ export interface CacheOptions<T = unknown> {
     forceRefresh?: boolean;
     shouldCache?: (data: T) => boolean;
     useDistributedCache?: boolean;
+    l2TimeoutMs?: number;
 }
 
 const MEMORY_CACHE_MAX_KEYS = 2000;
@@ -78,7 +79,8 @@ export function getL1CacheMetrics() {
 }
 
 /**
- * Invalidate all L1 cache entries whose key starts with any of the given prefixes.
+ * Invalidate all L1 cache entries whose key starts with any of the given prefixes,
+ * and schedule distributed L2 cache prefix deletion when configured.
  */
 export function invalidateCacheByPrefix(prefixes: string | string[]): number {
     const prefixList = Array.isArray(prefixes) ? prefixes : [prefixes];
@@ -91,7 +93,42 @@ export function invalidateCacheByPrefix(prefixes: string | string[]): number {
             removed++;
         }
     }
+    for (const prefix of prefixList) {
+        void distributedCache.delByPrefix(prefix);
+    }
     return removed;
+}
+
+/**
+ * Invalidate both L1 memory and L2 distributed Redis cache entries by prefix and await L2 completion.
+ */
+export async function invalidateCacheByPrefixAsync(prefixes: string | string[]): Promise<{
+    l1Removed: number;
+    l2Removed: number;
+}> {
+    const prefixList = Array.isArray(prefixes) ? prefixes : [prefixes];
+    let l1Removed = 0;
+    for (const key of memoryCache.keys()) {
+        if (prefixList.some((p) => key.startsWith(p))) {
+            memoryCache.delete(key);
+            pendingRequests.delete(key);
+            revalidateState.delete(key);
+            l1Removed++;
+        }
+    }
+    const counts = await Promise.all(prefixList.map((p) => distributedCache.delByPrefix(p)));
+    const l2Removed = counts.reduce((sum, n) => sum + n, 0);
+    return {l1Removed, l2Removed};
+}
+
+/**
+ * Invalidate a single key in both L1 memory and L2 distributed Redis cache.
+ */
+export async function invalidateCacheKey(key: string): Promise<void> {
+    memoryCache.delete(key);
+    pendingRequests.delete(key);
+    revalidateState.delete(key);
+    await distributedCache.del(key);
 }
 
 /**
@@ -108,6 +145,7 @@ export async function getCachedOrFetch<T>(
     const forceRefresh = options?.forceRefresh ?? false;
     const shouldCache = options?.shouldCache;
     const useDistributedCache = options?.useDistributedCache ?? false;
+    const l2TimeoutMs = options?.l2TimeoutMs ?? 400;
     const now = Date.now();
 
     // 1. Check L1 Memory Cache
@@ -140,7 +178,17 @@ export async function getCachedOrFetch<T>(
         // 1b. Check L2 Distributed Cache (Upstash Redis) if enabled
         let l2Fallback: CachedData<T> | undefined;
         if (useDistributedCache) {
-            const l2Entry = await distributedCache.get<CachedData<T>>(key);
+            let l2Timer: ReturnType<typeof setTimeout> | undefined;
+            const l2Entry = l2TimeoutMs > 0
+                ? await Promise.race([
+                    distributedCache.get<CachedData<T>>(key, l2TimeoutMs),
+                    new Promise<null>((resolve) => {
+                        l2Timer = setTimeout(() => resolve(null), l2TimeoutMs);
+                    }),
+                ]).finally(() => {
+                    if (l2Timer) clearTimeout(l2Timer);
+                })
+                : await distributedCache.get<CachedData<T>>(key, l2TimeoutMs);
             if (l2Entry && l2Entry.data !== undefined && typeof l2Entry.timestamp === "number") {
                 const ageMs = Date.now() - l2Entry.timestamp;
                 l2Fallback = {

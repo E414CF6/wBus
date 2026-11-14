@@ -1,5 +1,6 @@
 import {ApiValidators, createApiHandler} from "@shared/api";
 import {fetchBusLocations, getAdaptiveTtlSeconds, type RawBusLocation} from "@entities/bus";
+import {getClientPollHint} from "@entities/bus/api/routeWindow";
 
 // Always treat this route as dynamic to avoid prepended 404s on deploy
 export const dynamic = "force-dynamic";
@@ -9,7 +10,10 @@ export const dynamic = "force-dynamic";
  * Fetch real-time bus locations for a specific route ID.
  */
 const LIVE_CACHE_OPTIONS = {
-    staleWhileRevalidateSeconds: 5, staleIfErrorSeconds: 60,
+    staleWhileRevalidateSeconds: 5,
+    staleIfErrorSeconds: 60,
+    useDistributedCache: true,
+    l2TimeoutMs: 300,
 };
 
 export const GET = createApiHandler<RawBusLocation[]>({
@@ -25,6 +29,10 @@ export const GET = createApiHandler<RawBusLocation[]>({
     ttl: (id, req) => {
         const cityCode = ApiValidators.resolveCityCode(req ? new URL(req.url).searchParams.get("cityCode") : null);
         return getAdaptiveTtlSeconds(id, 8, 15, cityCode);
+    },
+    resolveMeta: (id, req) => {
+        const cityCode = ApiValidators.resolveCityCode(new URL(req.url).searchParams.get("cityCode"));
+        return getClientPollHint([id], cityCode);
     },
     cacheOptions: LIVE_CACHE_OPTIONS,
     errorMessage: "Failed to fetch bus data",

@@ -11,7 +11,11 @@ export class SharedCircuitBreaker {
     private state: CircuitState = "CLOSED";
     private failureCount = 0;
     private lastFailureTime = 0;
+    private lastSuccessTime = 0;
     private nextAttemptTime = 0;
+    private totalRequests = 0;
+    private successfulRequests = 0;
+    private failedRequests = 0;
 
     constructor(
         private readonly name: string,
@@ -31,6 +35,9 @@ export class SharedCircuitBreaker {
     }
 
     recordSuccess(): void {
+        this.totalRequests += 1;
+        this.successfulRequests += 1;
+        this.lastSuccessTime = Date.now();
         if (this.state !== "CLOSED") {
             console.log(`[CircuitBreaker:${this.name}] CLOSED: Upstream recovered.`);
         }
@@ -39,6 +46,8 @@ export class SharedCircuitBreaker {
     }
 
     recordFailure(): void {
+        this.totalRequests += 1;
+        this.failedRequests += 1;
         this.failureCount += 1;
         this.lastFailureTime = Date.now();
         if (this.failureCount >= this.threshold || this.state === "HALF_OPEN") {
@@ -54,16 +63,28 @@ export class SharedCircuitBreaker {
         return {
             state: this.state,
             failureCount: this.failureCount,
-            lastFailureTime: this.lastFailureTime,
+            consecutiveFailures: this.failureCount,
+            totalRequests: this.totalRequests,
+            successfulRequests: this.successfulRequests,
+            failedRequests: this.failedRequests,
+            lastSuccessTime: this.lastSuccessTime > 0 ? new Date(this.lastSuccessTime).toISOString() : null,
+            lastFailureTime: this.lastFailureTime > 0 ? new Date(this.lastFailureTime).toISOString() : null,
             cooldownRemainingMs: this.state === "OPEN" ? Math.max(0, this.nextAttemptTime - Date.now()) : 0,
         };
     }
+}
+
+export function computeBackoffDelayMs(attempt: number, baseDelayMs = 300, maxJitterMs = 120): number {
+    const jitter = maxJitterMs > 0 ? Math.floor(Math.random() * maxJitterMs) : 0;
+    return baseDelayMs * 2 ** Math.max(0, attempt - 1) + jitter;
 }
 
 export interface UpstreamRetryOptions {
     maxAttempts?: number;
     baseDelayMs?: number;
     timeoutMs?: number;
+    method?: string;
+    body?: BodyInit | null;
     headers?: Record<string, string>;
     cache?: RequestCache;
     circuitBreaker?: SharedCircuitBreaker;
@@ -91,6 +112,8 @@ export async function fetchWithRetry(
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
             const res = await fetch(url, {
+                method: options.method,
+                body: options.body,
                 headers: options.headers,
                 signal: AbortSignal.timeout(timeoutMs),
                 cache: options.cache ?? "no-store",

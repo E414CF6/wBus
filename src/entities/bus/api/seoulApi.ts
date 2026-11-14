@@ -1,5 +1,6 @@
 import {fetchWithRetry, SharedCircuitBreaker} from "@shared/api/upstreamClient";
 import {getCachedOrFetch, peekCached, setCached} from "@shared/cache";
+import {artifactStore} from "@shared/cache/artifactStore";
 import {calculatePolylineMeters} from "@entities/route/polylineChunker";
 import type {GeoPolyline} from "@entities/route/types";
 import type {RawBusArrival, RawBusLocation, RawBusStop, RawCityRoute, RawNearbyStop,} from "./publicApi";
@@ -429,6 +430,9 @@ async function getSeoulRouteBundle(routeId: string): Promise<{
             // Warm L1 caches for bus-stops and polyline endpoints
             setCached(`bus-stops:${SEOUL_CITY_CODE}:${routeId}`, stops);
             setCached(`polyline:${SEOUL_CITY_CODE}:${routeId}`, polyline);
+            if (stops.length > 0) {
+                void artifactStore.putJson(`routes/${SEOUL_CITY_CODE}/${routeId}.json`, polyline);
+            }
 
             return {stops, polyline, routeName};
         },
@@ -436,6 +440,8 @@ async function getSeoulRouteBundle(routeId: string): Promise<{
             ttlSeconds: 3600,
             staleWhileRevalidateSeconds: 86400,
             staleIfErrorSeconds: 86400,
+            useDistributedCache: true,
+            shouldCache: (b) => Boolean(b?.stops?.length),
         }
     );
 
@@ -450,7 +456,7 @@ export async function fetchSeoulBusLocations(
     getServiceKey: () => { key: string; index: number },
     onKeyRateLimited?: (index: number) => void
 ): Promise<RawBusLocation[]> {
-    // 1. Resolve routeName and route stops with multi-tier cache & fallback warming
+    // 1. Resolve routeName and route stops from fast L1 caches first
     let cachedStops = peekCached<RawBusStop[]>(`bus-stops:${SEOUL_CITY_CODE}:${routeId}`, 86400)?.data;
     const cachedPoly = peekCached<GeoPolyline>(`polyline:${SEOUL_CITY_CODE}:${routeId}`, 86400)?.data;
     let resolvedRouteName = cachedPoly?.route_no || "";
@@ -464,20 +470,61 @@ export async function fetchSeoulBusLocations(
         }
     }
 
-    // If still missing stops or polyline, proactively warm bundle via TOPIS
-    if ((!cachedStops || !resolvedRouteName) && routeId) {
+    // 2. Fetch live bus positions IN PARALLEL with TOPIS route bundle warm-up (eliminates cold-start waterfall)
+    const needsBundleWarm = (!cachedStops || !resolvedRouteName) && Boolean(routeId);
+    const bundlePromise = needsBundleWarm
+        ? getSeoulRouteBundle(routeId).catch(() => null)
+        : Promise.resolve(null);
+
+    let usedKeyIndex: number | null = null;
+    const wsPositionPromise = (async (): Promise<SeoulBusPosItem[]> => {
         try {
-            const bundle = await getSeoulRouteBundle(routeId);
-            if (bundle) {
-                if (bundle.stops && bundle.stops.length > 0) {
-                    cachedStops = bundle.stops;
-                }
-                if (bundle.routeName && bundle.routeName !== routeId) {
-                    resolvedRouteName = bundle.routeName;
+            const {key, index} = getServiceKey();
+            usedKeyIndex = index;
+            return await fetchSeoulWsBusPos("getBusPosByRtid", {busRouteId: routeId}, key);
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            if (/LIMITED|TRAFFIC|EXCEED|429|Code:\s*22/i.test(msg) && onKeyRateLimited && usedKeyIndex !== null) {
+                try {
+                    onKeyRateLimited(usedKeyIndex);
+                } catch {
+                    // Ignore
                 }
             }
-        } catch {
-            // Keep going even if bundle warm fails
+
+            // Fallback: TOPIS selectBusposByRtid.do
+            const fallbackUrl = `${SBUS_WEB_BASE}/selectBusposByRtid.do?routeId=${encodeURIComponent(routeId)}&isLowBus=N`;
+            const res = await fetchWithRetry(fallbackUrl, {
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (compatible; wBus/2.0)",
+                    Accept: "application/json",
+                },
+                timeoutMs: 4500,
+                maxAttempts: 2,
+                cache: "no-store",
+                circuitBreaker: seoulTopisBreaker,
+            });
+
+            if (!res.ok) {
+                throw err;
+            }
+
+            const json = (await res.json()) as SbusResponseEnvelope<{
+                resultList?: SeoulBusPosItem[];
+                resultRouteBuspos?: SeoulBusPosItem[];
+            }>;
+            return json.ResponseVO?.data?.resultList ?? json.ResponseVO?.data?.resultRouteBuspos ?? [];
+        }
+    })();
+
+    const [bundle, rawItems] = await Promise.all([bundlePromise, wsPositionPromise]);
+
+    if (bundle) {
+        if (bundle.stops && bundle.stops.length > 0) {
+            cachedStops = bundle.stops;
+        }
+        if (bundle.routeName && bundle.routeName !== routeId) {
+            resolvedRouteName = bundle.routeName;
         }
     }
 
@@ -496,48 +543,6 @@ export async function fetchSeoulBusLocations(
                 stopLookup.set(String(s.nodeid), entry);
             }
         }
-    }
-
-    let rawItems: SeoulBusPosItem[];
-    let usedKeyIndex: number | null = null;
-
-    // Primary: Official ws.bus.go.kr/api/rest/buspos/getBusPosByRtid using TAGO serviceKey
-    try {
-        const {key, index} = getServiceKey();
-        usedKeyIndex = index;
-        rawItems = await fetchSeoulWsBusPos("getBusPosByRtid", {busRouteId: routeId}, key);
-    } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (/LIMITED|TRAFFIC|EXCEED|429|Code:\s*22/i.test(msg) && onKeyRateLimited && usedKeyIndex !== null) {
-            try {
-                onKeyRateLimited(usedKeyIndex);
-            } catch {
-                // Ignore
-            }
-        }
-
-        // Fallback: TOPIS selectBusposByRtid.do
-        const fallbackUrl = `${SBUS_WEB_BASE}/selectBusposByRtid.do?routeId=${encodeURIComponent(routeId)}&isLowBus=N`;
-        const res = await fetchWithRetry(fallbackUrl, {
-            headers: {
-                "User-Agent": "Mozilla/5.0 (compatible; wBus/2.0)",
-                Accept: "application/json",
-            },
-            timeoutMs: 4500,
-            maxAttempts: 2,
-            cache: "no-store",
-            circuitBreaker: seoulTopisBreaker,
-        });
-
-        if (!res.ok) {
-            throw err;
-        }
-
-        const json = (await res.json()) as SbusResponseEnvelope<{
-            resultList?: SeoulBusPosItem[];
-            resultRouteBuspos?: SeoulBusPosItem[];
-        }>;
-        rawItems = json.ResponseVO?.data?.resultList ?? json.ResponseVO?.data?.resultRouteBuspos ?? [];
     }
 
     const locations: RawBusLocation[] = [];

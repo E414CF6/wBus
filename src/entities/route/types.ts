@@ -54,6 +54,7 @@ export interface GeoPolyline {
     total_dist: number;
     total_time?: number;
     source_ver?: string;
+    stops_hash?: string;
     bbox?: [number, number, number, number];
     stops_count?: number;
 }

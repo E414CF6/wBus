@@ -4,6 +4,7 @@ import {
     mergeRouteDatasets,
     MIN_REFRESH_INTERVAL_DAYS,
     MIN_REFRESH_INTERVAL_MS,
+    reconcileScrapedDataset,
 } from "./scheduleService";
 import type {RouteDataset} from "./types";
 
@@ -126,6 +127,106 @@ describe("scheduleService caching and refresh interval", () => {
         expect(route30).toBeDefined();
         expect(route30?.firstBus).toBe("05:50");
         expect(route30?.timetable.length).toBe(1);
+    });
+
+    it("rejects empty scrapes or severe route count drops in reconcileScrapedDataset", () => {
+        const prev: RouteDataset = {
+            updatedAt: "2026-01-01T00:00:00.000Z",
+            sourceUrl: "http://its.wonju.go.kr",
+            totalRoutes: 4,
+            routes: ["1", "2", "30", "34"].map((no) => ({
+                id: no,
+                rawNo: no,
+                routeNo: no,
+                dayType: "매일",
+                origin: "A",
+                destination: "B",
+                firstBus: "06:00",
+                lastBus: "22:00",
+                runCount: "10",
+                interval: "30",
+                timetable: [{seq: 1, originDepTime: "06:00", destDepTime: "06:40", type: "일반", notes: ""}],
+            })),
+        };
+
+        const empty = reconcileScrapedDataset({
+            updatedAt: "2026-01-02T00:00:00.000Z",
+            sourceUrl: "http://its.wonju.go.kr",
+            totalRoutes: 0,
+            routes: [],
+        }, prev);
+        expect(empty.accepted).toBe(false);
+        expect(empty.reason).toBe("empty-dataset");
+
+        const truncated = reconcileScrapedDataset({
+            updatedAt: "2026-01-02T00:00:00.000Z",
+            sourceUrl: "http://its.wonju.go.kr",
+            totalRoutes: 1,
+            routes: [prev.routes[0]],
+        }, prev);
+        expect(truncated.accepted).toBe(false);
+        expect(truncated.reason).toContain("route-count-drop");
+    });
+
+    it("preserves prior timetable when individual detail scrape fails", () => {
+        const prev: RouteDataset = {
+            updatedAt: "2026-01-01T00:00:00.000Z",
+            sourceUrl: "http://its.wonju.go.kr",
+            totalRoutes: 2,
+            routes: [
+                {
+                    id: "1",
+                    rawNo: "30",
+                    routeNo: "30",
+                    dayType: "매일",
+                    origin: "장양리",
+                    destination: "연세대",
+                    firstBus: "06:00",
+                    lastBus: "22:00",
+                    runCount: "20",
+                    interval: "20",
+                    timetable: [{seq: 1, originDepTime: "06:00", destDepTime: "06:40", type: "일반", notes: ""}],
+                },
+                {
+                    id: "2",
+                    rawNo: "34",
+                    routeNo: "34",
+                    dayType: "매일",
+                    origin: "관설동",
+                    destination: "연세대",
+                    firstBus: "06:10",
+                    lastBus: "22:10",
+                    runCount: "10",
+                    interval: "30",
+                    timetable: [{seq: 1, originDepTime: "06:10", destDepTime: "06:50", type: "일반", notes: ""}],
+                },
+            ],
+        };
+
+        const scraped = {
+            updatedAt: "2026-01-02T00:00:00.000Z",
+            sourceUrl: "http://its.wonju.go.kr",
+            totalRoutes: 2,
+            failedRouteNos: ["34"],
+            successCount: 1,
+            routes: [
+                {
+                    ...prev.routes[0],
+                    timetable: [{seq: 1, originDepTime: "05:55", destDepTime: "06:35", type: "저상", notes: "신규"}],
+                },
+                {
+                    ...prev.routes[1],
+                    timetable: [],
+                },
+            ],
+        };
+
+        const res = reconcileScrapedDataset(scraped, prev);
+        expect(res.accepted).toBe(true);
+        expect(res.preservedRoutes).toBe(1);
+        expect(res.dataset?.routes[0].timetable[0].originDepTime).toBe("05:55");
+        expect(res.dataset?.routes[1].timetable).toHaveLength(1);
+        expect(res.dataset?.routes[1].timetable[0].originDepTime).toBe("06:10");
     });
 });
 

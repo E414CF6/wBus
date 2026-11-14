@@ -56,6 +56,15 @@ export const TagoBusStopSchema = z.object({
     updowncd: coerceFiniteNumber(0),
 }).passthrough();
 
+export const TagoNearbyStopSchema = z.object({
+    nodeid: coerceString("").refine((s) => s.length > 0, "Missing nodeid"),
+    nodenm: coerceString(""),
+    gpslati: coerceFiniteNumber(NaN).refine((n) => Number.isFinite(n) && n !== 0, "Invalid stop lat"),
+    gpslong: coerceFiniteNumber(NaN).refine((n) => Number.isFinite(n) && n !== 0, "Invalid stop lon"),
+    citycode: z.union([z.string(), z.number()]).optional(),
+    nodeno: z.union([z.string(), z.number()]).optional(),
+}).passthrough();
+
 export const TagoCityRouteSchema = z.object({
     routeid: coerceString("").refine((s) => s.length > 0, "Missing routeid"),
     routeno: coerceString("").refine((s) => s.length > 0, "Missing routeno"),

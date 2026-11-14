@@ -51,6 +51,9 @@ export async function GET(request: NextRequest) {
                 ttlSeconds: 60,
                 staleWhileRevalidateSeconds: 300,
                 staleIfErrorSeconds: 600,
+                useDistributedCache: true,
+                l2TimeoutMs: 350,
+                shouldCache: (items) => Array.isArray(items) && items.length > 0,
             }
         );
 
@@ -68,6 +71,7 @@ export async function GET(request: NextRequest) {
         stops.sort((a, b) => a.distanceMeters - b.distanceMeters);
 
         const sliced = stops.slice(0, limit);
+        const shouldSkipCache = sliced.length === 0 || Boolean(result.meta?.degraded);
 
         return NextResponse.json(
             {
@@ -77,11 +81,12 @@ export async function GET(request: NextRequest) {
                     returned: sliced.length,
                     center: {lat, lng},
                     layer: result.meta?.layer ?? "origin",
+                    degraded: Boolean(result.meta?.degraded),
                 },
             },
             {
                 headers: {
-                    "Cache-Control": CACHE_CONTROL_HEADER,
+                    "Cache-Control": shouldSkipCache ? "no-store" : CACHE_CONTROL_HEADER,
                 },
             }
         );

@@ -5,7 +5,9 @@ import {
     TagoBusLocationSchema,
     TagoBusStopSchema,
     TagoCityRouteSchema,
+    TagoNearbyStopSchema,
 } from "@shared/api/schemas";
+import {computeBackoffDelayMs, SharedCircuitBreaker} from "@shared/api/upstreamClient";
 import {type CachedData, getCachedOrFetch, peekCached} from "@shared/cache";
 import {API_PRIORITY, TaskQueue} from "@shared/utils/concurrency";
 import {
@@ -13,6 +15,7 @@ import {
     recordRouteBusActivity,
     registerCityRoutesMapping,
     registerRouteIdMapping,
+    warmRouteWindowResources,
 } from "./routeWindow";
 import {
     fetchSeoulBusArrivals,
@@ -141,76 +144,10 @@ class ServiceKeyManager {
 const keyManager = new ServiceKeyManager();
 
 // ----------------------------------------------------------------------
-// 2. Circuit Breaker
+// 2. Circuit Breaker (Unified SharedCircuitBreaker)
 // ----------------------------------------------------------------------
 
-type CircuitState = "CLOSED" | "OPEN" | "HALF_OPEN";
-
-class CircuitBreaker {
-    private state: CircuitState = "CLOSED";
-    private consecutiveFailures = 0;
-    private nextAttemptAt = 0;
-    private totalRequests = 0;
-    private successfulRequests = 0;
-    private failedRequests = 0;
-    private lastSuccessTime: number | null = null;
-    private lastFailureTime: number | null = null;
-
-    canExecute(): boolean {
-        if (this.state === "CLOSED") return true;
-
-        const now = Date.now();
-        if (this.state === "OPEN") {
-            if (now >= this.nextAttemptAt) {
-                this.state = "HALF_OPEN";
-                console.log("[PublicAPI CircuitBreaker] Entering HALF_OPEN state (probe request allowed).");
-                return true;
-            }
-            return false;
-        }
-
-        // HALF_OPEN allows probe
-        return true;
-    }
-
-    recordSuccess() {
-        this.totalRequests++;
-        this.successfulRequests++;
-        this.lastSuccessTime = Date.now();
-        this.consecutiveFailures = 0;
-        if (this.state !== "CLOSED") {
-            console.log("[PublicAPI CircuitBreaker] Upstream recovered. Resetting state to CLOSED.");
-            this.state = "CLOSED";
-        }
-    }
-
-    recordFailure() {
-        this.totalRequests++;
-        this.failedRequests++;
-        this.lastFailureTime = Date.now();
-        this.consecutiveFailures++;
-
-        if (this.consecutiveFailures >= 5 || (this.state === "HALF_OPEN")) {
-            this.state = "OPEN";
-            this.nextAttemptAt = Date.now() + CIRCUIT_COOLDOWN_MS;
-            console.warn(`[PublicAPI CircuitBreaker] Tripped to OPEN due to ${this.consecutiveFailures} consecutive failures. Cooldown until ${new Date(this.nextAttemptAt).toISOString()}`);
-        }
-    }
-
-    getState() {
-        return {
-            state: this.state,
-            consecutiveFailures: this.consecutiveFailures,
-            totalRequests: this.totalRequests,
-            successfulRequests: this.successfulRequests,
-            failedRequests: this.failedRequests,
-            lastSuccessTime: this.lastSuccessTime ? new Date(this.lastSuccessTime).toISOString() : null,
-            lastFailureTime: this.lastFailureTime ? new Date(this.lastFailureTime).toISOString() : null,
-        };
-    }
-}
-
-const circuitBreaker = new CircuitBreaker();
+const circuitBreaker = new SharedCircuitBreaker("PublicAPI", 5, CIRCUIT_COOLDOWN_MS);
 
 // ----------------------------------------------------------------------
 // 3. Priority Concurrency Queue & Token Bucket Rate Limiter
@@ -335,7 +272,7 @@ function inspectResponseForErrors(data: unknown): {
 }
 
 async function rawFetchPublicApi<T>(path: string, params: Record<string, string>): Promise<T> {
-    if (!circuitBreaker.canExecute()) {
+    if (!circuitBreaker.canRequest()) {
         throw new PublicApiError("[PublicAPI] Circuit Breaker is OPEN due to upstream failure.", 503, path);
     }
 
@@ -439,9 +376,8 @@ function isRetryableStatus(status: number): boolean {
 }
 
 function delay(attempt: number): Promise<void> {
-    const jitter = Math.floor(Math.random() * 100);
     return new Promise((resolve) => {
-        setTimeout(resolve, RETRY_BASE_DELAY_MS * attempt + jitter);
+        setTimeout(resolve, computeBackoffDelayMs(attempt, RETRY_BASE_DELAY_MS, 100));
     });
 }
 
@@ -457,6 +393,9 @@ interface PublicApiResponseEnvelope<T> {
             items?: {
                 item?: T | T[];
             };
+            totalCount?: number | string;
+            numOfRows?: number | string;
+            pageNo?: number | string;
         };
     };
     OpenAPI_ServiceResponse?: {
@@ -477,6 +416,39 @@ function extractItems<T>(data: PublicApiResponseEnvelope<T>, urlHint = "apis.dat
     const raw = data.response?.body?.items?.item;
     if (!raw) return [];
     return Array.isArray(raw) ? raw : [raw];
+}
+
+async function fetchAllPublicApiPages<T>(
+    path: string,
+    params: Record<string, string>,
+    priority: number,
+    urlHint: string,
+    maxPages = 4
+): Promise<T[]> {
+    const firstPage = await fetchPublicApi<PublicApiResponseEnvelope<T>>(path, {...params, pageNo: "1"}, {priority});
+    const collected = extractItems(firstPage, urlHint);
+    const totalCount = Number(firstPage.response?.body?.totalCount ?? collected.length);
+    const pageSize = Number(params.numOfRows ?? firstPage.response?.body?.numOfRows ?? 1024);
+
+    if (!Number.isFinite(totalCount) || totalCount <= collected.length || pageSize <= 0) {
+        return collected;
+    }
+
+    const totalPages = Math.min(maxPages, Math.ceil(totalCount / pageSize));
+    if (totalPages <= 1) return collected;
+
+    for (let page = 2; page <= totalPages; page++) {
+        const nextPage = await fetchPublicApi<PublicApiResponseEnvelope<T>>(
+            path,
+            {...params, pageNo: String(page)},
+            {priority}
+        );
+        const pageItems = extractItems(nextPage, `${urlHint}:p${page}`);
+        if (pageItems.length === 0) break;
+        collected.push(...pageItems);
+    }
+
+    return collected;
 }
 
 // ----------------------------------------------------------------------
@@ -513,6 +485,9 @@ export async function fetchBusLocations(routeId: string, options?: {
 }): Promise<RawBusLocation[]> {
     const cityCode = options?.cityCode ?? CITY_CODE;
     const metricsKey = `${cityCode}:${routeId}`;
+
+    // Warm routeId->routeNo & schedule window in cold serverless instances
+    await warmRouteWindowResources(cityCode);
 
     // 1. Check Operating Service Window (Short-circuit during midnight / non-operating hours)
     const serviceStatus = isRouteInServiceWindow(routeId, new Date(), cityCode);
@@ -632,13 +607,12 @@ export async function fetchRouteStops(routeId: string, cityCode = CITY_CODE): Pr
     }
 
     const tagoCityCode = cityCode === "32320" ? "32020" : cityCode;
-    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawBusStop>>(
+    const items = await fetchAllPublicApiPages<RawBusStop>(
         "/BusRouteInfoInqireService/getRouteAcctoThrghSttnList",
-        {routeId, cityCode: tagoCityCode},
-        {priority: API_PRIORITY.USER_INTERACTIVE}
+        {routeId, cityCode: tagoCityCode, numOfRows: "1024"},
+        API_PRIORITY.USER_INTERACTIVE,
+        `getRouteAcctoThrghSttnList:${cityCode}:${routeId}`
     );
-
-    const items = extractItems(data, `getRouteAcctoThrghSttnList:${cityCode}:${routeId}`);
     return filterValidItems(
         items.map((stop) => ({
             ...stop,
@@ -687,11 +661,15 @@ export async function fetchNearbyStops(params: {
     );
 
     const items = extractItems(data, `getCrdntPrxmtSttnList:${params.gpsLati},${params.gpsLong}`);
-    return items.map((s) => ({
-        ...s,
-        gpslati: Number(s.gpslati),
-        gpslong: Number(s.gpslong),
-    }));
+    return filterValidItems(
+        items.map((s) => ({
+            ...s,
+            gpslati: Number(s.gpslati),
+            gpslong: Number(s.gpslong),
+        })),
+        TagoNearbyStopSchema,
+        `nearby-stops:${params.gpsLati.toFixed(3)},${params.gpsLong.toFixed(3)}`
+    ) as RawNearbyStop[];
 }
 
 export interface RawCityRoute {
@@ -718,13 +696,12 @@ export async function fetchCityRoutes(cityCode: string, routeNo?: string): Promi
         params.routeNo = routeNo;
     }
 
-    const data = await fetchPublicApi<PublicApiResponseEnvelope<RawCityRoute>>(
+    const items = await fetchAllPublicApiPages<RawCityRoute>(
         "/BusRouteInfoInqireService/getRouteNoList",
         params,
-        {priority: API_PRIORITY.USER_INTERACTIVE}
+        API_PRIORITY.USER_INTERACTIVE,
+        `getRouteNoList:${cityCode}:${routeNo ?? "all"}`
     );
-
-    const items = extractItems(data, `getRouteNoList:${cityCode}:${routeNo ?? "all"}`);
     const mapped = filterValidItems(
         items.map((r) => ({
             ...r,

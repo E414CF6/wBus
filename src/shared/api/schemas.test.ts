@@ -5,6 +5,8 @@ import {
     RouteDatasetSchema,
     TagoBusLocationSchema,
     TagoCityRouteSchema,
+    TagoNearbyStopSchema,
+    TimetableEntrySchema,
 } from "./schemas";
 
 describe("runtime API schemas", () => {
@@ -69,5 +71,31 @@ describe("runtime API schemas", () => {
             routes: [{id: "1", rawNo: "30", routeNo: "30", timetable: []}],
         });
         expect(dataset.success).toBe(true);
+    });
+
+    it("filters invalid nearby stops and coerces timetable entry fields", () => {
+        const stops = filterValidItems(
+            [
+                {nodeid: "WJB1001", nodenm: "연세대정문", gpslati: "37.28", gpslong: "127.90", citycode: 32020},
+                {nodeid: "", nodenm: "Missing ID", gpslati: 37.28, gpslong: 127.90},
+                {nodeid: "WJB1002", nodenm: "Zero coords", gpslati: 0, gpslong: 0},
+            ],
+            TagoNearbyStopSchema
+        );
+        expect(stops).toHaveLength(1);
+        expect(stops[0].gpslati).toBeCloseTo(37.28);
+
+        const row = TimetableEntrySchema.safeParse({
+            seq: "3",
+            originDepTime: "07:10",
+            destDepTime: "07:55",
+            type: null,
+            notes: undefined,
+        });
+        expect(row.success).toBe(true);
+        if (row.success) {
+            expect(row.data.seq).toBe(3);
+            expect(row.data.type).toBe("");
+        }
     });
 });

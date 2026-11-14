@@ -3,7 +3,12 @@
   "schedules": {
     "daily-refresh": {
       "schedule": "0 19 * * *",
-      "path": "/api/cron/refresh",
+      "path": "/api/cron/refresh?target=schedule",
+      "requestMethod": "GET"
+    },
+    "weekly-route-sync": {
+      "schedule": "15 19 * * 0",
+      "path": "/api/cron/refresh?target=routes&mode=quick",
       "requestMethod": "GET"
     }
   }

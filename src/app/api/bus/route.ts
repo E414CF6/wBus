@@ -1,5 +1,6 @@
 import {type NextRequest, NextResponse} from "next/server";
 import {fetchBusLocations, getAdaptiveTtlSeconds, type RawBusLocation} from "@entities/bus";
+import {getClientPollHint, warmRouteWindowResources} from "@entities/bus/api/routeWindow";
 import {filterRouteIdsByCity} from "@entities/city";
 import {getCachedOrFetch} from "@shared/cache";
 import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
@@ -9,7 +10,10 @@ import {ApiValidators} from "@shared/api";
 export const dynamic = "force-dynamic";
 
 const LIVE_CACHE_OPTIONS = {
-    staleWhileRevalidateSeconds: 5, staleIfErrorSeconds: 60,
+    staleWhileRevalidateSeconds: 5,
+    staleIfErrorSeconds: 60,
+    useDistributedCache: true,
+    l2TimeoutMs: 300,
 };
 
 const CACHE_CONTROL_HEADER = "public, max-age=2, s-maxage=10, stale-while-revalidate=5, stale-if-error=60";
@@ -45,6 +49,8 @@ export async function GET(request: NextRequest) {
     }
 
     try {
+        await warmRouteWindowResources(cityCode);
+
         let hasDegraded = false;
         const settled = await mapWithConcurrencyLimit(routeIds, async (routeId) => {
             const ttl = getAdaptiveTtlSeconds(routeId, 8, 15, cityCode);
@@ -73,6 +79,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({error: "Failed to fetch bus telemetry for requested routes"}, {status: 502});
         }
 
+        const pollHint = allBuses.length > 0 ? {inService: true} : getClientPollHint(routeIds, cityCode);
         const headers: Record<string, string> = {
             "Cache-Control": hasDegraded ? "no-store" : CACHE_CONTROL_HEADER,
             "X-Batch-Routes-Count": String(routeIds.length),
@@ -88,6 +95,7 @@ export async function GET(request: NextRequest) {
                 count: allBuses.length,
                 routes: routeIds,
                 degraded: hasDegraded,
+                ...pollHint,
             },
         }, {headers});
     } catch (err) {
