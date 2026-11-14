@@ -1,19 +1,33 @@
 "use client";
 
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import {Layer, Source} from "react-map-gl/maplibre";
+import type {MapLayerMouseEvent} from "maplibre-gl";
+import {useTheme} from "next-themes";
 import {useBusStop, useFavoriteStops, useNearbyStops} from "@entities/station/hooks";
 import type {BusStop} from "@entities/station/types";
-import {computeOptimalLabelPlacements} from "@entities/station/busStopMarkerUtils";
+import {findPairedOppositeStop} from "@entities/station/busStopMarkerUtils";
 import {MAP_SETTINGS} from "@shared/config/env";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useIsDesktop} from "@shared/ui/useIsDesktop";
 import {useCityContext} from "@entities/city";
 import {filterRouteIdsByCity, isRouteAllowedInCity} from "@entities/city/routeBoundary";
 import {useRoutePolylineData} from "@features/live-tracking";
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {buildSegmentedRouteGeoJson} from "@entities/route/polylineService";
 import {findNearestFeatureColor} from "./lib/markerGeometry";
+import {
+    buildBusStopsGeoJson,
+    getBusStopKey,
+    STOP_CIRCLE_NEARBY_LAYER_ID,
+    STOP_CIRCLE_ROUTE_LAYER_ID,
+    STOP_INTERACTIVE_LAYER_IDS,
+    STOP_LABEL_NEARBY_LAYER_ID,
+    STOP_LABEL_PRIORITY_LAYER_ID,
+    STOP_LABEL_ROUTE_LAYER_ID,
+    STOP_SOURCE_ID,
+} from "./lib/stopLayerUtils";
 import {BusStopMarkerItem} from "./ui/BusStopMarkerItem";
-import {useVisibleStops} from "./hooks/useVisibleStops";
 
 export interface BusStopMarkerProps {
     routeName: string;
@@ -43,13 +57,15 @@ export const BusStopMarker = ({
     const {favoriteStops, isFavoriteStop, toggleFavoriteStop} = useFavoriteStops(effectiveCityCode);
 
     const {map} = useAppMapContext();
+    const isDesktop = useIsDesktop();
+    const {resolvedTheme} = useTheme();
+    const isDark = resolvedTheme === "dark";
+
     const [zoom, setZoom] = useState(map?.getZoom() ?? MAP_SETTINGS.ZOOM.DEFAULT);
-    const [bounds, setBounds] = useState(map?.getBounds() ?? null);
     const [centerCoords, setCenterCoords] = useState<{ lat: number; lng: number } | null>(() => {
         const c = map?.getCenter();
         return c ? {lat: c.lat, lng: c.lng} : null;
     });
-    const rafRef = useRef<number | null>(null);
 
     // Fetch spatial nearby stops when zoomed in >= 14.3 and showNearbyStops is enabled
     const shouldFetchNearby = Boolean(showNearbyStops && zoom >= 14.3 && centerCoords);
@@ -99,7 +115,7 @@ export const BusStopMarker = ({
 
         for (const stop of routeStops) {
             const color = findNearestFeatureColor(stop.gpslati, stop.gpslong, features, routeMainColor);
-            const key = `${stop.nodeid}-${stop.updowncd ?? "na"}`;
+            const key = getBusStopKey(stop);
             colorMap.set(key, color);
             colorMap.set(stop.nodeid, color);
         }
@@ -107,43 +123,36 @@ export const BusStopMarker = ({
         return colorMap;
     }, [routeStops, activeGeoJson, routeMainColor]);
 
-    // Track map zoom and viewport center/bounds
+    // Only update React view state on moveend/zoomend (WebGL layers handle per-frame pan/zoom natively)
     useEffect(() => {
         if (!map) return;
 
         const updateViewState = () => {
-            if (rafRef.current) cancelAnimationFrame(rafRef.current);
-            rafRef.current = requestAnimationFrame(() => {
-                setZoom(map.getZoom());
-                setBounds(map.getBounds());
-                const c = map.getCenter();
-                if (c) {
-                    setCenterCoords({lat: c.lat, lng: c.lng});
-                }
-            });
+            setZoom(map.getZoom());
+            const c = map.getCenter();
+            if (c) {
+                setCenterCoords({lat: c.lat, lng: c.lng});
+            }
         };
 
         updateViewState();
 
         map.on("zoomend", updateViewState);
         map.on("moveend", updateViewState);
-        map.on("zoom", updateViewState);
-        map.on("move", updateViewState);
 
         return () => {
-            if (rafRef.current) cancelAnimationFrame(rafRef.current);
             map.off("zoomend", updateViewState);
             map.off("moveend", updateViewState);
-            map.off("zoom", updateViewState);
-            map.off("move", updateViewState);
         };
     }, [map]);
 
     const [eventFocusedStop, setEventFocusedStop] = useState<BusStop | null>(null);
+    const [hoveredStopKey, setHoveredStopKey] = useState<string | null>(null);
     const [prevFocusedCityCode, setPrevFocusedCityCode] = useState(effectiveCityCode);
     if (prevFocusedCityCode !== effectiveCityCode) {
         setPrevFocusedCityCode(effectiveCityCode);
         setEventFocusedStop(null);
+        setHoveredStopKey(null);
     }
     const activeFocusedStopId = focusedStopId || eventFocusedStop?.nodeid || null;
 
@@ -173,20 +182,95 @@ export const BusStopMarker = ({
         onClearFocusedStop?.();
     }, [onClearFocusedStop]);
 
-    // Viewport-aware visible stops derivation
-    const visibleStops = useVisibleStops({
-        routeStops,
-        favoriteStops,
-        nearbyStops,
-        showNearbyStops,
-        showStopLabels,
-        bounds,
-        zoom,
-        stopColorMap,
-        routeMainColor,
-        activeFocusedStopId,
-        eventFocusedStop,
-    });
+    const favoriteNodeIds = useMemo(
+        () => new Set(favoriteStops.map((s) => s.nodeid)),
+        [favoriteStops]
+    );
+
+    const {geoJson: stopsGeoJson, stopByKey} = useMemo(
+        () =>
+            buildBusStopsGeoJson({
+                routeStops,
+                favoriteStops,
+                nearbyStops,
+                showNearbyStops,
+                stopColorMap,
+                routeMainColor,
+                favoriteNodeIds,
+            }),
+        [routeStops, favoriteStops, nearbyStops, showNearbyStops, stopColorMap, routeMainColor, favoriteNodeIds]
+    );
+
+    const stopByKeyRef = useRef(stopByKey);
+    useEffect(() => {
+        stopByKeyRef.current = stopByKey;
+    }, [stopByKey]);
+
+    // Handle click and hover interactions on WebGL stop layers
+    useEffect(() => {
+        if (!map) return;
+        const mapInstance = map.getMap();
+        if (!mapInstance) return;
+
+        const handleLayerClick = (e: MapLayerMouseEvent) => {
+            const feature = e.features?.[0];
+            const stopKey = feature?.properties?.stopKey as string | undefined;
+            if (!stopKey) return;
+
+            const stop = stopByKeyRef.current.get(stopKey);
+            if (!stop) return;
+
+            e.preventDefault();
+
+            if (isDesktop) {
+                window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: stop}));
+                window.dispatchEvent(new CustomEvent("wbus:open-bus-list"));
+                return;
+            }
+
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
+                window.dispatchEvent(new CustomEvent("wbus:close-bus-list"));
+                window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
+            }
+            setEventFocusedStop(stop);
+
+            if (stop.gpslong && stop.gpslati) {
+                map.easeTo({
+                    center: [stop.gpslong, stop.gpslati],
+                    offset: [0, -120],
+                    duration: 350,
+                });
+            }
+        };
+
+        const handleLayerMouseMove = (e: MapLayerMouseEvent) => {
+            mapInstance.getCanvas().style.cursor = "pointer";
+            if (!isDesktop) return;
+            const stopKey = e.features?.[0]?.properties?.stopKey as string | undefined;
+            setHoveredStopKey((prev) => (prev === (stopKey ?? null) ? prev : (stopKey ?? null)));
+        };
+
+        const handleLayerMouseLeave = () => {
+            mapInstance.getCanvas().style.cursor = "";
+            setHoveredStopKey((prev) => (prev === null ? prev : null));
+        };
+
+        const layerIds = [...STOP_INTERACTIVE_LAYER_IDS];
+        for (const layerId of layerIds) {
+            mapInstance.on("click", layerId, handleLayerClick);
+            mapInstance.on("mousemove", layerId, handleLayerMouseMove);
+            mapInstance.on("mouseleave", layerId, handleLayerMouseLeave);
+        }
+
+        return () => {
+            for (const layerId of layerIds) {
+                mapInstance.off("click", layerId, handleLayerClick);
+                mapInstance.off("mousemove", layerId, handleLayerMouseMove);
+                mapInstance.off("mouseleave", layerId, handleLayerMouseLeave);
+            }
+        };
+    }, [map, isDesktop]);
 
     const handleSelectOppositeStop = useCallback(
         (targetStop: BusStop) => {
@@ -204,22 +288,188 @@ export const BusStopMarker = ({
         [map]
     );
 
-    const placementsMap = useMemo(() => {
-        return computeOptimalLabelPlacements(visibleStops, map, centerCoords, activeFocusedStopId);
-    }, [visibleStops, map, centerCoords, activeFocusedStopId]);
+    // Resolve only the active DOM markers (focused stop + optional desktop hovered stop)
+    const activeDomStops = useMemo(() => {
+        const result: Array<{ stop: BusStop; isRouteStop: boolean; color: string; isFocused: boolean }> = [];
+        const addedIds = new Set<string>();
 
-    const isCompactNode = zoom < 14.3;
+        const resolveMeta = (stop: BusStop) => {
+            const isRoute = routeStops.some((s) => s.nodeid === stop.nodeid);
+            const key = getBusStopKey(stop);
+            const color = isRoute
+                ? stopColorMap.get(key) || stopColorMap.get(stop.nodeid) || routeMainColor
+                : favoriteNodeIds.has(stop.nodeid)
+                    ? "#f59e0b"
+                    : "#64748b";
+            return {isRouteStop: isRoute, color};
+        };
+
+        if (activeFocusedStopId) {
+            const focused =
+                eventFocusedStop?.nodeid === activeFocusedStopId
+                    ? eventFocusedStop
+                    : routeStops.find((s) => s.nodeid === activeFocusedStopId) ||
+                    favoriteStops.find((s) => s.nodeid === activeFocusedStopId) ||
+                    nearbyStops.find((s) => s.nodeid === activeFocusedStopId) ||
+                    null;
+
+            if (focused) {
+                addedIds.add(focused.nodeid);
+                result.push({stop: focused, ...resolveMeta(focused), isFocused: true});
+            }
+        }
+
+        if (isDesktop && hoveredStopKey) {
+            const hovered = stopByKey.get(hoveredStopKey);
+            if (hovered && !addedIds.has(hovered.nodeid)) {
+                addedIds.add(hovered.nodeid);
+                result.push({stop: hovered, ...resolveMeta(hovered), isFocused: false});
+            }
+        }
+
+        return result;
+    }, [
+        activeFocusedStopId,
+        eventFocusedStop,
+        routeStops,
+        favoriteStops,
+        nearbyStops,
+        isDesktop,
+        hoveredStopKey,
+        stopByKey,
+        stopColorMap,
+        routeMainColor,
+        favoriteNodeIds,
+    ]);
+
+    const allStopsForPairing = useMemo(
+        () => [...routeStops, ...favoriteStops, ...nearbyStops],
+        [routeStops, favoriteStops, nearbyStops]
+    );
+
+    const textHaloColor = isDark ? "rgba(15, 23, 42, 0.92)" : "rgba(255, 255, 255, 0.95)";
+    const labelColorPrimary = isDark ? "#f8fafc" : "#0f172a";
+    const labelColorNearby = isDark ? "#cbd5e1" : "#475569";
 
     return (
         <>
-            {visibleStops.map((stop, index) => {
-                const key = stop.nodeid ? `${stop.nodeid}-${stop.updowncd ?? "na"}` : `stop-${index}`;
+            <Source id={STOP_SOURCE_ID} type="geojson" data={stopsGeoJson}>
+                {/* 1. Nearby non-route stop circles (zoom >= 14.3) */}
+                <Layer
+                    id={STOP_CIRCLE_NEARBY_LAYER_ID}
+                    type="circle"
+                    minzoom={14.3}
+                    filter={["all", ["==", ["get", "isRouteStop"], false], ["==", ["get", "isFavorite"], false]]}
+                    paint={{
+                        "circle-radius": ["interpolate", ["linear"], ["zoom"], 14.3, 4, 16, 5.5],
+                        "circle-color": isDark ? "#1e293b" : "#ffffff",
+                        "circle-stroke-width": 1.5,
+                        "circle-stroke-color": isDark ? "#64748b" : "#94a3b8",
+                        "circle-opacity": 0.92,
+                    }}
+                />
+
+                {/* 2. Route & Favorite stop circles (zoom >= 12.0) */}
+                <Layer
+                    id={STOP_CIRCLE_ROUTE_LAYER_ID}
+                    type="circle"
+                    minzoom={12.0}
+                    filter={["any", ["==", ["get", "isRouteStop"], true], ["==", ["get", "isFavorite"], true]]}
+                    paint={{
+                        "circle-radius": [
+                            "case",
+                            ["==", ["get", "isFavorite"], true],
+                            ["interpolate", ["linear"], ["zoom"], 12, 4.5, 14.3, 6.5, 16, 7.5],
+                            ["interpolate", ["linear"], ["zoom"], 12, 3.5, 14.3, 5.5, 16, 6.5],
+                        ],
+                        "circle-color": ["case", ["==", ["get", "isFavorite"], true], "#f59e0b", ["get", "color"]],
+                        "circle-stroke-width": 2,
+                        "circle-stroke-color": isDark ? "#0f172a" : "#ffffff",
+                    }}
+                />
+
+                {/* 3. Native WebGL symbol labels with GPU collision detection */}
+                {showStopLabels && (
+                    <Layer
+                        id={STOP_LABEL_PRIORITY_LAYER_ID}
+                        type="symbol"
+                        minzoom={12.0}
+                        filter={["==", ["get", "isFavorite"], true]}
+                        layout={{
+                            "text-field": ["get", "nodenm"],
+                            "text-font": ["Noto Sans Bold"],
+                            "text-size": 11.5,
+                            "text-anchor": "left",
+                            "text-offset": [0.85, 0],
+                            "text-allow-overlap": false,
+                            "text-ignore-placement": false,
+                            "symbol-sort-key": ["get", "sortKey"],
+                            "text-padding": 4,
+                        }}
+                        paint={{
+                            "text-color": labelColorPrimary,
+                            "text-halo-color": textHaloColor,
+                            "text-halo-width": 2,
+                        }}
+                    />
+                )}
+
+                {showStopLabels && (
+                    <Layer
+                        id={STOP_LABEL_ROUTE_LAYER_ID}
+                        type="symbol"
+                        minzoom={14.2}
+                        filter={["all", ["==", ["get", "isRouteStop"], true], ["==", ["get", "isFavorite"], false]]}
+                        layout={{
+                            "text-field": ["get", "nodenm"],
+                            "text-font": ["Noto Sans Bold"],
+                            "text-size": 11.5,
+                            "text-anchor": "left",
+                            "text-offset": [0.85, 0],
+                            "text-allow-overlap": false,
+                            "text-ignore-placement": false,
+                            "symbol-sort-key": ["get", "sortKey"],
+                            "text-padding": 4,
+                        }}
+                        paint={{
+                            "text-color": labelColorPrimary,
+                            "text-halo-color": textHaloColor,
+                            "text-halo-width": 2,
+                        }}
+                    />
+                )}
+
+                {showStopLabels && (
+                    <Layer
+                        id={STOP_LABEL_NEARBY_LAYER_ID}
+                        type="symbol"
+                        minzoom={15.6}
+                        filter={["all", ["==", ["get", "isRouteStop"], false], ["==", ["get", "isFavorite"], false]]}
+                        layout={{
+                            "text-field": ["get", "nodenm"],
+                            "text-font": ["Noto Sans Bold"],
+                            "text-size": 11,
+                            "text-anchor": "left",
+                            "text-offset": [0.8, 0],
+                            "text-allow-overlap": false,
+                            "text-ignore-placement": false,
+                            "symbol-sort-key": ["get", "sortKey"],
+                            "text-padding": 4,
+                        }}
+                        paint={{
+                            "text-color": labelColorNearby,
+                            "text-halo-color": textHaloColor,
+                            "text-halo-width": 2,
+                        }}
+                    />
+                )}
+            </Source>
+
+            {/* Render rich DOM marker + bottom sheet ONLY for focused / hovered stop (max 1-2 nodes) */}
+            {activeDomStops.map(({stop, isRouteStop, color, isFocused}) => {
+                const key = getBusStopKey(stop);
                 const isFav = isFavoriteStop(stop.nodeid);
-                const isFocused = Boolean(activeFocusedStopId && stop.nodeid === activeFocusedStopId);
-                const placementInfo = placementsMap.get(stop.nodeid) || {
-                    placement: "right" as const,
-                    showLabel: stop.showLabel,
-                };
+                const pairedOppositeStop = isFocused ? findPairedOppositeStop(stop, allStopsForPairing) : null;
 
                 return (
                     <BusStopMarkerItem
@@ -227,16 +477,15 @@ export const BusStopMarker = ({
                         stop={stop}
                         cityCode={effectiveCityCode}
                         currentRouteName={routeName}
-                        isRouteStop={stop.isRouteStop}
+                        isRouteStop={isRouteStop}
                         isFavorite={isFav}
-                        isCompactNode={isCompactNode}
+                        isCompactNode={false}
                         onToggleFavorite={toggleFavoriteStop}
-                        showLabel={placementInfo.showLabel}
-                        labelPlacement={placementInfo.placement}
-                        disambiguationLabel={placementInfo.disambiguationLabel}
-                        pairedOppositeStop={placementInfo.pairedOppositeStop}
+                        showLabel={true}
+                        labelPlacement="right"
+                        pairedOppositeStop={pairedOppositeStop}
                         onSelectOppositeStop={handleSelectOppositeStop}
-                        color={stop.color}
+                        color={color}
                         onRouteChange={onRouteChange}
                         initialOpen={isFocused}
                         onClearInitialOpen={handleClearFocused}

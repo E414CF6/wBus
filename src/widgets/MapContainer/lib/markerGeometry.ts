@@ -38,6 +38,7 @@ export function getDistanceToSegmentMeters(
 
 /**
  * Finds the nearest polyline segment feature color to a given bus stop coordinate.
+ * Pre-filters features using a fast bounding-box check before segment-level distance math.
  */
 export function findNearestFeatureColor(
     stopLat: number,
@@ -47,6 +48,7 @@ export function findNearestFeatureColor(
 ): string {
     let minDistance = Infinity;
     let matchedColor = fallbackColor;
+    const cosLat = Math.cos((stopLat * Math.PI) / 180);
 
     for (const feat of features) {
         if (feat.geometry.type !== "LineString") continue;
@@ -54,6 +56,28 @@ export function findNearestFeatureColor(
         if (!color) continue;
 
         const coords = feat.geometry.coordinates as [number, number][];
+        if (coords.length < 2) continue;
+
+        // Fast bounding-box lower bound in meters before scanning segments
+        let minLng = Infinity;
+        let maxLng = -Infinity;
+        let minLat = Infinity;
+        let maxLat = -Infinity;
+        for (let i = 0; i < coords.length; i++) {
+            const [lng, lat] = coords[i];
+            if (lng < minLng) minLng = lng;
+            if (lng > maxLng) maxLng = lng;
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+        }
+
+        const dxDeg = stopLng < minLng ? minLng - stopLng : stopLng > maxLng ? stopLng - maxLng : 0;
+        const dyDeg = stopLat < minLat ? minLat - stopLat : stopLat > maxLat ? stopLat - maxLat : 0;
+        if (dxDeg > 0 || dyDeg > 0) {
+            const bboxDist = Math.hypot(dxDeg * 111000 * cosLat, dyDeg * 111000);
+            if (bboxDist >= minDistance) continue;
+        }
+
         for (let i = 0; i < coords.length - 1; i++) {
             const segA: [number, number] = [coords[i][1], coords[i][0]];
             const segB: [number, number] = [coords[i + 1][1], coords[i + 1][0]];

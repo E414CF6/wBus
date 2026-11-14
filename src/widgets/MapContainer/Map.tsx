@@ -212,7 +212,8 @@ export default function Map({onReady, children}: MapProps) {
                 maxCanvasSize={maxCanvasSize}
                 style={{width: "100%", height: "100%", position: "absolute", inset: 0}}
                 touchPitch={false}
-                onClick={() => {
+                onClick={(e) => {
+                    if (e.defaultPrevented) return;
                     if (typeof window !== "undefined") {
                         window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
                         window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
