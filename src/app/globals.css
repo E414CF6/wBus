@@ -32,17 +32,22 @@ html,
 body {
     margin: 0;
     padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
+    min-height: 100%;
     background-color: var(--background);
     color: var(--foreground);
     font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard Variable", Pretendard, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     -webkit-tap-highlight-color: transparent;
-    overscroll-behavior-y: none;
-    overscroll-behavior-x: none;
+}
+
+/* Lock document viewport scrolling only when the full-bleed interactive map shell is active */
+html.wbus-map-lock,
+html.wbus-map-lock body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
 }
 
 /* Prevent 300ms tap delay and tap highlights on interactive controls */
@@ -141,12 +146,23 @@ input[type="submit"] {
     background: #334155;
 }
 
-/* Bus Marker & Route Styles */
+/* Bus Marker & Stop Label Styles */
 .bus-marker-with-label {
-    display: inline-block;
-    width: max-content;
-    min-width: 100%;
-    padding-right: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.wbus-stop-label-halo {
+    -webkit-text-stroke: 3.5px rgba(255, 255, 255, 0.94);
+    paint-order: stroke fill;
+    text-shadow: 0 1px 2px rgba(15, 23, 42, 0.14);
+}
+
+.dark .wbus-stop-label-halo {
+    -webkit-text-stroke: 3.5px rgba(11, 16, 27, 0.94);
+    paint-order: stroke fill;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.65);
 }
 
 @keyframes marqueeScroll {
@@ -202,13 +218,14 @@ input[type="submit"] {
 
 /* MapLibre Controls Positioning & Glassmorphism */
 .maplibregl-ctrl-top-right {
-    top: calc(env(safe-area-inset-top, 0px) + 98px) !important;
+    top: var(--wbus-header-bottom, calc(env(safe-area-inset-top, 0px) + 124px)) !important;
     right: max(12px, env(safe-area-inset-right, 12px)) !important;
 }
 
 .maplibregl-ctrl-bottom-right,
 .maplibregl-ctrl-bottom-left {
-    margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 2px) !important;
+    margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 6px) !important;
+    margin-right: max(8px, env(safe-area-inset-right, 8px)) !important;
 }
 
 @media (min-width: 640px) {

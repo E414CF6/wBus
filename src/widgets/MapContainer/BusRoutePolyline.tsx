@@ -10,8 +10,9 @@ import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {useCityContext} from "@entities/city";
 import {filterRouteIdsByCity, isRouteAllowedInCity} from "@entities/city/routeBoundary";
 import {useTheme} from "next-themes";
-import {useEffect, useMemo, useRef} from "react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import {Layer, Source} from "react-map-gl/maplibre";
+import {ensureRouteChevronImage, findFirstLabelLayerId, ROUTE_CHEVRON_IMAGE_ID,} from "./lib/routeLayerUtils";
 
 export interface BusRoutePolylineProps {
     routeName: string;
@@ -41,6 +42,34 @@ export default function BusRoutePolyline({
     const routeIds = useMemo(() => filterRouteIdsByCity(effectiveCityCode, rawRouteIds), [rawRouteIds, effectiveCityCode]);
     const lastBoundsKeyRef = useRef<string | null>(null);
     const needsVisibleFitRef = useRef(false);
+    const [beforeLabelLayerId, setBeforeLabelLayerId] = useState<string | undefined>(undefined);
+    const [hasChevronImage, setHasChevronImage] = useState(false);
+
+    // Sync route chevron icon & label-below insertion layer across initial load and theme switches
+    useEffect(() => {
+        if (!map) return;
+
+        const mapInstance = map.getMap();
+        const syncStyleHooks = () => {
+            const chevronOk = ensureRouteChevronImage(mapInstance);
+            setHasChevronImage(chevronOk);
+
+            const styleLayers = mapInstance.getStyle()?.layers;
+            const firstLabel = findFirstLabelLayerId(styleLayers);
+            setBeforeLabelLayerId(firstLabel);
+        };
+
+        if (mapInstance.isStyleLoaded()) {
+            syncStyleHooks();
+        }
+
+        mapInstance.on("style.load", syncStyleHooks);
+        mapInstance.on("styledata", syncStyleHooks);
+        return () => {
+            mapInstance.off("style.load", syncStyleHooks);
+            mapInstance.off("styledata", syncStyleHooks);
+        };
+    }, [map, resolvedTheme]);
 
     // Filter to render available route IDs for this route number, respecting selectedVariantId if provided
     const validRouteIds = useMemo(() => {
@@ -176,9 +205,8 @@ export default function BusRoutePolyline({
     if (validRouteIds.length === 0 || !activeGeoJson) return null;
 
     // Theme-adaptive colors
-    const casingColor = isDark ? "#080c14" : "#ffffff";
-    const casingOpacity = isDark ? 0.95 : 0.85;
-    const haloColor = isDark ? "#080c14" : "#ffffff";
+    const casingColor = isDark ? "#090d16" : "#ffffff";
+    const casingOpacity = isDark ? 0.92 : 0.95;
 
     return (
         <Source id="active-routes-polyline" type="geojson" data={activeGeoJson}>
@@ -186,16 +214,17 @@ export default function BusRoutePolyline({
             <Layer
                 id="polyline-active-casing"
                 type="line"
+                beforeId={beforeLabelLayerId}
                 paint={{
                     "line-color": casingColor,
                     "line-width": [
                         "interpolate",
                         ["exponential", 1.4],
                         ["zoom"],
-                        10, 3.6,
-                        13, 6,
-                        15, 8.5,
-                        18, 13.5,
+                        10, 4,
+                        13, 6.5,
+                        15, 9.2,
+                        18, 14.5,
                     ],
                     "line-opacity": casingOpacity,
                     "line-offset": [
@@ -217,6 +246,7 @@ export default function BusRoutePolyline({
             <Layer
                 id="polyline-active-layer"
                 type="line"
+                beforeId={beforeLabelLayerId}
                 paint={{
                     "line-color": ["get", "color"] as unknown as string,
                     "line-width":
@@ -225,10 +255,10 @@ export default function BusRoutePolyline({
                                 "interpolate",
                                 ["exponential", 1.4],
                                 ["zoom"],
-                                10, 2,
-                                13, 3.8,
-                                15, 5.5,
-                                18, 9,
+                                10, 2.2,
+                                13, 4.2,
+                                15, 6,
+                                18, 9.6,
                             ]
                             : [
                                 "case",
@@ -237,10 +267,10 @@ export default function BusRoutePolyline({
                                     "interpolate",
                                     ["exponential", 1.4],
                                     ["zoom"],
-                                    10, 2.4,
-                                    13, 4.4,
-                                    15, 6.5,
-                                    18, 10.5,
+                                    10, 2.6,
+                                    13, 4.8,
+                                    15, 7,
+                                    18, 11,
                                 ],
                                 [
                                     "interpolate",
@@ -254,7 +284,7 @@ export default function BusRoutePolyline({
                             ],
                     "line-opacity":
                         selectedDirection === "all"
-                            ? 0.95
+                            ? 0.96
                             : [
                                 "case",
                                 ["==", ["get", "direction"], selectedDirection],
@@ -276,41 +306,58 @@ export default function BusRoutePolyline({
                     "line-join": "round",
                 }}
             />
-            {/* Direction arrows along line */}
-            <Layer
-                id="polyline-active-arrows"
-                type="symbol"
-                filter={
-                    selectedDirection === "all" || !selectedDirection
-                        ? ["has", "direction"]
-                        : ["==", ["get", "direction"], selectedDirection]
-                }
-                layout={{
-                    "symbol-placement": "line",
-                    "symbol-spacing": 160,
-                    "text-field": "▶",
-                    "text-font": ["Noto Sans Regular"],
-                    "text-size": [
-                        "interpolate",
-                        ["linear"],
-                        ["zoom"],
-                        10, 6,
-                        14, 10,
-                        18, 16,
-                    ],
-                    "text-keep-upright": false,
-                    "text-rotation-alignment": "auto",
-                    "symbol-avoid-edges": true,
-                    "text-allow-overlap": false,
-                    "text-ignore-placement": false,
-                }}
-                paint={{
-                    "text-color": ["get", "color"] as unknown as string,
-                    "text-halo-color": haloColor,
-                    "text-halo-width": 2.5,
-                    "text-opacity": selectedDirection === "all" ? 0.9 : 0.95,
-                }}
-            />
+            {/* Crisp directional chevrons embedded inside the route line */}
+            {hasChevronImage && (
+                <Layer
+                    id="polyline-active-arrows"
+                    type="symbol"
+                    beforeId={beforeLabelLayerId}
+                    filter={
+                        selectedDirection === "all" || !selectedDirection
+                            ? ["has", "direction"]
+                            : ["==", ["get", "direction"], selectedDirection]
+                    }
+                    layout={{
+                        "symbol-placement": "line",
+                        "symbol-spacing": 120,
+                        "icon-image": ROUTE_CHEVRON_IMAGE_ID,
+                        "icon-size": [
+                            "interpolate",
+                            ["linear"],
+                            ["zoom"],
+                            10, 0.35,
+                            13, 0.55,
+                            15, 0.72,
+                            18, 0.95,
+                        ],
+                        "icon-offset": [
+                            "interpolate",
+                            ["linear"],
+                            ["zoom"],
+                            12, ["literal", [0, 0]],
+                            14, ["literal", [0, 2.2]],
+                            16, ["literal", [0, 3.2]],
+                            18, ["literal", [0, 4.2]],
+                        ],
+                        "icon-keep-upright": false,
+                        "icon-rotation-alignment": "map",
+                        "icon-allow-overlap": false,
+                        "icon-ignore-placement": false,
+                        "symbol-avoid-edges": true,
+                    }}
+                    paint={{
+                        "icon-opacity":
+                            selectedDirection === "all"
+                                ? 0.92
+                                : [
+                                    "case",
+                                    ["==", ["get", "direction"], selectedDirection],
+                                    0.96,
+                                    0.2,
+                                ],
+                    }}
+                />
+            )}
         </Source>
     );
 }

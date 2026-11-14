@@ -22,7 +22,7 @@ import {useBusStop, useFavoriteStops} from "@entities/station/hooks";
 import type {BusStop} from "@entities/station/types";
 import {matchesHangul} from "@shared/utils/hangul";
 import {triggerHaptic} from "@shared/utils/haptics";
-import {markModalNavigating, Modal} from "@shared/ui";
+import {isCoarsePointerDevice, isDesktopViewport, markModalNavigating, markModalReplacing, Modal} from "@shared/ui";
 
 // ----------------------------------------------------------------------
 // Types & Constants
@@ -111,6 +111,9 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                     duration: 950,
                 });
             }
+            if (!isDesktopViewport()) {
+                markModalReplacing("route");
+            }
             if (typeof window !== "undefined") {
                 window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: stop}));
             }
@@ -119,9 +122,9 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         [map, onClose]
     );
 
-    // Auto-focus on open
+    // Auto-focus on open (skip on touch-only devices to avoid unsolicited virtual keyboard popup)
     useEffect(() => {
-        if (isOpen) {
+        if (isOpen && !isCoarsePointerDevice()) {
             const timer = setTimeout(() => {
                 searchInputRef.current?.focus();
             }, 60);

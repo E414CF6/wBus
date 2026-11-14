@@ -162,7 +162,7 @@ export const BusDrawerFilterBar: React.FC<BusDrawerFilterBarProps> = ({
                                 onChange={(e) => onSearchQueryChange(e.target.value)}
                                 placeholder="정류장 이름 또는 번호 검색..."
                                 aria-label="정류장 검색"
-                                className="w-full pl-8.5 pr-8 py-1.5 rounded-xl bg-slate-100/85 dark:bg-white/[0.06] border border-transparent focus:border-blue-500/40 focus:bg-white dark:focus:bg-white/10 text-xs font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
+                                className="w-full pl-8.5 pr-8 py-2 sm:py-1.5 leading-snug rounded-xl bg-slate-100/85 dark:bg-white/[0.06] border border-transparent focus:border-blue-500/40 focus:bg-white dark:focus:bg-white/10 text-xs font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
                             />
                             {stopSearchQuery && (
                                 <button

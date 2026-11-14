@@ -116,7 +116,7 @@ export const OnboardingModal: React.FC = () => {
             <button
                 type="button"
                 onClick={handleSkip}
-                className="px-2.5 py-1 rounded-xl text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
+                className="px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
             >
                 건너뛰기
             </button>
@@ -208,9 +208,10 @@ export const OnboardingModal: React.FC = () => {
             maxWidth="lg"
             height="auto"
             modalId="onboarding"
+            footerClassName="flex-wrap gap-2"
             ariaLabel="wBus 시작하기 온보딩 가이드"
         >
-            <div className="overflow-y-auto p-4 sm:p-6 space-y-3 custom-scrollbar">
+            <div className="overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-3 custom-scrollbar">
                 {/* STEP 1: Core Features */}
                 {step === 0 && (
                     <div className="space-y-3 animate-fadeIn">

@@ -27,7 +27,6 @@ import BusAnimatedMarker from "./BusAnimatedMarker";
 // Constants & Styles
 // ----------------------------------------------------------------------
 
-const SETTINGS = MAP_SETTINGS.MARKERS.BUS;
 const SNAP_INDEX_RANGE = 80;
 
 // ----------------------------------------------------------------------
@@ -42,52 +41,71 @@ interface BusIconDOMProps {
     plateNumber?: string;
 }
 
+const BusHeadingConeSVG = memo(({color}: { color: string }) => (
+    <svg
+        width="44"
+        height="44"
+        viewBox="0 0 44 44"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+    >
+        <path
+            d="M22 22 L12.5 5.5 A19 19 0 0 1 31.5 5.5 Z"
+            fill={color}
+            fillOpacity="0.22"
+        />
+        <path
+            d="M22 2.2 L27.2 10.6 L22 8.8 L16.8 10.6 Z"
+            fill={color}
+            stroke="#ffffff"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
+        />
+        <circle
+            cx="22"
+            cy="22"
+            r="14.2"
+            stroke={color}
+            strokeOpacity="0.4"
+            strokeWidth="1.25"
+        />
+    </svg>
+));
+
+BusHeadingConeSVG.displayName = "BusHeadingConeSVG";
+
 /**
- * Clean, minimalist top-down bus marker capsule.
+ * Always-upright transit bus route capsule & optional plate pill.
  */
 const BusIconDOM = memo(({routeNumber, color, isSelected, isFollowed, plateNumber}: BusIconDOMProps) => {
-    const [w, h] = SETTINGS.ICON_SIZE;
     const themeColor = color || "#2563eb";
     const cleanRoute = (routeNumber || "").trim();
     const isMarquee = cleanRoute.length >= 4;
     const shortPlate = plateNumber ? plateNumber.trim().slice(-4) : "";
 
     return (
-        <div
-            className={`bus-marker-with-label relative transition-transform duration-150 ${
-                isSelected || isFollowed ? "scale-115 z-50" : "z-10"
-            }`}
-            style={{
-                width: w,
-                height: h,
-                filter:
-                    isSelected || isFollowed
-                        ? `drop-shadow(0 0 10px ${themeColor}) drop-shadow(0 4px 12px rgba(0,0,0,0.4))`
-                        : "drop-shadow(0 3px 8px rgba(0,0,0,0.3))",
-            }}
-        >
+        <>
             {isFollowed && (
                 <span
-                    className="animate-ping absolute -inset-1 rounded-2xl opacity-45 pointer-events-none"
+                    className="motion-safe:animate-ping absolute inset-1 rounded-full opacity-40 pointer-events-none"
                     style={{backgroundColor: themeColor}}
                 />
             )}
-            <svg
-                width={w}
-                height={h}
-                viewBox="0 0 40 50"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                aria-label={UI_TEXT.ACCESSIBILITY.BUS_ICON_ALT}
-                role="img"
-            >
-                <rect x="4" y="2" width="32" height="50" rx="10" fill={themeColor}/>
-            </svg>
+
             <div
-                className={`bus-route-text-container absolute top-1 left-1/2 -translate-x-1/2 text-white text-[11px] font-extrabold px-1 py-px rounded-lg border-[1.5px] border-white shadow-[0_2px_6px_rgba(0,0,0,0.3)] tracking-[0.3px] min-w-7 max-w-7 flex items-center ${
+                role="img"
+                aria-label={UI_TEXT.ACCESSIBILITY.BUS_ICON_ALT}
+                className={`relative z-10 flex items-center h-6 min-w-7.5 max-w-9 px-1.5 rounded-full text-white text-[11px] font-extrabold border-2 border-white tracking-tight overflow-hidden ${
                     isMarquee ? "justify-start" : "justify-center"
-                } select-none overflow-hidden`}
-                style={{backgroundColor: themeColor}}
+                }`}
+                style={{
+                    backgroundColor: themeColor,
+                    boxShadow:
+                        isSelected || isFollowed
+                            ? `0 0 0 2px ${themeColor}55, 0 4px 12px rgba(0,0,0,0.4)`
+                            : "0 3px 10px rgba(0,0,0,0.3)",
+                }}
             >
                 {isMarquee ? (
                     <div className="marquee-scroll flex-nowrap items-center hover:[animation-play-state:paused]">
@@ -96,7 +114,7 @@ const BusIconDOM = memo(({routeNumber, color, isSelected, isFollowed, plateNumbe
                     </div>
                 ) : (
                     <span
-                        className={`text-center whitespace-nowrap select-none ${
+                        className={`text-center whitespace-nowrap select-none leading-none ${
                             cleanRoute.length === 3 ? "text-[10px] tracking-tight" : ""
                         }`}
                     >
@@ -104,13 +122,14 @@ const BusIconDOM = memo(({routeNumber, color, isSelected, isFollowed, plateNumbe
                     </span>
                 )}
             </div>
+
             {shortPlate && (
                 <span
-                    className="absolute -bottom-3.5 left-1/2 -translate-x-1/2 px-1 py-px rounded bg-slate-900/90 dark:bg-white/95 text-white dark:text-slate-900 text-[9px] font-mono font-bold leading-none whitespace-nowrap shadow-xs border border-white/40 dark:border-black/20 pointer-events-none select-none">
+                    className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 z-20 px-1.5 py-0.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-slate-100 text-[9px] font-mono font-bold leading-none whitespace-nowrap shadow-sm border border-black/15 dark:border-white/20 pointer-events-none select-none">
                     {shortPlate}
                 </span>
             )}
-        </div>
+        </>
     );
 });
 
@@ -285,6 +304,12 @@ const MarkerItemComponent = memo(function MarkerItemComponent({
         onClick(markerKey);
     }, [markerKey, onClick]);
 
+    const themeColor = markerColor || "#2563eb";
+    const headingOverlay = useMemo(() => <BusHeadingConeSVG color={themeColor}/>, [themeColor]);
+    const wrapperClassName = `relative flex items-center justify-center w-11 h-11 transition-transform duration-150 select-none ${
+        isSelected || isFollowed ? "scale-115 z-50" : "z-10 hover:scale-105"
+    }`;
+
     return (
         <BusAnimatedMarker
             position={position}
@@ -299,13 +324,15 @@ const MarkerItemComponent = memo(function MarkerItemComponent({
             refreshKey={refreshKey}
             onPositionChange={isSelected || isFollowed ? handlePosChange : undefined}
             onClick={handleClick}
+            headingOverlay={headingOverlay}
+            wrapperClassName={wrapperClassName}
         >
             <BusIconDOM
                 routeNumber={bus.routenm || routeName}
-                color={markerColor}
+                color={themeColor}
                 isSelected={isSelected}
                 isFollowed={isFollowed}
-                plateNumber={showPlateNumber ? bus.vehicleno : undefined}
+                plateNumber={showPlateNumber || isSelected || isFollowed ? bus.vehicleno : undefined}
             />
         </BusAnimatedMarker>
     );
@@ -548,8 +575,22 @@ export default function BusMarker({routeName, enabled = true, onPopupOpen, onPop
         });
     }, [markers, bounds, selectedBusKey, followedBusKey]);
 
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const closePopup = () => setSelectedBusKey(null);
+        window.addEventListener("wbus:close-popups", closePopup);
+        window.addEventListener("wbus:close-stop-popup", closePopup);
+        return () => {
+            window.removeEventListener("wbus:close-popups", closePopup);
+            window.removeEventListener("wbus:close-stop-popup", closePopup);
+        };
+    }, []);
+
     const handleMarkerClick = useCallback(
         (key: string) => {
+            if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
+            }
             setSelectedBusKey(key);
             onPopupOpen?.(routeName);
         },

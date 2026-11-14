@@ -230,24 +230,28 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                 >
                     {/* Pin Pill Label */}
                     <div
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full shadow-lg border backdrop-blur-md bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-300/80 shadow-blue-600/35 ring-2 ring-blue-500/25">
-                        <div className="flex items-center justify-center w-4 h-4 rounded-full bg-white/20 shrink-0">
-                            <Clock className="w-2.5 h-2.5 text-white stroke-[2.5]"/>
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full shadow-lg border backdrop-blur-xl bg-white/94 dark:bg-slate-900/94 text-slate-900 dark:text-slate-50 border-blue-500/35 dark:border-blue-400/35 shadow-slate-900/12 dark:shadow-black/50 ring-1 ring-black/5 dark:ring-white/10">
+                        <div
+                            className="flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white shrink-0 shadow-2xs">
+                            <Clock className="w-2.5 h-2.5 stroke-[2.5]"/>
                         </div>
                         <div className="flex flex-col text-left leading-tight">
-                            <span className="text-[9px] uppercase font-black tracking-wider text-blue-200">
+                            <span
+                                className="text-[9px] uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">
                                 기점 시간표
                             </span>
-                            <span className="font-extrabold text-[11px] max-w-[110px] truncate text-white">
+                            <span
+                                className="font-extrabold text-[11px] max-w-[110px] truncate text-slate-900 dark:text-white">
                                 {formattedOriginName}
                             </span>
                         </div>
                         {originDepartures.nextDeparture && (
-                            <div className="ml-1 pl-1.5 border-l border-white/25 flex flex-col items-end leading-none">
-                                <span className="font-mono font-black text-[11px] text-white">
+                            <div
+                                className="ml-1 pl-1.5 border-l border-slate-200 dark:border-white/15 flex flex-col items-end leading-none">
+                                <span className="font-mono font-black text-[11px] text-slate-900 dark:text-white">
                                     {originDepartures.nextDeparture.timeStr}
                                 </span>
-                                <span className="text-[9px] font-bold text-blue-100">
+                                <span className="text-[9px] font-bold text-blue-600 dark:text-blue-300">
                                     {originDepartures.nextDeparture.waitMins <= 0
                                         ? "곧 출발"
                                         : `${originDepartures.nextDeparture.waitMins}분 후`}
@@ -258,14 +262,12 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
 
                     {/* Downward Pointer Triangle */}
                     <div
-                        className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-indigo-600 -mt-px"/>
+                        className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-white/95 dark:border-t-slate-900/95 -mt-px"/>
 
-                    {/* Ground Beacon Pulse Dot */}
-                    <div className="relative flex items-center justify-center w-3 h-3 -mt-0.5">
+                    {/* Ground Beacon Dot */}
+                    <div className="relative flex items-center justify-center w-2.5 h-2.5 -mt-0.5">
                         <span
-                            className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-blue-400"/>
-                        <span
-                            className="relative inline-flex rounded-full h-2 w-2 border border-white shadow-xs bg-blue-600"/>
+                            className="relative inline-flex rounded-full h-2 w-2 border-[1.5px] border-white dark:border-slate-950 shadow-xs bg-blue-600"/>
                     </div>
                 </div>
             </Marker>
@@ -289,25 +291,28 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                     >
                         {/* Pin Pill Label */}
                         <div
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full shadow-lg border backdrop-blur-md bg-gradient-to-r from-amber-600 to-orange-600 text-white border-amber-300/80 shadow-amber-600/35 ring-2 ring-amber-500/25">
-                            <div className="flex items-center justify-center w-4 h-4 rounded-full bg-white/20 shrink-0">
-                                <RotateCw className="w-2.5 h-2.5 text-white stroke-[2.5]"/>
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full shadow-lg border backdrop-blur-xl bg-white/94 dark:bg-slate-900/94 text-slate-900 dark:text-slate-50 border-amber-500/35 dark:border-amber-400/35 shadow-slate-900/12 dark:shadow-black/50 ring-1 ring-black/5 dark:ring-white/10">
+                            <div
+                                className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white shrink-0 shadow-2xs">
+                                <RotateCw className="w-2.5 h-2.5 stroke-[2.5]"/>
                             </div>
                             <div className="flex flex-col text-left leading-tight">
-                                <span className="text-[9px] uppercase font-black tracking-wider text-amber-200">
+                                <span
+                                    className="text-[9px] uppercase font-extrabold tracking-wider text-amber-600 dark:text-amber-400">
                                     회차지 시간표
                                 </span>
-                                <span className="font-extrabold text-[11px] max-w-[110px] truncate text-white">
+                                <span
+                                    className="font-extrabold text-[11px] max-w-[110px] truncate text-slate-900 dark:text-white">
                                     {formattedTurningName}
                                 </span>
                             </div>
                             {destDepartures.nextDeparture && (
                                 <div
-                                    className="ml-1 pl-1.5 border-l border-white/25 flex flex-col items-end leading-none">
-                                    <span className="font-mono font-black text-[11px] text-white">
+                                    className="ml-1 pl-1.5 border-l border-slate-200 dark:border-white/15 flex flex-col items-end leading-none">
+                                    <span className="font-mono font-black text-[11px] text-slate-900 dark:text-white">
                                         {destDepartures.nextDeparture.timeStr}
                                     </span>
-                                    <span className="text-[9px] font-bold text-amber-100">
+                                    <span className="text-[9px] font-bold text-amber-600 dark:text-amber-300">
                                         {destDepartures.nextDeparture.waitMins <= 0
                                             ? "곧 출발"
                                             : `${destDepartures.nextDeparture.waitMins}분 후`}
@@ -318,14 +323,12 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
 
                         {/* Downward Pointer Triangle */}
                         <div
-                            className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-orange-600 -mt-px"/>
+                            className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[6px] border-l-transparent border-r-transparent border-t-white/95 dark:border-t-slate-900/95 -mt-px"/>
 
-                        {/* Ground Beacon Pulse Dot */}
-                        <div className="relative flex items-center justify-center w-3 h-3 -mt-0.5">
+                        {/* Ground Beacon Dot */}
+                        <div className="relative flex items-center justify-center w-2.5 h-2.5 -mt-0.5">
                             <span
-                                className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-amber-400"/>
-                            <span
-                                className="relative inline-flex rounded-full h-2 w-2 border border-white shadow-xs bg-amber-600"/>
+                                className="relative inline-flex rounded-full h-2 w-2 border-[1.5px] border-white dark:border-slate-950 shadow-xs bg-amber-500"/>
                         </div>
                     </div>
                 </Marker>

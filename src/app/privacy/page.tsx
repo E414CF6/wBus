@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
     return (<div
-        className="min-h-screen bg-slate-50 dark:bg-[#090d16] text-slate-800 dark:text-slate-200 transition-colors">
+        className="min-h-dvh pb-[env(safe-area-inset-bottom,0px)] bg-slate-50 dark:bg-[#090d16] text-slate-800 dark:text-slate-200 transition-colors">
         {/* Sticky Header */}
         <header
             className="sticky top-0 z-40 bg-white/80 dark:bg-[#090d16]/80 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/10">

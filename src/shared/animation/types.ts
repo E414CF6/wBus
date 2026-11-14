@@ -15,6 +15,8 @@ export interface UseAnimatedPositionOptions {
     snapIndexRange?: number;
     resetKey?: string | number;
     markerRef?: React.RefObject<Marker | null>;
+    /** Optional 60fps frame callback for rotating a separate directional element while keeping badge upright. */
+    onDirectAngle?: (angle: number) => void;
     pollingIntervalMs?: number;
     dataDelayMs?: number;
     /** Polyline coordinate indices where bus stops are located. */

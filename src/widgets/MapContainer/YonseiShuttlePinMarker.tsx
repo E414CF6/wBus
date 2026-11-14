@@ -1,7 +1,6 @@
 "use client";
 
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {createPortal} from "react-dom";
 import {Marker} from "react-map-gl/maplibre";
 import {Clock, ExternalLink, GraduationCap, MapPin, RotateCw, X,} from "lucide-react";
 
@@ -10,7 +9,7 @@ import {getKakaoRoadviewUrl} from "@entities/station";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {isSaturday, parseTimeToMinutes} from "@shared/lib/timeUtils";
 import type {DayMode} from "@shared/types/navigation";
-import {useModalHistory} from "@shared/ui";
+import {Modal} from "@shared/ui";
 
 // ----------------------------------------------------------------------
 // Constants & Types
@@ -105,12 +104,6 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
     const handleClosePopup = useCallback(() => {
         setIsPopupOpen(false);
     }, []);
-
-    useModalHistory({
-        isOpen: isPopupOpen,
-        onClose: handleClosePopup,
-        modalId: "shuttle-pin",
-    });
 
     const currentMins = effectiveNow.getHours() * 60 + effectiveNow.getMinutes();
 
@@ -214,18 +207,6 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
         return () => cancelAnimationFrame(frameId);
     }, [isPopupOpen, direction, activeDayType]);
 
-    // Close on Escape key press
-    useEffect(() => {
-        if (!isPopupOpen) return;
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                setIsPopupOpen(false);
-            }
-        };
-        window.addEventListener("keydown", handleKeyDown);
-        return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isPopupOpen]);
-
     // Close when requested by other modals
     useEffect(() => {
         if (!isPopupOpen) return;
@@ -318,23 +299,18 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
             </Marker>
 
             {/* 2. Interactive Centered Floating Shuttle Timetable Modal */}
-            {typeof document !== "undefined" && isPopupOpen &&
-                createPortal(
-                    <div
-                        className="fixed inset-0 z-[120] flex items-center justify-center p-4 pointer-events-none">
-                        {/* Click-outside shaded backdrop */}
-                        <div
-                            className="fixed inset-0 bg-black/45 dark:bg-black/65 backdrop-blur-[2px] transition-opacity animate-fadeIn pointer-events-auto"
-                            onClick={() => setIsPopupOpen(false)}
-                            aria-hidden="true"
-                        />
-                        <div
-                            role="dialog"
-                            aria-modal="true"
-                            aria-label="연세대학교 미래캠퍼스 무료 셔틀버스 시간표"
-                            className="relative z-10 pointer-events-auto flex flex-col w-full sm:w-[440px] max-w-md max-h-[82dvh] sm:max-h-[660px] bg-white dark:bg-[#11131a] sm:bg-white/98 sm:dark:bg-[#11131a]/98 backdrop-blur-3xl overflow-hidden rounded-[28px] shadow-[0_24px_64px_rgba(0,0,0,0.38)] dark:shadow-[0_24px_64px_rgba(0,0,0,0.72)] border border-black/10 dark:border-white/12 animate-scaleUp select-none"
-                            onClick={(e) => e.stopPropagation()}
-                        >
+            <Modal
+                isOpen={isPopupOpen}
+                onClose={handleClosePopup}
+                maxWidth="md"
+                height="auto"
+                zIndex="z-[120]"
+                modalId="shuttle-pin"
+                hideCloseButton
+                ariaLabel="연세대학교 미래캠퍼스 무료 셔틀버스 시간표"
+                className="sm:w-[440px] max-h-[82dvh] sm:max-h-[660px] select-none"
+                bodyClassName="overscroll-contain"
+            >
                             {/* Popup Header */}
                             <div className="p-4 border-b border-black/5 dark:border-white/5 space-y-3 shrink-0">
                                 <div className="flex items-start justify-between gap-2">
@@ -431,7 +407,7 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
                             </div>
 
                             {/* Popup Body: Next Departure & Full List */}
-                            <div className="p-4 space-y-3.5 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+                <div className="p-4 space-y-3.5 flex-1 min-h-0 overflow-y-auto overscroll-contain custom-scrollbar">
                                 {/* Live Next Departure Spotlight Card */}
                                 <div
                                     className={`p-3.5 rounded-2xl border ${
@@ -620,11 +596,7 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
                                     </a>
                                 </div>
                             </div>
-                        </div>
-                    </div>,
-                    document.body
-                )
-            }
+            </Modal>
         </>
     );
 });

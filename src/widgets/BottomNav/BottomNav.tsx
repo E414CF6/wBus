@@ -169,16 +169,7 @@ function BottomNavComponent({
                 onClose={() => setIsSettingsOpen(false)}
             />
 
-            {/* 3. Click-outside Backdrop when BusListDrawer is open (Mobile & Tablet only) */}
-            {!isDesktop && isMobileBusListOpen && (
-                <div
-                    className="fixed inset-0 z-[55] bg-black/30 dark:bg-black/55 transition-opacity animate-fadeIn lg:hidden"
-                    onClick={() => setIsMobileBusListOpen(false)}
-                    aria-hidden="true"
-                />
-            )}
-
-            {/* 4. Expandable Floating Running Bus List & Stop Details Drawer */}
+            {/* 3. Expandable Floating Running Bus List (Desktop Sidebar / Mobile BottomSheet) */}
             {isBusListOpen && (
                 <BusListDrawer
                     isOpen={isBusListOpen}
@@ -199,12 +190,12 @@ function BottomNavComponent({
             )}
 
             <div
-                className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1.125rem)] left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-2.5 max-w-[calc(100vw-2rem)] sm:max-w-none ${className}`}
+                className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1.125rem)] left-1/2 lg:left-[calc(50%+198px)] xl:left-[calc(50%+218px)] -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-2.5 max-w-[calc(100vw-1.5rem)] lg:max-w-[calc(100vw-428px)] xl:max-w-[calc(100vw-468px)] sm:w-auto ${className}`}
             >
                 {/* Floating Region Switch Prompt Pill */}
                 {hasPendingRegion && detectedCity && !isBusListOpen && (
                     <div
-                        className="flex items-center gap-2 pl-3 pr-2 py-1.5 bg-white/92 dark:bg-[#11131a]/92 backdrop-blur-2xl text-slate-900 dark:text-white rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.16)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.6)] border border-black/10 dark:border-white/15 animate-fadeIn select-none"
+                        className="flex items-center gap-2 max-w-full pl-3 pr-2 py-1.5 bg-white/92 dark:bg-[#11131a]/92 backdrop-blur-2xl text-slate-900 dark:text-white rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.16)] dark:shadow-[0_10px_30px_rgba(0,0,0,0.6)] border border-black/10 dark:border-white/15 animate-fadeIn select-none"
                         role="status"
                         aria-live="polite"
                     >
@@ -212,23 +203,25 @@ function BottomNavComponent({
                             className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 animate-spin shrink-0"
                             style={{animationDuration: "6s"}}
                         />
-                        <span className="text-xs font-extrabold tracking-tight whitespace-nowrap">
-                            지도 위치:{" "}
-                            <strong className="text-blue-600 dark:text-blue-400 font-black">
+                        <span
+                            className="text-xs font-extrabold tracking-tight flex items-center gap-1 min-w-0 whitespace-nowrap">
+                            <span className="shrink-0">지도 위치:</span>
+                            <strong
+                                className="text-blue-600 dark:text-blue-400 font-black truncate max-w-[110px] sm:max-w-[180px]">
                                 {detectedCity.name}
                             </strong>
                         </span>
                         <button
                             type="button"
                             onClick={confirmDetectedCity}
-                            className="px-2.5 py-1 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black transition-all cursor-pointer active:scale-95 whitespace-nowrap shadow-xs"
+                            className="px-2.5 py-1 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black transition-all cursor-pointer active:scale-95 whitespace-nowrap shadow-xs shrink-0"
                         >
                             이 지역 노선 보기
                         </button>
                         <button
                             type="button"
                             onClick={dismissDetectedCity}
-                            className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+                            className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer shrink-0"
                             aria-label="지역 전환 알림 닫기"
                         >
                             <X className="w-3.5 h-3.5"/>
@@ -239,7 +232,7 @@ function BottomNavComponent({
                 {/* Unified Bottom Floating Pill Navigation Bar (Responsive on Mobile and Desktop) */}
                 <nav
                     aria-label={UI_TEXT.ACCESSIBILITY.MAIN_NAV}
-                    className="relative max-w-[calc(100vw-1.5rem)] sm:max-w-none bg-white/92 dark:bg-[#11131a]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 select-none overflow-hidden shrink-0"
+                    className="relative max-w-full bg-white/92 dark:bg-[#11131a]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 select-none overflow-hidden shrink-0"
                 >
                     <div
                         className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 px-2 sm:px-3 overflow-x-auto scrollbar-hide custom-scrollbar-hidden scroll-smooth touch-pan-x overscroll-x-contain">

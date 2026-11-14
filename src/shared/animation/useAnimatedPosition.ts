@@ -61,6 +61,7 @@ export function useAnimatedPosition(
         snapIndexRange,
         resetKey,
         markerRef,
+        onDirectAngle,
         dataDelayMs = DEFAULT_DATA_DELAY_MS,
         stopCoordIndices = [],
     } = options;
@@ -142,13 +143,17 @@ export function useAnimatedPosition(
             if (!marker) return false;
             try {
                 marker.setLngLat([pos[1], pos[0]]);
-                marker.setRotation(angle);
+                if (onDirectAngle) {
+                    onDirectAngle(angle);
+                } else {
+                    marker.setRotation(angle);
+                }
                 return true;
             } catch {
                 return false;
             }
         },
-        [markerRef]
+        [markerRef, onDirectAngle]
     );
 
     // ----------------------------------------------------------------

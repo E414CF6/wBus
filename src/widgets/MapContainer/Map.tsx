@@ -17,7 +17,7 @@ import {setWorkerUrl} from "maplibre-gl";
 import {AlertCircle, AlertTriangle, Navigation} from "lucide-react";
 import {useTheme} from "next-themes";
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import MapGL, {GeolocateControl, MapRef, NavigationControl} from "react-map-gl/maplibre";
+import MapGL, {AttributionControl, GeolocateControl, MapRef, NavigationControl} from "react-map-gl/maplibre";
 
 // Set MapLibre GL JS v6 Web Worker path to locally served static asset
 if (typeof window !== "undefined") {
@@ -175,6 +175,10 @@ export default function Map({onReady, children}: MapProps) {
                 compassBtn.setAttribute("title", UI_TEXT.MAP.COMPASS_TITLE);
                 compassBtn.setAttribute("aria-label", UI_TEXT.MAP.COMPASS_TITLE);
             }
+            const attribCtrl = document.querySelector<HTMLElement>(".maplibregl-ctrl-attrib.maplibregl-compact-show");
+            if (attribCtrl) {
+                attribCtrl.classList.remove("maplibregl-compact-show");
+            }
         };
         updateControlAriaLabels();
         const timer = setTimeout(updateControlAriaLabels, 600);
@@ -196,6 +200,7 @@ export default function Map({onReady, children}: MapProps) {
                 onError={handleError}
                 mapStyle={mapStyleUrl}
                 mapLib={maplibregl}
+                attributionControl={false}
                 minZoom={MAP_SETTINGS.ZOOM.MIN}
                 maxZoom={MAP_SETTINGS.ZOOM.MAX}
                 maxBounds={[
@@ -237,6 +242,7 @@ export default function Map({onReady, children}: MapProps) {
                         visualizePitch={true}
                     />
                 )}
+                <AttributionControl compact={true} position="bottom-right"/>
                 {children}
             </MapGL>
 
@@ -245,7 +251,7 @@ export default function Map({onReady, children}: MapProps) {
                 <aside
                     role="status"
                     aria-live="polite"
-                    className={`absolute bottom-24 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg border backdrop-blur-2xl text-xs sm:text-sm font-bold tracking-tight animate-fadeIn select-none pointer-events-auto transition-all ${
+                    className={`absolute bottom-24 left-1/2 lg:left-[calc(50%+200px)] xl:left-[calc(50%+218px)] -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg border backdrop-blur-2xl text-xs sm:text-sm font-bold tracking-tight animate-fadeIn select-none pointer-events-auto transition-all max-w-[calc(100vw-2rem)] ${
                         locationToast.type === "error"
                             ? "bg-rose-500/95 dark:bg-rose-600/95 text-white border-rose-400/30 shadow-rose-500/25"
                             : locationToast.type === "warning"

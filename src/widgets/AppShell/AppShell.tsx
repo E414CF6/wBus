@@ -176,8 +176,17 @@ function MapAppShell() {
         handleRouteChange,
     ]);
 
+    // Lock root html/body overflow only while MapAppShell is mounted so document routes (/privacy, /terms) can scroll normally.
+    useEffect(() => {
+        if (typeof document === "undefined") return;
+        document.documentElement.classList.add("wbus-map-lock");
+        return () => {
+            document.documentElement.classList.remove("wbus-map-lock");
+        };
+    }, []);
+
     return (
-        <div className="fixed inset-0 w-full h-full overflow-hidden bg-slate-50 dark:bg-[#090d16]">
+        <div className="fixed inset-0 w-full h-dvh overflow-hidden bg-slate-50 dark:bg-[#090d16]">
             {/* 1. Real-time Map View Container (Main View) */}
             <div className="absolute inset-0 w-full h-full overflow-hidden block">
                 <MapRouteHeader

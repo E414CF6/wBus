@@ -177,9 +177,9 @@ export function Modal({
                 {/* Header */}
                 {hasHeader && (
                     <div
-                        className={`flex items-center justify-between px-4 sm:px-6 pt-3.5 pb-3 border-b border-black/5 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] shrink-0 ${headerClassName}`}
+                        className={`flex items-start sm:items-center justify-between gap-2 px-4 sm:px-6 pt-3.5 pb-3 border-b border-black/5 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] shrink-0 ${headerClassName}`}
                     >
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0">
                             {headerLeading}
                             {!headerLeading && icon && (
                                 <div
@@ -192,7 +192,7 @@ export function Modal({
                                     {typeof title === "string" ? (
                                         <h2
                                             id={ariaLabelledby}
-                                            className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight truncate"
+                                            className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight leading-snug break-keep line-clamp-2 sm:line-clamp-none"
                                         >
                                             {title}
                                         </h2>
@@ -203,7 +203,7 @@ export function Modal({
                                 </div>
                                 {subtitle && (
                                     <div
-                                        className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                        className="text-[11px] sm:text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5 leading-snug line-clamp-2 sm:line-clamp-none">
                                         {subtitle}
                                     </div>
                                 )}

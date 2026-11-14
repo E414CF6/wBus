@@ -70,7 +70,7 @@ export const YonseiSettingsModal: React.FC<YonseiSettingsModalProps> = ({
             maxWidth="md"
             height="auto"
             zIndex="z-[110]"
-            enableHistory={false}
+            modalId="yonsei-settings"
             ariaLabel="연세대 미래캠퍼스 설정 모달"
         >
             <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 custom-scrollbar">

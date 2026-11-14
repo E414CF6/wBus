@@ -13,6 +13,7 @@ export interface BusStopMarkerItemProps {
     currentRouteName: string;
     isRouteStop?: boolean;
     isFavorite?: boolean;
+    isCompactNode?: boolean;
     onToggleFavorite?: (stop: BusStop) => void;
     onRouteChange?: (routeName: string) => void;
     showLabel?: boolean;
@@ -31,6 +32,7 @@ export const BusStopMarkerItem = memo<BusStopMarkerItemProps>(({
                                                                    currentRouteName,
                                                                    isRouteStop = true,
                                                                    isFavorite = false,
+                                                                   isCompactNode = false,
                                                                    onToggleFavorite,
                                                                    onRouteChange,
                                                                    showLabel = true,
@@ -48,8 +50,33 @@ export const BusStopMarkerItem = memo<BusStopMarkerItemProps>(({
     const [closedStopId, setClosedStopId] = useState<string | null>(null);
     const [isHovered, setIsHovered] = useState(false);
 
+    // Clear previous dismiss flag whenever this stop becomes focused via initialOpen again
+    const [prevInitialOpen, setPrevInitialOpen] = useState(initialOpen);
+    if (initialOpen !== prevInitialOpen) {
+        setPrevInitialOpen(initialOpen);
+        if (initialOpen) {
+            setClosedStopId(null);
+        }
+    }
+
     const isUserClosed = closedStopId === stop.nodeid;
     const isOpen = !isDesktop && (isPopupOpen || (initialOpen && !isUserClosed));
+
+    // Also clear dismiss flag & open directly if wbus:focus-stop targets this exact stop on mobile
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const handleFocusStop = (e: Event) => {
+            const detail = (e as CustomEvent<BusStop>).detail;
+            if (!isDesktop && detail?.nodeid === stop.nodeid) {
+                window.dispatchEvent(new CustomEvent("wbus:close-bus-list"));
+                window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
+                setClosedStopId(null);
+                setIsPopupOpen(true);
+            }
+        };
+        window.addEventListener("wbus:focus-stop", handleFocusStop);
+        return () => window.removeEventListener("wbus:focus-stop", handleFocusStop);
+    }, [isDesktop, stop.nodeid]);
 
     const handleMarkerClick = useCallback((e: { originalEvent?: Event }) => {
         if (e.originalEvent) {
@@ -154,56 +181,88 @@ export const BusStopMarkerItem = memo<BusStopMarkerItemProps>(({
                     onMouseLeave={() => setIsHovered(false)}
                 >
                     {isRouteStop ? (
-                        <div
-                            title={`${stop.nodenm} (현재 노선 정류장)`}
-                            className={`relative flex items-center justify-center w-6 h-6 rounded-lg text-white shadow-md border-2 group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 before:absolute before:-inset-2 before:content-[''] ${
-                                isFavorite ? "border-amber-300 ring-2 ring-amber-400/60" : "border-white/90"
-                            }`}
-                            style={{backgroundColor: color}}
-                        >
-                            <BusFront className="w-3.5 h-3.5 fill-current"/>
-                            {isFavorite && (
-                                <span
-                                    className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow-xs border border-white">
-                                    <Star className="w-2 h-2 fill-current"/>
-                                </span>
-                            )}
-                        </div>
+                        isCompactNode && !isFavorite && !isHovered && !isOpen ? (
+                            <div
+                                title={`${stop.nodenm} (현재 노선 정류장)`}
+                                className="relative w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 shadow-xs group-hover:scale-150 transition-transform cursor-pointer shrink-0 z-10 before:absolute before:-inset-2.5 before:content-['']"
+                                style={{border: `2.5px solid ${color}`}}
+                            />
+                        ) : (
+                            <div
+                                title={`${stop.nodenm} (현재 노선 정류장)`}
+                                className={`relative flex items-center justify-center w-6 h-6 rounded-lg text-white shadow-md border-2 group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 before:absolute before:-inset-2 before:content-[''] ${
+                                    isFavorite ? "border-amber-300 ring-2 ring-amber-400/60" : "border-white/95 dark:border-slate-900"
+                                }`}
+                                style={{backgroundColor: color}}
+                            >
+                                <BusFront className="w-3.5 h-3.5 fill-current"/>
+                                {isFavorite && (
+                                    <span
+                                        className="absolute -top-1.5 -right-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-400 text-slate-950 shadow-xs border border-white">
+                                        <Star className="w-2 h-2 fill-current"/>
+                                    </span>
+                                )}
+                            </div>
+                        )
                     ) : isFavorite ? (
                         <div
                             title={`${stop.nodenm} (즐겨찾는 정류장)`}
-                            className="relative flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500 text-white shadow-md border-2 border-white group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 ring-2 ring-amber-400/50 before:absolute before:-inset-2 before:content-['']"
+                            className="relative flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500 text-white shadow-md border-2 border-white dark:border-slate-900 group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 ring-2 ring-amber-400/50 before:absolute before:-inset-2 before:content-['']"
                         >
                             <Star className="w-3.5 h-3.5 fill-current"/>
                         </div>
                     ) : (
                         <div
                             title={`${stop.nodenm} (주변 정류장 · 클릭하여 도착정보 확인)`}
-                            className="flex items-center justify-center w-5 h-5 rounded-full bg-slate-700/90 dark:bg-slate-600/90 text-white shadow-sm border-[1.5px] border-white/85 opacity-85 group-hover:opacity-100 group-hover:scale-125 group-hover:bg-blue-600 transition-all cursor-pointer shrink-0 z-10 before:absolute before:-inset-2 before:content-['']"
+                            className="flex items-center justify-center w-4 h-4 rounded-full bg-white/95 dark:bg-slate-800/95 shadow-sm border-[1.5px] border-slate-400 dark:border-slate-500 opacity-90 group-hover:opacity-100 group-hover:scale-125 group-hover:border-blue-500 transition-all cursor-pointer shrink-0 z-10 before:absolute before:-inset-2 before:content-['']"
                         >
-                            <div className="w-1.5 h-1.5 rounded-full bg-white"/>
+                            <div
+                                className="w-1.5 h-1.5 rounded-full bg-slate-500 dark:bg-slate-300 group-hover:bg-blue-500"/>
                         </div>
                     )}
 
                     {(showLabel || isFavorite || isHovered || isOpen) && (
-                        <div
-                            className={`absolute px-2 py-0.5 rounded-md bg-[#18191c]/95 shadow-md backdrop-blur-md pointer-events-auto whitespace-nowrap group-hover:scale-105 transition-all z-20 flex items-center gap-1.5 ${placementClasses}`}
-                            style={{
-                                border: `1.2px solid ${borderColor}`,
-                            }}
-                        >
-                            {isFavorite && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 shrink-0"/>}
-                            <span
-                                className="text-white font-bold text-[11px] sm:text-[12px] tracking-tight leading-none">
-                                {stop.nodenm}
-                            </span>
-                            {disambiguationLabel && (
+                        isHovered || isOpen || isFavorite ? (
+                            <div
+                                className={`absolute px-2 py-0.5 rounded-lg bg-white/95 dark:bg-slate-900/95 shadow-md backdrop-blur-md pointer-events-auto whitespace-nowrap group-hover:scale-105 transition-all z-20 flex items-center gap-1.5 ${placementClasses}`}
+                                style={{
+                                    border: `1.25px solid ${borderColor}`,
+                                }}
+                            >
+                                {isFavorite && <Star
+                                    className="w-2.5 h-2.5 text-amber-500 dark:text-amber-400 fill-amber-500 dark:fill-amber-400 shrink-0"/>}
                                 <span
-                                    className="text-[9px] font-mono font-bold px-1 py-0.2 rounded bg-white/15 text-slate-300">
-                                    {disambiguationLabel}
+                                    className="text-slate-900 dark:text-slate-50 font-bold text-[11px] sm:text-[12px] tracking-tight leading-none">
+                                    {stop.nodenm}
                                 </span>
-                            )}
-                        </div>
+                                {disambiguationLabel && (
+                                    <span
+                                        className="text-[9px] font-mono font-bold px-1 py-px rounded bg-slate-900/8 dark:bg-white/15 text-slate-600 dark:text-slate-300">
+                                        {disambiguationLabel}
+                                    </span>
+                                )}
+                            </div>
+                        ) : (
+                            <div
+                                className={`absolute pointer-events-auto whitespace-nowrap z-20 flex items-center gap-1 ${placementClasses}`}
+                            >
+                                <span
+                                    className={`wbus-stop-label-halo font-bold text-[11px] sm:text-[12px] tracking-tight leading-none ${
+                                        isRouteStop
+                                            ? "text-slate-900 dark:text-slate-50"
+                                            : "text-slate-600 dark:text-slate-300"
+                                    }`}
+                                >
+                                    {stop.nodenm}
+                                </span>
+                                {disambiguationLabel && (
+                                    <span
+                                        className="text-[9px] font-mono font-bold px-1 py-px rounded bg-white/90 dark:bg-slate-900/90 text-slate-700 dark:text-slate-200 border border-black/10 dark:border-white/15 shadow-2xs leading-none">
+                                        {disambiguationLabel}
+                                    </span>
+                                )}
+                            </div>
+                        )
                     )}
                 </div>
             </Marker>

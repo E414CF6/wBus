@@ -13,7 +13,7 @@ import {
 import type {CityInfo} from "@entities/city/types";
 import {matchesHangul} from "@shared/utils/hangul";
 import {triggerHaptic} from "@shared/utils/haptics";
-import {markModalNavigating, Modal} from "@shared/ui";
+import {isCoarsePointerDevice, markModalNavigating, Modal} from "@shared/ui";
 
 type CityTabId = "ALL" | "FAVORITES" | "CAPITAL" | "GANGWON" | "CHUNGCHEONG" | "JEOLLA" | "GYEONGSANG" | "JEJU";
 
@@ -65,7 +65,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
     }
 
     useEffect(() => {
-        if (isOpen && searchInputRef.current) {
+        if (isOpen && !isCoarsePointerDevice() && searchInputRef.current) {
             const timer = setTimeout(() => searchInputRef.current?.focus(), 80);
             return () => clearTimeout(timer);
         }

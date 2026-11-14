@@ -57,7 +57,9 @@ export function isModalQueryMatching(currentHref: string, modalId: string, query
 }
 
 const MODAL_NAVIGATION_SUPPRESS_MS = 1000;
+const MODAL_REPLACE_SUPPRESS_MS = 1000;
 let lastModalNavigationAt = 0;
+let pendingModalReplacement: { fromModalId: string; at: number } | null = null;
 
 /**
  * 모달 내부 링크 이동(<Link> 등) 직전에 호출하여 모달 닫힘 시
@@ -65,6 +67,28 @@ let lastModalNavigationAt = 0;
  */
 export function markModalNavigating(now = Date.now()) {
     lastModalNavigationAt = now;
+}
+
+/**
+ * 한 모달을 닫으면서 동시에 다른 모달로 전환하기 직전에 호출합니다.
+ * 이전 모달 닫힘 시 history.back() 또는 URL 쿼리 제거를 건너뛰고,
+ * 새 모달이 pushState 대신 replaceState로 현재 히스토리 엔트리를 교체하도록 합니다.
+ */
+export function markModalReplacing(fromModalId: string, now = Date.now()) {
+    pendingModalReplacement = {fromModalId, at: now};
+}
+
+export function isPendingModalReplacement(
+    fromModalId: string,
+    replacement: { fromModalId: string; at: number } | null = pendingModalReplacement,
+    now = Date.now()
+): boolean {
+    return Boolean(
+        replacement &&
+        replacement.fromModalId === fromModalId &&
+        now - replacement.at >= 0 &&
+        now - replacement.at < MODAL_REPLACE_SUPPRESS_MS
+    );
 }
 
 export function shouldSuppressHistoryBackOnClose(params: {
@@ -115,6 +139,7 @@ export function useModalHistory({
     const hasPushedRef = useRef(false);
     const isPopstateClosingRef = useRef(false);
     const initialUrlRef = useRef<string | null>(null);
+    const wasOpenRef = useRef(false);
 
     // 모달 열림: URL에 쿼리스트링 추가 및 popstate / 내부 링크 클릭 리스너 등록
     useEffect(() => {
@@ -134,11 +159,23 @@ export function useModalHistory({
 
             if (currentVal !== value) {
                 const targetUrl = buildModalUrl(window.location.href, value, key);
-                window.history.pushState(
-                    {modalId: value, isWbusModal: true},
-                    "",
-                    targetUrl
+                const canReplacePreviousModal = Boolean(
+                    currentVal && isPendingModalReplacement(currentVal)
                 );
+                if (canReplacePreviousModal) {
+                    pendingModalReplacement = null;
+                    window.history.replaceState(
+                        {modalId: value, isWbusModal: true},
+                        "",
+                        targetUrl
+                    );
+                } else {
+                    window.history.pushState(
+                        {modalId: value, isWbusModal: true},
+                        "",
+                        targetUrl
+                    );
+                }
                 hasPushedRef.current = true;
             }
         } catch {
@@ -195,15 +232,24 @@ export function useModalHistory({
     // 모달 닫힘: 사용자가 UI(X 버튼, 배경 터치 등)로 닫았을 때 브라우저 히스토리 원상복구
     useEffect(() => {
         if (!isOpen) {
+            if (!wasOpenRef.current) {
+                isPopstateClosingRef.current = false;
+                return;
+            }
+            wasOpenRef.current = false;
+
+            const modalValue = modalId || "open";
+            const isBeingReplaced = isPendingModalReplacement(modalValue);
+
             if (hasPushedRef.current && !isPopstateClosingRef.current) {
                 hasPushedRef.current = false;
-                if (typeof window !== "undefined") {
+                if (typeof window !== "undefined" && !isBeingReplaced) {
                     const currentHref = window.location.href;
                     const isLinkNavigating = isRecentModalNavigation(lastModalNavigationAt);
                     const suppressHistoryBack = shouldSuppressHistoryBackOnClose({
                         currentHref,
                         initialBaseUrl: initialUrlRef.current,
-                        modalId: modalId || "open",
+                        modalId: modalValue,
                         queryKey,
                         lastNavigationAt: lastModalNavigationAt,
                     });
@@ -219,7 +265,7 @@ export function useModalHistory({
                     } else if (!isLinkNavigating) {
                         try {
                             const currentUrl = new URL(currentHref);
-                            if (currentUrl.searchParams.has(queryKey)) {
+                            if (currentUrl.searchParams.get(queryKey) === modalValue) {
                                 const cleanUrl = removeModalUrlQuery(currentHref, queryKey);
                                 window.history.replaceState(null, "", cleanUrl);
                             }
@@ -230,10 +276,10 @@ export function useModalHistory({
                 }
             } else if (!hasPushedRef.current && !isPopstateClosingRef.current) {
                 // pushState를 수행하지 않았던 경우(예: 직접 URL로 진입) 모달이 닫히면 URL 쿼리 파라미터만 정리 (단, 링크 이동 중이 아닐 때만)
-                if (typeof window !== "undefined" && !isRecentModalNavigation(lastModalNavigationAt)) {
+                if (typeof window !== "undefined" && !isBeingReplaced && !isRecentModalNavigation(lastModalNavigationAt)) {
                     try {
                         const currentUrl = new URL(window.location.href);
-                        if (currentUrl.searchParams.get(queryKey) === (modalId || "open")) {
+                        if (currentUrl.searchParams.get(queryKey) === modalValue) {
                             const cleanUrl = removeModalUrlQuery(window.location.href, queryKey);
                             window.history.replaceState(null, "", cleanUrl);
                         }
@@ -245,6 +291,7 @@ export function useModalHistory({
             isPopstateClosingRef.current = false;
             initialUrlRef.current = null;
         } else {
+            wasOpenRef.current = true;
             isPopstateClosingRef.current = false;
         }
     }, [isOpen, modalId, queryKey]);
@@ -254,13 +301,17 @@ export function useModalHistory({
         return () => {
             if (hasPushedRef.current && !isPopstateClosingRef.current) {
                 hasPushedRef.current = false;
-                if (isRecentModalNavigation(lastModalNavigationAt)) {
+                const modalValue = modalId || "open";
+                if (
+                    isRecentModalNavigation(lastModalNavigationAt) ||
+                    isPendingModalReplacement(modalValue)
+                ) {
                     return;
                 }
                 try {
                     if (typeof window !== "undefined") {
                         const currentUrl = new URL(window.location.href);
-                        if (currentUrl.searchParams.get(queryKey) === (modalId || "open")) {
+                        if (currentUrl.searchParams.get(queryKey) === modalValue) {
                             const cleanUrl = removeModalUrlQuery(window.location.href, queryKey);
                             window.history.replaceState(null, "", cleanUrl);
                         }

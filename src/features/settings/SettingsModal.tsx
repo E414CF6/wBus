@@ -102,8 +102,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
         if (isOpen) {
             setConfirmClearData(false);
             setStatusNotice(null);
-            setIsYonseiModalOpen(false);
         }
+        setIsYonseiModalOpen(false);
     }
 
     const activeTheme: ThemePreference = mounted

@@ -2,7 +2,9 @@ import {describe, expect, it} from "vitest";
 import {
     buildModalUrl,
     isModalQueryMatching,
+    isPendingModalReplacement,
     isRecentModalNavigation,
+    markModalReplacing,
     removeModalUrlQuery,
     shouldSuppressHistoryBackOnClose,
     useModalHistory,
@@ -150,5 +152,26 @@ describe("useModalHistory URL state decision logic", () => {
                 now: 5000,
             })
         ).toBe(false);
+    });
+
+    it("suppresses history.back when another modal replaced the query string", () => {
+        expect(
+            shouldSuppressHistoryBackOnClose({
+                currentHref: "https://wbus.kr/?cityCode=32020&route=30&modal=stop-detail",
+                initialBaseUrl: "/?cityCode=32020&route=30",
+                modalId: "bus-list",
+                queryKey: "modal",
+                lastNavigationAt: 0,
+                now: 5000,
+            })
+        ).toBe(true);
+    });
+
+    it("detects pending modal replacement only for matching modalId within 1000ms", () => {
+        markModalReplacing("bus-list", 1000);
+        expect(isPendingModalReplacement("bus-list", undefined, 1200)).toBe(true);
+        expect(isPendingModalReplacement("stop-detail", undefined, 1200)).toBe(false);
+        expect(isPendingModalReplacement("bus-list", undefined, 2100)).toBe(false);
+        expect(isPendingModalReplacement("bus-list", null, 1200)).toBe(false);
     });
 });

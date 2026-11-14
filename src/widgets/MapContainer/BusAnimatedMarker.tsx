@@ -1,12 +1,12 @@
 "use client";
 
 import {MAP_SETTINGS} from "@shared/config/env";
-
+import {useAppMapContext} from "@shared/context/AppMapContext";
 import {type Coordinate, normalizeAngle} from "@shared/utils/geo";
 
 import {useAnimatedPosition} from "@shared/animation";
 
-import React, {memo, useEffect, useRef} from "react";
+import React, {memo, useCallback, useEffect, useRef} from "react";
 import {Marker} from "react-map-gl/maplibre";
 import type {Marker as MapLibreMarker} from "maplibre-gl";
 
@@ -33,6 +33,10 @@ interface BusAnimatedMarkerProps {
     onClick?: () => void;
     /** Optional callback when animated position updates (used for real-time Popup & Camera tracking) */
     onPositionChange?: (position: Coordinate) => void;
+    /** Optional directional overlay rotated at 60fps without rotating children */
+    headingOverlay?: React.ReactNode;
+    /** Wrapper class for sizing/highlighting both heading overlay and upright children */
+    wrapperClassName?: string;
     children?: React.ReactNode;
 }
 
@@ -43,7 +47,7 @@ interface BusAnimatedMarkerProps {
 /**
  * A bus marker that smoothly animates along a polyline when its position updates.
  * Uses requestAnimationFrame for smooth 60fps animation.
- * Optimized with direct MapLibre marker updates to bypass React re-renders during animation.
+ * Separates directional heading rotation (headingOverlay) from upright route badge rendering (children).
  */
 function BusAnimatedMarker({
                                position,
@@ -58,21 +62,63 @@ function BusAnimatedMarker({
                                refreshKey,
                                onClick,
                                onPositionChange,
+                               headingOverlay,
+                               wrapperClassName,
                                children,
                            }: BusAnimatedMarkerProps) {
     // Ref to MapLibre marker for direct DOM updates (bypasses React)
     const markerRef = useRef<MapLibreMarker | null>(null);
+    const headingRef = useRef<HTMLDivElement | null>(null);
+    const {map} = useAppMapContext();
+
+    const getMapBearing = useCallback(() => {
+        try {
+            return map?.getBearing() ?? 0;
+        } catch {
+            return 0;
+        }
+    }, [map]);
+
+    const handleDirectAngle = useCallback(
+        (angle: number) => {
+            const el = headingRef.current;
+            if (!el) return;
+            const bearing = getMapBearing();
+            el.style.transform = `rotate(${normalizeAngle(angle - bearing)}deg)`;
+        },
+        [getMapBearing]
+    );
 
     // Hook handles the interpolation loop (requestAnimationFrame)
-    // Now with direct marker updates for smoother animation
+    // Now with direct marker & heading updates for smoother animation
     const {position: animatedPosition, angle: animatedAngle} = useAnimatedPosition(position, rotationAngle, {
-        duration: animationDuration, polyline, // Only attempt to snap if we have a valid line segment
-        snapToPolyline: polyline.length >= 2, resetKey: refreshKey, snapIndexHint, snapIndexRange, // Pass marker ref for direct DOM updates during animation
-        markerRef, // Pass polling interval for velocity-based forward projection
-        pollingIntervalMs, // Pass data delay for accurate projection distance
-        dataDelayMs, // Pass stop coordinate indices for speed modulation
+        duration: animationDuration,
+        polyline,
+        snapToPolyline: polyline.length >= 2,
+        resetKey: refreshKey,
+        snapIndexHint,
+        snapIndexRange,
+        markerRef,
+        onDirectAngle: headingOverlay ? handleDirectAngle : undefined,
+        pollingIntervalMs,
+        dataDelayMs,
         stopCoordIndices,
     });
+
+    // Keep heading cone synchronized on initial mount and whenever map viewport rotates
+    useEffect(() => {
+        if (!headingOverlay) return;
+        const syncHeading = () => {
+            handleDirectAngle(animatedAngle);
+        };
+        syncHeading();
+
+        if (!map) return;
+        map.on("rotate", syncHeading);
+        return () => {
+            map.off("rotate", syncHeading);
+        };
+    }, [animatedAngle, handleDirectAngle, headingOverlay, map]);
 
     const onPositionChangeRef = useRef(onPositionChange);
     useEffect(() => {
@@ -107,13 +153,26 @@ function BusAnimatedMarker({
         ref={markerRef}
         longitude={animatedPosition[1]}
         latitude={animatedPosition[0]}
-        rotation={normalizeAngle(animatedAngle)}
-        rotationAlignment="map"
+        rotation={headingOverlay ? 0 : normalizeAngle(animatedAngle)}
+        rotationAlignment={headingOverlay ? "viewport" : "map"}
         onClick={handleMarkerClick}
         anchor="center"
-        style={{pointerEvents: 'auto', zIndex: 35}}
+        style={{pointerEvents: "auto", zIndex: 35}}
     >
-        {children}
+        {headingOverlay ? (
+            <div className={wrapperClassName}>
+                <div
+                    ref={headingRef}
+                    className="absolute inset-0 pointer-events-none will-change-transform"
+                    style={{transformOrigin: "center center"}}
+                >
+                    {headingOverlay}
+                </div>
+                {children}
+            </div>
+        ) : (
+            children
+        )}
     </Marker>);
 }
 

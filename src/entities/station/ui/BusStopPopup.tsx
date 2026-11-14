@@ -226,7 +226,7 @@ function ArrivalList({
                 </button>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar p-2.5 sm:p-3 pt-1.5 space-y-2">
+            <div className="p-2.5 sm:p-3 pt-1.5 space-y-2">
                 {arrivalData.map((bus, idx) => {
                     const rName = String(bus.routeno ?? "").trim();
                     const isCurrentRoute = Boolean(currentRouteName && rName === currentRouteName);
@@ -289,7 +289,7 @@ export default function BusStopPopup({
         });
     }, [arrivalRawData, currentRouteName]);
 
-    return (<div className="w-full min-w-68 sm:min-w-[330px] bg-transparent overflow-hidden">
+    return (<div className="w-full min-w-0 bg-transparent">
         <ArrivalList
             loading={loading}
             isValidating={isValidating}

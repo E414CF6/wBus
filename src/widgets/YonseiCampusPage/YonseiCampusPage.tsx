@@ -175,7 +175,7 @@ export function YonseiCampusPage() {
             <header
                 className="sticky top-0 z-40 bg-white/85 dark:bg-[#090d16]/85 backdrop-blur-2xl border-b border-slate-200/80 dark:border-white/10">
                 <div
-                    className="max-w-6xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
+                    className="max-w-6xl mx-auto px-3.5 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-2 sm:gap-2.5">
                     {/* Left: Back to Map + Yonsei Brand */}
                     <div className="flex items-center gap-2.5 min-w-0">
                         <Link
@@ -210,7 +210,8 @@ export function YonseiCampusPage() {
                     </div>
 
                     {/* Right: Direction Toggle + DayMode Toggle + Theme Toggle */}
-                    <div className="flex items-center gap-1.5 sm:gap-2 ml-auto">
+                    <div
+                        className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-1.5 sm:gap-2 sm:ml-auto">
                         {/* One-Click Outbound / Inbound Mode Switcher */}
                         <div
                             className="flex items-center gap-0.5 p-0.5 rounded-full bg-slate-100 dark:bg-white/10 border border-black/5 dark:border-white/10"

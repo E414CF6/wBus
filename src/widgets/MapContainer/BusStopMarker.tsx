@@ -152,11 +152,20 @@ export const BusStopMarker = ({
         const handleFocusStop = (e: Event) => {
             const detail = (e as CustomEvent<BusStop>).detail;
             if (detail && detail.nodeid) {
-                setEventFocusedStop((prev) => (prev?.nodeid === detail.nodeid ? prev : detail));
+                setEventFocusedStop({...detail});
             }
         };
+        const handleClearFocus = () => {
+            setEventFocusedStop(null);
+        };
         window.addEventListener("wbus:focus-stop", handleFocusStop);
-        return () => window.removeEventListener("wbus:focus-stop", handleFocusStop);
+        window.addEventListener("wbus:close-stop-popup", handleClearFocus);
+        window.addEventListener("wbus:close-popups", handleClearFocus);
+        return () => {
+            window.removeEventListener("wbus:focus-stop", handleFocusStop);
+            window.removeEventListener("wbus:close-stop-popup", handleClearFocus);
+            window.removeEventListener("wbus:close-popups", handleClearFocus);
+        };
     }, []);
 
     const handleClearFocused = useCallback(() => {
@@ -199,6 +208,8 @@ export const BusStopMarker = ({
         return computeOptimalLabelPlacements(visibleStops, map, centerCoords, activeFocusedStopId);
     }, [visibleStops, map, centerCoords, activeFocusedStopId]);
 
+    const isCompactNode = zoom < 14.3;
+
     return (
         <>
             {visibleStops.map((stop, index) => {
@@ -218,6 +229,7 @@ export const BusStopMarker = ({
                         currentRouteName={routeName}
                         isRouteStop={stop.isRouteStop}
                         isFavorite={isFav}
+                        isCompactNode={isCompactNode}
                         onToggleFavorite={toggleFavoriteStop}
                         showLabel={placementInfo.showLabel}
                         labelPlacement={placementInfo.placement}

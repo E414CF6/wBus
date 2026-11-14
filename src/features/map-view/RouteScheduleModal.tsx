@@ -134,12 +134,16 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
     const [prevInitialLocation, setPrevInitialLocation] = useState(initialLocation);
     const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
 
-    // Sync hourlyLocation with initialLocation when modal opens or initialLocation changes (render-phase state update)
+    // Sync hourlyLocation and reset nested notice modal state when modal opens/closes (render-phase state update)
     if (isOpen !== prevIsOpen || initialLocation !== prevInitialLocation) {
         setPrevIsOpen(isOpen);
         setPrevInitialLocation(initialLocation);
         if (isOpen && initialLocation && hourlyLocation !== initialLocation) {
             setHourlyLocation(initialLocation);
+        }
+        if (!isOpen) {
+            setIsNoticeModalOpen(false);
+            setSelectedNoticeId(null);
         }
     }
 
@@ -487,23 +491,30 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
 
                             <div
                                 ref={tableRef}
-                                className="max-h-96 overflow-y-auto rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11131a] shadow-xs custom-scrollbar"
+                                role="region"
+                                aria-label="전체 운행 시간표"
+                                tabIndex={0}
+                                className="max-h-96 overflow-auto overscroll-contain rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11131a] shadow-xs custom-scrollbar focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
                             >
-                                <table className="w-full border-collapse text-left text-xs">
+                                <table className="w-full min-w-[520px] sm:min-w-full border-collapse text-left text-xs">
                                     <thead
-                                        className="sticky top-0 z-10 bg-slate-100/95 dark:bg-[#161922]/95 backdrop-blur-md text-slate-700 dark:text-slate-200 border-b border-black/5 dark:border-white/10 font-extrabold">
+                                        className="sticky top-0 z-20 bg-slate-100/95 dark:bg-[#161922]/95 backdrop-blur-md text-slate-700 dark:text-slate-200 border-b border-black/5 dark:border-white/10 font-extrabold">
                                     <tr>
-                                        <th className="py-2 px-2.5 w-12 text-center border-r border-black/5 dark:border-white/10">
+                                        <th
+                                            scope="col"
+                                            className="sticky left-0 z-30 bg-slate-100 dark:bg-[#161922] py-2 px-2.5 w-12 text-center whitespace-nowrap border-r border-black/5 dark:border-white/10"
+                                        >
                                             회차
                                         </th>
                                         <th
-                                            className={`py-2 px-3 border-r border-black/5 dark:border-white/10 transition-colors ${
+                                            scope="col"
+                                            className={`py-2 px-3 whitespace-nowrap border-r border-black/5 dark:border-white/10 transition-colors ${
                                                 hourlyLocation === "origin"
                                                     ? "bg-blue-100/70 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100"
                                                     : ""
                                             }`}
                                         >
-                                            <div className="flex items-center gap-1">
+                                            <div className="flex items-center gap-1 whitespace-nowrap">
                                                 <span>기점 출발 ({originName})</span>
                                                 {hourlyLocation === "origin" && (
                                                     <span
@@ -514,13 +525,14 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                             </div>
                                         </th>
                                         <th
-                                            className={`py-2 px-3 border-r border-black/5 dark:border-white/10 transition-colors ${
+                                            scope="col"
+                                            className={`py-2 px-3 whitespace-nowrap border-r border-black/5 dark:border-white/10 transition-colors ${
                                                 hourlyLocation === "dest"
                                                     ? "bg-amber-100/70 dark:bg-amber-900/40 text-amber-900 dark:text-amber-100"
                                                     : ""
                                             }`}
                                         >
-                                            <div className="flex items-center gap-1">
+                                            <div className="flex items-center gap-1 whitespace-nowrap">
                                                 <span>회차지 출발 ({destName})</span>
                                                 {hourlyLocation === "dest" && (
                                                     <span
@@ -530,7 +542,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                 )}
                                             </div>
                                         </th>
-                                        <th className="py-2 px-3">비고</th>
+                                        <th scope="col" className="py-2 px-3 whitespace-nowrap min-w-[120px]">비고</th>
                                     </tr>
                                     </thead>
                                     <tbody className="divide-y divide-black/5 dark:divide-white/5">
@@ -567,11 +579,18 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                             : "hover:bg-slate-50 dark:hover:bg-white/[0.02]"
                                                     }`}
                                                 >
-                                                    <td className="py-2 px-2.5 text-center font-mono text-slate-400 border-r border-black/5 dark:border-white/10">
+                                                    <th
+                                                        scope="row"
+                                                        className={`sticky left-0 z-10 py-2 px-2.5 text-center font-mono font-medium whitespace-nowrap text-slate-400 border-r border-black/5 dark:border-white/10 ${
+                                                            isNextOrigin || isNextDest
+                                                                ? "bg-blue-50 dark:bg-[#141c33]"
+                                                                : "bg-white dark:bg-[#11131a]"
+                                                        }`}
+                                                    >
                                                         {row.seq}
-                                                    </td>
+                                                    </th>
                                                     <td
-                                                        className={`py-2 px-3 font-mono border-r border-black/5 dark:border-white/10 ${
+                                                        className={`py-2 px-3 font-mono whitespace-nowrap border-r border-black/5 dark:border-white/10 ${
                                                             hourlyLocation === "origin"
                                                                 ? "bg-blue-50/40 dark:bg-blue-950/20"
                                                                 : ""
@@ -588,7 +607,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                             </span>
                                                     </td>
                                                     <td
-                                                        className={`py-2 px-3 font-mono border-r border-black/5 dark:border-white/10 ${
+                                                        className={`py-2 px-3 font-mono whitespace-nowrap border-r border-black/5 dark:border-white/10 ${
                                                             hourlyLocation === "dest"
                                                                 ? "bg-amber-50/40 dark:bg-amber-950/20"
                                                                 : ""

@@ -309,12 +309,47 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
     // Active variant bus count
     const activeVariantBusCount = activeVariant ? (busesPerVariation.get(activeVariant.routeId) ?? 0) : runningCount;
 
+    const headerRef = useRef<HTMLElement>(null);
+
+    // Measure actual floating header bottom so mobile top-right MapLibre controls never collide with it
+    useEffect(() => {
+        if (typeof window === "undefined" || typeof document === "undefined") return;
+        const el = headerRef.current;
+        if (!el) return;
+
+        const updateHeaderOffset = () => {
+            const rect = el.getBoundingClientRect();
+            if (rect.height > 0) {
+                document.documentElement.style.setProperty(
+                    "--wbus-header-bottom",
+                    `${Math.ceil(rect.bottom + 8)}px`
+                );
+            }
+        };
+
+        updateHeaderOffset();
+
+        let observer: ResizeObserver | null = null;
+        if (typeof ResizeObserver !== "undefined") {
+            observer = new ResizeObserver(updateHeaderOffset);
+            observer.observe(el);
+        }
+        window.addEventListener("resize", updateHeaderOffset);
+
+        return () => {
+            observer?.disconnect();
+            window.removeEventListener("resize", updateHeaderOffset);
+            document.documentElement.style.removeProperty("--wbus-header-bottom");
+        };
+    }, [isDegraded, selectedVariantId, favoriteStops.length]);
+
     return (
         <>
             <header
-                className={`absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 -translate-x-1/2 ${
+                ref={headerRef}
+                className={`absolute top-[calc(env(safe-area-inset-top,0px)+0.75rem)] left-1/2 lg:left-[calc(50%+166px)] xl:left-[calc(50%+186px)] -translate-x-1/2 ${
                     isVariantMenuOpen ? "z-[80]" : "z-50"
-                } pointer-events-auto flex flex-col items-center gap-1.5 max-w-[95vw] w-full sm:w-auto animate-fadeIn select-none`}
+                } pointer-events-auto flex flex-col items-center gap-1.5 w-[calc(100vw-1rem)] sm:w-auto sm:max-w-[calc(100vw-9rem)] lg:max-w-[calc(100vw-492px)] xl:max-w-[calc(100vw-532px)] animate-fadeIn select-none`}
             >
                 {/* 1. Main Route Overview Glass Card */}
                 <div

@@ -4,7 +4,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Bus, Loader2} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {isDesktopViewport, useIsDesktop} from "@shared/ui/useIsDesktop";
-import {useModalHistory} from "@shared/ui";
+import {BottomSheet, markModalReplacing} from "@shared/ui";
 import {triggerHaptic} from "@shared/utils/haptics";
 import {type RouteVariationStop, useRouteVariations} from "@entities/route";
 import type {DirectionCode, RouteVariation} from "@entities/route/types";
@@ -63,13 +63,6 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
     const isDesktop = useIsDesktop();
 
-    useModalHistory({
-        isOpen: isOpen && !isDesktop,
-        onClose,
-        modalId: "bus-list",
-        enableHistory: !isDesktop,
-    });
-
     const [internalVariantId, setInternalVariantId] = useState<string | null>(null);
     const selectedVariantId = controlledVariantId !== undefined ? controlledVariantId : internalVariantId;
     const setSelectedVariantId = onSelectVariant ?? setInternalVariantId;
@@ -78,22 +71,10 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
     const [nearestBusVehicleNo, setNearestBusVehicleNo] = useState<string | null>(null);
     const [isSplitCollapsed, setIsSplitCollapsed] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [dragOffsetY, setDragOffsetY] = useState(0);
-    const [isDraggingSheet, setIsDraggingSheet] = useState(false);
-    const dragStartRef = useRef<{ y: number; time: number } | null>(null);
     const listRef = useRef<HTMLDivElement>(null);
     const jumpStripRef = useRef<HTMLDivElement>(null);
     const hasAutoScrolledRef = useRef<string | null>(null);
     const suppressNextMapSyncRef = useRef(false);
-
-    const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
-    if (isOpen !== prevIsOpen) {
-        setPrevIsOpen(isOpen);
-        if (isOpen) {
-            setDragOffsetY(0);
-            setIsDraggingSheet(false);
-        }
-    }
 
     // Listen to external focus stop event (from map marker click or search)
     useEffect(() => {
@@ -101,6 +82,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         const handleFocusStop = (e: Event) => {
             const detail = (e as CustomEvent<BusStop>).detail;
             if (detail && detail.nodeid) {
+                suppressNextMapSyncRef.current = true;
                 setSelectedStop(detail);
                 setSelectedStopId(detail.nodeid);
             }
@@ -276,7 +258,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
     // Keep the route timeline aligned & scrolled to the running bus entity nearest to the current map center
     const syncNearestBusToMapCenter = useCallback(() => {
-        if (!map || !isOpen || stopSearchQuery.trim().length > 0) return;
+        if (!map || !isOpen || stopSearchQuery.trim().length > 0 || selectedStop) return;
         if (suppressNextMapSyncRef.current) {
             suppressNextMapSyncRef.current = false;
             return;
@@ -293,7 +275,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
         setNearestBusVehicleNo(nearestBus.bus.vehicleno);
         scrollTimelineToBusEntry(nearestBus);
-    }, [map, isOpen, stopSearchQuery, matchedBusesForJump, scrollTimelineToBusEntry]);
+    }, [map, isOpen, stopSearchQuery, selectedStop, matchedBusesForJump, scrollTimelineToBusEntry]);
 
     useEffect(() => {
         if (!isOpen || !map) return;
@@ -364,6 +346,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             }
 
             if (!isDesktop) {
+                markModalReplacing("bus-list");
                 onClose();
             }
             window.dispatchEvent(new CustomEvent("wbus:focus-stop", {detail: stop}));
@@ -406,48 +389,6 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
         });
     }, []);
 
-    // Mobile swipe-down-to-dismiss handlers on grab handle & header
-    const handleSheetTouchStart = useCallback(
-        (e: React.TouchEvent) => {
-            if (isDesktop || e.touches.length !== 1) return;
-            dragStartRef.current = {
-                y: e.touches[0].clientY,
-                time: Date.now(),
-            };
-            setIsDraggingSheet(true);
-        },
-        [isDesktop]
-    );
-
-    const handleSheetTouchMove = useCallback(
-        (e: React.TouchEvent) => {
-            if (isDesktop || !dragStartRef.current || e.touches.length !== 1) return;
-            const deltaY = e.touches[0].clientY - dragStartRef.current.y;
-            if (deltaY > 0) {
-                setDragOffsetY(deltaY);
-            } else {
-                setDragOffsetY(0);
-            }
-        },
-        [isDesktop]
-    );
-
-    const handleSheetTouchEnd = useCallback(() => {
-        if (isDesktop || !dragStartRef.current) return;
-        const elapsed = Math.max(1, Date.now() - dragStartRef.current.time);
-        const velocity = dragOffsetY / elapsed;
-        dragStartRef.current = null;
-        setIsDraggingSheet(false);
-
-        if (dragOffsetY > 95 || (velocity > 0.45 && dragOffsetY > 32)) {
-            triggerHaptic("light");
-            setDragOffsetY(0);
-            onClose();
-        } else {
-            setDragOffsetY(0);
-        }
-    }, [isDesktop, dragOffsetY, onClose]);
-
     // Paired opposite stop derivation
     const pairedOppositeStop = useMemo(() => {
         if (!selectedStop || currentStops.length === 0) return null;
@@ -463,61 +404,34 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
     const hasBottomSplit = isDesktop && Boolean(selectedStop);
 
-    return (
-        <aside
-            aria-label="실시간 버스 노선 및 정류장 목록"
-            style={
-                !isDesktop && dragOffsetY > 0
-                    ? {transform: `translateY(${dragOffsetY}px)`, animation: "none"}
-                    : undefined
-            }
-            className={`${
-                isDraggingSheet ? "transition-none" : "transition-all duration-300 ease-out"
-            } ${
-                isDesktop
-                    ? "hidden lg:flex z-40 fixed top-[72px] bottom-6 left-4 w-[380px] lg:w-[420px] max-h-[calc(100vh-96px)] bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex-col"
-                    : "fixed inset-x-0 bottom-0 z-[60] max-h-[82dvh] h-[82dvh] bg-white dark:bg-[#11131a] rounded-t-[24px] shadow-[0_-12px_40px_rgba(0,0,0,0.2)] dark:shadow-[0_-12px_40px_rgba(0,0,0,0.7)] flex flex-col border-t border-slate-200/70 dark:border-white/10 animate-slideUp"
+    const drawerHeader = (
+        <BusDrawerHeader
+            selectedRoute={selectedRoute}
+            routeSubInfo={routeSubInfo}
+            runningBusCount={runningBuses.length}
+            isConnecting={isConnecting}
+            timeAgo={timeAgo}
+            isRefreshing={isRefreshing}
+            hasBottomSplit={hasBottomSplit}
+            metaThemeMainColor={meta?.colorTheme?.main}
+            metaThemeBg={meta?.colorTheme?.bg}
+            metaThemeText={meta?.colorTheme?.text}
+            metaThemeShadow={meta?.colorTheme?.shadow}
+            onRefresh={handleRefresh}
+            onClose={onClose}
+        />
+    );
+
+    const timelineSection = (
+        <div
+            className={`w-full flex flex-col overflow-hidden transition-all duration-300 ${
+                hasBottomSplit
+                    ? isSplitCollapsed
+                        ? "flex-1 h-[calc(100%-56px)]"
+                        : "flex-[52] h-[52%]"
+                    : "flex-1 min-h-0"
             }`}
         >
-            {/* Mobile Bottom Sheet Grab Handle + Swipeable Header Area */}
-            <div
-                onTouchStart={handleSheetTouchStart}
-                onTouchMove={handleSheetTouchMove}
-                onTouchEnd={handleSheetTouchEnd}
-                className="touch-none lg:touch-auto shrink-0"
-            >
-                <div className="flex lg:hidden justify-center pt-2 pb-0.5">
-                    <div className="w-9 h-1 bg-slate-300/90 dark:bg-white/20 rounded-full"/>
-                </div>
-
-                {/* 1. Header */}
-                <BusDrawerHeader
-                    selectedRoute={selectedRoute}
-                    routeSubInfo={routeSubInfo}
-                    runningBusCount={runningBuses.length}
-                    isConnecting={isConnecting}
-                    timeAgo={timeAgo}
-                    isRefreshing={isRefreshing}
-                    hasBottomSplit={hasBottomSplit}
-                    metaThemeMainColor={meta?.colorTheme?.main}
-                    metaThemeBg={meta?.colorTheme?.bg}
-                    metaThemeText={meta?.colorTheme?.text}
-                    metaThemeShadow={meta?.colorTheme?.shadow}
-                    onRefresh={handleRefresh}
-                    onClose={onClose}
-                />
-            </div>
-
-            {/* Upper Section: Route Overview & Stops Timeline */}
-            <div
-                className={`w-full flex flex-col overflow-hidden transition-all duration-300 ${
-                    hasBottomSplit
-                        ? isSplitCollapsed
-                            ? "flex-1 h-[calc(100%-56px)]"
-                            : "flex-[52] h-[52%]"
-                        : "flex-1 min-h-0"
-                }`}
-            >
                 {/* 1.5 Variation Tabs & 2. Direction Filter / Search */}
                 <BusDrawerFilterBar
                     effectiveVariations={effectiveVariations}
@@ -573,64 +487,91 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
                     </div>
                 )}
 
-                {/* 3. Bus Stop Timeline List Body */}
-                <div
-                    ref={listRef}
-                    className="flex-1 overflow-y-auto custom-scrollbar relative min-h-0 border-t border-slate-100 dark:border-white/[0.07] pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] lg:pb-3"
-                >
-                    {currentStops.length === 0 ? (
-                        <div
-                            className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
-                            <Loader2
-                                className={`w-6 h-6 animate-spin ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-400"}`}
-                            />
-                            <span className="text-xs font-semibold">정류장 목록을 불러오고 있습니다...</span>
-                        </div>
-                    ) : filteredStops.length === 0 ? (
-                        <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
-                            {stopSearchQuery
-                                ? `"${stopSearchQuery}" 검색 결과가 없습니다.`
-                                : "해당 방향의 정류장 정보가 없습니다."}
-                        </div>
-                    ) : (
-                        filteredStops.map((stop, index) => {
-                            const stopKey = `${stop.nodeid}-${stop.nodeord ?? ""}`;
-                            const busesHere = busesByStopKey.get(stopKey) || [];
-                            const isFirst = index === 0;
-                            const isLast = index === filteredStops.length - 1;
-                            const isSelected = selectedStopId === stop.nodeid;
-                            const isTurning = Boolean(
-                                turningStop &&
-                                turningStop.nodeid === stop.nodeid &&
-                                turningStop.nodeord === stop.nodeord
-                            );
-                            const isFav = isFavoriteStop(stop.nodeid);
+            {/* 3. Bus Stop Timeline List Body */}
+            <div
+                ref={listRef}
+                className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar relative min-h-0 border-t border-slate-100 dark:border-white/[0.07] pb-3"
+            >
+                {currentStops.length === 0 ? (
+                    <div
+                        className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
+                        <Loader2
+                            className={`w-6 h-6 animate-spin ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-400"}`}
+                        />
+                        <span className="text-xs font-semibold">정류장 목록을 불러오고 있습니다...</span>
+                    </div>
+                ) : filteredStops.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
+                        {stopSearchQuery
+                            ? `"${stopSearchQuery}" 검색 결과가 없습니다.`
+                            : "해당 방향의 정류장 정보가 없습니다."}
+                    </div>
+                ) : (
+                    filteredStops.map((stop, index) => {
+                        const stopKey = `${stop.nodeid}-${stop.nodeord ?? ""}`;
+                        const busesHere = busesByStopKey.get(stopKey) || [];
+                        const isFirst = index === 0;
+                        const isLast = index === filteredStops.length - 1;
+                        const isSelected = selectedStopId === stop.nodeid;
+                        const isTurning = Boolean(
+                            turningStop &&
+                            turningStop.nodeid === stop.nodeid &&
+                            turningStop.nodeord === stop.nodeord
+                        );
+                        const isFav = isFavoriteStop(stop.nodeid);
 
-                            return (
-                                <BusDrawerStopItem
-                                    key={stopKey}
-                                    stop={stop}
-                                    isFirst={isFirst}
-                                    isLast={isLast}
-                                    isSelected={isSelected}
-                                    isTurningStop={isTurning}
-                                    isFavStop={isFav}
-                                    busesHere={busesHere}
-                                    nearestBusVehicleNo={nearestBusVehicleNo}
-                                    metaThemeMainColor={meta?.colorTheme?.main}
-                                    metaThemeBadgeBg={meta?.colorTheme?.badgeBg}
-                                    metaThemeBg={meta?.colorTheme?.bg}
-                                    metaThemeText={meta?.colorTheme?.text}
-                                    metaThemeShadow={meta?.colorTheme?.shadow}
-                                    onStopClick={handleStopClick}
-                                    onBusBadgeClick={handleBusBadgeClick}
-                                    onToggleFavorite={toggleFavoriteStop}
-                                />
-                            );
-                        })
-                    )}
-                </div>
+                        return (
+                            <BusDrawerStopItem
+                                key={stopKey}
+                                stop={stop}
+                                isFirst={isFirst}
+                                isLast={isLast}
+                                isSelected={isSelected}
+                                isTurningStop={isTurning}
+                                isFavStop={isFav}
+                                busesHere={busesHere}
+                                nearestBusVehicleNo={nearestBusVehicleNo}
+                                metaThemeMainColor={meta?.colorTheme?.main}
+                                metaThemeBadgeBg={meta?.colorTheme?.badgeBg}
+                                metaThemeBg={meta?.colorTheme?.bg}
+                                metaThemeText={meta?.colorTheme?.text}
+                                metaThemeShadow={meta?.colorTheme?.shadow}
+                                onStopClick={handleStopClick}
+                                onBusBadgeClick={handleBusBadgeClick}
+                                onToggleFavorite={toggleFavoriteStop}
+                            />
+                        );
+                    })
+                )}
             </div>
+        </div>
+    );
+
+    if (!isDesktop) {
+        return (
+            <BottomSheet
+                isOpen={isOpen}
+                onClose={onClose}
+                ariaLabel="실시간 버스 노선 및 정류장 목록"
+                modalId="bus-list"
+                role="complementary"
+                heightClassName="h-[82dvh] max-h-[82dvh]"
+                handleContent={drawerHeader}
+            >
+                {timelineSection}
+            </BottomSheet>
+        );
+    }
+
+    return (
+        <aside
+            aria-label="실시간 버스 노선 및 정류장 목록"
+            className="hidden lg:flex z-40 fixed top-4 bottom-4 left-4 w-[380px] xl:w-[420px] max-h-[calc(100dvh-32px)] bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex-col transition-all duration-300 ease-out"
+        >
+            <div className="shrink-0">{drawerHeader}</div>
+
+            {/* Upper Section: Route Overview & Stops Timeline */}
+            {timelineSection}
 
             {/* Lower Section: Context-Aware Split View (Selected Stop Details on Desktop) */}
             {hasBottomSplit && selectedStop && (
