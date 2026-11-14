@@ -140,20 +140,33 @@ async function fetchOsrmSingleChunk(chunk: [number, number][]): Promise<[number,
     return result;
 }
 
-async function fetchOsrmPolyline(coords: [number, number][]): Promise<[number, number][] | null> {
-    if (coords.length < 2) return null;
+interface OsrmPolylineResult {
+    coords: [number, number][] | null;
+    allFallback: boolean;
+}
+
+async function fetchOsrmPolylineWithMeta(coords: [number, number][]): Promise<OsrmPolylineResult> {
+    if (coords.length < 2) return {coords: null, allFallback: false};
 
     if (coords.length <= OSRM_CHUNK_SIZE) {
         const single = await fetchOsrmSingleChunk(coords);
-        return single && single.length >= 2 ? single : smoothPolylineSpline(coords);
+        if (single && single.length >= 2) {
+            return {coords: single, allFallback: false};
+        }
+        return {coords: smoothPolylineSpline(coords), allFallback: true};
     }
 
     const chunks = chunkCoordinates(coords, OSRM_CHUNK_SIZE);
+    let osrmSuccessCount = 0;
     const settled = await mapWithConcurrencyLimit(
         chunks,
         async (chunk) => {
             const snapped = await fetchOsrmSingleChunk(chunk);
-            return snapped && snapped.length >= 2 ? snapped : smoothPolylineSpline(chunk);
+            if (snapped && snapped.length >= 2) {
+                osrmSuccessCount++;
+                return snapped;
+            }
+            return smoothPolylineSpline(chunk);
         },
         {concurrency: 3, staggerMs: 20}
     );
@@ -163,7 +176,15 @@ async function fetchOsrmPolyline(coords: [number, number][]): Promise<[number, n
     );
 
     const stitched = stitchPolylineSegments(segments);
-    return stitched.length >= 2 ? stitched : coords;
+    return {
+        coords: stitched.length >= 2 ? stitched : coords,
+        allFallback: osrmSuccessCount === 0,
+    };
+}
+
+async function fetchOsrmPolyline(coords: [number, number][]): Promise<[number, number][] | null> {
+    const result = await fetchOsrmPolylineWithMeta(coords);
+    return result.coords;
 }
 
 
@@ -253,10 +274,21 @@ async function assembleRoutePolyline(params: {
 
     if (upCoords.length < 2 && downCoords.length < 2) return null;
 
-    const [snappedUp, snappedDown] = await Promise.all([
-        upCoords.length >= 2 ? fetchOsrmPolyline(upCoords) : Promise.resolve(null),
-        hasBothDirections && downCoords.length >= 2 ? fetchOsrmPolyline(downCoords) : Promise.resolve(null),
+    const [upRes, downRes] = await Promise.all([
+        upCoords.length >= 2 ? fetchOsrmPolylineWithMeta(upCoords) : Promise.resolve({
+            coords: null,
+            allFallback: false
+        }),
+        hasBothDirections && downCoords.length >= 2
+            ? fetchOsrmPolylineWithMeta(downCoords)
+            : Promise.resolve({coords: null, allFallback: false}),
     ]);
+
+    const snappedUp = upRes.coords;
+    const snappedDown = downRes.coords;
+    const isFallback =
+        (upCoords.length >= 2 && upRes.allFallback) ||
+        (hasBothDirections && downCoords.length >= 2 && downRes.allFallback);
 
     let finalUp = snappedUp && snappedUp.length >= 2 ? snappedUp : smoothPolylineSpline(upCoords);
     let finalDown = hasBothDirections
@@ -287,6 +319,7 @@ async function assembleRoutePolyline(params: {
         total_dist: Math.round(totalDist),
         up_polyline: finalUp,
         down_polyline: finalDown,
+        ...(isFallback ? {is_fallback: true} : {}),
         stops: stops.map((s) => ({
             id: s.nodeid,
             name: s.nodenm,
@@ -396,7 +429,7 @@ export async function refreshRouteData(
 
                     if (!options.force) {
                         const existing = await artifactStore.getJson<GeoPolyline>(namespacedKey).catch(() => null);
-                        if (existing?.data?.stops_hash && existing.data.stops_hash === stopsHash) {
+                        if (existing?.data?.stops_hash && existing.data.stops_hash === stopsHash && !existing.data.is_fallback) {
                             skippedUnchanged++;
                             return;
                         }
@@ -410,10 +443,16 @@ export async function refreshRouteData(
                     });
                     if (!polylineData) return;
 
-                    // Save minified GeoPolyline under namespaced Blob/FS key & seed caches
-                    await artifactStore.putJson(namespacedKey, polylineData, {pretty: false});
-                    setCached(`polyline:${cityCode}:${routeId}`, polylineData);
-                    void distributedCache.set(`polyline:${cityCode}:${routeId}`, polylineData, 24 * 60 * 60).catch(() => false);
+                    // Do not persist degraded spline-only fallbacks so transient OSRM failures self-heal
+                    if (!polylineData.is_fallback) {
+                        await artifactStore.putJson(namespacedKey, polylineData, {pretty: false});
+                        setCached(`polyline:${cityCode}:${routeId}`, polylineData);
+                        void distributedCache.set(
+                            `polyline:${cityCode}:${routeId}`,
+                            {data: polylineData, timestamp: Date.now()},
+                            7 * 86400
+                        ).catch(() => false);
+                    }
 
                     processedCount++;
                 } catch (err) {
@@ -488,7 +527,11 @@ export async function generateSingleRoutePolyline(
                     const seoulPolyline = await fetchSeoulRoutePolyline(routeId, routeNo);
                     if (seoulPolyline && seoulPolyline.stops?.length) {
                         setCached(`polyline:${cityCode}:${routeId}`, seoulPolyline);
-                        void distributedCache.set(`polyline:${cityCode}:${routeId}`, seoulPolyline, 24 * 60 * 60).catch(() => false);
+                        void distributedCache.set(
+                            `polyline:${cityCode}:${routeId}`,
+                            {data: seoulPolyline, timestamp: Date.now()},
+                            7 * 86400
+                        ).catch(() => false);
                         return seoulPolyline;
                     }
                 } catch {
@@ -540,12 +583,18 @@ export async function generateSingleRoutePolyline(
             });
             if (!polylineData) return null;
 
-            // Seed server L1 + L2 Redis cache for /api/polyline/[routeId]
-            setCached(`polyline:${cityCode}:${routeId}`, polylineData);
-            void distributedCache.set(`polyline:${cityCode}:${routeId}`, polylineData, 24 * 60 * 60).catch(() => false);
+            // Only persist road-snapped polylines; skip durable caching if OSRM fell back to spline
+            if (!polylineData.is_fallback) {
+                setCached(`polyline:${cityCode}:${routeId}`, polylineData);
+                void distributedCache.set(
+                    `polyline:${cityCode}:${routeId}`,
+                    {data: polylineData, timestamp: Date.now()},
+                    7 * 86400
+                ).catch(() => false);
 
-            // Persist minified GeoPolyline under namespaced /tmp + Vercel Blob key
-            await artifactStore.putJson(`routes/${cityCode}/${routeId}.json`, polylineData, {pretty: false});
+                // Persist minified GeoPolyline under namespaced /tmp + Vercel Blob key
+                await artifactStore.putJson(`routes/${cityCode}/${routeId}.json`, polylineData, {pretty: false});
+            }
 
             return polylineData;
         } catch (err) {
@@ -553,7 +602,7 @@ export async function generateSingleRoutePolyline(
             return null;
         }
     }).then((result) => {
-        if (!result) {
+        if (!result || result.is_fallback) {
             polylineGenerationCache.delete(cacheKey);
         }
         return result;

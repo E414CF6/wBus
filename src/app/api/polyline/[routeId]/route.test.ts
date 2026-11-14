@@ -18,6 +18,7 @@ vi.mock("@entities/route/routeSyncService", () => ({
                 [127.92, 37.35],
                 [127.91, 37.34],
             ],
+            ...(routeId === "FALLBACK_ROUTE" ? {is_fallback: true} : {}),
             stops: [
                 {id: "STOP1", name: "Station 1", ord: 1, ud: 1, lat: 37.34, lon: 127.91, nodeno: "1001"},
                 {id: "STOP2", name: "Station 2", ord: 2, ud: 1, lat: 37.35, lon: 127.92, nodeno: "1002"},
@@ -68,5 +69,14 @@ describe("GET /api/polyline/[routeId]", () => {
         expect(res.status).toBe(404);
         const data = await res.json();
         expect(data.error).toContain("Wonju");
+    });
+
+    it("bypasses caching when polyline is a spline fallback", async () => {
+        const req = new NextRequest("http://localhost:3000/api/polyline/FALLBACK_ROUTE?cityCode=32020");
+        const res = await GET(req, {params: Promise.resolve({routeId: "FALLBACK_ROUTE"})});
+        expect(res.status).toBe(200);
+        expect(res.headers.get("Cache-Control")).toContain("no-store");
+        expect(res.headers.get("X-Cache-Status")).toBe("bypass");
+        expect(res.headers.get("X-Cache-Layer")).toBe("fallback");
     });
 });

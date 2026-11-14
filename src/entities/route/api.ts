@@ -178,13 +178,13 @@ export async function getPolyline(routeKey: string, cityCode?: string): Promise<
     const result = await polylineCache.getOrFetch(cacheKey, async () => {
         const idbKey = `${STORAGE_KEYS.POLYLINE_PREFIX}${cacheKey}`;
         const fromIdb = await idbGet<GeoPolyline>(idbKey);
-        if (fromIdb && Array.isArray(fromIdb.stops) && fromIdb.stops.length > 0) {
+        if (fromIdb && !fromIdb.is_fallback && Array.isArray(fromIdb.stops) && fromIdb.stops.length > 0) {
             return fromIdb;
         }
 
         try {
             const poly = await fetchAPI<GeoPolyline>(`/api/polyline/${encodeURIComponent(routeKey)}?cityCode=${cCode}`);
-            if (poly && Array.isArray(poly.stops) && poly.stops.length > 0) {
+            if (poly && !poly.is_fallback && Array.isArray(poly.stops) && poly.stops.length > 0) {
                 void idbSet(idbKey, poly, ONE_DAY_MS);
             }
             return poly;
@@ -198,7 +198,7 @@ export async function getPolyline(routeKey: string, cityCode?: string): Promise<
             throw error;
         }
     });
-    if (!result) {
+    if (!result || result.is_fallback) {
         polylineCache.delete(cacheKey);
     }
     return result;

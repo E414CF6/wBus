@@ -57,6 +57,7 @@ export interface GeoPolyline {
     stops_hash?: string;
     bbox?: [number, number, number, number];
     stops_count?: number;
+    is_fallback?: boolean;
 }
 
 // Direction

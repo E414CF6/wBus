@@ -44,7 +44,7 @@ export async function GET(
 
     // 1. Check L1 In-Memory Cache
     const memCached = peekCached<GeoPolyline>(cacheKey, POLYLINE_TTL_SECONDS);
-    if (memCached?.data) {
+    if (memCached?.data && !memCached.data.is_fallback) {
         return NextResponse.json(memCached.data, {
             status: 200,
             headers: {
@@ -58,7 +58,7 @@ export async function GET(
     // 1b. Check L2 Redis Cache
     try {
         const l2 = await distributedCache.get<CachedData<GeoPolyline>>(cacheKey, 350);
-        if (l2?.data && Array.isArray(l2.data.stops) && l2.data.stops.length > 0) {
+        if (l2?.data && !l2.data.is_fallback && Array.isArray(l2.data.stops) && l2.data.stops.length > 0) {
             setCached(cacheKey, l2.data);
             return NextResponse.json(l2.data, {
                 status: 200,
@@ -78,7 +78,7 @@ export async function GET(
         const stored =
             (await artifactStore.getJson<GeoPolyline>(`routes/${cityCode}/${routeId}.json`)) ??
             (await artifactStore.getJson<GeoPolyline>(`routes/${routeId}.json`));
-        if (stored?.data && Array.isArray(stored.data.stops) && stored.data.stops.length > 0) {
+        if (stored?.data && !stored.data.is_fallback && Array.isArray(stored.data.stops) && stored.data.stops.length > 0) {
             setCached(cacheKey, stored.data);
             void distributedCache.set(cacheKey, {data: stored.data, timestamp: Date.now()}, 7 * 86400);
             return NextResponse.json(stored.data, {
@@ -98,6 +98,16 @@ export async function GET(
     try {
         const polyline = await generateSingleRoutePolyline(routeId, cityCode, routeNo);
         if (polyline) {
+            if (polyline.is_fallback) {
+                return NextResponse.json(polyline, {
+                    status: 200,
+                    headers: {
+                        "Cache-Control": "no-store, max-age=0",
+                        "X-Cache-Status": "bypass",
+                        "X-Cache-Layer": "fallback",
+                    },
+                });
+            }
             setCached(cacheKey, polyline);
             void distributedCache.set(cacheKey, {data: polyline, timestamp: Date.now()}, 7 * 86400);
             return NextResponse.json(polyline, {
