@@ -14,15 +14,16 @@ export interface FloatingBottomNavProps {
 
 export const FloatingBottomNav: React.FC<FloatingBottomNavProps> = memo(
     function FloatingBottomNav({
-        activeModal,
-        onScrollTop,
-        onOpenCityBusModal,
-        onOpenShuttleModal,
-        onOpenStopsModal,
-        onOpenSettingsModal,
-    }) {
+                                   activeModal,
+                                   onScrollTop,
+                                   onOpenCityBusModal,
+                                   onOpenShuttleModal,
+                                   onOpenStopsModal,
+                                   onOpenSettingsModal,
+                               }) {
         return (
-            <div className="fixed bottom-4 sm:bottom-6 inset-x-0 z-40 flex justify-center px-3 pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
+            <div
+                className="fixed bottom-4 sm:bottom-6 inset-x-0 z-40 flex justify-center px-3 pointer-events-none pb-[env(safe-area-inset-bottom,0px)]">
                 <nav
                     aria-label="빠른 메뉴"
                     className="pointer-events-auto inline-flex items-center gap-1 sm:gap-1.5 p-1.5 rounded-full bg-[#111520]/92 dark:bg-[#0d121d]/92 backdrop-blur-2xl border border-white/12 shadow-[0_12px_40px_-8px_rgba(2,6,23,0.55)] max-w-full overflow-x-auto no-scrollbar"
@@ -34,7 +35,8 @@ export const FloatingBottomNav: React.FC<FloatingBottomNavProps> = memo(
                         aria-label="맨 위로 이동"
                         className="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
                     >
-                        <span className="w-7 h-7 rounded-full bg-white text-[#0f172a] flex items-center justify-center shadow-xs">
+                        <span
+                            className="w-7 h-7 rounded-full bg-white text-[#0f172a] flex items-center justify-center shadow-xs">
                             <Bus className="w-3.5 h-3.5 stroke-[2.5]"/>
                         </span>
                         <span className="text-xs font-black tracking-tight">wBus</span>

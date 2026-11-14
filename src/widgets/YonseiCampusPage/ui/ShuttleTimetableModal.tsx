@@ -7,11 +7,7 @@ import {type ShuttleInboundItem, type ShuttleOutboundItem, YONSEI_SHUTTLE_SCHEDU
 import {UI_TEXT} from "@shared/config/locale";
 import {useDialogModal} from "@shared/lib/useDialogModal";
 import type {DayMode} from "@shared/types/navigation";
-import {
-    filterShuttleSchedule,
-    getNextShuttleDepartures,
-    type ShuttleDayFilter,
-} from "../lib/yonseiShuttleUtils";
+import {filterShuttleSchedule, getNextShuttleDepartures, type ShuttleDayFilter,} from "../lib/yonseiShuttleUtils";
 
 export interface ShuttleTimetableModalProps {
     isOpen: boolean;
@@ -24,12 +20,12 @@ export interface ShuttleTimetableModalProps {
 type ShuttleTab = "OUTBOUND" | "INBOUND" | "GUIDELINES";
 
 export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
-    isOpen,
-    initialTab,
-    dayMode,
-    now,
-    onClose,
-}) => {
+                                                                                isOpen,
+                                                                                initialTab,
+                                                                                dayMode,
+                                                                                now,
+                                                                                onClose,
+                                                                            }) => {
     const [activeTab, setActiveTab] = useState<ShuttleTab>(initialTab);
     const [dayFilter, setDayFilter] = useState<ShuttleDayFilter>("ALL");
     const [searchQuery, setSearchQuery] = useState("");
@@ -66,10 +62,12 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
             className="m-auto w-full sm:max-w-2xl max-h-[90dvh] open:flex flex-col rounded-t-3xl sm:rounded-3xl bg-white dark:bg-[#111623] text-slate-900 dark:text-slate-100 border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden p-0 mb-0 sm:mb-auto"
         >
             {/* Modal Header */}
-            <div className="px-4 sm:px-6 pt-4 pb-3.5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] space-y-3 shrink-0">
+            <div
+                className="px-4 sm:px-6 pt-4 pb-3.5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] space-y-3 shrink-0">
                 <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-0">
-                        <span className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#003876] to-blue-700 text-white flex items-center justify-center shadow-xs shrink-0">
+                        <span
+                            className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#003876] to-blue-700 text-white flex items-center justify-center shadow-xs shrink-0">
                             <GraduationCap className="w-4 h-4"/>
                         </span>
                         <div className="min-w-0">
@@ -85,8 +83,8 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                                         dayType.isSaturday
                                             ? "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30"
                                             : dayType.isSunday
-                                              ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30"
-                                              : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                                                ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30"
+                                                : "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
                                     }`}
                                 >
                                     {dayType.label}
@@ -110,7 +108,8 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
 
                 {/* Saturday Notice */}
                 {dayType.isSaturday && (
-                    <div className="p-2.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/30 flex items-center gap-2 text-[11px] font-bold text-amber-800 dark:text-amber-200">
+                    <div
+                        className="p-2.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/30 flex items-center gap-2 text-[11px] font-bold text-amber-800 dark:text-amber-200">
                         <AlertCircle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0"/>
                         <span>{UI_TEXT.YONSEI_SHUTTLE.SATURDAY_NO_RUN_DESC} (평일·일요일 전체 시간표 열람 가능)</span>
                     </div>
@@ -202,7 +201,8 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                         </div>
 
                         <div className="relative flex-1">
-                            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
+                            <Search
+                                className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
                             <input
                                 type="text"
                                 value={searchQuery}
@@ -233,13 +233,14 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                     activeTab === "OUTBOUND"
                         ? `${tabBaseId}-outbound`
                         : activeTab === "INBOUND"
-                          ? `${tabBaseId}-inbound`
-                          : `${tabBaseId}-guidelines`
+                            ? `${tabBaseId}-inbound`
+                            : `${tabBaseId}-guidelines`
                 }
                 className="flex-1 overflow-y-auto px-4 sm:px-6 py-4"
             >
                 {activeTab === "GUIDELINES" ? (
-                    <div className="p-4 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 space-y-3">
+                    <div
+                        className="p-4 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 space-y-3">
                         <div className="flex items-center gap-2 text-sm font-black text-slate-900 dark:text-white">
                             <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0"/>
                             <span>{UI_TEXT.YONSEI_SHUTTLE.GUIDELINES_TITLE}</span>
@@ -253,7 +254,8 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                                     key={idx}
                                     className="flex items-start gap-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 leading-relaxed"
                                 >
-                                    <span className="w-5 h-5 rounded-full bg-[#003876]/10 dark:bg-blue-500/15 text-[#003876] dark:text-blue-300 text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 tabular-nums">
+                                    <span
+                                        className="w-5 h-5 rounded-full bg-[#003876]/10 dark:bg-blue-500/15 text-[#003876] dark:text-blue-300 text-[11px] font-black flex items-center justify-center shrink-0 mt-0.5 tabular-nums">
                                         {idx + 1}
                                     </span>
                                     <span>{line}</span>
@@ -269,7 +271,8 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                     </div>
                 ) : (
                     <div className="space-y-2.5">
-                        <div className="flex items-center justify-between px-1 text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
+                        <div
+                            className="flex items-center justify-between px-1 text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
                             <span>
                                 {activeTab === "OUTBOUND"
                                     ? "미래관 출발 하교 셔틀 목록"
@@ -286,11 +289,11 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                                 const isNext =
                                     activeTab === "OUTBOUND"
                                         ? nextOutbound?.item.departure_time === item.departure_time &&
-                                          nextOutbound.item.destination ===
-                                              (item as ShuttleOutboundItem).destination
+                                        nextOutbound.item.destination ===
+                                        (item as ShuttleOutboundItem).destination
                                         : nextInbound?.item.departure_time === item.departure_time &&
-                                          nextInbound.item.departure_point ===
-                                              (item as ShuttleInboundItem).departure_point;
+                                        nextInbound.item.departure_point ===
+                                        (item as ShuttleInboundItem).departure_point;
 
                                 return (
                                     <div
@@ -303,10 +306,12 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex items-baseline gap-2.5 min-w-0">
-                                                <span className="text-lg font-black tabular-nums text-[#003876] dark:text-blue-300 shrink-0">
+                                                <span
+                                                    className="text-lg font-black tabular-nums text-[#003876] dark:text-blue-300 shrink-0">
                                                     {item.departure_time}
                                                 </span>
-                                                <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">
+                                                <span
+                                                    className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white truncate">
                                                     {activeTab === "OUTBOUND"
                                                         ? `${item.departure_point} → ${item.destination}`
                                                         : `${item.departure_point} 발 → ${item.destination}`}
@@ -315,7 +320,8 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
 
                                             <div className="flex items-center gap-1 shrink-0">
                                                 {isNext && (
-                                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-[#003876] dark:bg-blue-600 text-white">
+                                                    <span
+                                                        className="px-2 py-0.5 rounded-md text-[10px] font-black bg-[#003876] dark:bg-blue-600 text-white">
                                                         {UI_TEXT.YONSEI_SHUTTLE.NEXT_BUS}
                                                     </span>
                                                 )}
@@ -331,16 +337,19 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                                             </div>
                                         </div>
 
-                                        <div className="flex flex-wrap items-center gap-1 text-[11px] text-slate-600 dark:text-slate-300">
+                                        <div
+                                            className="flex flex-wrap items-center gap-1 text-[11px] text-slate-600 dark:text-slate-300">
                                             {item.via.length > 0 ? (
                                                 <>
                                                     <span className="font-bold text-slate-400 mr-0.5">경유:</span>
                                                     {item.via.map((v, vIdx) => (
                                                         <React.Fragment key={`${v.name}-${vIdx}`}>
-                                                            <span className="px-1.5 py-0.5 rounded-md bg-white dark:bg-white/[0.08] border border-slate-200/70 dark:border-white/10 font-semibold">
+                                                            <span
+                                                                className="px-1.5 py-0.5 rounded-md bg-white dark:bg-white/[0.08] border border-slate-200/70 dark:border-white/10 font-semibold">
                                                                 {v.name}
                                                                 {v.time && (
-                                                                    <span className="ml-1 font-black tabular-nums text-[#003876] dark:text-blue-400">
+                                                                    <span
+                                                                        className="ml-1 font-black tabular-nums text-[#003876] dark:text-blue-400">
                                                                         {v.time}
                                                                     </span>
                                                                 )}
@@ -359,7 +368,8 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                                         </div>
 
                                         {item.note && (
-                                            <div className="text-[11px] font-bold text-amber-800 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1">
+                                            <div
+                                                className="text-[11px] font-bold text-amber-800 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg px-2.5 py-1">
                                                 ※ {item.note}
                                             </div>
                                         )}

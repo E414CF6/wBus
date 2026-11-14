@@ -39,7 +39,8 @@ import {ShuttleStopsModal} from "./ui/ShuttleStopsModal";
 import {ShuttleTimetableModal} from "./ui/ShuttleTimetableModal";
 import {YonseiCityBusCard} from "./ui/YonseiCityBusCard";
 
-const emptySubscribe = () => () => {};
+const emptySubscribe = () => () => {
+};
 const KOREAN_WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 function getDefaultDirection(now: Date): CampusDirectionMode {
@@ -100,7 +101,7 @@ export function YonseiCampusPage() {
     const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const isDark = mounted
         ? resolvedTheme === "dark" ||
-          (typeof document !== "undefined" && document.documentElement.classList.contains("dark"))
+        (typeof document !== "undefined" && document.documentElement.classList.contains("dark"))
         : false;
 
     const handleToggleTheme = useCallback(() => {
@@ -189,8 +190,8 @@ export function YonseiCampusPage() {
         dayMode === "AUTO"
             ? `자동 (${isTodayWeekendOrHoliday ? "휴일" : "평일"})`
             : dayMode === "WEEKDAY"
-              ? UI_TEXT.YONSEI.MODE_WEEKDAY
-              : UI_TEXT.YONSEI.MODE_VACATION;
+                ? UI_TEXT.YONSEI.MODE_WEEKDAY
+                : UI_TEXT.YONSEI.MODE_VACATION;
 
     const outboundWait = nextOutbound ? getShuttleWaitBadge(nextOutbound.waitMins) : null;
     const inboundWait = nextInbound ? getShuttleWaitBadge(nextInbound.waitMins) : null;

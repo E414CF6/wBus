@@ -3,17 +3,7 @@
 import React, {useId, useRef} from "react";
 import Link from "next/link";
 import {useTheme} from "next-themes";
-import {
-    ArrowDownLeft,
-    ArrowUpRight,
-    Calendar,
-    Check,
-    Monitor,
-    Moon,
-    Settings,
-    Sun,
-    X,
-} from "lucide-react";
+import {ArrowDownLeft, ArrowUpRight, Calendar, Check, Monitor, Moon, Settings, Sun, X,} from "lucide-react";
 
 import {UI_TEXT} from "@shared/config/locale";
 import {useDialogModal} from "@shared/lib/useDialogModal";
@@ -32,21 +22,21 @@ export interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
-    isOpen,
-    dayMode,
-    isTodayWeekendOrHoliday,
-    directionMode,
-    onDayModeChange,
-    onDirectionModeChange,
-    onClose,
-}) => {
+                                                                isOpen,
+                                                                dayMode,
+                                                                isTodayWeekendOrHoliday,
+                                                                directionMode,
+                                                                onDayModeChange,
+                                                                onDirectionModeChange,
+                                                                onClose,
+                                                            }) => {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const titleId = useId();
     const {theme, setTheme} = useTheme();
 
     useDialogModal(dialogRef, isOpen);
 
-    const dayModeOptions: {id: DayMode; label: string; desc: string}[] = [
+    const dayModeOptions: { id: DayMode; label: string; desc: string }[] = [
         {
             id: "AUTO",
             label: `자동 (${isTodayWeekendOrHoliday ? "휴일" : "평일"})`,
@@ -79,9 +69,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             className="m-auto w-full sm:max-w-md max-h-[88dvh] open:flex flex-col rounded-t-3xl sm:rounded-3xl bg-white dark:bg-[#111623] text-slate-900 dark:text-slate-100 border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden p-0 mb-0 sm:mb-auto"
         >
             {/* Header */}
-            <div className="px-5 pt-4 pb-3.5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] flex items-center justify-between gap-2 shrink-0">
+            <div
+                className="px-5 pt-4 pb-3.5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] flex items-center justify-between gap-2 shrink-0">
                 <div className="flex items-center gap-2.5">
-                    <span className="w-8 h-8 rounded-xl bg-[#003876]/10 dark:bg-blue-500/15 text-[#003876] dark:text-blue-400 flex items-center justify-center">
+                    <span
+                        className="w-8 h-8 rounded-xl bg-[#003876]/10 dark:bg-blue-500/15 text-[#003876] dark:text-blue-400 flex items-center justify-center">
                         <Settings className="w-4 h-4"/>
                     </span>
                     <div>
@@ -133,12 +125,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                                         <div className="text-xs font-black text-slate-900 dark:text-white">
                                             {opt.label}
                                         </div>
-                                        <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                                        <div
+                                            className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
                                             {opt.desc}
                                         </div>
                                     </div>
                                     {selected && (
-                                        <span className="w-5 h-5 rounded-full bg-[#003876] dark:bg-blue-500 text-white flex items-center justify-center shrink-0">
+                                        <span
+                                            className="w-5 h-5 rounded-full bg-[#003876] dark:bg-blue-500 text-white flex items-center justify-center shrink-0">
                                             <Check className="w-3 h-3"/>
                                         </span>
                                     )}
@@ -219,12 +213,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 </div>
 
                 {/* Legal / Links */}
-                <div className="pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-[11px] font-bold text-slate-400 dark:text-slate-500">
+                <div
+                    className="pt-3 border-t border-slate-200/80 dark:border-white/10 flex items-center justify-between text-[11px] font-bold text-slate-400 dark:text-slate-500">
                     <div className="flex items-center gap-3">
-                        <Link href="/privacy" onClick={onClose} className="hover:text-slate-700 dark:hover:text-slate-200 underline underline-offset-4">
+                        <Link href="/privacy" onClick={onClose}
+                              className="hover:text-slate-700 dark:hover:text-slate-200 underline underline-offset-4">
                             개인정보처리방침
                         </Link>
-                        <Link href="/terms" onClick={onClose} className="hover:text-slate-700 dark:hover:text-slate-200 underline underline-offset-4">
+                        <Link href="/terms" onClick={onClose}
+                              className="hover:text-slate-700 dark:hover:text-slate-200 underline underline-offset-4">
                             이용약관
                         </Link>
                     </div>

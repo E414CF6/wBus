@@ -74,12 +74,12 @@ function getWaitBadgeConfig(waitMins: number): {
 }
 
 export const YonseiCityBusCard: React.FC<YonseiCityBusCardProps> = memo(function YonseiCityBusCard({
-    routeNo,
-    scheduleRoute,
-    directionMode,
-    now,
-    onOpenTimetable,
-}) {
+                                                                                                       routeNo,
+                                                                                                       scheduleRoute,
+                                                                                                       directionMode,
+                                                                                                       now,
+                                                                                                       onOpenTimetable,
+                                                                                                   }) {
     const config = ROUTE_CONFIG[routeNo];
     const accent = ROUTE_ACCENT_STYLES[routeNo];
 

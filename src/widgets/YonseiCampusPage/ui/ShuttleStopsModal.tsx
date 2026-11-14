@@ -3,12 +3,7 @@
 import React, {useId, useMemo, useRef, useState} from "react";
 import {Camera, ExternalLink, Info, MapPin, Navigation, X} from "lucide-react";
 
-import {
-    getKakaoMapUrl,
-    getKakaoRoadviewUrl,
-    YONSEI_SHUTTLE_STOPS,
-    type YonseiShuttleStop,
-} from "@entities/station";
+import {getKakaoMapUrl, getKakaoRoadviewUrl, YONSEI_SHUTTLE_STOPS, type YonseiShuttleStop,} from "@entities/station";
 import {UI_TEXT} from "@shared/config/locale";
 import {useDialogModal} from "@shared/lib/useDialogModal";
 import type {CampusDirectionMode} from "../lib/yonseiShuttleUtils";
@@ -26,10 +21,10 @@ function mapDirectionModeToFilter(mode: CampusDirectionMode): StopDirectionFilte
 }
 
 export const ShuttleStopsModal: React.FC<ShuttleStopsModalProps> = ({
-    isOpen,
-    initialDirectionMode,
-    onClose,
-}) => {
+                                                                        isOpen,
+                                                                        initialDirectionMode,
+                                                                        onClose,
+                                                                    }) => {
     const [dirFilter, setDirFilter] = useState<StopDirectionFilter>(() =>
         mapDirectionModeToFilter(initialDirectionMode)
     );
@@ -52,10 +47,12 @@ export const ShuttleStopsModal: React.FC<ShuttleStopsModalProps> = ({
             className="m-auto w-full sm:max-w-2xl max-h-[90dvh] open:flex flex-col rounded-t-3xl sm:rounded-3xl bg-white dark:bg-[#111623] text-slate-900 dark:text-slate-100 border border-slate-200/80 dark:border-white/10 shadow-2xl overflow-hidden p-0 mb-0 sm:mb-auto"
         >
             {/* Header */}
-            <div className="px-4 sm:px-6 pt-4 pb-3.5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] space-y-3 shrink-0">
+            <div
+                className="px-4 sm:px-6 pt-4 pb-3.5 border-b border-slate-200/80 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.02] space-y-3 shrink-0">
                 <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-0">
-                        <span className="w-9 h-9 rounded-2xl bg-[#003876]/10 dark:bg-blue-500/15 text-[#003876] dark:text-blue-400 flex items-center justify-center shrink-0">
+                        <span
+                            className="w-9 h-9 rounded-2xl bg-[#003876]/10 dark:bg-blue-500/15 text-[#003876] dark:text-blue-400 flex items-center justify-center shrink-0">
                             <MapPin className="w-4 h-4"/>
                         </span>
                         <div className="min-w-0">
@@ -142,7 +139,8 @@ export const ShuttleStopsModal: React.FC<ShuttleStopsModalProps> = ({
                                     </p>
                                     {stop.tips && (
                                         <p className="flex items-start gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-white/80 dark:bg-white/[0.04] border border-slate-200/70 dark:border-white/[0.06] rounded-xl px-2.5 py-2">
-                                            <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#003876] dark:text-blue-400"/>
+                                            <Info
+                                                className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#003876] dark:text-blue-400"/>
                                             <span>{stop.tips}</span>
                                         </p>
                                     )}

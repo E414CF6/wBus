@@ -54,7 +54,7 @@ function toTimetableEntries(schedule: YonseiDaySchedule): TimetableEntry[] {
  * Builds static BusRoute objects for Yonsei Mirae Campus routes (30, 34, 34-1).
  */
 export function getStaticYonseiBusRoutes(): BusRoute[] {
-    const routeMeta: Record<string, {origin: string; destination: string}> = {
+    const routeMeta: Record<string, { origin: string; destination: string }> = {
         "30": {origin: "장양리", destination: "연세대학교"},
         "34": {origin: "장양리", destination: "연세대학교"},
         "34-1": {origin: "장양리", destination: "회촌"},

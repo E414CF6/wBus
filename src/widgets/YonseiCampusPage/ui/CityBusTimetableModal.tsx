@@ -26,13 +26,13 @@ export interface CityBusTimetableModalProps {
 }
 
 export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
-    isOpen,
-    initialRouteNo,
-    initialLocation,
-    allRoutes,
-    now,
-    onClose,
-}) => {
+                                                                                isOpen,
+                                                                                initialRouteNo,
+                                                                                initialLocation,
+                                                                                allRoutes,
+                                                                                now,
+                                                                                onClose,
+                                                                            }) => {
     const [routeNo, setRouteNo] = useState(initialRouteNo);
     const [location, setLocation] = useState<"origin" | "dest">(initialLocation);
     const [searchQuery, setSearchQuery] = useState("");
@@ -270,7 +270,8 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                 {/* Search + Route Stops Toggle */}
                 <div className="flex items-center gap-2">
                     <div className="relative flex-1">
-                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"/>
+                        <Search
+                            className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"/>
                         <input
                             type="text"
                             value={searchQuery}
@@ -388,19 +389,19 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                                 scope="col"
                                 className="w-16 px-3 py-2.5 text-center border-y border-l border-slate-200/80 dark:border-white/10 rounded-tl-xl"
                             >
-                                    {UI_TEXT.YONSEI.HOUR_LABEL}
+                                {UI_TEXT.YONSEI.HOUR_LABEL}
                             </th>
                             <th
                                 scope="col"
                                 className="px-3 py-2.5 text-left border-y border-l border-slate-200/80 dark:border-white/10"
                             >
-                                    {UI_TEXT.YONSEI.WEEKDAY_COLUMN}
+                                {UI_TEXT.YONSEI.WEEKDAY_COLUMN}
                             </th>
                             <th
                                 scope="col"
                                 className="px-3 py-2.5 text-left border border-slate-200/80 dark:border-white/10 rounded-tr-xl"
                             >
-                                    {UI_TEXT.YONSEI.VACATION_COLUMN}
+                                {UI_TEXT.YONSEI.VACATION_COLUMN}
                             </th>
                         </tr>
                         </thead>
@@ -420,11 +421,11 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                                 <th
                                     scope="row"
                                     className={`px-2 py-2.5 text-center font-black tabular-nums border-b border-l border-slate-200/70 dark:border-white/10 ${
-                                            row.isCurrentHour
-                                                ? "bg-blue-50 dark:bg-[#152038] text-[#003876] dark:text-blue-300 border-l-4 border-l-[#003876] dark:border-l-blue-400"
-                                                : "bg-slate-50/90 dark:bg-[#141a29] text-slate-700 dark:text-slate-200"
-                                        }`}
-                                    >
+                                        row.isCurrentHour
+                                            ? "bg-blue-50 dark:bg-[#152038] text-[#003876] dark:text-blue-300 border-l-4 border-l-[#003876] dark:border-l-blue-400"
+                                            : "bg-slate-50/90 dark:bg-[#141a29] text-slate-700 dark:text-slate-200"
+                                    }`}
+                                >
                                     <span className="text-sm">{row.displayHour}시</span>
                                     {row.isCurrentHour && (
                                         <span
@@ -438,31 +439,31 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                                 {/* Weekday minutes */}
                                 <td className="px-3 py-2.5 border-b border-l border-slate-200/70 dark:border-white/10 align-middle">
                                     <div className="flex flex-wrap gap-1.5 items-center">
-                                            {row.weekdayMinutes.length === 0 ? (
-                                                <span className="text-[11px] text-slate-300 dark:text-slate-700">
+                                        {row.weekdayMinutes.length === 0 ? (
+                                            <span className="text-[11px] text-slate-300 dark:text-slate-700">
                                                     -
                                                 </span>
-                                            ) : (
-                                                row.weekdayMinutes.map((item) =>
-                                                    renderMinuteChip(item, "weekday")
-                                                )
-                                            )}
-                                        </div>
+                                        ) : (
+                                            row.weekdayMinutes.map((item) =>
+                                                renderMinuteChip(item, "weekday")
+                                            )
+                                        )}
+                                    </div>
                                 </td>
 
                                 {/* Vacation / Holiday minutes */}
                                 <td className="px-3 py-2.5 border-b border-x border-slate-200/70 dark:border-white/10 align-middle">
                                     <div className="flex flex-wrap gap-1.5 items-center">
-                                            {row.vacationMinutes.length === 0 ? (
-                                                <span className="text-[11px] text-slate-300 dark:text-slate-700">
+                                        {row.vacationMinutes.length === 0 ? (
+                                            <span className="text-[11px] text-slate-300 dark:text-slate-700">
                                                     -
                                                 </span>
-                                            ) : (
-                                                row.vacationMinutes.map((item) =>
-                                                    renderMinuteChip(item, "vacation")
-                                                )
-                                            )}
-                                        </div>
+                                        ) : (
+                                            row.vacationMinutes.map((item) =>
+                                                renderMinuteChip(item, "vacation")
+                                            )
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
