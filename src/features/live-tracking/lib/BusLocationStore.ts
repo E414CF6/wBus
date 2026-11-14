@@ -1,5 +1,9 @@
 import type {BusItem} from "@entities/bus/types";
-import {API_CONFIG} from "@shared/config/env";
+import {
+    getGlobalPollingIntervalMs,
+    setGlobalPollingIntervalMs,
+    subscribeGlobalPollingInterval,
+} from "@shared/config/pollingConfig";
 import type {CachedData} from "@shared/cache";
 import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import {type BusLocationState, EMPTY_BUS_LIST, EMPTY_STATE, type Listener,} from "../model/types";
@@ -330,23 +334,25 @@ export class BusLocationStore {
         const hints = validMetas
             .map((m) => (typeof m.nextPollAfterMs === "number" && Number.isFinite(m.nextPollAfterMs) ? m.nextPollAfterMs : null))
             .filter((n): n is number => n !== null && n > 0);
+        const baseIntervalMs = getGlobalPollingIntervalMs();
         if (hints.length > 0) {
-            return Math.min(180_000, Math.max(globalPollingIntervalMs, Math.min(...hints)));
+            return Math.min(180_000, Math.max(baseIntervalMs, Math.min(...hints)));
         }
         if (validMetas.every((m) => m.inService === false)) {
-            return Math.min(180_000, Math.max(globalPollingIntervalMs, 60_000));
+            return Math.min(180_000, Math.max(baseIntervalMs, 60_000));
         }
         return null;
     }
 
     private computeNextDelayMs(): number {
+        const baseIntervalMs = getGlobalPollingIntervalMs();
         if (this.consecutiveErrors > 0) {
-            return Math.min(60_000, globalPollingIntervalMs * 2 ** Math.min(this.consecutiveErrors, 3));
+            return Math.min(60_000, baseIntervalMs * 2 ** Math.min(this.consecutiveErrors, 3));
         }
-        if (this.serverSuggestedDelayMs !== null && this.serverSuggestedDelayMs > globalPollingIntervalMs) {
+        if (this.serverSuggestedDelayMs !== null && this.serverSuggestedDelayMs > baseIntervalMs) {
             return this.serverSuggestedDelayMs;
         }
-        return globalPollingIntervalMs;
+        return baseIntervalMs;
     }
 
     private clearPollTimer() {
@@ -451,20 +457,19 @@ export class BusLocationStore {
     }
 }
 
-let globalPollingIntervalMs: number = API_CONFIG.LIVE.POLLING_INTERVAL_MS;
-
 const busLocationStores = new Map<string, BusLocationStore>();
+
+subscribeGlobalPollingInterval(() => {
+    for (const store of busLocationStores.values()) {
+        store.restartPollingIfActive();
+    }
+});
 
 /**
  * Updates the global live-tracking polling interval for all active and future BusLocationStore instances.
  */
 export function setGlobalBusPollingIntervalMs(intervalMs: number): void {
-    if (!Number.isFinite(intervalMs) || intervalMs < 1000) return;
-    if (globalPollingIntervalMs === intervalMs) return;
-    globalPollingIntervalMs = intervalMs;
-    for (const store of busLocationStores.values()) {
-        store.restartPollingIfActive();
-    }
+    setGlobalPollingIntervalMs(intervalMs);
 }
 
 export function getBusLocationStore(routeIdsKey: string, cityCode: string = "32020"): BusLocationStore {

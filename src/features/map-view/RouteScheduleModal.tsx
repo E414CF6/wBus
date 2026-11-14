@@ -1,7 +1,7 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Clock, Download, LocateFixed, RotateCw, Search, X} from "lucide-react";
+import {Clock, RotateCw, X} from "lucide-react";
 
 import {
     type BusRoute,
@@ -14,6 +14,9 @@ import {getRouteMeta} from "@entities/route/routeMetadata";
 import {NoticeBanner, NoticeModal} from "@entities/notice";
 import {Modal} from "@shared/ui";
 import type {DayMode} from "@shared/types/navigation";
+import {exportScheduleCsv} from "./schedule-modal/exportScheduleCsv";
+import {FullTimetableTable} from "./schedule-modal/FullTimetableTable";
+import {NextDepartureCards} from "./schedule-modal/NextDepartureCards";
 
 export interface RouteScheduleModalProps {
     isOpen: boolean;
@@ -174,25 +177,8 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
     }, []);
 
     const handleExportCsv = useCallback(() => {
-        if (!activeVariant?.timetable || activeVariant.timetable.length === 0) return;
-        const headers = ["회차", `${originName} 기점 출발`, `${destName} 회차지 출발`, "유형", "비고"];
-        const rows = activeVariant.timetable.map((row) => [
-            row.seq,
-            `"${row.originDepTime}"`,
-            `"${row.destDepTime}"`,
-            `"${(row.type || "").replace(/"/g, '""')}"`,
-            `"${(row.notes || "").replace(/"/g, '""')}"`,
-        ]);
-        const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
-        const blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"});
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `wBus_${routeName}번_${activeVariant.dayType}_시간표.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        if (!activeVariant) return;
+        exportScheduleCsv(activeVariant, routeName, originName, destName);
     }, [activeVariant, originName, destName, routeName]);
 
     const renderBodyContent = () => (
@@ -210,125 +196,16 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                 </div>
             ) : (
                 <>
-                    {/* Real-time Next Departure Spotlight (Dual Cards) */}
                     {nextDepInfo && (
-                        <div className={`grid ${embedded ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"} gap-2.5`}>
-                            {/* Origin Next Departure */}
-                            <div
-                                onClick={() => setHourlyLocation("origin")}
-                                className={`p-3 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 border transition-all duration-200 cursor-pointer ${
-                                    hourlyLocation === "origin"
-                                        ? "border-blue-500 dark:border-blue-500 ring-2 ring-blue-500/50 shadow-md"
-                                        : "border-blue-200 dark:border-blue-900/60 opacity-80 hover:opacity-100"
-                                } flex items-center justify-between gap-2`}
-                                title={`기점(${originName}) 기준으로 시간표 보기`}
-                            >
-                                <div className="min-w-0 flex-1">
-                                    <div
-                                        className="flex items-center gap-1.5 text-[11px] font-bold text-blue-700 dark:text-blue-300">
-                                        <Clock className="w-3 h-3 shrink-0"/>
-                                        <span className="truncate">기점 ({originName}) 출발</span>
-                                        {hourlyLocation === "origin" && (
-                                            <span
-                                                className="px-1.5 py-0.2 rounded-md bg-blue-600 text-[9px] font-black text-white shrink-0">
-                                                기준 정류장
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-baseline gap-1.5 mt-0.5 flex-wrap">
-                                        {nextDepInfo.nextOrigin ? (
-                                            <>
-                                                <span
-                                                    className="font-mono text-xl font-black text-blue-900 dark:text-blue-100">
-                                                    {nextDepInfo.nextOrigin.originDepTime}
-                                                </span>
-                                                <span
-                                                    className="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 whitespace-nowrap">
-                                                    (
-                                                    {nextDepInfo.originWaitMins !== null &&
-                                                        (nextDepInfo.originWaitMins <= 0
-                                                            ? "곧 출발"
-                                                            : `${nextDepInfo.originWaitMins}분 후`)}
-                                                    )
-                                                </span>
-                                            </>
-                                        ) : (
-                                            <span className="text-xs font-bold text-slate-400">
-                                                금일 운행 종료
-                                            </span>
-                                        )}
-                                    </div>
-                                    {nextDepInfo.nextOrigin?.notes && (
-                                        <div
-                                            className="text-[10px] font-bold text-blue-600 dark:text-blue-400 mt-1">
-                                            ※ {nextDepInfo.nextOrigin.notes}
-                                        </div>
-                                    )}
-                                </div>
-                                <span
-                                    className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-[10px] font-black text-blue-700 dark:text-blue-300 shrink-0 self-start">
-                                    {activeVariant.dayType}
-                                </span>
-                            </div>
-
-                            {/* Turnaround Next Departure */}
-                            <div
-                                onClick={() => setHourlyLocation("dest")}
-                                className={`p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border transition-all duration-200 cursor-pointer ${
-                                    hourlyLocation === "dest"
-                                        ? "border-amber-500 dark:border-amber-500 ring-2 ring-amber-500/50 shadow-md"
-                                        : "border-amber-200 dark:border-amber-900/60 opacity-80 hover:opacity-100"
-                                } flex items-center justify-between gap-2`}
-                                title={`회차지(${destName}) 기준으로 시간표 보기`}
-                            >
-                                <div className="min-w-0 flex-1">
-                                    <div
-                                        className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
-                                        <RotateCw className="w-3 h-3 shrink-0"/>
-                                        <span className="truncate">회차지 ({destName}) 출발</span>
-                                        {hourlyLocation === "dest" && (
-                                            <span
-                                                className="px-1.5 py-0.2 rounded-md bg-amber-600 text-[9px] font-black text-white shrink-0">
-                                                기준 정류장
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex items-baseline gap-1.5 mt-0.5 flex-wrap">
-                                        {nextDepInfo.nextDest ? (
-                                            <>
-                                                <span
-                                                    className="font-mono text-xl font-black text-amber-900 dark:text-amber-100">
-                                                    {nextDepInfo.nextDest.destDepTime}
-                                                </span>
-                                                <span
-                                                    className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400 whitespace-nowrap">
-                                                    (
-                                                    {nextDepInfo.destWaitMins !== null &&
-                                                        (nextDepInfo.destWaitMins <= 0
-                                                            ? "곧 출발"
-                                                            : `${nextDepInfo.destWaitMins}분 후`)}
-                                                    )
-                                                </span>
-                                            </>
-                                        ) : (
-                                            <span className="text-xs font-bold text-slate-400">
-                                                금일 운행 종료
-                                            </span>
-                                        )}
-                                    </div>
-                                    {nextDepInfo.nextDest?.notes && (
-                                        <div
-                                            className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mt-1">
-                                            ※ {nextDepInfo.nextDest.notes}
-                                        </div>
-                                    )}
-                                </div>
-                                <span
-                                    className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-[10px] font-black text-amber-700 dark:text-amber-300 shrink-0 self-start">
-                                    {activeVariant.dayType}
-                                </span>
-                            </div>
-                        </div>
+                        <NextDepartureCards
+                            nextDepInfo={nextDepInfo}
+                            dayType={activeVariant.dayType}
+                            originName={originName}
+                            destName={destName}
+                            hourlyLocation={hourlyLocation}
+                            onSelectLocation={setHourlyLocation}
+                            embedded={embedded}
+                        />
                     )}
 
                     {/* View Switcher & Day Type Selector Bar */}
@@ -431,209 +308,21 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                         </div>
                     )}
 
-                    {/* View 2: 전체 회차별 시간표 목록 */}
                     {viewMode === "full" && (
-                        <div className="space-y-3">
-                            <div
-                                className={`flex ${
-                                    embedded ? "flex-col" : "flex-col sm:flex-row sm:items-center"
-                                } justify-between gap-2`}
-                            >
-                                <div className="flex items-center gap-2 flex-wrap">
-                                    <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200">
-                                        {activeVariant.dayType} 운행 회차 ({filteredTimetable.length}회)
-                                    </span>
-                                    {nextDepInfo && (nextDepInfo.nextOrigin || nextDepInfo.nextDest) && (
-                                        <button
-                                            type="button"
-                                            onClick={scrollToNextRow}
-                                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 text-[11px] font-extrabold border border-blue-200 dark:border-blue-800 cursor-pointer active:scale-95 transition whitespace-nowrap"
-                                        >
-                                            <LocateFixed className="w-3 h-3"/>
-                                            <span>다음 출발 행으로</span>
-                                        </button>
-                                    )}
-                                    <button
-                                        type="button"
-                                        onClick={handleExportCsv}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[11px] font-extrabold border border-emerald-200 dark:border-emerald-800 cursor-pointer active:scale-95 transition whitespace-nowrap"
-                                        title="시간표를 CSV 파일로 다운로드 (엑셀 호환)"
-                                    >
-                                        <Download className="w-3 h-3"/>
-                                        <span>CSV 다운로드</span>
-                                    </button>
-                                </div>
-
-                                <div className={`relative w-full ${embedded ? "" : "sm:w-56"}`}>
-                                    <Search
-                                        className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"/>
-                                    <input
-                                        id="schedule-table-search"
-                                        name="schedule-table-search"
-                                        type="text"
-                                        value={tableSearch}
-                                        onChange={(e) => setTableSearch(e.target.value)}
-                                        placeholder="시각·비고 검색"
-                                        aria-label="시각·비고 검색"
-                                        className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11131a] text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    />
-                                    {tableSearch && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setTableSearch("")}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                                        >
-                                            <X className="w-3 h-3"/>
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div
-                                ref={tableRef}
-                                role="region"
-                                aria-label="전체 운행 시간표"
-                                tabIndex={0}
-                                className="max-h-96 overflow-auto overscroll-contain rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11131a] shadow-xs custom-scrollbar focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
-                            >
-                                <table className="w-full min-w-[520px] sm:min-w-full border-collapse text-left text-xs">
-                                    <thead
-                                        className="sticky top-0 z-20 bg-slate-100/95 dark:bg-[#161922]/95 backdrop-blur-md text-slate-700 dark:text-slate-200 border-b border-black/5 dark:border-white/10 font-extrabold">
-                                    <tr>
-                                        <th
-                                            scope="col"
-                                            className="sticky left-0 z-30 bg-slate-100 dark:bg-[#161922] py-2 px-2.5 w-12 text-center whitespace-nowrap border-r border-black/5 dark:border-white/10"
-                                        >
-                                            회차
-                                        </th>
-                                        <th
-                                            scope="col"
-                                            className={`py-2 px-3 whitespace-nowrap border-r border-black/5 dark:border-white/10 transition-colors ${
-                                                hourlyLocation === "origin"
-                                                    ? "bg-blue-100/70 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100"
-                                                    : ""
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-1 whitespace-nowrap">
-                                                <span>기점 출발 ({originName})</span>
-                                                {hourlyLocation === "origin" && (
-                                                    <span
-                                                        className="px-1 py-0.2 rounded text-[9px] font-black bg-blue-600 text-white shrink-0">
-                                                        기준
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </th>
-                                        <th
-                                            scope="col"
-                                            className={`py-2 px-3 whitespace-nowrap border-r border-black/5 dark:border-white/10 transition-colors ${
-                                                hourlyLocation === "dest"
-                                                    ? "bg-amber-100/70 dark:bg-amber-900/40 text-amber-900 dark:text-amber-100"
-                                                    : ""
-                                            }`}
-                                        >
-                                            <div className="flex items-center gap-1 whitespace-nowrap">
-                                                <span>회차지 출발 ({destName})</span>
-                                                {hourlyLocation === "dest" && (
-                                                    <span
-                                                        className="px-1 py-0.2 rounded text-[9px] font-black bg-amber-600 text-white shrink-0">
-                                                        기준
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </th>
-                                        <th scope="col" className="py-2 px-3 whitespace-nowrap min-w-[120px]">비고</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                                    {filteredTimetable.length === 0 ? (
-                                        <tr>
-                                            <td
-                                                colSpan={4}
-                                                className="py-8 text-center text-slate-400"
-                                            >
-                                                일치하는 운행 회차가 없습니다.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        filteredTimetable.map((row) => {
-                                            const isNextOrigin =
-                                                nextDepInfo?.nextOrigin?.seq === row.seq;
-                                            const isNextDest =
-                                                nextDepInfo?.nextDest?.seq === row.seq;
-                                            const isTargetNext =
-                                                hourlyLocation === "origin" ? isNextOrigin : isNextDest;
-
-                                            return (
-                                                <tr
-                                                    key={row.seq}
-                                                    data-next-departure={
-                                                        isNextOrigin || isNextDest
-                                                            ? "true"
-                                                            : undefined
-                                                    }
-                                                    data-target-next={isTargetNext ? "true" : undefined}
-                                                    className={`cv-auto-row ${
-                                                        isNextOrigin || isNextDest
-                                                            ? "bg-blue-50/80 dark:bg-blue-950/40 font-bold"
-                                                            : "hover:bg-slate-50 dark:hover:bg-white/[0.02]"
-                                                    }`}
-                                                >
-                                                    <th
-                                                        scope="row"
-                                                        className={`sticky left-0 z-10 py-2 px-2.5 text-center font-mono font-medium whitespace-nowrap text-slate-400 border-r border-black/5 dark:border-white/10 ${
-                                                            isNextOrigin || isNextDest
-                                                                ? "bg-blue-50 dark:bg-[#141c33]"
-                                                                : "bg-white dark:bg-[#11131a]"
-                                                        }`}
-                                                    >
-                                                        {row.seq}
-                                                    </th>
-                                                    <td
-                                                        className={`py-2 px-3 font-mono whitespace-nowrap border-r border-black/5 dark:border-white/10 ${
-                                                            hourlyLocation === "origin"
-                                                                ? "bg-blue-50/40 dark:bg-blue-950/20"
-                                                                : ""
-                                                        }`}
-                                                    >
-                                                            <span
-                                                                className={
-                                                                    isNextOrigin
-                                                                        ? "px-1.5 py-0.5 rounded bg-blue-600 text-white font-black"
-                                                                        : "font-bold text-slate-900 dark:text-slate-100"
-                                                                }
-                                                            >
-                                                                {row.originDepTime}
-                                                            </span>
-                                                    </td>
-                                                    <td
-                                                        className={`py-2 px-3 font-mono whitespace-nowrap border-r border-black/5 dark:border-white/10 ${
-                                                            hourlyLocation === "dest"
-                                                                ? "bg-amber-50/40 dark:bg-amber-950/20"
-                                                                : ""
-                                                        }`}
-                                                    >
-                                                            <span
-                                                                className={
-                                                                    isNextDest
-                                                                        ? "px-1.5 py-0.5 rounded bg-amber-600 text-white font-black"
-                                                                        : "font-bold text-slate-900 dark:text-slate-100"
-                                                                }
-                                                            >
-                                                                {row.destDepTime}
-                                                            </span>
-                                                    </td>
-                                                    <td className="py-2 px-3 text-slate-600 dark:text-slate-400">
-                                                        {row.notes || "-"}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        <FullTimetableTable
+                            dayType={activeVariant.dayType}
+                            originName={originName}
+                            destName={destName}
+                            hourlyLocation={hourlyLocation}
+                            filteredTimetable={filteredTimetable}
+                            nextDepInfo={nextDepInfo}
+                            tableSearch={tableSearch}
+                            onTableSearchChange={setTableSearch}
+                            tableRef={tableRef}
+                            onScrollToNextRow={scrollToNextRow}
+                            onExportCsv={handleExportCsv}
+                            embedded={embedded}
+                        />
                     )}
                 </>
             )}

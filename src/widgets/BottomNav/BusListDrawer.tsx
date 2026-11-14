@@ -1,7 +1,6 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import {Bus, Loader2} from "lucide-react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {isDesktopViewport, useIsDesktop} from "@shared/ui/useIsDesktop";
 import {BottomSheet, markModalReplacing} from "@shared/ui";
@@ -20,8 +19,9 @@ import {useStopSearchFilter} from "./hooks/useStopSearchFilter";
 import {useElapsedTimeAgo} from "./hooks/useElapsedTimeAgo";
 import {BusDrawerHeader} from "./ui/BusDrawerHeader";
 import {BusDrawerFilterBar} from "./ui/BusDrawerFilterBar";
-import {BusDrawerStopItem} from "./ui/BusDrawerStopItem";
+import {BusDrawerTimelineList} from "./ui/BusDrawerTimelineList";
 import {DesktopSplitStopView} from "./ui/DesktopSplitStopView";
+import {RunningBusesJumpStrip} from "./ui/RunningBusesJumpStrip";
 
 interface BusListDrawerProps {
     isOpen: boolean;
@@ -454,96 +454,37 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             />
 
             {/* 2.5 Live Running Buses Quick-Jump Strip */}
-            {matchedBusesForJump.length > 0 && (
-                <div
-                    ref={jumpStripRef}
-                    className="flex items-center gap-1.5 px-4 pb-2.5 overflow-x-auto custom-scrollbar-hidden shrink-0">
-                        <span
-                            className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0 mr-0.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"/>
-                            운행중
-                        </span>
-                    {matchedBusesForJump.map(({stopKey, stop, plateDigits, bus}) => {
-                        const isNearestBus = nearestBusVehicleNo === bus.vehicleno;
-                        return (
-                            <button
-                                key={`${bus.vehicleno}-${stopKey}`}
-                                type="button"
-                                data-bus-jump={bus.vehicleno}
-                                onClick={() => handleJumpToBusStop(stopKey, stop, bus.vehicleno)}
-                                className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border transition cursor-pointer whitespace-nowrap active:scale-95 shrink-0 ${
-                                    isNearestBus
-                                        ? `${meta?.colorTheme?.bg || "bg-blue-600"} text-white border-transparent shadow-xs`
-                                        : `${meta?.colorTheme?.badgeBg || "bg-blue-500/10 dark:bg-blue-500/20"} ${meta?.colorTheme?.text || "text-blue-700 dark:text-blue-300"} ${meta?.colorTheme?.border || "border-blue-500/25"}`
-                                }`}
-                                title={`${bus.vehicleno} (${stop.nodenm}) 위치로 스크롤`}
-                            >
-                                <Bus className="w-3 h-3 shrink-0"/>
-                                <span className="font-mono font-black">{plateDigits}</span>
-                                <span className="opacity-75 max-w-[90px] truncate">· {stop.nodenm}</span>
-                            </button>
-                        );
-                    })}
-                </div>
-            )}
+            <RunningBusesJumpStrip
+                jumpStripRef={jumpStripRef}
+                matchedBusesForJump={matchedBusesForJump}
+                nearestBusVehicleNo={nearestBusVehicleNo}
+                metaThemeBg={meta?.colorTheme?.bg}
+                metaThemeBadgeBg={meta?.colorTheme?.badgeBg}
+                metaThemeText={meta?.colorTheme?.text}
+                metaThemeBorder={meta?.colorTheme?.border}
+                onJumpToBusStop={handleJumpToBusStop}
+            />
 
             {/* 3. Bus Stop Timeline List Body */}
-            <div
-                ref={listRef}
-                className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar relative min-h-0 border-t border-slate-100 dark:border-white/[0.07] pb-3"
-            >
-                {currentStops.length === 0 ? (
-                    <div
-                        className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
-                        <Loader2
-                            className={`w-6 h-6 animate-spin ${meta?.colorTheme?.text || "text-blue-600 dark:text-blue-400"}`}
-                        />
-                        <span className="text-xs font-semibold">정류장 목록을 불러오고 있습니다...</span>
-                    </div>
-                ) : filteredStops.length === 0 ? (
-                    <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
-                        {stopSearchQuery
-                            ? `"${stopSearchQuery}" 검색 결과가 없습니다.`
-                            : "해당 방향의 정류장 정보가 없습니다."}
-                    </div>
-                ) : (
-                    filteredStops.map((stop, index) => {
-                        const stopKey = `${stop.nodeid}-${stop.nodeord ?? ""}`;
-                        const busesHere = busesByStopKey.get(stopKey) || [];
-                        const isFirst = index === 0;
-                        const isLast = index === filteredStops.length - 1;
-                        const isSelected = selectedStopId === stop.nodeid;
-                        const isTurning = Boolean(
-                            turningStop &&
-                            turningStop.nodeid === stop.nodeid &&
-                            turningStop.nodeord === stop.nodeord
-                        );
-                        const isFav = isFavoriteStop(stop.nodeid);
-
-                        return (
-                            <BusDrawerStopItem
-                                key={stopKey}
-                                stop={stop}
-                                isFirst={isFirst}
-                                isLast={isLast}
-                                isSelected={isSelected}
-                                isTurningStop={isTurning}
-                                isFavStop={isFav}
-                                busesHere={busesHere}
-                                nearestBusVehicleNo={nearestBusVehicleNo}
-                                metaThemeMainColor={meta?.colorTheme?.main}
-                                metaThemeBadgeBg={meta?.colorTheme?.badgeBg}
-                                metaThemeBg={meta?.colorTheme?.bg}
-                                metaThemeText={meta?.colorTheme?.text}
-                                metaThemeShadow={meta?.colorTheme?.shadow}
-                                onStopClick={handleStopClick}
-                                onBusBadgeClick={handleBusBadgeClick}
-                                onToggleFavorite={toggleFavoriteStop}
-                            />
-                        );
-                    })
-                )}
-            </div>
+            <BusDrawerTimelineList
+                listRef={listRef}
+                currentStopsCount={currentStops.length}
+                filteredStops={filteredStops}
+                stopSearchQuery={stopSearchQuery}
+                busesByStopKey={busesByStopKey}
+                selectedStopId={selectedStopId}
+                turningStop={turningStop}
+                nearestBusVehicleNo={nearestBusVehicleNo}
+                isFavoriteStop={isFavoriteStop}
+                toggleFavoriteStop={toggleFavoriteStop}
+                onStopClick={handleStopClick}
+                onBusBadgeClick={handleBusBadgeClick}
+                metaThemeMainColor={meta?.colorTheme?.main}
+                metaThemeBadgeBg={meta?.colorTheme?.badgeBg}
+                metaThemeBg={meta?.colorTheme?.bg}
+                metaThemeText={meta?.colorTheme?.text}
+                metaThemeShadow={meta?.colorTheme?.shadow}
+            />
         </div>
     );
 

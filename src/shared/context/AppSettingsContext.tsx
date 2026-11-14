@@ -8,7 +8,7 @@ import {
     readSettingsFromBrowser,
     writeSettingsToBrowser,
 } from "@shared/config/settingsCookie";
-import {setGlobalBusPollingIntervalMs} from "@features/live-tracking/lib/BusLocationStore";
+import {setGlobalPollingIntervalMs} from "@shared/config/pollingConfig";
 import {setHapticEnabled} from "@shared/utils/haptics";
 
 interface AppSettingsContextValue {
@@ -46,7 +46,7 @@ export function AppSettingsProvider({children}: { children: React.ReactNode }) {
         const frameId = requestAnimationFrame(() => {
             const loaded = readSettingsFromBrowser();
             setHapticEnabled(loaded.hapticEnabled);
-            setGlobalBusPollingIntervalMs(loaded.livePollingIntervalMs);
+            setGlobalPollingIntervalMs(loaded.livePollingIntervalMs);
             setSettings(loaded);
             setHasLoadedSettings(true);
             if (!loaded.hasCompletedOnboarding) {
@@ -58,7 +58,7 @@ export function AppSettingsProvider({children}: { children: React.ReactNode }) {
 
     useEffect(() => {
         if (!hasLoadedSettings) return;
-        setGlobalBusPollingIntervalMs(settings.livePollingIntervalMs);
+        setGlobalPollingIntervalMs(settings.livePollingIntervalMs);
     }, [hasLoadedSettings, settings.livePollingIntervalMs]);
 
     useEffect(() => {
