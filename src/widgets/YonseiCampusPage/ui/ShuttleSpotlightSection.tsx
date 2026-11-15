@@ -3,9 +3,10 @@
 import React from "react";
 import {AlertCircle, Bus, Clock, GraduationCap, Info, MapPin, Table2} from "lucide-react";
 import {
-    YONSEI_SHUTTLE_SCHEDULE,
+    type ShuttleBusScheduleData,
     type ShuttleInboundItem,
     type ShuttleOutboundItem,
+    YONSEI_SHUTTLE_SCHEDULE,
 } from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
 import {triggerHaptic} from "@shared/utils/haptics";
@@ -21,6 +22,7 @@ interface ShuttleSpotlightSectionProps {
     };
     nextOutbound: NextShuttleResult<ShuttleOutboundItem> | null;
     nextInbound: NextShuttleResult<ShuttleInboundItem> | null;
+    shuttleSchedule?: ShuttleBusScheduleData;
     onOpenShuttleModal: (tab: "OUTBOUND" | "INBOUND" | "GUIDELINES") => void;
     onOpenStopsModal: () => void;
 }
@@ -30,6 +32,7 @@ export const ShuttleSpotlightSection: React.FC<ShuttleSpotlightSectionProps> = (
     shuttleDayType,
     nextOutbound,
     nextInbound,
+                                                                                    shuttleSchedule = YONSEI_SHUTTLE_SCHEDULE,
     onOpenShuttleModal,
     onOpenStopsModal,
 }) => {
@@ -46,7 +49,7 @@ export const ShuttleSpotlightSection: React.FC<ShuttleSpotlightSectionProps> = (
                     <div>
                         <div className="flex items-center gap-2">
                             <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
-                                {YONSEI_SHUTTLE_SCHEDULE.title}
+                                {shuttleSchedule.title}
                             </h2>
                             <span
                                 className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${

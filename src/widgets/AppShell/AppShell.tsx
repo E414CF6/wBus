@@ -28,6 +28,10 @@ const YonseiCampusPage = dynamic(
     () => import("@widgets/YonseiCampusPage/YonseiCampusPage"),
     {ssr: false}
 );
+const WikiDirectoryPage = dynamic(
+    () => import("@widgets/WikiDirectory/WikiDirectoryPage"),
+    {ssr: false}
+);
 
 export function AppShell() {
     const router = useRouter();
@@ -64,6 +68,9 @@ export function AppShell() {
 
     if (activeSpecialPage === SPECIAL_PAGE_IDS.YONSEI_MIRAE) {
         return <YonseiCampusPage/>;
+    }
+    if (activeSpecialPage === SPECIAL_PAGE_IDS.WIKI) {
+        return <WikiDirectoryPage/>;
     }
 
     return <MapAppShell/>;

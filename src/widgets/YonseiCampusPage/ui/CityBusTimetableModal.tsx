@@ -12,6 +12,7 @@ import {
     type MinuteItem,
     resolveWeekdayAndVacationRoutes,
 } from "@entities/schedule";
+import type {WikiLinkedRoute} from "@entities/wiki";
 import {UI_TEXT} from "@shared/config/locale";
 import {isWeekend, parseTimeToMinutes} from "@shared/lib/timeUtils";
 import {useDialogModal} from "@shared/lib/useDialogModal";
@@ -21,6 +22,8 @@ export interface CityBusTimetableModalProps {
     initialRouteNo: string;
     initialLocation: "origin" | "dest";
     allRoutes: BusRoute[];
+    routeNumbers?: readonly string[];
+    routeOverrides?: Record<string, WikiLinkedRoute>;
     isHolidayOrVacation?: boolean;
     now: Date;
     onClose: () => void;
@@ -31,6 +34,8 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                                                                                 initialRouteNo,
                                                                                 initialLocation,
                                                                                 allRoutes,
+                                                                                routeNumbers = TARGET_ROUTE_NUMBERS,
+                                                                                routeOverrides,
                                                                                 isHolidayOrVacation,
                                                                                 now,
                                                                                 onClose,
@@ -59,6 +64,7 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
     useDialogModal(dialogRef, isOpen, handleDialogOpen);
 
     const config = ROUTE_CONFIG[routeNo];
+    const override = routeOverrides?.[routeNo];
     const primaryRoute = useMemo(
         () => allRoutes.find((r) => r.routeNo === routeNo) ?? null,
         [allRoutes, routeNo]
@@ -100,8 +106,10 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
         });
     }, [primaryRoute, weekdayRoute, vacationRoute, searchQuery, now, footnoteMap, currentHourStr, location]);
 
-    const destLabel = config?.destLabel ?? "연세대 출발";
-    const originLabel = config?.originLabel ?? "장양리 출발";
+    const destLabel = override?.destLabel || config?.destLabel || "연세대 출발";
+    const originLabel = override?.originLabel || config?.originLabel || "장양리 출발";
+    const descriptionText = override?.description || config?.description || `${routeNo}번 시내버스`;
+    const viaStopsText = override?.viaStops || config?.viaStops;
 
     const handleRouteChange = (no: string) => {
         setRouteNo(no);
@@ -187,7 +195,7 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                                 {UI_TEXT.YONSEI.FULL_TIMETABLE_DETAIL}
                             </h3>
                             <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
-                                {config?.description}
+                                {descriptionText}
                             </p>
                         </div>
                     </div>
@@ -209,7 +217,7 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                         aria-label="버스 노선 선택"
                         className="inline-flex items-center gap-1 p-1 rounded-xl bg-slate-200/60 dark:bg-white/[0.06] overflow-x-auto no-scrollbar max-w-full"
                     >
-                        {TARGET_ROUTE_NUMBERS.map((no) => {
+                        {routeNumbers.map((no) => {
                             const selected = routeNo === no;
                             return (
                                 <button
@@ -295,7 +303,7 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                         )}
                     </div>
 
-                    {config?.viaStops && (
+                    {viaStopsText && (
                         <button
                             type="button"
                             onClick={() => setShowStops((v) => !v)}
@@ -313,13 +321,13 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                 </div>
 
                 {/* Collapsible Via Stops Strip */}
-                {showStops && config?.viaStops && (
+                {showStops && viaStopsText && (
                     <div
                         className="p-3 rounded-xl bg-white dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/10 text-[11px] font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
                         <span className="font-black text-[#003876] dark:text-blue-300 mr-1.5">
                             전체 경유지:
                         </span>
-                        {config.viaStops}
+                        {viaStopsText}
                     </div>
                 )}
 

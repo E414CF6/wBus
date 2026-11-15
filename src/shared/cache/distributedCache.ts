@@ -152,4 +152,48 @@ export const distributedCache = {
 
         return deleted;
     },
+
+    async incrWithWindow(key: string, windowSeconds: number): Promise<number | null> {
+        const client = getRedisClient();
+        if (!client) return null;
+
+        try {
+            const count = await client.incr(key);
+            if (count === 1 && windowSeconds > 0) {
+                await client.expire(key, Math.ceil(windowSeconds));
+            }
+            return count;
+        } catch (err) {
+            console.warn(`[DistributedCache] incrWithWindow failed for '${key}':`, err instanceof Error ? err.message : err);
+            return null;
+        }
+    },
+
+    async acquireLock(key: string, ttlSeconds = 5): Promise<string | null> {
+        const client = getRedisClient();
+        if (!client) return null;
+
+        const token = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        try {
+            const res = await client.set(key, token, {nx: true, ex: Math.max(1, Math.ceil(ttlSeconds))});
+            return res === "OK" ? token : null;
+        } catch (err) {
+            console.warn(`[DistributedCache] acquireLock failed for '${key}':`, err instanceof Error ? err.message : err);
+            return null;
+        }
+    },
+
+    async releaseLock(key: string, token: string): Promise<void> {
+        const client = getRedisClient();
+        if (!client) return;
+
+        try {
+            const current = await client.get<string>(key);
+            if (current === token) {
+                await client.del(key);
+            }
+        } catch {
+            // Ignore lock release failure (bounded by TTL)
+        }
+    },
 };

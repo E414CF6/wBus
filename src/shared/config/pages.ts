@@ -7,6 +7,7 @@ export const APP_PAGE_QUERY_KEY = "page";
  */
 export const SPECIAL_PAGE_IDS = {
     YONSEI_MIRAE: "yonsei_mirae",
+    WIKI: "wiki",
 } as const;
 
 export type SpecialPageId = (typeof SPECIAL_PAGE_IDS)[keyof typeof SPECIAL_PAGE_IDS];
@@ -21,10 +22,16 @@ export interface SpecialPageMeta {
 export const SPECIAL_PAGE_REGISTRY: Record<SpecialPageId, SpecialPageMeta> = {
     [SPECIAL_PAGE_IDS.YONSEI_MIRAE]: {
         id: SPECIAL_PAGE_IDS.YONSEI_MIRAE,
-        title: "연세대학교 미래캠퍼스 버스·셔틀 시간표",
+        title: "연세대학교 미래캠퍼스 위키 · 버스·셔틀 시간표",
         description:
-            "연세대학교 미래캠퍼스 무료 셔틀버스(여주역·만종역·원주역·터미널) 및 시내버스 30번·34번·34-1번 실시간 위치·운행 시간표",
+            "사용자가 함께 편집하는 연세대학교 미래캠퍼스 무료 셔틀버스(여주역·만종역·원주역·터미널) 및 시내버스 30번·34번·34-1번 실시간 위키 허브",
         cityCode: "32020",
+    },
+    [SPECIAL_PAGE_IDS.WIKI]: {
+        id: SPECIAL_PAGE_IDS.WIKI,
+        title: "wBus 커뮤니티 위키 | 함께 만드는 버스·셔틀 가이드",
+        description:
+            "누구나 직접 편집하고 최신화하는 시내버스 노선·캠퍼스 셔틀·터미널 위키 허브",
     },
 };
 

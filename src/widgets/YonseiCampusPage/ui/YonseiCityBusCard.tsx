@@ -6,12 +6,15 @@ import {ArrowRight, Clock, Map as MapIcon, Table2} from "lucide-react";
 
 import {ROUTE_CONFIG} from "@entities/route";
 import {type BusRoute, getUpcomingDepartures} from "@entities/schedule";
+import type {WikiLinkedRoute} from "@entities/wiki";
 import {UI_TEXT} from "@shared/config/locale";
 import {buildMapUrl} from "@widgets/AppShell/hooks/useAppNavigation";
 import type {CampusDirectionMode} from "../lib/yonseiShuttleUtils";
 
 export interface YonseiCityBusCardProps {
-    routeNo: "30" | "34" | "34-1";
+    routeNo: string;
+    cityCode?: string;
+    routeOverride?: WikiLinkedRoute;
     scheduleRoute: BusRoute | null;
     directionMode: CampusDirectionMode;
     now: Date;
@@ -19,7 +22,7 @@ export interface YonseiCityBusCardProps {
 }
 
 const ROUTE_ACCENT_STYLES: Record<
-    "30" | "34" | "34-1",
+    string,
     {
         topBar: string;
         surfaceRing: string;
@@ -41,6 +44,12 @@ const ROUTE_ACCENT_STYLES: Record<
         surfaceRing: "hover:border-indigo-500/35 dark:hover:border-violet-500/40",
         timeText: "text-indigo-700 dark:text-violet-300",
     },
+};
+
+const DEFAULT_ROUTE_ACCENT = {
+    topBar: "from-slate-700 via-blue-700 to-indigo-600",
+    surfaceRing: "hover:border-blue-500/35 dark:hover:border-blue-500/40",
+    timeText: "text-slate-900 dark:text-blue-300",
 };
 
 function getWaitBadgeConfig(waitMins: number): {
@@ -77,23 +86,27 @@ function getWaitBadgeConfig(waitMins: number): {
 
 export const YonseiCityBusCard: React.FC<YonseiCityBusCardProps> = memo(function YonseiCityBusCard({
                                                                                                        routeNo,
+                                                                                                       cityCode = "32020",
+                                                                                                       routeOverride,
                                                                                                        scheduleRoute,
                                                                                                        directionMode,
                                                                                                        now,
                                                                                                        onOpenTimetable,
                                                                                                    }) {
     const config = ROUTE_CONFIG[routeNo];
-    const accent = ROUTE_ACCENT_STYLES[routeNo];
+    const accent = ROUTE_ACCENT_STYLES[routeNo] ?? DEFAULT_ROUTE_ACCENT;
 
     const scheduleDirection = directionMode === "OUTBOUND" ? "DEST" : "ORIGIN";
     const modalLocation: "origin" | "dest" = directionMode === "OUTBOUND" ? "dest" : "origin";
 
     const departureLabel = useMemo(() => {
         if (directionMode === "OUTBOUND") {
-            return config?.destLabel ?? "연세대 출발";
+            return routeOverride?.destLabel || config?.destLabel || "연세대 출발";
         }
-        return config?.originLabel ?? "장양리 출발";
-    }, [directionMode, config]);
+        return routeOverride?.originLabel || config?.originLabel || "기점 출발";
+    }, [directionMode, routeOverride, config]);
+
+    const descriptionText = routeOverride?.description || config?.description || `${routeNo}번 시내버스`;
 
     const {nextDeparture, subsequentDepartures, allValidDepartures} = useMemo(() => {
         return getUpcomingDepartures(scheduleRoute?.timetable ?? [], scheduleDirection, now);
@@ -156,10 +169,15 @@ export const YonseiCityBusCard: React.FC<YonseiCityBusCardProps> = memo(function
                     {/* Route Waypoints Summary */}
                     <p
                         className="text-[11px] leading-relaxed font-medium text-slate-500 dark:text-slate-400 line-clamp-2 min-h-[2.125rem]"
-                        title={config?.description}
+                        title={descriptionText}
                     >
-                        {config?.description}
+                        {descriptionText}
                     </p>
+                    {routeOverride?.note && (
+                        <p className="text-[11px] font-bold text-[#003876] dark:text-blue-300 bg-blue-50/80 dark:bg-blue-500/10 border border-blue-200/70 dark:border-blue-400/20 rounded-xl px-2.5 py-1.5 line-clamp-2">
+                            {routeOverride.note}
+                        </p>
+                    )}
 
                     {/* Next Departure Spotlight */}
                     <div
@@ -252,7 +270,7 @@ export const YonseiCityBusCard: React.FC<YonseiCityBusCardProps> = memo(function
                     </button>
 
                     <Link
-                        href={buildMapUrl(routeNo, "32020")}
+                        href={buildMapUrl(routeNo, cityCode)}
                         aria-label={`${routeNo}번 실시간 위치 지도에서 보기`}
                         className="shrink-0 inline-flex items-center gap-1 py-2.5 px-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border border-emerald-200/80 dark:border-emerald-400/25 text-emerald-800 dark:text-emerald-300 text-xs font-extrabold transition-colors"
                     >

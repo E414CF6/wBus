@@ -1,10 +1,11 @@
 import {afterEach, describe, expect, it, vi} from "vitest";
 import {artifactStore} from "./artifactStore";
 
-const {mockBlobGet, mockBlobHead, mockBlobPut, mockFs} = vi.hoisted(() => ({
+const {mockBlobGet, mockBlobHead, mockBlobPut, mockBlobDel, mockFs} = vi.hoisted(() => ({
     mockBlobGet: vi.fn(),
     mockBlobHead: vi.fn(),
     mockBlobPut: vi.fn(),
+    mockBlobDel: vi.fn(),
     mockFs: {
         existsSync: vi.fn(),
         statSync: vi.fn(),
@@ -18,6 +19,7 @@ vi.mock("@vercel/blob", () => ({
     get: mockBlobGet,
     head: mockBlobHead,
     put: mockBlobPut,
+    del: mockBlobDel,
 }));
 
 vi.mock("fs", () => ({
@@ -72,5 +74,19 @@ describe("artifactStore durability and /tmp freshness", () => {
         mockBlobHead.mockRejectedValueOnce(new Error("401 Unauthorized"));
         const authErrHealth = await artifactStore.checkHealth();
         expect(authErrHealth.ok).toBe(false);
+    });
+
+    it("rethrows Blob write errors when strict: true is passed to putJson", async () => {
+        vi.stubEnv("BLOB_READ_WRITE_TOKEN", "test-blob-token");
+        mockBlobPut.mockRejectedValueOnce(new Error("Blob outage"));
+
+        await expect(
+            artifactStore.putJson("wiki/test.json", {ok: true}, {strict: true, skipPublicWrite: true})
+        ).rejects.toThrow("Blob outage");
+
+        mockBlobPut.mockRejectedValueOnce(new Error("Blob transient outage"));
+        await expect(
+            artifactStore.putJson("wiki/test.json", {ok: true}, {skipPublicWrite: true})
+        ).resolves.toBeUndefined();
     });
 });

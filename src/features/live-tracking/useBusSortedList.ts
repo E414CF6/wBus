@@ -23,7 +23,7 @@ export const useBusSortedList = (routeName: string, enabled: boolean = true, cit
         lastUpdated,
         isDegraded,
         reconnect,
-    } = useBusLocationData(activeRouteIds, cityCode);
+    } = useBusLocationData(activeRouteIds, cityCode, {routeName, enabled});
 
     const getDirection = useBusDirection(routeName, cityCode);
     const error = mapError;

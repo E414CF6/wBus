@@ -11,6 +11,8 @@ export interface CacheMeta {
     degraded?: boolean;
     inService?: boolean;
     nextPollAfterMs?: number;
+    routes?: string[];
+    routeName?: string;
 }
 
 export interface CachedData<T> {

@@ -43,7 +43,7 @@ export function useBusData(routeName: string, enabled: boolean = true, cityCode:
     const activeRouteIds = useMemo(() => (enabled ? routeIds : []), [enabled, routeIds]);
     const {
         data: busList, connectionStatus, hasFetched, error, lastUpdated, serverAgeMs, isDegraded, reconnect
-    } = useBusLocationData(activeRouteIds, cityCode);
+    } = useBusLocationData(activeRouteIds, cityCode, {routeName, enabled});
     const directionFn = useBusDirection(routeName, cityCode);
 
     const activeRouteId = useMemo(() => {

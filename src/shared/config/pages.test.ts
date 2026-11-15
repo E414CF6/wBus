@@ -4,7 +4,9 @@ import {buildPageHref, isValidSpecialPageId, resolveSpecialPageFromSearch, SPECI
 describe("pages registry", () => {
     it("validates registered special page IDs", () => {
         expect(isValidSpecialPageId(SPECIAL_PAGE_IDS.YONSEI_MIRAE)).toBe(true);
+        expect(isValidSpecialPageId(SPECIAL_PAGE_IDS.WIKI)).toBe(true);
         expect(isValidSpecialPageId("yonsei_mirae")).toBe(true);
+        expect(isValidSpecialPageId("wiki")).toBe(true);
         expect(isValidSpecialPageId("unknown_page")).toBe(false);
         expect(isValidSpecialPageId("")).toBe(false);
         expect(isValidSpecialPageId(null)).toBe(false);

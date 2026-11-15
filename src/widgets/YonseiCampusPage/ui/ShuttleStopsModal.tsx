@@ -3,7 +3,8 @@
 import React, {useId, useMemo, useRef, useState} from "react";
 import {Camera, ExternalLink, Info, MapPin, Navigation, X} from "lucide-react";
 
-import {getKakaoMapUrl, getKakaoRoadviewUrl, YONSEI_SHUTTLE_STOPS, type YonseiShuttleStop,} from "@entities/station";
+import {getKakaoMapUrl, getKakaoRoadviewUrl, YONSEI_SHUTTLE_STOPS} from "@entities/station";
+import type {WikiBoardingStop} from "@entities/wiki";
 import {UI_TEXT} from "@shared/config/locale";
 import {useDialogModal} from "@shared/lib/useDialogModal";
 import type {CampusDirectionMode} from "../lib/yonseiShuttleUtils";
@@ -11,6 +12,7 @@ import type {CampusDirectionMode} from "../lib/yonseiShuttleUtils";
 export interface ShuttleStopsModalProps {
     isOpen: boolean;
     initialDirectionMode: CampusDirectionMode;
+    stops?: WikiBoardingStop[];
     onClose: () => void;
 }
 
@@ -23,6 +25,7 @@ function mapDirectionModeToFilter(mode: CampusDirectionMode): StopDirectionFilte
 export const ShuttleStopsModal: React.FC<ShuttleStopsModalProps> = ({
                                                                         isOpen,
                                                                         initialDirectionMode,
+                                                                        stops = YONSEI_SHUTTLE_STOPS,
                                                                         onClose,
                                                                     }) => {
     const [dirFilter, setDirFilter] = useState<StopDirectionFilter>(() =>
@@ -33,10 +36,10 @@ export const ShuttleStopsModal: React.FC<ShuttleStopsModalProps> = ({
 
     useDialogModal(dialogRef, isOpen);
 
-    const filteredStops = useMemo<YonseiShuttleStop[]>(() => {
-        if (dirFilter === "ALL") return YONSEI_SHUTTLE_STOPS;
-        return YONSEI_SHUTTLE_STOPS.filter((s) => s.directionTag === dirFilter);
-    }, [dirFilter]);
+    const filteredStops = useMemo<WikiBoardingStop[]>(() => {
+        if (dirFilter === "ALL") return stops;
+        return stops.filter((s) => s.directionTag === dirFilter || s.directionTag === "공통");
+    }, [dirFilter, stops]);
 
     return (
         <dialog

@@ -6,6 +6,7 @@ import {Clock, ExternalLink, GraduationCap, MapPin, RotateCw, X,} from "lucide-r
 
 import {type ShuttleInboundItem, type ShuttleOutboundItem, YONSEI_SHUTTLE_SCHEDULE,} from "@entities/schedule";
 import {getKakaoRoadviewUrl} from "@entities/station";
+import {useWikiPage, YONSEI_MIRAE_WIKI_SLUG} from "@entities/wiki";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {isSaturday, parseTimeToMinutes} from "@shared/lib/timeUtils";
 import type {DayMode} from "@shared/types/navigation";
@@ -108,12 +109,16 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
     const currentMins = effectiveNow.getHours() * 60 + effectiveNow.getMinutes();
 
     // 4. Sorted departures & next departure calculation
+    const {data: yonseiWikiDoc} = useWikiPage(enabled ? YONSEI_MIRAE_WIKI_SLUG : null);
+    const shuttleScheduleSource = yonseiWikiDoc?.shuttle?.enabled
+        ? yonseiWikiDoc.shuttle
+        : YONSEI_SHUTTLE_SCHEDULE;
     const isSundayFilter = activeDayType === "SUNDAY";
 
     // Outbound (하교 / 학교 출발)
     const outboundList: ShuttleOutboundItem[] = useMemo(() => {
         if (isTodaySaturday) return [];
-        return YONSEI_SHUTTLE_SCHEDULE.outbound_from_campus
+        return shuttleScheduleSource.outbound_from_campus
             .filter((item) =>
                 isSundayFilter
                     ? item.operation_type.includes("일요일")
@@ -125,12 +130,12 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
                     (parseTimeToMinutes(a.departure_time) ?? 0) -
                     (parseTimeToMinutes(b.departure_time) ?? 0)
             );
-    }, [isSundayFilter, isTodaySaturday]);
+    }, [shuttleScheduleSource.outbound_from_campus, isSundayFilter, isTodaySaturday]);
 
     // Inbound (등교 / 학교 도착)
     const inboundList: ShuttleInboundItem[] = useMemo(() => {
         if (isTodaySaturday) return [];
-        return YONSEI_SHUTTLE_SCHEDULE.inbound_to_campus
+        return shuttleScheduleSource.inbound_to_campus
             .filter((item) =>
                 isSundayFilter
                     ? item.operation_type.includes("일요일")
@@ -142,7 +147,7 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
                     (parseTimeToMinutes(a.departure_time) ?? 0) -
                     (parseTimeToMinutes(b.departure_time) ?? 0)
             );
-    }, [isSundayFilter, isTodaySaturday]);
+    }, [shuttleScheduleSource.inbound_to_campus, isSundayFilter, isTodaySaturday]);
 
     // Next Outbound
     const nextOutbound = useMemo(() => {

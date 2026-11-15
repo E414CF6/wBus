@@ -311,10 +311,10 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                             </div>
                             <div className="min-w-0">
                                 <p className="text-xs sm:text-sm font-black tracking-tight truncate">
-                                    연세대학교 미래캠퍼스 전용 페이지
+                                    연세대학교 미래캠퍼스 위키 허브
                                 </p>
                                 <p className="text-[11px] font-semibold text-sky-100/90 truncate">
-                                    무료 셔틀버스 · 30/34/34-1번 등·하교 통합 허브 바로가기
+                                    무료 셔틀버스 · 30/34/34-1번 · 사용자 편집 위키 바로가기
                                 </p>
                             </div>
                         </div>

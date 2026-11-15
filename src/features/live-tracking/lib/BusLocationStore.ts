@@ -19,6 +19,10 @@ const fetchRouteData = async (url: string, signal?: AbortSignal): Promise<Cached
     return res.json();
 };
 
+export interface BusLocationStoreOptions {
+    routeName?: string;
+}
+
 /**
  * BusLocationStore
  * High-performance real-time telemetry store backed by CDN micro-caching (s-maxage=10s).
@@ -26,9 +30,10 @@ const fetchRouteData = async (url: string, signal?: AbortSignal): Promise<Cached
  */
 export class BusLocationStore {
     public dataLength = 0;
-    private readonly routeIds: string[];
+    private routeIds: string[];
     private readonly routeIdsKey: string;
     private readonly cityCode: string;
+    private readonly routeName?: string;
     private state: BusLocationState;
     private listeners = new Set<Listener>();
     private pollTimer: ReturnType<typeof setTimeout> | null = null;
@@ -40,14 +45,31 @@ export class BusLocationStore {
     private isSuspended = false;
     private routeDataMap = new Map<string, BusItem[]>();
 
-    constructor(routeIds: string[], routeIdsKey: string, cityCode: string = "32020") {
+    constructor(
+        routeIds: string[],
+        routeIdsKey: string,
+        cityCode: string = "32020",
+        options?: BusLocationStoreOptions
+    ) {
         this.routeIds = routeIds;
         this.routeIdsKey = routeIdsKey;
         this.cityCode = cityCode;
+        this.routeName = options?.routeName?.trim() || undefined;
         this.state = {
             ...EMPTY_STATE,
             reconnect: () => this.manualReconnect(),
         };
+    }
+
+    public updateFallbackRouteIds(nextRouteIds: string[]) {
+        if (nextRouteIds.length === 0) return;
+        if (
+            nextRouteIds.length === this.routeIds.length &&
+            nextRouteIds.every((id, idx) => id === this.routeIds[idx])
+        ) {
+            return;
+        }
+        this.routeIds = nextRouteIds;
     }
 
     getSnapshot = () => this.state;
@@ -124,11 +146,16 @@ export class BusLocationStore {
             timestamp?: number;
             ageMs?: number | null;
             targetRouteIds?: string[];
+            replaceAll?: boolean;
         }
     ) {
         const degraded = options?.degraded ?? false;
         const timestamp = options?.timestamp ?? Date.now();
         const targetRouteIds = options?.targetRouteIds ?? this.routeIds;
+
+        if (options?.replaceAll) {
+            this.routeDataMap.clear();
+        }
 
         const incomingByRouteId = new Map<string, BusItem[]>();
         for (const item of nextData) {
@@ -173,8 +200,61 @@ export class BusLocationStore {
         });
     }
 
+    private async fetchIndividuallyFallback(
+        routeIds: string[],
+        cityParam: string,
+        signal: AbortSignal,
+        batchErr: unknown
+    ) {
+        const settled = await mapWithConcurrencyLimit(
+            routeIds,
+            (routeId) => fetchRouteData(`/api/bus/${routeId}?${cityParam}`, signal),
+            {
+                concurrency: 3,
+                staggerMs: 30,
+            }
+        );
+        if (signal.aborted) return;
+
+        const fulfilledResults: BusItem[] = [];
+        const fulfilledRouteIds: string[] = [];
+        let hasFailures = false;
+        let maxAgeMs: number | null = null;
+        const metas: Array<CachedData<BusItem[]>["meta"]> = [];
+
+        settled.forEach((result, idx) => {
+            const routeId = routeIds[idx];
+            if (result.status === "fulfilled") {
+                fulfilledRouteIds.push(routeId);
+                const items = result.value.data;
+                if (Array.isArray(items)) {
+                    fulfilledResults.push(...items);
+                }
+                const ageMs = result.value.meta?.ageMs;
+                if (typeof ageMs === "number" && Number.isFinite(ageMs)) {
+                    maxAgeMs = maxAgeMs === null ? ageMs : Math.max(maxAgeMs, ageMs);
+                }
+                metas.push(result.value.meta);
+            } else {
+                hasFailures = true;
+            }
+        });
+
+        if (fulfilledRouteIds.length > 0) {
+            this.consecutiveErrors = hasFailures ? this.consecutiveErrors + 1 : 0;
+            this.serverSuggestedDelayMs = this.resolvePollHintDelayMs(metas);
+            this.applyData(fulfilledResults, {
+                degraded: hasFailures,
+                ageMs: maxAgeMs,
+                targetRouteIds: fulfilledRouteIds,
+            });
+        } else if (routeIds.length > 0) {
+            throw new Error("All route location requests failed", {cause: batchErr});
+        }
+    }
+
     private async fetchLocations() {
-        if (this.isFetching || this.routeIds.length === 0) return;
+        if (this.isFetching || (this.routeIds.length === 0 && !this.routeName)) return;
         this.isFetching = true;
         const controller = new AbortController();
         this.abortController = controller;
@@ -182,7 +262,40 @@ export class BusLocationStore {
 
         try {
             const cityParam = `cityCode=${encodeURIComponent(this.cityCode)}`;
-            if (this.routeIds.length === 1) {
+            if (this.routeName) {
+                try {
+                    const res = await fetchRouteData(
+                        `/api/bus?routeName=${encodeURIComponent(this.routeName)}&${cityParam}`,
+                        signal
+                    );
+                    if (signal.aborted) return;
+                    const items = Array.isArray(res.data) ? res.data : [];
+                    const resolvedRouteIds = Array.isArray(res.meta?.routes) && res.meta.routes.length > 0
+                        ? res.meta.routes
+                        : this.routeIds.length > 0
+                            ? this.routeIds
+                            : Array.from(new Set(items.map((b) => b.routeid).filter((id): id is string => Boolean(id))));
+                    if (Array.isArray(res.meta?.routes) && res.meta.routes.length > 0) {
+                        this.updateFallbackRouteIds(res.meta.routes);
+                    }
+                    this.consecutiveErrors = 0;
+                    this.serverSuggestedDelayMs = this.resolvePollHintDelayMs([res.meta]);
+                    this.applyData(items, {
+                        degraded: Boolean(res.meta?.degraded),
+                        timestamp: res.timestamp,
+                        ageMs: res.meta?.ageMs ?? null,
+                        targetRouteIds: resolvedRouteIds,
+                        replaceAll: true,
+                    });
+                } catch (routeNameErr) {
+                    if (signal.aborted) return;
+                    if (this.routeIds.length === 0) {
+                        throw routeNameErr;
+                    }
+                    console.warn("[BusLocationStore] Route-name fetch failed, falling back to concurrent individual requests:", routeNameErr);
+                    await this.fetchIndividuallyFallback(this.routeIds, cityParam, signal, routeNameErr);
+                }
+            } else if (this.routeIds.length === 1) {
                 // Single route direct call
                 const routeId = this.routeIds[0];
                 const res = await fetchRouteData(`/api/bus/${routeId}?${cityParam}`, signal);
@@ -248,52 +361,7 @@ export class BusLocationStore {
                 } catch (batchErr) {
                     if (signal.aborted) return;
                     console.warn("[BusLocationStore] Batch fetch failed, falling back to concurrent individual requests:", batchErr);
-                    // Resilient fallback: Query each route individually
-                    const settled = await mapWithConcurrencyLimit(
-                        this.routeIds,
-                        (routeId) => fetchRouteData(`/api/bus/${routeId}?${cityParam}`, signal),
-                        {
-                            concurrency: 3,
-                            staggerMs: 30,
-                        }
-                    );
-                    if (signal.aborted) return;
-
-                    const fulfilledResults: BusItem[] = [];
-                    const fulfilledRouteIds: string[] = [];
-                    let hasFailures = false;
-                    let maxAgeMs: number | null = null;
-                    const metas: Array<CachedData<BusItem[]>["meta"]> = [];
-
-                    settled.forEach((result, idx) => {
-                        const routeId = this.routeIds[idx];
-                        if (result.status === "fulfilled") {
-                            fulfilledRouteIds.push(routeId);
-                            const items = result.value.data;
-                            if (Array.isArray(items)) {
-                                fulfilledResults.push(...items);
-                            }
-                            const ageMs = result.value.meta?.ageMs;
-                            if (typeof ageMs === "number" && Number.isFinite(ageMs)) {
-                                maxAgeMs = maxAgeMs === null ? ageMs : Math.max(maxAgeMs, ageMs);
-                            }
-                            metas.push(result.value.meta);
-                        } else {
-                            hasFailures = true;
-                        }
-                    });
-
-                    if (fulfilledRouteIds.length > 0) {
-                        this.consecutiveErrors = hasFailures ? this.consecutiveErrors + 1 : 0;
-                        this.serverSuggestedDelayMs = this.resolvePollHintDelayMs(metas);
-                        this.applyData(fulfilledResults, {
-                            degraded: hasFailures,
-                            ageMs: maxAgeMs,
-                            targetRouteIds: fulfilledRouteIds,
-                        });
-                    } else if (this.routeIds.length > 0) {
-                        throw new Error("All route location requests failed", {cause: batchErr});
-                    }
+                    await this.fetchIndividuallyFallback(this.routeIds, cityParam, signal, batchErr);
                 }
             }
         } catch (err) {
@@ -427,7 +495,7 @@ export class BusLocationStore {
     }
 
     private start() {
-        if (this.routeIds.length === 0) {
+        if (this.routeIds.length === 0 && !this.routeName) {
             this.setState(EMPTY_STATE);
             return;
         }
@@ -478,6 +546,22 @@ export function getBusLocationStore(routeIdsKey: string, cityCode: string = "320
     if (existing) return existing;
     const routeIds = routeIdsKey.split(",").filter(Boolean);
     const store = new BusLocationStore(routeIds, fullKey, cityCode);
+    busLocationStores.set(fullKey, store);
+    return store;
+}
+
+export function getBusLocationStoreByRouteName(
+    routeName: string,
+    cityCode: string = "32020",
+    fallbackRouteIds: string[] = []
+): BusLocationStore {
+    const normalizedName = routeName.trim();
+    const fullKey = `${cityCode}:name:${normalizedName}`;
+    const existing = busLocationStores.get(fullKey);
+    if (existing) return existing;
+    const store = new BusLocationStore(fallbackRouteIds, fullKey, cityCode, {
+        routeName: normalizedName,
+    });
     busLocationStores.set(fullKey, store);
     return store;
 }

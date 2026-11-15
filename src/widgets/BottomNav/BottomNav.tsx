@@ -1,7 +1,8 @@
 "use client";
 
 import React, {memo, useCallback, useEffect, useMemo, useState} from "react";
-import {Bus, ChevronDown, Compass, MapIcon, MapPin, Settings, Sparkles, X,} from "lucide-react";
+import Link from "next/link";
+import {BookOpen, Bus, ChevronDown, Compass, MapIcon, MapPin, Settings, Sparkles, X,} from "lucide-react";
 
 import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
@@ -352,6 +353,18 @@ function BottomNavComponent({
                         </button>
 
                         <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+
+                        {/* Community Bus Wiki Link */}
+                        <Link
+                            href="/wiki"
+                            onClick={() => triggerHaptic("light")}
+                            aria-label="버스 위키 열기"
+                            title="커뮤니티 위키"
+                            className="inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-full text-gray-600 dark:text-gray-300 hover:text-[#003876] dark:hover:text-sky-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-200 select-none active:scale-90 shrink-0"
+                        >
+                            <BookOpen className="w-4 h-4 stroke-[2.2]"/>
+                            <span className="hidden sm:inline text-[11px] font-black tracking-tight">위키</span>
+                        </Link>
 
                         {/* Settings Modal Button */}
                         <button

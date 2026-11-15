@@ -377,10 +377,15 @@ export const BusStopMarker = ({
                     filter={["any", ["==", ["get", "isRouteStop"], true], ["==", ["get", "isFavorite"], true]]}
                     paint={{
                         "circle-radius": [
-                            "case",
-                            ["==", ["get", "isFavorite"], true],
-                            ["interpolate", ["linear"], ["zoom"], 12, 4.5, 14.3, 6.5, 16, 7.5],
-                            ["interpolate", ["linear"], ["zoom"], 12, 3.5, 14.3, 5.5, 16, 6.5],
+                            "interpolate",
+                            ["linear"],
+                            ["zoom"],
+                            12,
+                            ["case", ["==", ["get", "isFavorite"], true], 4.5, 3.5],
+                            14.3,
+                            ["case", ["==", ["get", "isFavorite"], true], 6.5, 5.5],
+                            16,
+                            ["case", ["==", ["get", "isFavorite"], true], 7.5, 6.5],
                         ],
                         "circle-color": ["case", ["==", ["get", "isFavorite"], true], "#f59e0b", ["get", "color"]],
                         "circle-stroke-width": 2,

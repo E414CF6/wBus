@@ -3,7 +3,12 @@
 import React, {useId, useMemo, useRef, useState} from "react";
 import {AlertCircle, GraduationCap, Info, Search, X} from "lucide-react";
 
-import {type ShuttleInboundItem, type ShuttleOutboundItem, YONSEI_SHUTTLE_SCHEDULE} from "@entities/schedule";
+import {
+    type ShuttleBusScheduleData,
+    type ShuttleInboundItem,
+    type ShuttleOutboundItem,
+    YONSEI_SHUTTLE_SCHEDULE,
+} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
 import {useDialogModal} from "@shared/lib/useDialogModal";
 import type {DayMode} from "@shared/types/navigation";
@@ -14,6 +19,7 @@ export interface ShuttleTimetableModalProps {
     initialTab: "OUTBOUND" | "INBOUND" | "GUIDELINES";
     dayMode: DayMode;
     now: Date;
+    shuttleSchedule?: ShuttleBusScheduleData;
     onClose: () => void;
 }
 
@@ -24,6 +30,7 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                                                                                 initialTab,
                                                                                 dayMode,
                                                                                 now,
+                                                                                shuttleSchedule = YONSEI_SHUTTLE_SCHEDULE,
                                                                                 onClose,
                                                                             }) => {
     const [activeTab, setActiveTab] = useState<ShuttleTab>(initialTab);
@@ -37,18 +44,18 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
     useDialogModal(dialogRef, isOpen);
 
     const {dayType, nextInbound, nextOutbound} = useMemo(
-        () => getNextShuttleDepartures(YONSEI_SHUTTLE_SCHEDULE, dayMode, now),
-        [dayMode, now]
+        () => getNextShuttleDepartures(shuttleSchedule, dayMode, now),
+        [shuttleSchedule, dayMode, now]
     );
 
     const filteredOutbound = useMemo(
-        () => filterShuttleSchedule(YONSEI_SHUTTLE_SCHEDULE.outbound_from_campus, dayFilter, searchQuery),
-        [dayFilter, searchQuery]
+        () => filterShuttleSchedule(shuttleSchedule.outbound_from_campus, dayFilter, searchQuery),
+        [shuttleSchedule.outbound_from_campus, dayFilter, searchQuery]
     );
 
     const filteredInbound = useMemo(
-        () => filterShuttleSchedule(YONSEI_SHUTTLE_SCHEDULE.inbound_to_campus, dayFilter, searchQuery),
-        [dayFilter, searchQuery]
+        () => filterShuttleSchedule(shuttleSchedule.inbound_to_campus, dayFilter, searchQuery),
+        [shuttleSchedule.inbound_to_campus, dayFilter, searchQuery]
     );
 
     const activeList = activeTab === "OUTBOUND" ? filteredOutbound : filteredInbound;
@@ -76,7 +83,7 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                                     id={titleId}
                                     className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate"
                                 >
-                                    {YONSEI_SHUTTLE_SCHEDULE.title}
+                                    {shuttleSchedule.title}
                                 </h3>
                                 <span
                                     className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${
@@ -249,7 +256,7 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                             {UI_TEXT.YONSEI_SHUTTLE.GUIDELINES_DESC}
                         </p>
                         <ul className="space-y-2.5 pt-1">
-                            {YONSEI_SHUTTLE_SCHEDULE.guidelines.map((line, idx) => (
+                            {shuttleSchedule.guidelines.map((line, idx) => (
                                 <li
                                     key={idx}
                                     className="flex items-start gap-2.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 leading-relaxed"

@@ -1,5 +1,5 @@
 import {type NextRequest, NextResponse} from "next/server";
-import {fetchBusLocations, getAdaptiveTtlSeconds, type RawBusLocation} from "@entities/bus";
+import {fetchBusLocations, getAdaptiveTtlSeconds, getCachedCityRoutes, type RawBusLocation} from "@entities/bus";
 import {getClientPollHint, warmRouteWindowResources} from "@entities/bus/api/routeWindow";
 import {filterRouteIdsByCity} from "@entities/city";
 import {getCachedOrFetch} from "@shared/cache";
@@ -17,23 +17,50 @@ const LIVE_CACHE_OPTIONS = {
 };
 
 const CACHE_CONTROL_HEADER = "public, max-age=2, s-maxage=10, stale-while-revalidate=5, stale-if-error=60";
+const MAX_ROUTE_NAME_VARIANTS = 30;
+const MAX_QUERY_ROUTE_IDS = 15;
 
-/**
- * GET /api/bus
- * Returns batched real-time bus locations for specified route IDs (`?routeIds=...`).
- */
-export async function GET(request: NextRequest) {
-    const {searchParams} = request.nextUrl;
-    const routeIdsParam = searchParams.get("routeIds");
+type ResolvedBusRoutes =
+    | { ok: true; routeIds: string[]; routeName?: string; lookupDegraded?: boolean }
+    | { ok: false; response: NextResponse };
 
-    if (!routeIdsParam) {
-        return NextResponse.json(
-            {error: "Missing required query parameter: routeIds. To fetch bus timetables, please use /api/schedule."},
-            {status: 400}
-        );
+async function resolveBusRouteIds(searchParams: URLSearchParams, cityCode: string): Promise<ResolvedBusRoutes> {
+    const routeNameParam = searchParams.get("routeName");
+    if (routeNameParam !== null) {
+        const routeName = routeNameParam.trim();
+        if (!ApiValidators.isValidRouteName(routeName)) {
+            return {
+                ok: false,
+                response: NextResponse.json({error: "Invalid routeName parameter"}, {status: 400}),
+            };
+        }
+
+        const routesResult = await getCachedCityRoutes(cityCode, routeName);
+        const rawRoutes = routesResult.data || [];
+        const matched = rawRoutes.filter((r) => String(r.routeno) === routeName || r.routeid === routeName);
+        const routeIds = filterRouteIdsByCity(
+            cityCode,
+            Array.from(new Set(matched.map((r) => r.routeid)))
+        ).slice(0, MAX_ROUTE_NAME_VARIANTS);
+
+        return {
+            ok: true,
+            routeIds,
+            routeName,
+            lookupDegraded: Boolean(routesResult.meta?.degraded) || rawRoutes.length === 0,
+        };
     }
 
-    const cityCode = ApiValidators.resolveCityCode(searchParams.get("cityCode"));
+    const routeIdsParam = searchParams.get("routeIds");
+    if (!routeIdsParam) {
+        return {
+            ok: false,
+            response: NextResponse.json(
+                {error: "Missing required query parameter: routeName or routeIds. To fetch bus timetables, please use /api/schedule."},
+                {status: 400}
+            ),
+        };
+    }
 
     const routeIds = filterRouteIdsByCity(
         cityCode,
@@ -41,14 +68,60 @@ export async function GET(request: NextRequest) {
             .split(",")
             .map((id) => id.trim())
             .filter((id) => ApiValidators.isValidRouteId(id))
-            .slice(0, 15)
+            .slice(0, MAX_QUERY_ROUTE_IDS)
     );
 
     if (routeIds.length === 0) {
-        return NextResponse.json({error: "Invalid or empty routeIds parameter"}, {status: 400});
+        return {
+            ok: false,
+            response: NextResponse.json({error: "Invalid or empty routeIds parameter"}, {status: 400}),
+        };
     }
 
+    return {ok: true, routeIds};
+}
+
+/**
+ * GET /api/bus
+ * Returns batched real-time bus locations for a route name (`?routeName=...`) or explicit route IDs (`?routeIds=...`).
+ */
+export async function GET(request: NextRequest) {
+    const {searchParams} = request.nextUrl;
+    const cityCode = ApiValidators.resolveCityCode(searchParams.get("cityCode"));
+
     try {
+        const resolved = await resolveBusRouteIds(searchParams, cityCode);
+        if (!resolved.ok) {
+            return resolved.response;
+        }
+
+        const {routeIds, routeName, lookupDegraded} = resolved;
+        if (routeIds.length === 0) {
+            const degraded = Boolean(lookupDegraded);
+            return NextResponse.json(
+                {
+                    data: [],
+                    timestamp: Date.now(),
+                    meta: {
+                        status: degraded ? "fallback" : "hit",
+                        layer: "edge",
+                        count: 0,
+                        routes: [],
+                        ...(routeName ? {routeName} : {}),
+                        degraded,
+                        inService: false,
+                    },
+                },
+                {
+                    headers: {
+                        "Cache-Control": "no-store",
+                        "X-Batch-Routes-Count": "0",
+                        ...(degraded ? {"X-Cache-Degraded": "true"} : {}),
+                    },
+                }
+            );
+        }
+
         await warmRouteWindowResources(cityCode);
 
         let hasDegraded = false;
@@ -94,6 +167,7 @@ export async function GET(request: NextRequest) {
                 layer: "edge",
                 count: allBuses.length,
                 routes: routeIds,
+                ...(routeName ? {routeName} : {}),
                 degraded: hasDegraded,
                 ...pollHint,
             },

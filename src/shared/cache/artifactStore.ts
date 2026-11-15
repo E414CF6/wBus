@@ -1,6 +1,6 @@
 import "server-only";
 
-import {get as blobGet, head as blobHead, put as blobPut} from "@vercel/blob";
+import {del as blobDel, get as blobGet, head as blobHead, put as blobPut} from "@vercel/blob";
 import fs from "fs";
 import path from "path";
 
@@ -144,7 +144,11 @@ export const artifactStore = {
         return null;
     },
 
-    async putJson<T>(relativeKey: string, value: T, options?: { pretty?: boolean }): Promise<void> {
+    async putJson<T>(
+        relativeKey: string,
+        value: T,
+        options?: { pretty?: boolean; skipPublicWrite?: boolean; strict?: boolean }
+    ): Promise<void> {
         const cleanKey = relativeKey.replace(/^\/+/, "");
         const usePretty = options?.pretty ?? false;
         const serialized = usePretty ? JSON.stringify(value, null, 2) : JSON.stringify(value);
@@ -170,16 +174,42 @@ export const artifactStore = {
                 });
             } catch (err) {
                 console.warn(`[ArtifactStore] Blob PUT failed for '${cleanKey}':`, err instanceof Error ? err.message : err);
+                if (options?.strict) {
+                    throw err;
+                }
             }
+        } else if (options?.strict) {
+            throw new Error(`Blob store is not configured for strict write '${cleanKey}'`);
         }
 
         // 3. Persist to local public/ directory only when running locally (non-serverless)
-        if (!process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
+        if (!options?.skipPublicWrite && !process.env.VERCEL && !process.env.AWS_LAMBDA_FUNCTION_NAME) {
             try {
                 fs.mkdirSync(path.dirname(publicPath), {recursive: true});
                 fs.writeFileSync(/*turbopackIgnore: true*/ publicPath, serialized, "utf-8");
             } catch {
                 // Ignore read-only FS
+            }
+        }
+    },
+
+    async deleteJson(relativeKey: string): Promise<void> {
+        const cleanKey = relativeKey.replace(/^\/+/, "");
+        const [tmpPath] = resolveFsCandidates(cleanKey);
+
+        try {
+            if (fs.existsSync(/*turbopackIgnore: true*/ tmpPath)) {
+                fs.unlinkSync(/*turbopackIgnore: true*/ tmpPath);
+            }
+        } catch {
+            // Ignore
+        }
+
+        if (isBlobConfigured()) {
+            try {
+                await blobDel(cleanKey);
+            } catch (err) {
+                console.warn(`[ArtifactStore] Blob DEL failed for '${cleanKey}':`, err instanceof Error ? err.message : err);
             }
         }
     },

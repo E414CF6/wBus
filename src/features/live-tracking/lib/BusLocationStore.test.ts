@@ -1,5 +1,5 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from "vitest";
-import {BusLocationStore, getBusLocationStore} from "./BusLocationStore";
+import {BusLocationStore, getBusLocationStore, getBusLocationStoreByRouteName} from "./BusLocationStore";
 
 describe("BusLocationStore", () => {
     beforeEach(() => {
@@ -203,5 +203,92 @@ describe("BusLocationStore", () => {
         expect(store.getCurrentPollDelayMs()).toBeLessThan(20_000);
 
         unsubscribe();
+    });
+
+    it("polls /api/bus?routeName=... when configured with routeName and replaces stale routes", async () => {
+        const fetchSpy = vi.spyOn(globalThis, "fetch")
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    data: [{
+                        routeid: "WJB251000068",
+                        vehicleno: "1001",
+                        nodenm: "Stop A",
+                        gpslati: 37.34,
+                        gpslong: 127.92,
+                    }],
+                    timestamp: Date.now(),
+                    meta: {
+                        status: "hit",
+                        layer: "edge",
+                        ageMs: 100,
+                        routes: ["WJB251000068", "WJB251000376"],
+                        routeName: "30",
+                    },
+                }),
+            } as Response)
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    data: [],
+                    timestamp: Date.now(),
+                    meta: {
+                        status: "hit",
+                        layer: "edge",
+                        ageMs: 200,
+                        routes: ["WJB251000068", "WJB251000376"],
+                        routeName: "30",
+                    },
+                }),
+            } as Response);
+
+        const store = getBusLocationStoreByRouteName("30", "32020");
+        const unsubscribe = store.subscribe(() => undefined);
+        await vi.advanceTimersByTimeAsync(20);
+
+        expect(fetchSpy).toHaveBeenCalledWith(
+            "/api/bus?routeName=30&cityCode=32020",
+            expect.objectContaining({headers: {Accept: "application/json"}})
+        );
+        expect(store.getSnapshot().data).toHaveLength(1);
+
+        store.manualReconnect();
+        await vi.advanceTimersByTimeAsync(20);
+        expect(store.getSnapshot().data).toHaveLength(0);
+        expect(store.getSnapshot().error).toBe("ERR:NONE_RUNNING");
+
+        unsubscribe();
+    });
+
+    it("falls back to individual routeIds when routeName fetch fails and fallback routeIds exist", async () => {
+        vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+            const url = String(input);
+            if (url.startsWith("/api/bus?routeName=")) {
+                return {ok: false, status: 502} as Response;
+            }
+            return {
+                ok: true,
+                json: async () => ({
+                    data: [{
+                        routeid: "WJB251000068",
+                        vehicleno: "7777",
+                        nodenm: "Fallback Stop",
+                        gpslati: 37.34,
+                        gpslong: 127.92,
+                    }],
+                    timestamp: Date.now(),
+                }),
+            } as Response;
+        });
+
+        const store = getBusLocationStoreByRouteName("30-fallback", "32020");
+        store.updateFallbackRouteIds(["WJB251000068"]);
+        store.manualReconnect();
+        await vi.advanceTimersByTimeAsync(150);
+
+        const snapshot = store.getSnapshot();
+        expect(snapshot.hasFetched).toBe(true);
+        expect(snapshot.data).toHaveLength(1);
+        expect(snapshot.data[0].vehicleno).toBe("7777");
     });
 });
