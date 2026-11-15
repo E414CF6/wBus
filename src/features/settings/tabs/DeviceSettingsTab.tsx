@@ -15,12 +15,12 @@ interface DeviceSettingsTabProps {
 }
 
 export const DeviceSettingsTab: React.FC<DeviceSettingsTabProps> = ({
-    settings,
-    currentCityName,
-    onToggleAutoDetect,
-    onToggleHaptic,
-    onUpdateSettings,
-}) => (
+                                                                        settings,
+                                                                        currentCityName,
+                                                                        onToggleAutoDetect,
+                                                                        onToggleHaptic,
+                                                                        onUpdateSettings,
+                                                                    }) => (
     <>
         <section className="space-y-2.5">
             <SettingsSectionHeader

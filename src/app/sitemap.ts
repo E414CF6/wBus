@@ -1,27 +1,42 @@
 import type {MetadataRoute} from "next";
+import {getSeedWikiPages} from "@entities/wiki";
 import {SITE_CONFIG} from "@shared/config/env";
-import {buildPageHref, SPECIAL_PAGE_IDS} from "@shared/config/pages";
 
 export default function sitemap(): MetadataRoute.Sitemap {
     const baseUrl = SITE_CONFIG.METADATA.BASE_URL;
     const lastModified = new Date();
-
-    return [{
-        url: baseUrl, lastModified, changeFrequency: "hourly", priority: 1.0,
-    }, {
-        url: `${baseUrl}${buildPageHref(SPECIAL_PAGE_IDS.YONSEI_MIRAE)}`,
+    const wikiSeedEntries: MetadataRoute.Sitemap = getSeedWikiPages().map((page) => ({
+        url: `${baseUrl}/wiki/${encodeURIComponent(page.slug)}`,
         lastModified,
         changeFrequency: "daily",
         priority: 0.9,
-    }, {
-        url: `${baseUrl}/wiki`, lastModified, changeFrequency: "daily", priority: 0.9,
-    }, {
-        url: `${baseUrl}/wiki/yonsei-mirae`, lastModified, changeFrequency: "daily", priority: 0.9,
-    }, {
-        url: `${baseUrl}/schedule`, lastModified, changeFrequency: "daily", priority: 0.9,
-    }, {
-        url: `${baseUrl}/privacy`, lastModified, changeFrequency: "monthly", priority: 0.3,
-    }, {
-        url: `${baseUrl}/terms`, lastModified, changeFrequency: "monthly", priority: 0.3,
-    },];
+    }));
+
+    return [
+        {
+            url: baseUrl,
+            lastModified,
+            changeFrequency: "hourly",
+            priority: 1.0,
+        },
+        {
+            url: `${baseUrl}/wiki`,
+            lastModified,
+            changeFrequency: "daily",
+            priority: 0.9,
+        },
+        ...wikiSeedEntries,
+        {
+            url: `${baseUrl}/privacy`,
+            lastModified,
+            changeFrequency: "monthly",
+            priority: 0.3,
+        },
+        {
+            url: `${baseUrl}/terms`,
+            lastModified,
+            changeFrequency: "monthly",
+            priority: 0.3,
+        },
+    ];
 }

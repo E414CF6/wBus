@@ -16,7 +16,7 @@ const emptySubscribe = () => () => {
 
 export type YonseiDirectionPreference = AppSettings["yonseiDefaultDirection"];
 
-export interface SettingsModalProps {
+export type WikiTransitSettingsModalProps = {
     isOpen: boolean;
     dayMode: DayMode;
     isTodayWeekendOrHoliday: boolean;
@@ -24,17 +24,17 @@ export interface SettingsModalProps {
     onDayModeChange: (mode: DayMode) => void;
     onDirectionPreferenceChange: (pref: YonseiDirectionPreference) => void;
     onClose: () => void;
-}
+};
 
-export const SettingsModal: React.FC<SettingsModalProps> = ({
-                                                                isOpen,
-                                                                dayMode,
-                                                                isTodayWeekendOrHoliday,
-                                                                directionPreference,
-                                                                onDayModeChange,
-                                                                onDirectionPreferenceChange,
-                                                                onClose,
-                                                            }) => {
+export const WikiTransitSettingsModal: React.FC<WikiTransitSettingsModalProps> = ({
+                                                                                      isOpen,
+                                                                                      dayMode,
+                                                                                      isTodayWeekendOrHoliday,
+                                                                                      directionPreference,
+                                                                                      onDayModeChange,
+                                                                                      onDirectionPreferenceChange,
+                                                                                      onClose,
+                                                                                  }) => {
     const dialogRef = useRef<HTMLDialogElement>(null);
     const titleId = useId();
     const {theme, setTheme} = useTheme();

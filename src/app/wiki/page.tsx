@@ -15,8 +15,8 @@ export const metadata: Metadata = {
 };
 
 export default async function WikiIndexRoutePage({
-    searchParams,
-}: {
+                                                     searchParams,
+                                                 }: {
     searchParams: Promise<{ q?: string; category?: string }>;
 }) {
     const sp = await searchParams;

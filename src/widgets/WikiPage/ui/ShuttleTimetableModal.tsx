@@ -211,6 +211,8 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                             <Search
                                 className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"/>
                             <input
+                                id={`${titleId}-shuttle-search`}
+                                name="shuttleSearch"
                                 type="text"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}

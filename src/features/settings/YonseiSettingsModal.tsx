@@ -2,9 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import {ExternalLink, GraduationCap, MapIcon} from "lucide-react";
+import {ExternalLink, GraduationCap} from "lucide-react";
 
-import {buildPageHref, SPECIAL_PAGE_IDS} from "@shared/config/pages";
+import {YONSEI_MIRAE_WIKI_SLUG} from "@entities/wiki";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {markModalNavigating, Modal} from "@shared/ui";
 import {triggerHaptic} from "@shared/utils/haptics";
@@ -38,7 +38,7 @@ export const YonseiSettingsModal: React.FC<YonseiSettingsModalProps> = ({
     const modalFooter = (
         <>
             <Link
-                href={buildPageHref(SPECIAL_PAGE_IDS.YONSEI_MIRAE)}
+                href={`/wiki/${encodeURIComponent(YONSEI_MIRAE_WIKI_SLUG)}`}
                 onClick={() => {
                     markModalNavigating();
                     onClose();
@@ -46,7 +46,7 @@ export const YonseiSettingsModal: React.FC<YonseiSettingsModalProps> = ({
                 }}
                 className="inline-flex items-center gap-1.5 text-xs font-black text-[#003876] dark:text-blue-300 hover:underline"
             >
-                <span>연세대 화면 열기</span>
+                <span>연세대 위키 열기</span>
                 <ExternalLink className="w-3.5 h-3.5"/>
             </Link>
             <button
@@ -75,74 +75,7 @@ export const YonseiSettingsModal: React.FC<YonseiSettingsModalProps> = ({
         >
             <div className="overflow-y-auto p-4 sm:p-5 space-y-3.5 custom-scrollbar">
                 <SettingsGroup>
-                    {/* 1. Default Start Page */}
-                    <SettingsBlock>
-                        <div>
-                            <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white">
-                                앱 첫 접속 시 기본 시작 화면
-                            </p>
-                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                                브라우저로 <code className="font-mono">/</code>에 접속했을 때 자동으로 열릴 화면을 선택합니다
-                            </p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    triggerHaptic("selection");
-                                    updateSettings({defaultStartPage: "map"});
-                                }}
-                                className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all cursor-pointer active:scale-[0.98] ${
-                                    settings.defaultStartPage === "map"
-                                        ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-sm"
-                                        : "bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 border-black/10 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10"
-                                }`}
-                            >
-                                <MapIcon className="w-4 h-4 shrink-0"/>
-                                <div className="min-w-0">
-                                    <p className="text-xs font-black truncate">실시간 버스 지도</p>
-                                    <p
-                                        className={`text-[10px] truncate ${
-                                            settings.defaultStartPage === "map"
-                                                ? "text-white/75 dark:text-slate-600"
-                                                : "text-slate-400"
-                                        }`}
-                                    >
-                                        전국 시내버스 지도
-                                    </p>
-                                </div>
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    triggerHaptic("selection");
-                                    updateSettings({defaultStartPage: "yonsei"});
-                                }}
-                                className={`flex items-center gap-2 p-3 rounded-xl border text-left transition-all cursor-pointer active:scale-[0.98] ${
-                                    settings.defaultStartPage === "yonsei"
-                                        ? "bg-[#003876] text-white border-transparent shadow-sm"
-                                        : "bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 border-black/10 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10"
-                                }`}
-                            >
-                                <GraduationCap className="w-4 h-4 shrink-0"/>
-                                <div className="min-w-0">
-                                    <p className="text-xs font-black truncate">연세대 미래캠퍼스</p>
-                                    <p
-                                        className={`text-[10px] truncate ${
-                                            settings.defaultStartPage === "yonsei"
-                                                ? "text-sky-100"
-                                                : "text-slate-400"
-                                        }`}
-                                    >
-                                        셔틀·30·34·34-1 허브
-                                    </p>
-                                </div>
-                            </button>
-                        </div>
-                    </SettingsBlock>
-
-                    {/* 2. Yonsei Default Direction */}
+                    {/* 1. Yonsei Default Direction */}
                     <SettingsBlock>
                         <div>
                             <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white">

@@ -53,10 +53,10 @@ function formatRelativeOrDate(iso: string): string {
 }
 
 export const WikiDirectoryPage: React.FC<WikiDirectoryPageProps> = ({
-    initialData,
-    initialQuery = "",
-    initialCategory = "all",
-}) => {
+                                                                        initialData,
+                                                                        initialQuery = "",
+                                                                        initialCategory = "all",
+                                                                    }) => {
     const [activeCategory, setActiveCategory] = useState<WikiCategory | "all">(initialCategory);
     const [query, setQuery] = useState(initialQuery);
     const [limit, setLimit] = useState(24);
@@ -90,7 +90,8 @@ export const WikiDirectoryPage: React.FC<WikiDirectoryPageProps> = ({
     return (
         <div className="min-h-screen bg-[#f4f7fb] dark:bg-[#080c15] text-slate-900 dark:text-slate-100 flex flex-col">
             {/* Top Header */}
-            <header className="sticky top-0 z-30 backdrop-blur-2xl bg-white/88 dark:bg-[#0b101b]/88 border-b border-slate-200/80 dark:border-white/[0.08]">
+            <header
+                className="sticky top-0 z-30 backdrop-blur-2xl bg-white/88 dark:bg-[#0b101b]/88 border-b border-slate-200/80 dark:border-white/[0.08]">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                         <Link
@@ -139,14 +140,16 @@ export const WikiDirectoryPage: React.FC<WikiDirectoryPageProps> = ({
 
             <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
                 {/* Intro Hero + Search */}
-                <section className="relative overflow-hidden rounded-3xl p-5 sm:p-7 bg-white dark:bg-[#111623] border border-slate-200/85 dark:border-white/10 shadow-xs space-y-4">
+                <section
+                    className="relative overflow-hidden rounded-3xl p-5 sm:p-7 bg-white dark:bg-[#111623] border border-slate-200/85 dark:border-white/10 shadow-xs space-y-4">
                     <div
                         aria-hidden="true"
                         className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#003876]/[0.06] via-sky-500/[0.03] to-transparent dark:from-[#003876]/30 dark:via-sky-900/15 dark:to-transparent"
                     />
                     <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="space-y-1.5">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-[#003876] text-white">
+                            <span
+                                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-[#003876] text-white">
                                 <Sparkles className="w-3 h-3"/>
                                 누구나 편집하는 실시간 버스 위키
                             </span>
@@ -158,7 +161,7 @@ export const WikiDirectoryPage: React.FC<WikiDirectoryPageProps> = ({
                             </p>
                         </div>
                         <Link
-                            href="/wiki/yonsei-mirae"
+                            href={`/wiki/${encodeURIComponent("연세대학교 미래캠퍼스")}`}
                             className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/60 dark:hover:bg-sky-900/60 border border-sky-200 dark:border-sky-800 text-xs font-black text-[#003876] dark:text-sky-300 transition"
                         >
                             <Compass className="w-4 h-4"/>
@@ -171,6 +174,8 @@ export const WikiDirectoryPage: React.FC<WikiDirectoryPageProps> = ({
                         <div className="relative">
                             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"/>
                             <input
+                                id="wiki-directory-search"
+                                name="wikiSearch"
                                 type="text"
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
@@ -232,7 +237,8 @@ export const WikiDirectoryPage: React.FC<WikiDirectoryPageProps> = ({
                         </div>
 
                         {pages.length === 0 ? (
-                            <div className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111623] p-10 text-center space-y-3">
+                            <div
+                                className="rounded-3xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#111623] p-10 text-center space-y-3">
                                 <p className="text-sm font-bold text-slate-600 dark:text-slate-300">
                                     일치하는 위키 문서가 없습니다.
                                 </p>
@@ -254,10 +260,12 @@ export const WikiDirectoryPage: React.FC<WikiDirectoryPageProps> = ({
                                     >
                                         <div className="space-y-2">
                                             <div className="flex items-center justify-between gap-2">
-                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#003876]/10 dark:bg-sky-500/20 text-[#003876] dark:text-sky-300">
+                                                <span
+                                                    className="px-2 py-0.5 rounded-full text-[10px] font-black bg-[#003876]/10 dark:bg-sky-500/20 text-[#003876] dark:text-sky-300">
                                                     {WIKI_CATEGORY_LABELS[page.category]}
                                                 </span>
-                                                <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-black text-slate-600 dark:text-slate-300 tabular-nums">
+                                                <span
+                                                    className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-black text-slate-600 dark:text-slate-300 tabular-nums">
                                                     v{page.version}
                                                 </span>
                                             </div>
@@ -271,28 +279,34 @@ export const WikiDirectoryPage: React.FC<WikiDirectoryPageProps> = ({
                                             )}
                                         </div>
 
-                                        <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-white/[0.06]">
-                                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-extrabold text-slate-600 dark:text-slate-300">
+                                        <div
+                                            className="space-y-2 pt-2 border-t border-slate-100 dark:border-white/[0.06]">
+                                            <div
+                                                className="flex flex-wrap items-center gap-1.5 text-[10px] font-extrabold text-slate-600 dark:text-slate-300">
                                                 {page.linkedRouteCount > 0 && (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300">
+                                                    <span
+                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300">
                                                         <Bus className="w-3 h-3"/>
                                                         노선 {page.linkedRouteCount}
                                                     </span>
                                                 )}
                                                 {page.hasShuttle && (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300">
+                                                    <span
+                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-sky-50 dark:bg-sky-950/50 text-sky-700 dark:text-sky-300">
                                                         셔틀 시간표
                                                     </span>
                                                 )}
                                                 {page.boardingStopCount > 0 && (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">
+                                                    <span
+                                                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">
                                                         <MapPin className="w-3 h-3"/>
                                                         승강장 {page.boardingStopCount}
                                                     </span>
                                                 )}
                                             </div>
 
-                                            <div className="flex items-center justify-between text-[11px] font-medium text-slate-400 dark:text-slate-500">
+                                            <div
+                                                className="flex items-center justify-between text-[11px] font-medium text-slate-400 dark:text-slate-500">
                                                 <span className="inline-flex items-center gap-1 truncate">
                                                     <User className="w-3 h-3"/>
                                                     {page.lastEditor.nickname}
@@ -322,8 +336,10 @@ export const WikiDirectoryPage: React.FC<WikiDirectoryPageProps> = ({
                     </section>
 
                     {/* Recent Changes Feed */}
-                    <aside className="lg:col-span-4 rounded-2xl border border-slate-200/85 dark:border-white/10 bg-white dark:bg-[#111623] overflow-hidden shadow-xs">
-                        <div className="px-4 py-3 border-b border-slate-100 dark:border-white/[0.08] flex items-center gap-2">
+                    <aside
+                        className="lg:col-span-4 rounded-2xl border border-slate-200/85 dark:border-white/10 bg-white dark:bg-[#111623] overflow-hidden shadow-xs">
+                        <div
+                            className="px-4 py-3 border-b border-slate-100 dark:border-white/[0.08] flex items-center gap-2">
                             <History className="w-4 h-4 text-[#003876] dark:text-sky-400"/>
                             <h3 className="text-xs font-black text-slate-900 dark:text-white">
                                 최근 위키 변경
@@ -343,20 +359,24 @@ export const WikiDirectoryPage: React.FC<WikiDirectoryPageProps> = ({
                                         className="block p-3.5 hover:bg-slate-50 dark:hover:bg-white/[0.03] transition space-y-1"
                                     >
                                         <div className="flex items-center justify-between gap-2">
-                                            <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                                            <span
+                                                className="text-xs font-black text-slate-900 dark:text-white truncate">
                                                 {item.title}
                                             </span>
-                                            <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-black tabular-nums shrink-0">
+                                            <span
+                                                className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-black tabular-nums shrink-0">
                                                 v{item.version}
                                             </span>
                                         </div>
                                         <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-300 line-clamp-1">
                                             {item.summary || "문서 편집"}
                                         </p>
-                                        <div className="flex items-center justify-between text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                                        <div
+                                            className="flex items-center justify-between text-[10px] font-medium text-slate-400 dark:text-slate-500">
                                             <span>{item.editor.nickname} · {formatRelativeOrDate(item.createdAt)}</span>
                                             <span className="font-mono">
-                                                <span className="text-emerald-600 dark:text-emerald-400">+{item.diffStats.added}</span>{" "}
+                                                <span
+                                                    className="text-emerald-600 dark:text-emerald-400">+{item.diffStats.added}</span>{" "}
                                                 <span className="text-rose-500">-{item.diffStats.removed}</span>
                                             </span>
                                         </div>

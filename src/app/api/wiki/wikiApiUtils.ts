@@ -18,9 +18,9 @@ export function extractClientIp(request: Request): string {
 
 export function decodeWikiSlug(rawSlug: string): string {
     try {
-        return decodeURIComponent(rawSlug).trim().toLowerCase();
+        return decodeURIComponent(rawSlug).trim();
     } catch {
-        return rawSlug.trim().toLowerCase();
+        return rawSlug.trim();
     }
 }
 

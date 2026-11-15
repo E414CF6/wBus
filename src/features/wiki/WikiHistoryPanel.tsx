@@ -24,12 +24,12 @@ function formatRevisionTime(iso: string): string {
 }
 
 export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
-    slug,
-    currentVersion,
-    nickname,
-    isProtected = false,
-    onReverted,
-}) => {
+                                                                      slug,
+                                                                      currentVersion,
+                                                                      nickname,
+                                                                      isProtected = false,
+                                                                      onReverted,
+                                                                  }) => {
     const [selectedVersion, setSelectedVersion] = useState<number | null>(currentVersion);
     const [compareToVersion, setCompareToVersion] = useState<number | null>(
         currentVersion > 1 ? currentVersion - 1 : null
@@ -93,7 +93,8 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
 
     if (isLoading && !data) {
         return (
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-8 text-center text-xs font-semibold text-slate-500">
+            <div
+                className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-8 text-center text-xs font-semibold text-slate-500">
                 편집 이력을 불러오는 중...
             </div>
         );
@@ -101,7 +102,8 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
 
     if (error) {
         return (
-            <div className="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-5 text-xs font-bold text-rose-700 dark:text-rose-200">
+            <div
+                className="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-5 text-xs font-bold text-rose-700 dark:text-rose-200">
                 편집 이력을 불러오지 못했습니다: {error.message}
             </div>
         );
@@ -110,8 +112,10 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* Revision List */}
-            <div className="lg:col-span-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 overflow-hidden shadow-sm">
-                <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/70 flex items-center justify-between">
+            <div
+                className="lg:col-span-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 overflow-hidden shadow-sm">
+                <div
+                    className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/70 flex items-center justify-between">
                     <span className="text-xs font-black text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                         <History className="w-4 h-4 text-sky-600 dark:text-sky-400"/>
                         개정 이력 ({revisions.length})
@@ -122,7 +126,8 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                 </div>
 
                 {revertError && (
-                    <div className="m-3 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-[11px] font-bold text-rose-700 dark:text-rose-200">
+                    <div
+                        className="m-3 p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-[11px] font-bold text-rose-700 dark:text-rose-200">
                         {revertError}
                     </div>
                 )}
@@ -154,19 +159,23 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                                             className="text-left min-w-0 flex-1 cursor-pointer"
                                         >
                                             <div className="flex flex-wrap items-center gap-1.5">
-                                                <span className="px-2 py-0.5 rounded-md bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] font-black tabular-nums">
+                                                <span
+                                                    className="px-2 py-0.5 rounded-md bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] font-black tabular-nums">
                                                     v{rev.version}
                                                 </span>
                                                 {rev.version === currentVersion && (
-                                                    <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold">
+                                                    <span
+                                                        className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold">
                                                         최신
                                                     </span>
                                                 )}
-                                                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                                                <span
+                                                    className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
                                                     {rev.summary || "요약 없음"}
                                                 </span>
                                             </div>
-                                            <div className="flex flex-wrap items-center gap-2.5 mt-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                            <div
+                                                className="flex flex-wrap items-center gap-2.5 mt-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
                                                 <span className="inline-flex items-center gap-1">
                                                     <User className="w-3 h-3"/>
                                                     {rev.editor.nickname}
@@ -176,7 +185,8 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                                                     {formatRevisionTime(rev.createdAt)}
                                                 </span>
                                                 <span className="font-mono text-[10px]">
-                                                    <span className="text-emerald-600 dark:text-emerald-400">+{rev.diffStats.added}</span>{" "}
+                                                    <span
+                                                        className="text-emerald-600 dark:text-emerald-400">+{rev.diffStats.added}</span>{" "}
                                                     <span className="text-rose-500">-{rev.diffStats.removed}</span>
                                                 </span>
                                             </div>
@@ -202,8 +212,10 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
             </div>
 
             {/* Diff Inspector */}
-            <div className="lg:col-span-7 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 overflow-hidden shadow-sm">
-                <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/70 flex flex-wrap items-center justify-between gap-2">
+            <div
+                className="lg:col-span-7 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 overflow-hidden shadow-sm">
+                <div
+                    className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/70 flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-black text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                         <FileDiff className="w-4 h-4 text-indigo-600 dark:text-indigo-400"/>
                         변경 비교 (Diff)
@@ -211,6 +223,9 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                     {revisions.length > 0 && (
                         <div className="flex items-center gap-2 text-[11px] font-bold">
                             <select
+                                id="wiki-history-compare-to"
+                                name="compareToVersion"
+                                aria-label="비교 기준 버전 선택"
                                 value={compareToVersion ?? ""}
                                 onChange={(e) => setCompareToVersion(e.target.value ? Number(e.target.value) : null)}
                                 className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
@@ -224,6 +239,9 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                             </select>
                             <span className="text-slate-400">→</span>
                             <select
+                                id="wiki-history-selected"
+                                name="selectedVersion"
+                                aria-label="대상 버전 선택"
                                 value={selectedVersion ?? ""}
                                 onChange={(e) => setSelectedVersion(Number(e.target.value))}
                                 className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
@@ -246,7 +264,8 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                     ) : (
                         <>
                             {structuredChanges.length > 0 && (
-                                <div className="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/70 space-y-1">
+                                <div
+                                    className="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/70 space-y-1">
                                     <p className="text-[11px] font-black text-indigo-800 dark:text-indigo-200">
                                         구조화 데이터 변경 요약
                                     </p>
@@ -258,7 +277,8 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                                 </div>
                             )}
 
-                            <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden font-mono text-[11px] leading-relaxed">
+                            <div
+                                className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden font-mono text-[11px] leading-relaxed">
                                 {lineDiff.map((entry, idx) => (
                                     <div
                                         key={idx}

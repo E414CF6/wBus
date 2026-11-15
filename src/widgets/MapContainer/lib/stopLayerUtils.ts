@@ -55,21 +55,21 @@ export function getBusStopKey(stop: Pick<BusStop, "nodeid" | "updowncd">, fallba
  * (route stops, favorites, and nearby stops) to render natively via MapLibre WebGL layers.
  */
 export function buildBusStopsGeoJson({
-    routeStops,
-    favoriteStops,
-    nearbyStops,
-    showNearbyStops,
-    stopColorMap,
-    routeMainColor,
-    favoriteNodeIds,
-}: BuildBusStopsGeoJsonParams): BuildBusStopsGeoJsonResult {
+                                         routeStops,
+                                         favoriteStops,
+                                         nearbyStops,
+                                         showNearbyStops,
+                                         stopColorMap,
+                                         routeMainColor,
+                                         favoriteNodeIds,
+                                     }: BuildBusStopsGeoJsonParams): BuildBusStopsGeoJsonResult {
     const features: Array<Feature<Point, StopFeatureProperties>> = [];
     const stopByKey = new Map<string, BusStop>();
     const addedNodeIds = new Set<string>();
 
     const pushStop = (
         stop: BusStop,
-        opts: {isRouteStop: boolean; isFavorite: boolean; color: string; sortKey: number},
+        opts: { isRouteStop: boolean; isFavorite: boolean; color: string; sortKey: number },
         fallbackIndex?: number
     ) => {
         if (!Number.isFinite(stop.gpslong) || !Number.isFinite(stop.gpslati)) return;

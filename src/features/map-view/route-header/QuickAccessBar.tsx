@@ -19,20 +19,21 @@ interface QuickAccessBarProps {
 }
 
 export const QuickAccessBar: React.FC<QuickAccessBarProps> = ({
-    quickRoutes,
-    selectedRoute,
-    meta,
-    showYonseiFeatures,
-    hasUniversityShuttle,
-    defaultQuickRoutes,
-    isClient,
-    favoriteStops,
-    onSelectRoute,
-    onJumpToFavoriteStop,
-}) => {
+                                                                  quickRoutes,
+                                                                  selectedRoute,
+                                                                  meta,
+                                                                  showYonseiFeatures,
+                                                                  hasUniversityShuttle,
+                                                                  defaultQuickRoutes,
+                                                                  isClient,
+                                                                  favoriteStops,
+                                                                  onSelectRoute,
+                                                                  onJumpToFavoriteStop,
+                                                              }) => {
     return (
         <div className="relative z-0 flex justify-center max-w-full w-full px-1">
-            <div className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden py-0.5 px-1 max-w-full scroll-smooth touch-pan-x select-none">
+            <div
+                className="flex items-center gap-1.5 overflow-x-auto custom-scrollbar-hidden py-0.5 px-1 max-w-full scroll-smooth touch-pan-x select-none">
                 {quickRoutes.map((route) => {
                     const isCurrent = route === selectedRoute;
                     const isYonsei =

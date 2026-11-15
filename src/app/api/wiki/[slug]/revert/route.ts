@@ -1,12 +1,7 @@
 import {revalidatePath} from "next/cache";
 import {type NextRequest, NextResponse} from "next/server";
 import {isValidWikiSlug, WikiRevertPayloadSchema} from "@entities/wiki";
-import {
-    enforceWikiRateLimit,
-    isWikiAdminAuthorized,
-    resolveEditorInfo,
-    revertWikiPage,
-} from "@entities/wiki/server";
+import {enforceWikiRateLimit, isWikiAdminAuthorized, resolveEditorInfo, revertWikiPage,} from "@entities/wiki/server";
 import {decodeWikiSlug, extractClientIp, handleWikiApiError, WIKI_NO_STORE_HEADERS} from "../../wikiApiUtils";
 
 export const dynamic = "force-dynamic";
@@ -51,10 +46,7 @@ export async function POST(
 
         try {
             revalidatePath("/wiki");
-            revalidatePath(`/wiki/${slug}`);
-            if (slug === "yonsei-mirae") {
-                revalidatePath("/schedule");
-            }
+            revalidatePath("/wiki/[slug]", "page");
         } catch {
             // Ignore
         }

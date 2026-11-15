@@ -9,18 +9,29 @@ import type {CampusDirectionMode} from "../lib/yonseiShuttleUtils";
 interface CampusDirectionBarProps {
     directionMode: CampusDirectionMode;
     dayModeBadgeLabel: string;
+    badgeLabel?: string;
+    outboundTitle?: string;
+    outboundSubtitle?: string;
+    inboundTitle?: string;
+    inboundSubtitle?: string;
     onDirectionChange: (mode: CampusDirectionMode) => void;
     onOpenSettings: () => void;
 }
 
 export const CampusDirectionBar: React.FC<CampusDirectionBarProps> = ({
-    directionMode,
-    dayModeBadgeLabel,
-    onDirectionChange,
-    onOpenSettings,
-}) => {
+                                                                          directionMode,
+                                                                          dayModeBadgeLabel,
+                                                                          badgeLabel = UI_TEXT.YONSEI.HERO_BADGE,
+                                                                          outboundTitle = "하교 · 시내방면",
+                                                                          outboundSubtitle = "연세대 출발",
+                                                                          inboundTitle = "등교 · 학교방면",
+                                                                          inboundSubtitle = "장양리·시내 출발",
+                                                                          onDirectionChange,
+                                                                          onOpenSettings,
+                                                                      }) => {
     return (
-        <section className="relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-white dark:bg-[#111623] border border-slate-200/85 dark:border-white/10 shadow-xs">
+        <section
+            className="relative overflow-hidden rounded-3xl p-4 sm:p-5 bg-white dark:bg-[#111623] border border-slate-200/85 dark:border-white/10 shadow-xs">
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 bg-gradient-to-br from-[#003876]/[0.07] via-blue-500/[0.03] to-transparent dark:from-[#003876]/30 dark:via-blue-900/15 dark:to-transparent"
@@ -28,8 +39,9 @@ export const CampusDirectionBar: React.FC<CampusDirectionBarProps> = ({
             <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3.5">
                 <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-[#003876] text-white">
-                            {UI_TEXT.YONSEI.HERO_BADGE}
+                        <span
+                            className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black bg-[#003876] text-white">
+                            {badgeLabel}
                         </span>
                         <button
                             type="button"
@@ -70,7 +82,7 @@ export const CampusDirectionBar: React.FC<CampusDirectionBarProps> = ({
                     >
                         <ArrowUpRight className="w-3.5 h-3.5 shrink-0"/>
                         <div className="text-left leading-tight">
-                            <div>하교 · 시내방면</div>
+                            <div>{outboundTitle}</div>
                             <div
                                 className={`text-[10px] font-bold ${
                                     directionMode === "OUTBOUND"
@@ -78,7 +90,7 @@ export const CampusDirectionBar: React.FC<CampusDirectionBarProps> = ({
                                         : "text-slate-400 dark:text-slate-500"
                                 }`}
                             >
-                                연세대 출발
+                                {outboundSubtitle}
                             </div>
                         </div>
                     </button>
@@ -99,7 +111,7 @@ export const CampusDirectionBar: React.FC<CampusDirectionBarProps> = ({
                     >
                         <ArrowDownLeft className="w-3.5 h-3.5 shrink-0"/>
                         <div className="text-left leading-tight">
-                            <div>등교 · 학교방면</div>
+                            <div>{inboundTitle}</div>
                             <div
                                 className={`text-[10px] font-bold ${
                                     directionMode === "INBOUND"
@@ -107,7 +119,7 @@ export const CampusDirectionBar: React.FC<CampusDirectionBarProps> = ({
                                         : "text-slate-400 dark:text-slate-500"
                                 }`}
                             >
-                                장양리·시내 출발
+                                {inboundSubtitle}
                             </div>
                         </div>
                     </button>

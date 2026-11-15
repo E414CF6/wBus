@@ -14,13 +14,15 @@ import {
     wikiRevisions,
 } from "@shared/db";
 import {matchesHangul} from "@shared/utils/hangul";
-import {
-    applyWikiDelta,
-    computeWikiDelta,
-    shouldStoreCheckpoint,
-} from "./lib/wikiDelta";
+import {applyWikiDelta, computeWikiDelta, shouldStoreCheckpoint,} from "./lib/wikiDelta";
 import {computeWikiDiffStats, hasWikiContentChanged} from "./lib/wikiDiff";
-import {isValidWikiSlug, WikiPageDocumentSchema} from "./schemas";
+import {
+    isValidWikiSlug,
+    LEGACY_WIKI_SLUG_ALIASES,
+    normalizeWikiSlug,
+    resolveLegacyWikiSlug,
+    WikiPageDocumentSchema,
+} from "./schemas";
 import {getSeedWikiPage, getSeedWikiPages, PINNED_WIKI_SLUGS} from "./seeds";
 import type {
     WikiCategory,
@@ -51,6 +53,10 @@ const MAX_LIST_LIMIT = 100;
 const localRateBuckets = new Map<string, { count: number; expiresAt: number }>();
 
 let bootstrapPromise: Promise<void> | null = null;
+
+export function _resetWikiBootstrapForTests(): void {
+    bootstrapPromise = null;
+}
 
 export class WikiServiceError extends Error {
     status: number;
@@ -365,6 +371,11 @@ async function importDocumentIntoDb(
     return rows[0] ? rowToDocument(rows[0]) : null;
 }
 
+function resolveCanonicalSlug(rawSlug: string): string {
+    const trimmed = rawSlug.trim();
+    return resolveLegacyWikiSlug(trimmed) ?? trimmed;
+}
+
 async function migrateSingleSlugFromBlobOrSeed(
     db: WikiDatabase,
     slug: string
@@ -409,15 +420,67 @@ async function ensureSeedAndBlobBootstrapped(db: WikiDatabase): Promise<void> {
             const blobSlugs = (blobIndex?.data?.pages ?? []).map((p) => p.slug);
             const allCandidateSlugs = Array.from(new Set([...seedSlugs, ...blobSlugs]));
             for (const candidateSlug of allCandidateSlugs) {
-                if (!existingSet.has(candidateSlug)) {
-                    await migrateSingleSlugFromBlobOrSeed(db, candidateSlug);
-                    existingSet.add(candidateSlug);
+                const targetSlug = resolveLegacyWikiSlug(candidateSlug) ?? candidateSlug;
+                if (!existingSet.has(targetSlug)) {
+                    await migrateSingleSlugFromBlobOrSeed(db, targetSlug);
+                    existingSet.add(targetSlug);
                 }
             }
             return;
         }
 
-        // 2. Ensure any newly bundled built-in seeds exist
+        // 2. Migrate legacy ASCII seed slugs (e.g. yonsei-mirae -> 연세대학교 미래캠퍼스) while preserving revisions
+        for (const [legacySlug, canonicalSlug] of Object.entries(LEGACY_WIKI_SLUG_ALIASES)) {
+            if (existingSet.has(legacySlug) && !existingSet.has(canonicalSlug)) {
+                await db.transaction(async (tx) => {
+                    const oldRows = await tx
+                        .select()
+                        .from(wikiPages)
+                        .where(eq(wikiPages.slug, legacySlug))
+                        .limit(1);
+                    const oldRow = oldRows[0];
+                    if (!oldRow) return;
+
+                    await tx
+                        .insert(wikiPages)
+                        .values({
+                            slug: canonicalSlug,
+                            title: oldRow.title,
+                            subtitle: oldRow.subtitle,
+                            category: oldRow.category,
+                            cityCode: oldRow.cityCode,
+                            tags: oldRow.tags,
+                            tagsText: oldRow.tagsText,
+                            version: oldRow.version,
+                            isProtected: oldRow.isProtected,
+                            pinned: PINNED_WIKI_SLUGS.has(canonicalSlug) || oldRow.pinned,
+                            lastEditorNickname: oldRow.lastEditorNickname,
+                            lastEditorId: oldRow.lastEditorId,
+                            linkedRoutes: oldRow.linkedRoutes,
+                            shuttle: oldRow.shuttle,
+                            boardingStops: oldRow.boardingStops,
+                            markdownBody: oldRow.markdownBody,
+                            createdAt: oldRow.createdAt,
+                            updatedAt: oldRow.updatedAt,
+                        })
+                        .onConflictDoNothing({target: wikiPages.slug});
+
+                    await tx
+                        .update(wikiRevisions)
+                        .set({slug: canonicalSlug})
+                        .where(eq(wikiRevisions.slug, legacySlug));
+
+                    await tx.delete(wikiPages).where(eq(wikiPages.slug, legacySlug));
+                });
+
+                existingSet.delete(legacySlug);
+                existingSet.add(canonicalSlug);
+                await distributedCache.del(`${REDIS_PAGE_PREFIX}${legacySlug}`).catch(() => false);
+                await distributedCache.del(`${REDIS_PAGE_PREFIX}${canonicalSlug}`).catch(() => false);
+            }
+        }
+
+        // 3. Ensure any newly bundled built-in seeds exist
         for (const seed of seeds) {
             if (!existingSet.has(seed.slug)) {
                 await migrateSingleSlugFromBlobOrSeed(db, seed.slug);
@@ -516,13 +579,14 @@ async function reconstructRevision(
         ...rowToRevisionMeta(targetRow),
         snapshot: {
             ...currentDoc,
+            slug,
             ...(isProtected !== undefined ? {isProtected} : {}),
         },
     };
 }
 
 export async function getWikiPage(slug: string): Promise<WikiPageDocument | null> {
-    const normalized = slug.trim().toLowerCase();
+    const normalized = resolveCanonicalSlug(slug);
     if (!isValidWikiSlug(normalized)) return null;
 
     const cached = await distributedCache.get<WikiPageDocument>(
@@ -539,6 +603,8 @@ export async function getWikiPage(slug: string): Promise<WikiPageDocument | null
     }
 
     const db = getDb();
+    await ensureSeedAndBlobBootstrapped(db);
+
     const rows = await db
         .select()
         .from(wikiPages)
@@ -696,10 +762,12 @@ export async function createWikiPage(input: {
     summary: string;
     editor: WikiEditorInfo;
 }): Promise<WikiPageDocument> {
-    const slug = input.slug.trim().toLowerCase();
+    const canonicalTitle = normalizeWikiSlug(input.title);
+    const slug = canonicalTitle || normalizeWikiSlug(input.slug);
     if (!isValidWikiSlug(slug)) {
         throw new WikiServiceError("유효하지 않은 문서 슬러그입니다.", 400);
     }
+    const title = slug;
 
     const db = requireDb();
     const now = new Date();
@@ -708,7 +776,7 @@ export async function createWikiPage(input: {
 
     const doc: WikiPageDocument = {
         slug,
-        title: input.title,
+        title,
         subtitle: input.subtitle,
         category: input.category,
         ...(input.cityCode ? {cityCode: input.cityCode} : {}),
@@ -804,9 +872,14 @@ export async function saveWikiPageEdit(input: {
     editor: WikiEditorInfo;
     isAdmin?: boolean;
 }): Promise<{ document: WikiPageDocument; revision: WikiRevision }> {
-    const slug = input.slug.trim().toLowerCase();
+    const slug = resolveCanonicalSlug(input.slug);
     if (!isValidWikiSlug(slug)) {
         throw new WikiServiceError("유효하지 않은 문서 슬러그입니다.", 400);
+    }
+
+    const nextSlug = normalizeWikiSlug(input.title);
+    if (!isValidWikiSlug(nextSlug)) {
+        throw new WikiServiceError("제목은 2~80자의 유효한 위키 슬러그여야 합니다.", 400);
     }
 
     const db = requireDb();
@@ -825,7 +898,8 @@ export async function saveWikiPageEdit(input: {
             throw new WikiServiceError("편집할 위키 문서를 찾을 수 없습니다.", 404);
         }
 
-        const current = rowToDocument(lockedRows[0]);
+        const currentRow = lockedRows[0];
+        const current = rowToDocument(currentRow);
 
         if (current.isProtected && !input.isAdmin) {
             throw new WikiServiceError(
@@ -842,6 +916,18 @@ export async function saveWikiPageEdit(input: {
             );
         }
 
+        const slugChanged = nextSlug !== slug;
+        if (slugChanged) {
+            const existingTarget = await tx
+                .select({slug: wikiPages.slug})
+                .from(wikiPages)
+                .where(eq(wikiPages.slug, nextSlug))
+                .limit(1);
+            if (existingTarget.length > 0) {
+                throw new WikiServiceError("같은 제목(슬러그)의 위키 문서가 이미 존재합니다.", 409);
+            }
+        }
+
         const now = new Date();
         const nowIso = now.toISOString();
         const nextVersion = current.version + 1;
@@ -849,7 +935,8 @@ export async function saveWikiPageEdit(input: {
 
         const nextDoc: WikiPageDocument = {
             ...current,
-            title: input.title,
+            slug: nextSlug,
+            title: nextSlug,
             subtitle: input.subtitle,
             category: input.category,
             ...(input.cityCode ? {cityCode: input.cityCode} : {cityCode: undefined}),
@@ -873,36 +960,76 @@ export async function saveWikiPageEdit(input: {
             diffStats.structuredChanges.join(", ") ||
             "문서 내용 수정";
 
-        const updatedRows = await tx
-            .update(wikiPages)
-            .set({
-                title: nextDoc.title,
-                subtitle: nextDoc.subtitle,
-                category: nextDoc.category,
-                cityCode: nextDoc.cityCode ?? null,
-                tags: dedupedTags,
-                tagsText: dedupedTags.join(" "),
-                version: nextVersion,
-                lastEditorNickname: input.editor.nickname,
-                lastEditorId: input.editor.editorId,
-                linkedRoutes: nextDoc.linkedRoutes,
-                shuttle: nextDoc.shuttle,
-                boardingStops: nextDoc.boardingStops,
-                markdownBody: nextDoc.markdownBody,
-                updatedAt: now,
-            })
-            .where(and(eq(wikiPages.slug, slug), eq(wikiPages.version, current.version)))
-            .returning();
+        let savedRow: WikiPageRow;
+        if (slugChanged) {
+            const insertedRows = await tx
+                .insert(wikiPages)
+                .values({
+                    slug: nextSlug,
+                    title: nextDoc.title,
+                    subtitle: nextDoc.subtitle,
+                    category: nextDoc.category,
+                    cityCode: nextDoc.cityCode ?? null,
+                    tags: dedupedTags,
+                    tagsText: dedupedTags.join(" "),
+                    version: nextVersion,
+                    isProtected: Boolean(currentRow.isProtected),
+                    pinned: Boolean(currentRow.pinned) || PINNED_WIKI_SLUGS.has(nextSlug),
+                    lastEditorNickname: input.editor.nickname,
+                    lastEditorId: input.editor.editorId,
+                    linkedRoutes: nextDoc.linkedRoutes,
+                    shuttle: nextDoc.shuttle,
+                    boardingStops: nextDoc.boardingStops,
+                    markdownBody: nextDoc.markdownBody,
+                    createdAt: currentRow.createdAt,
+                    updatedAt: now,
+                })
+                .returning();
 
-        if (!updatedRows[0]) {
-            throw new WikiServiceError("동시 편집 충돌이 발생했습니다. 다시 시도해 주세요.", 409);
+            if (!insertedRows[0]) {
+                throw new WikiServiceError("문서 주소 변경 중 오류가 발생했습니다.", 500);
+            }
+
+            await tx
+                .update(wikiRevisions)
+                .set({slug: nextSlug})
+                .where(eq(wikiRevisions.slug, slug));
+
+            await tx.delete(wikiPages).where(eq(wikiPages.slug, slug));
+            savedRow = insertedRows[0];
+        } else {
+            const updatedRows = await tx
+                .update(wikiPages)
+                .set({
+                    title: nextDoc.title,
+                    subtitle: nextDoc.subtitle,
+                    category: nextDoc.category,
+                    cityCode: nextDoc.cityCode ?? null,
+                    tags: dedupedTags,
+                    tagsText: dedupedTags.join(" "),
+                    version: nextVersion,
+                    lastEditorNickname: input.editor.nickname,
+                    lastEditorId: input.editor.editorId,
+                    linkedRoutes: nextDoc.linkedRoutes,
+                    shuttle: nextDoc.shuttle,
+                    boardingStops: nextDoc.boardingStops,
+                    markdownBody: nextDoc.markdownBody,
+                    updatedAt: now,
+                })
+                .where(and(eq(wikiPages.slug, slug), eq(wikiPages.version, current.version)))
+                .returning();
+
+            if (!updatedRows[0]) {
+                throw new WikiServiceError("동시 편집 충돌이 발생했습니다. 다시 시도해 주세요.", 409);
+            }
+            savedRow = updatedRows[0];
         }
 
         const isCheckpoint = shouldStoreCheckpoint(nextVersion);
         const delta = isCheckpoint ? null : computeWikiDelta(current, nextDoc);
 
         await tx.insert(wikiRevisions).values({
-            slug,
+            slug: nextSlug,
             version: nextVersion,
             baseVersion: current.version,
             summary,
@@ -916,7 +1043,7 @@ export async function saveWikiPageEdit(input: {
         });
 
         const revision: WikiRevision = {
-            slug,
+            slug: nextSlug,
             version: nextVersion,
             baseVersion: current.version,
             summary,
@@ -926,18 +1053,21 @@ export async function saveWikiPageEdit(input: {
             snapshot: nextDoc,
         };
 
-        return {document: rowToDocument(updatedRows[0]), revision};
+        return {document: rowToDocument(savedRow), revision};
     });
 
+    if (result.document.slug !== slug) {
+        await distributedCache.del(`${REDIS_PAGE_PREFIX}${slug}`).catch(() => false);
+    }
     await distributedCache
-        .set(`${REDIS_PAGE_PREFIX}${slug}`, result.document, REDIS_CACHE_TTL_SECONDS)
+        .set(`${REDIS_PAGE_PREFIX}${result.document.slug}`, result.document, REDIS_CACHE_TTL_SECONDS)
         .catch(() => false);
 
     return result;
 }
 
 export async function getWikiRevisionList(slug: string): Promise<WikiRevisionMeta[]> {
-    const normalized = slug.trim().toLowerCase();
+    const normalized = resolveCanonicalSlug(slug);
     if (!isValidWikiSlug(normalized)) return [];
 
     const page = await getWikiPage(normalized);
@@ -961,14 +1091,14 @@ export async function getWikiRevisionList(slug: string): Promise<WikiRevisionMet
     const rows = await db
         .select()
         .from(wikiRevisions)
-        .where(eq(wikiRevisions.slug, normalized))
+        .where(eq(wikiRevisions.slug, page.slug))
         .orderBy(desc(wikiRevisions.version));
 
     return rows.map(rowToRevisionMeta);
 }
 
 export async function getWikiRevision(slug: string, version: number): Promise<WikiRevision | null> {
-    const normalized = slug.trim().toLowerCase();
+    const normalized = resolveCanonicalSlug(slug);
     if (!isValidWikiSlug(normalized) || version < 1) return null;
 
     if (!isDatabaseConfigured()) {
@@ -993,7 +1123,8 @@ export async function getWikiRevision(slug: string, version: number): Promise<Wi
     const db = getDb();
     // Ensure seed/Blob is migrated if this is the very first request
     const page = await getWikiPage(normalized);
-    return reconstructRevision(db, normalized, version, page?.isProtected);
+    const targetSlug = page?.slug ?? normalized;
+    return reconstructRevision(db, targetSlug, version, page?.isProtected);
 }
 
 export async function revertWikiPage(input: {
@@ -1004,7 +1135,7 @@ export async function revertWikiPage(input: {
     summary?: string;
     isAdmin?: boolean;
 }): Promise<{ document: WikiPageDocument; revision: WikiRevision }> {
-    const slug = input.slug.trim().toLowerCase();
+    const slug = resolveCanonicalSlug(input.slug);
     if (!isValidWikiSlug(slug)) {
         throw new WikiServiceError("유효하지 않은 문서 슬러그입니다.", 400);
     }
@@ -1055,6 +1186,7 @@ export async function revertWikiPage(input: {
         const nextDoc: WikiPageDocument = {
             ...restored,
             slug: current.slug,
+            title: current.title,
             createdAt: current.createdAt,
             isProtected: current.isProtected,
             version: nextVersion,
@@ -1135,7 +1267,7 @@ export async function setWikiPageProtection(
     slug: string,
     isProtected: boolean
 ): Promise<WikiPageDocument> {
-    const normalized = slug.trim().toLowerCase();
+    const normalized = resolveCanonicalSlug(slug);
     const db = requireDb();
     await getWikiPage(normalized);
 
@@ -1158,7 +1290,7 @@ export async function setWikiPageProtection(
 }
 
 export async function deleteWikiPage(slug: string): Promise<void> {
-    const normalized = slug.trim().toLowerCase();
+    const normalized = resolveCanonicalSlug(slug);
     if (PINNED_WIKI_SLUGS.has(normalized)) {
         throw new WikiServiceError("핵심 고정 허브 문서는 삭제할 수 없습니다.", 400);
     }

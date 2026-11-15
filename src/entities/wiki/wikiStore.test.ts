@@ -1,6 +1,19 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {PgDialect} from "drizzle-orm/pg-core";
 import * as realSchema from "@shared/db/schema";
+import {
+    _resetWikiBootstrapForTests,
+    createWikiPage,
+    deleteWikiPage,
+    getWikiPage,
+    getWikiRevision,
+    getWikiRevisionList,
+    listWikiPages,
+    revertWikiPage,
+    saveWikiPageEdit,
+    setWikiPageProtection,
+    WikiServiceError,
+} from "./wikiStore";
 
 const dialect = new PgDialect();
 
@@ -295,6 +308,13 @@ function createFakeDb() {
                             ignoreConflict = true;
                             return Promise.resolve().then(execInsert);
                         },
+                        returning() {
+                            return Promise.resolve().then(() => {
+                                execInsert();
+                                const row = pageRows.get(String(val.slug));
+                                return row ? [row] : [];
+                            });
+                        },
                         then(onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) {
                             return Promise.resolve().then(execInsert).then(onFulfilled, onRejected);
                         },
@@ -308,10 +328,22 @@ function createFakeDb() {
                     return {
                         where(cond: unknown) {
                             const execUpdate = () => {
-                                if (table !== realSchema.wikiPages) return [];
                                 const compiled = dialect.sqlToQuery(
                                     cond as Parameters<typeof dialect.sqlToQuery>[0]
                                 );
+                                if (table === realSchema.wikiRevisions) {
+                                    const oldSlug = String(compiled.params[0]);
+                                    const newSlug = patch.slug ? String(patch.slug) : oldSlug;
+                                    const updatedRevs: realSchema.WikiRevisionRow[] = [];
+                                    for (const rev of revisionRows) {
+                                        if (rev.slug === oldSlug) {
+                                            rev.slug = newSlug;
+                                            updatedRevs.push(rev);
+                                        }
+                                    }
+                                    return updatedRevs;
+                                }
+                                if (table !== realSchema.wikiPages) return [];
                                 const slug = String(compiled.params[0]);
                                 const row = pageRows.get(slug);
                                 if (!row) return [];
@@ -331,6 +363,9 @@ function createFakeDb() {
                             return {
                                 returning() {
                                     return Promise.resolve().then(execUpdate);
+                                },
+                                then(onFulfilled: (v: unknown) => unknown, onRejected?: (e: unknown) => unknown) {
+                                    return Promise.resolve().then(execUpdate).then(onFulfilled, onRejected);
                                 },
                             };
                         },
@@ -405,19 +440,6 @@ vi.mock("@shared/cache/artifactStore", () => ({
     },
 }));
 
-import {
-    createWikiPage,
-    deleteWikiPage,
-    getWikiPage,
-    getWikiRevision,
-    getWikiRevisionList,
-    listWikiPages,
-    revertWikiPage,
-    saveWikiPageEdit,
-    setWikiPageProtection,
-    WikiServiceError,
-} from "./wikiStore";
-
 describe("wikiStore Postgres + Delta integration", () => {
     beforeEach(() => {
         pageRows.clear();
@@ -426,18 +448,21 @@ describe("wikiStore Postgres + Delta integration", () => {
         memCache.clear();
         memBlobs.clear();
         memRateCounts.clear();
+        _resetWikiBootstrapForTests();
     });
 
     it("bootstraps seed, stores delta revisions with checkpoints every 10th version, and reverts losslessly", async () => {
+        const canonicalSlug = "연세대학교 미래캠퍼스";
         const initial = await getWikiPage("yonsei-mirae");
         expect(initial).not.toBeNull();
+        expect(initial?.slug).toBe(canonicalSlug);
         expect(initial?.version).toBe(1);
 
         // Edit sequentially v1 -> v11 (v1 and v10 checkpoints, v2..v9 & v11 deltas)
         let currentDoc = initial!;
         for (let v = 2; v <= 11; v++) {
             const editRes = await saveWikiPageEdit({
-                slug: "yonsei-mirae",
+                slug: canonicalSlug,
                 baseVersion: currentDoc.version,
                 title: currentDoc.title,
                 subtitle: currentDoc.subtitle,
@@ -457,8 +482,8 @@ describe("wikiStore Postgres + Delta integration", () => {
         expect(currentDoc.version).toBe(11);
 
         // Verify checkpoint flags in Postgres revisions table
-        const rev5Row = revisionRows.find((r) => r.slug === "yonsei-mirae" && r.version === 5);
-        const rev10Row = revisionRows.find((r) => r.slug === "yonsei-mirae" && r.version === 10);
+        const rev5Row = revisionRows.find((r) => r.slug === canonicalSlug && r.version === 5);
+        const rev10Row = revisionRows.find((r) => r.slug === canonicalSlug && r.version === 10);
         expect(rev5Row?.isCheckpoint).toBe(false);
         expect(rev5Row?.snapshot).toBeNull();
         expect(rev5Row?.delta).not.toBeNull();
@@ -466,8 +491,8 @@ describe("wikiStore Postgres + Delta integration", () => {
         expect(rev10Row?.snapshot).not.toBeNull();
 
         // Reconstruct v5 (from v1) and v11 (from v10) cleanly
-        const rev5 = await getWikiRevision("yonsei-mirae", 5);
-        const rev11 = await getWikiRevision("yonsei-mirae", 11);
+        const rev5 = await getWikiRevision(canonicalSlug, 5);
+        const rev11 = await getWikiRevision(canonicalSlug, 11);
         expect(rev5?.snapshot.markdownBody).toContain("- v5 학우 제보 팁");
         expect(rev5?.snapshot.markdownBody).not.toContain("- v6 학우 제보 팁");
         expect(rev11?.snapshot.markdownBody).toContain("- v11 학우 제보 팁");
@@ -475,7 +500,7 @@ describe("wikiStore Postgres + Delta integration", () => {
         // Stale baseVersion -> 409 Conflict
         await expect(
             saveWikiPageEdit({
-                slug: "yonsei-mirae",
+                slug: canonicalSlug,
                 baseVersion: 4,
                 title: currentDoc.title,
                 subtitle: currentDoc.subtitle,
@@ -491,13 +516,13 @@ describe("wikiStore Postgres + Delta integration", () => {
             })
         ).rejects.toMatchObject({status: 409});
 
-        const revisions = await getWikiRevisionList("yonsei-mirae");
+        const revisions = await getWikiRevisionList(canonicalSlug);
         expect(revisions[0].version).toBe(11);
         expect(revisions[revisions.length - 1].version).toBe(1);
 
         // Revert to v1 -> v12 checkpoint
         const revertRes = await revertWikiPage({
-            slug: "yonsei-mirae",
+            slug: canonicalSlug,
             targetVersion: 1,
             baseVersion: 11,
             summary: "초기 버전 복구",
@@ -505,7 +530,7 @@ describe("wikiStore Postgres + Delta integration", () => {
         });
         expect(revertRes.document.version).toBe(12);
         expect(revertRes.document.markdownBody).toBe(initial!.markdownBody);
-        const rev12Row = revisionRows.find((r) => r.slug === "yonsei-mirae" && r.version === 12);
+        const rev12Row = revisionRows.find((r) => r.slug === canonicalSlug && r.version === 12);
         expect(rev12Row?.isCheckpoint).toBe(true);
     });
 
@@ -593,19 +618,19 @@ describe("wikiStore Postgres + Delta integration", () => {
             editor: {nickname: "개설자", editorId: "ed-3"},
         });
 
-        expect(created.slug).toBe("custom-stop-guide");
+        expect(created.slug).toBe("남원주역 정류장 가이드");
 
         // Search inside markdownBody directly
         const bodySearch = await listWikiPages({query: "유니크키워드XY123"});
-        expect(bodySearch.pages.map((p) => p.slug)).toEqual(["custom-stop-guide"]);
+        expect(bodySearch.pages.map((p) => p.slug)).toEqual(["남원주역 정류장 가이드"]);
         expect(bodySearch.totalCount).toBe(1);
         expect(bodySearch.hasMore).toBe(false);
 
         // Lock page
-        await setWikiPageProtection("custom-stop-guide", true);
+        await setWikiPageProtection("남원주역 정류장 가이드", true);
         await expect(
             saveWikiPageEdit({
-                slug: "custom-stop-guide",
+                slug: "남원주역 정류장 가이드",
                 baseVersion: 1,
                 title: created.title,
                 subtitle: created.subtitle,
@@ -622,11 +647,34 @@ describe("wikiStore Postgres + Delta integration", () => {
             })
         ).rejects.toBeInstanceOf(WikiServiceError);
 
+        // Unlock & rename title -> updates slug atomically and preserves revision chain
+        await setWikiPageProtection("남원주역 정류장 가이드", false);
+        const renamed = await saveWikiPageEdit({
+            slug: "남원주역 정류장 가이드",
+            baseVersion: 1,
+            title: "남원주역 KTX 버스 승강장",
+            subtitle: created.subtitle,
+            category: created.category,
+            cityCode: created.cityCode,
+            tags: created.tags,
+            linkedRoutes: [],
+            shuttle: null,
+            boardingStops: [],
+            markdownBody: created.markdownBody,
+            summary: "제목 및 슬러그 통일",
+            editor: {nickname: "편집자", editorId: "ed-5"},
+        });
+        expect(renamed.document.slug).toBe("남원주역 KTX 버스 승강장");
+        expect(pageRows.has("남원주역 정류장 가이드")).toBe(false);
+        expect(pageRows.has("남원주역 KTX 버스 승강장")).toBe(true);
+        const renamedRevs = await getWikiRevisionList("남원주역 KTX 버스 승강장");
+        expect(renamedRevs.length).toBe(2);
+
         // Pinned hubs cannot be deleted
-        await expect(deleteWikiPage("yonsei-mirae")).rejects.toMatchObject({status: 400});
+        await expect(deleteWikiPage("연세대학교 미래캠퍼스")).rejects.toMatchObject({status: 400});
 
         // Custom page can be deleted
-        await deleteWikiPage("custom-stop-guide");
-        expect(pageRows.has("custom-stop-guide")).toBe(false);
+        await deleteWikiPage("남원주역 KTX 버스 승강장");
+        expect(pageRows.has("남원주역 KTX 버스 승강장")).toBe(false);
     });
 });

@@ -6,7 +6,7 @@ import {Bus, ChevronRight, Clock, GraduationCap, MapPin, Search, X} from "lucide
 import {getRouteMeta, useRecentRoutes, useRouteBookmarks} from "@entities/route";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {buildPageHref, SPECIAL_PAGE_IDS} from "@shared/config/pages";
+import {YONSEI_MIRAE_WIKI_SLUG} from "@entities/wiki";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {useCityContext, useCityFeatures} from "@entities/city";
 import {useCityRoutes} from "@entities/route/hooks";
@@ -298,7 +298,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
             >
                 {hasUniversityShuttle && settings.showYonseiFeatures && !searchQuery && (
                     <Link
-                        href={buildPageHref(SPECIAL_PAGE_IDS.YONSEI_MIRAE)}
+                        href={`/wiki/${encodeURIComponent(YONSEI_MIRAE_WIKI_SLUG)}`}
                         onClick={() => {
                             markModalNavigating();
                             onClose();

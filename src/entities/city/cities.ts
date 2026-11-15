@@ -179,7 +179,6 @@ export function getCityByCode(code?: string | null): CityInfo {
 
 export function resolveInitialCity({
                                        search,
-                                       pathname,
                                        savedCode,
                                    }: {
     search?: string;
@@ -191,10 +190,6 @@ export function resolveInitialCity({
     const matchedQueryCity = findCityByCode(queryCity);
     if (matchedQueryCity) {
         return matchedQueryCity;
-    }
-
-    if (pathname === "/schedule") {
-        return DEFAULT_CITY;
     }
 
     return findCityByCode(savedCode) ?? DEFAULT_CITY;

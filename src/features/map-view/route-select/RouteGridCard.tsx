@@ -17,15 +17,15 @@ interface RouteGridCardProps {
 }
 
 export const RouteGridCard: React.FC<RouteGridCardProps> = ({
-    route,
-    meta,
-    categoryLabel,
-    isSelected,
-    isYonsei,
-    isBookmarked,
-    onSelect,
-    onToggleBookmark,
-}) => (
+                                                                route,
+                                                                meta,
+                                                                categoryLabel,
+                                                                isSelected,
+                                                                isYonsei,
+                                                                isBookmarked,
+                                                                onSelect,
+                                                                onToggleBookmark,
+                                                            }) => (
     <div
         className={`cv-auto-route group relative flex items-start justify-between rounded-2xl transition-all duration-200 select-none border ${
             isSelected
@@ -60,7 +60,8 @@ export const RouteGridCard: React.FC<RouteGridCardProps> = ({
                                         : "간선")}
                     </span>
                     {isYonsei && (
-                        <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
+                        <span
+                            className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
                             {UI_TEXT.ROUTE_SELECT.YONSEI_BADGE}
                         </span>
                     )}

@@ -15,18 +15,19 @@ interface VariantDropdownProps {
 }
 
 export const VariantDropdown: React.FC<VariantDropdownProps> = ({
-    meta,
-    effectiveVariations,
-    selectedVariantId,
-    activeVariant,
-    busesPerVariation,
-    onSelectVariant,
-}) => {
+                                                                    meta,
+                                                                    effectiveVariations,
+                                                                    selectedVariantId,
+                                                                    activeVariant,
+                                                                    busesPerVariation,
+                                                                    onSelectVariant,
+                                                                }) => {
     return (
         <div
             className="absolute top-full left-0 mt-2 z-50 w-64 sm:w-72 max-w-[calc(100vw-2rem)] bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-2xl rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.25)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.7)] border border-black/10 dark:border-white/15 p-1.5 space-y-1 animate-scaleUp select-none"
         >
-            <div className="px-3 py-1.5 border-b border-black/5 dark:border-white/5 flex items-center justify-between text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
+            <div
+                className="px-3 py-1.5 border-b border-black/5 dark:border-white/5 flex items-center justify-between text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
                 <span>노선 종류 및 경유지 선택</span>
                 <span className="font-mono text-[10px]">총 {effectiveVariations.length}개</span>
             </div>

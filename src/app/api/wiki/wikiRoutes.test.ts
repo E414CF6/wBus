@@ -1,5 +1,8 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {NextRequest} from "next/server";
+import {GET as listWikiGET, POST as createWikiPOST} from "./route";
+import {GET as getWikiGET, PATCH as patchWikiPATCH, PUT as updateWikiPUT} from "./[slug]/route";
+import {POST as revertWikiPOST} from "./[slug]/revert/route";
 
 const mockWikiServer = vi.hoisted(() => ({
     listWikiPages: vi.fn(),
@@ -20,6 +23,7 @@ const mockWikiServer = vi.hoisted(() => ({
     WikiServiceError: class WikiServiceError extends Error {
         status: number;
         payload?: unknown;
+
         constructor(message: string, status: number, payload?: unknown) {
             super(message);
             this.status = status;
@@ -33,10 +37,6 @@ vi.mock("next/cache", () => ({
 }));
 
 vi.mock("@entities/wiki/server", () => mockWikiServer);
-
-import {GET as listWikiGET, POST as createWikiPOST} from "./route";
-import {GET as getWikiGET, PUT as updateWikiPUT, PATCH as patchWikiPATCH} from "./[slug]/route";
-import {POST as revertWikiPOST} from "./[slug]/revert/route";
 
 describe("wiki API routes", () => {
     beforeEach(() => {

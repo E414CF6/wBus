@@ -170,8 +170,8 @@ export const FOOTER_STRINGS = {
     COPYRIGHT: "© 2026 wBus",
     DESCRIPTION: "시내버스 정보 서비스",
     LINKS: [
+        {label: "실시간 지도", href: "/"},
         {label: "커뮤니티 위키", href: "/wiki"},
-        {label: "연세대 미래캠퍼스", href: "/?page=yonsei_mirae"},
         {label: "이용약관", href: "/terms"},
         {label: "개인정보처리방침", href: "/privacy"},
     ],

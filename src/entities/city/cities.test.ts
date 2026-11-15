@@ -186,24 +186,6 @@ describe("cities entity & nearest city resolution", () => {
             expect(resolved.code).toBe("32020");
         });
 
-        it("defaults /schedule without cityCode to Wonju even when another city is saved", () => {
-            const resolved = resolveInitialCity({
-                search: "",
-                pathname: "/schedule",
-                savedCode: "11",
-            });
-            expect(resolved.code).toBe("32020");
-        });
-
-        it("respects explicit cityCode on /schedule", () => {
-            const resolved = resolveInitialCity({
-                search: "?cityCode=11",
-                pathname: "/schedule",
-                savedCode: "32020",
-            });
-            expect(resolved.code).toBe("11");
-        });
-
         it("falls back to saved city when query city is missing or invalid", () => {
             expect(
                 resolveInitialCity({search: "", pathname: "/", savedCode: "11"}).code

@@ -28,27 +28,58 @@ export const RESERVED_WIKI_SLUGS = new Set([
     "search",
 ]);
 
-export const WIKI_SLUG_REGEX = /^[a-z0-9\uAC00-\uD7A3-]+$/;
+export const WIKI_SLUG_MAX_LENGTH = 80;
+export const WIKI_SLUG_DISALLOWED_CHARS_REGEX = /[\\/?#%<>"`]/;
 export const TIME_HH_MM_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-export function isValidWikiSlug(slug: string): boolean {
-    if (!slug || typeof slug !== "string") return false;
-    const trimmed = slug.trim().toLowerCase();
-    if (trimmed.length < 2 || trimmed.length > 64) return false;
-    if (RESERVED_WIKI_SLUGS.has(trimmed)) return false;
-    if (trimmed.startsWith("-") || trimmed.endsWith("-")) return false;
-    return WIKI_SLUG_REGEX.test(trimmed);
+function hasControlChar(str: string): boolean {
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        if (code <= 0x1f || code === 0x7f) return true;
+    }
+    return false;
+}
+
+function stripControlChars(str: string): string {
+    let out = "";
+    for (let i = 0; i < str.length; i++) {
+        const code = str.charCodeAt(i);
+        if (code > 0x1f && code !== 0x7f) {
+            out += str[i];
+        }
+    }
+    return out;
+}
+
+export const LEGACY_WIKI_SLUG_ALIASES: Record<string, string> = {
+    "yonsei-mirae": "연세대학교 미래캠퍼스",
+    "wonju-terminal": "원주 고속·시외버스터미널",
+    "wonju-station": "원주역 (무실동 KTX)",
+};
+
+export function resolveLegacyWikiSlug(rawSlug: string): string | null {
+    if (!rawSlug || typeof rawSlug !== "string") return null;
+    const key = rawSlug.trim().toLowerCase();
+    return LEGACY_WIKI_SLUG_ALIASES[key] ?? null;
 }
 
 export function normalizeWikiSlug(raw: string): string {
-    return raw
+    return stripControlChars(raw)
+        .replace(/[\\/?#%<>"`]/g, "")
+        .replace(/\s+/g, " ")
         .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9\uAC00-\uD7A3-]/g, "")
-        .replace(/-+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, 64);
+        .slice(0, WIKI_SLUG_MAX_LENGTH);
+}
+
+export function isValidWikiSlug(slug: string): boolean {
+    if (!slug || typeof slug !== "string") return false;
+    const trimmed = slug.trim();
+    if (trimmed.length < 2 || trimmed.length > WIKI_SLUG_MAX_LENGTH) return false;
+    if (trimmed === "." || trimmed === "..") return false;
+    if (RESERVED_WIKI_SLUGS.has(trimmed.toLowerCase())) return false;
+    if (hasControlChar(trimmed) || WIKI_SLUG_DISALLOWED_CHARS_REGEX.test(trimmed)) return false;
+    if (/\s{2,}/.test(trimmed)) return false;
+    return true;
 }
 
 const ShuttleViaStopSchema = z.object({
@@ -137,7 +168,15 @@ export const WikiPageDocumentSchema = z.object({
 
 export const WikiEditPayloadSchema = z.object({
     baseVersion: z.number().int().min(1),
-    title: z.string().trim().min(2, "제목은 2자 이상이어야 합니다").max(80),
+    title: z
+        .string()
+        .trim()
+        .min(2, "제목은 2자 이상이어야 합니다")
+        .max(80)
+        .refine(
+            (t) => isValidWikiSlug(normalizeWikiSlug(t)),
+            "제목에 사용할 수 없는 예약어이거나 슬러그(2~80자)로 변환할 수 없습니다"
+        ),
     subtitle: z.string().trim().max(160).default(""),
     category: z.enum(["campus", "route", "stop", "terminal", "guide"]),
     cityCode: z.string().trim().regex(/^\d{2,10}$/).optional().or(z.literal("")).transform((v) => (v === "" ? undefined : v)),
@@ -152,8 +191,16 @@ export const WikiEditPayloadSchema = z.object({
 });
 
 export const WikiCreatePayloadSchema = z.object({
-    slug: z.string().trim().transform((s) => normalizeWikiSlug(s)).refine(isValidWikiSlug, "슬러그는 2~64자의 한글, 영문 소문자, 숫자, 하이픈(-)만 사용할 수 있습니다"),
-    title: z.string().trim().min(2, "제목은 2자 이상이어야 합니다").max(80),
+    slug: z.string().optional(),
+    title: z
+        .string()
+        .trim()
+        .min(2, "제목은 2자 이상이어야 합니다")
+        .max(80)
+        .refine(
+            (t) => isValidWikiSlug(normalizeWikiSlug(t)),
+            "제목은 2~80자여야 하며 예약어(new, edit, api 등)나 URL 특수문자를 제외해 주세요"
+        ),
     subtitle: z.string().trim().max(160).default(""),
     category: z.enum(["campus", "route", "stop", "terminal", "guide"]),
     cityCode: z.string().trim().regex(/^\d{2,10}$/).optional().or(z.literal("")).transform((v) => (v === "" ? undefined : v)),
@@ -165,6 +212,14 @@ export const WikiCreatePayloadSchema = z.object({
     nickname: z.string().trim().max(24).optional().default(""),
     summary: z.string().trim().max(160).optional().default("새 위키 문서 생성"),
     website: z.string().optional(), // Honeypot field
+}).transform((data) => {
+    const derivedSlug = normalizeWikiSlug(data.title);
+    const derivedTitle = derivedSlug || data.title;
+    return {
+        ...data,
+        title: derivedTitle,
+        slug: derivedSlug,
+    };
 });
 
 export const WikiRevertPayloadSchema = z.object({

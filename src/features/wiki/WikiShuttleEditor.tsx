@@ -52,7 +52,8 @@ export const WikiShuttleEditor: React.FC<WikiShuttleEditorProps> = ({value, onCh
 
     if (!value) {
         return (
-            <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/40 p-5 flex items-center justify-between gap-4">
+            <div
+                className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/40 p-5 flex items-center justify-between gap-4">
                 <div className="min-w-0">
                     <h4 className="text-sm font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
                         <Bus className="w-4 h-4 text-sky-600 dark:text-sky-400"/>
@@ -121,14 +122,17 @@ export const WikiShuttleEditor: React.FC<WikiShuttleEditorProps> = ({value, onCh
     };
 
     return (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/70 flex flex-wrap items-center justify-between gap-2">
+        <div
+            className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 overflow-hidden shadow-sm">
+            <div
+                className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/70 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5 min-w-0">
                     <Bus className="w-4 h-4 text-[#003876] dark:text-sky-400 shrink-0"/>
                     <span className="text-xs font-black text-slate-800 dark:text-slate-100">
                         셔틀버스 시간표 구조화 데이터
                     </span>
-                    <label className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer ml-1">
+                    <label
+                        className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer ml-1">
                         <input
                             type="checkbox"
                             checked={value.enabled}
@@ -203,7 +207,9 @@ export const WikiShuttleEditor: React.FC<WikiShuttleEditorProps> = ({value, onCh
                 {activeSection === "outbound" && (
                     <div className="space-y-2.5">
                         <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                            경유지는 <code className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800">정류장|HH:MM|정시</code> 형식으로 쉼표(,)로 구분해 입력하세요. (예: <code>원주역|08:50|정시, 원주터미널</code>)
+                            경유지는 <code
+                            className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800">정류장|HH:MM|정시</code> 형식으로
+                            쉼표(,)로 구분해 입력하세요. (예: <code>원주역|08:50|정시, 원주터미널</code>)
                         </p>
                         {value.outbound_from_campus.map((item, idx) => (
                             <div
@@ -314,7 +320,9 @@ export const WikiShuttleEditor: React.FC<WikiShuttleEditorProps> = ({value, onCh
                 {activeSection === "inbound" && (
                     <div className="space-y-2.5">
                         <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                            경유지는 <code className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800">정류장|HH:MM|정시</code> 형식으로 쉼표(,)로 구분해 입력하세요.
+                            경유지는 <code
+                            className="px-1 py-0.5 rounded bg-slate-100 dark:bg-slate-800">정류장|HH:MM|정시</code> 형식으로
+                            쉼표(,)로 구분해 입력하세요.
                         </p>
                         {value.inbound_to_campus.map((item, idx) => (
                             <div

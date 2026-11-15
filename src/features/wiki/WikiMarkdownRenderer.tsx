@@ -4,12 +4,7 @@ import React, {useMemo} from "react";
 import Link from "next/link";
 import {AlertTriangle, BookOpen, Bus, Camera, ExternalLink, Info, Lightbulb} from "lucide-react";
 import {getKakaoRoadviewUrl} from "@entities/station";
-import {
-    parseWikiMarkdown,
-    type WikiBlockNode,
-    type WikiCalloutTone,
-    type WikiInlineNode,
-} from "@entities/wiki";
+import {parseWikiMarkdown, type WikiBlockNode, type WikiCalloutTone, type WikiInlineNode,} from "@entities/wiki";
 import {buildMapUrl} from "@widgets/AppShell/hooks/useAppNavigation";
 
 function renderInlineNodes(nodes: WikiInlineNode[], keyPrefix: string): React.ReactNode {
@@ -165,7 +160,8 @@ function renderBlock(block: WikiBlockNode, idx: number): React.ReactNode {
         case "list":
             if (block.ordered) {
                 return (
-                    <ol key={key} className="list-decimal pl-5 space-y-1.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                    <ol key={key}
+                        className="list-decimal pl-5 space-y-1.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
                         {block.items.map((item, itemIdx) => (
                             <li key={`${key}-li-${itemIdx}`} className="leading-relaxed">
                                 {renderInlineNodes(item, `${key}-li-${itemIdx}`)}
@@ -175,7 +171,8 @@ function renderBlock(block: WikiBlockNode, idx: number): React.ReactNode {
                 );
             }
             return (
-                <ul key={key} className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                <ul key={key}
+                    className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
                     {block.items.map((item, itemIdx) => (
                         <li key={`${key}-li-${itemIdx}`} className="leading-relaxed">
                             {renderInlineNodes(item, `${key}-li-${itemIdx}`)}
@@ -237,9 +234,11 @@ function renderBlock(block: WikiBlockNode, idx: number): React.ReactNode {
                         </thead>
                         <tbody className="divide-y divide-slate-200/70 dark:divide-white/10">
                         {block.rows.map((row, rIdx) => (
-                            <tr key={`${key}-tr-${rIdx}`} className="bg-white dark:bg-transparent hover:bg-slate-50/80 dark:hover:bg-white/[0.03]">
+                            <tr key={`${key}-tr-${rIdx}`}
+                                className="bg-white dark:bg-transparent hover:bg-slate-50/80 dark:hover:bg-white/[0.03]">
                                 {row.map((cell, cIdx) => (
-                                    <td key={`${key}-td-${rIdx}-${cIdx}`} className="px-3.5 py-2.5 text-slate-700 dark:text-slate-300">
+                                    <td key={`${key}-td-${rIdx}-${cIdx}`}
+                                        className="px-3.5 py-2.5 text-slate-700 dark:text-slate-300">
                                         {renderInlineNodes(cell, `${key}-td-${rIdx}-${cIdx}`)}
                                     </td>
                                 ))}
@@ -260,9 +259,9 @@ export interface WikiMarkdownRendererProps {
 }
 
 export const WikiMarkdownRenderer: React.FC<WikiMarkdownRendererProps> = ({
-    markdown,
-    showToc = true,
-}) => {
+                                                                              markdown,
+                                                                              showToc = true,
+                                                                          }) => {
     const {blocks, toc} = useMemo(() => parseWikiMarkdown(markdown), [markdown]);
 
     if (blocks.length === 0) {

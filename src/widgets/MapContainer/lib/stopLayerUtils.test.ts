@@ -2,7 +2,7 @@ import {describe, expect, it} from "vitest";
 import type {BusStop} from "@entities/station/types";
 import {buildBusStopsGeoJson, getBusStopKey} from "./stopLayerUtils";
 
-const makeStop = (overrides: Partial<BusStop> & {nodeid: string; nodenm: string}): BusStop => ({
+const makeStop = (overrides: Partial<BusStop> & { nodeid: string; nodenm: string }): BusStop => ({
     nodeno: 1001,
     gpslati: 37.34,
     gpslong: 127.94,

@@ -17,7 +17,6 @@ describe("settingsCookie", () => {
 
         it("round-trips valid AppSettings through cookie serialization", () => {
             const custom = {
-                defaultStartPage: "yonsei" as const,
                 showYonseiFeatures: false,
                 yonseiDefaultDirection: "INBOUND" as const,
                 defaultDayMode: "WEEKDAY" as const,
@@ -71,7 +70,6 @@ describe("settingsCookie", () => {
 
             const parsed = parseSettingsCookie(`${SETTINGS_COOKIE_NAME}=${raw}`);
             expect(parsed).toEqual({
-                defaultStartPage: "map",
                 showYonseiFeatures: false,
                 yonseiDefaultDirection: "OUTBOUND",
                 defaultDayMode: "AUTO",

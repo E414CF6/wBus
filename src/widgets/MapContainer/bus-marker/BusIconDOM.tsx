@@ -91,7 +91,8 @@ export const BusIconDOM = memo(({routeNumber, color, isSelected, isFollowed, pla
             </div>
 
             {shortPlate && (
-                <span className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 z-20 px-1.5 py-0.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-slate-100 text-[9px] font-mono font-bold leading-none whitespace-nowrap shadow-sm border border-black/15 dark:border-white/20 pointer-events-none select-none">
+                <span
+                    className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 z-20 px-1.5 py-0.5 rounded-full bg-white/95 dark:bg-slate-900/95 text-slate-900 dark:text-slate-100 text-[9px] font-mono font-bold leading-none whitespace-nowrap shadow-sm border border-black/15 dark:border-white/20 pointer-events-none select-none">
                     {shortPlate}
                 </span>
             )}

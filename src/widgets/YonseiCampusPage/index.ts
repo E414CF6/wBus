@@ -1,1 +1,0 @@
-export {YonseiCampusPage} from "./YonseiCampusPage";

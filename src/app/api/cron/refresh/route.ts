@@ -56,7 +56,6 @@ async function handleUnifiedCron(request: NextRequest) {
                 try {
                     invalidateScheduleTag();
                     revalidatePath("/api/schedule");
-                    revalidatePath("/schedule");
                 } catch (revalErr) {
                     console.warn("[CronRefresh] Schedule revalidate error:", revalErr);
                 }

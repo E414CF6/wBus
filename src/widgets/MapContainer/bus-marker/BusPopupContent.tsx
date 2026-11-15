@@ -18,15 +18,15 @@ interface BusPopupContentProps {
 
 export const BusPopupContent = memo(
     ({
-        bus,
-        routeName,
-        stopName,
-        DirectionIcon,
-        themeColor,
-        direction,
-        isFollowed,
-        onToggleFollow,
-    }: BusPopupContentProps) => {
+         bus,
+         routeName,
+         stopName,
+         DirectionIcon,
+         themeColor,
+         direction,
+         isFollowed,
+         onToggleFollow,
+     }: BusPopupContentProps) => {
         const directionLabel =
             direction === 1
                 ? "상행"
@@ -35,7 +35,8 @@ export const BusPopupContent = memo(
                     : "운행 중";
 
         return (
-            <div className="min-w-64 sm:min-w-72 flex flex-col bg-white/95 dark:bg-[#111116]/95 backdrop-blur-3xl rounded-3xl overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.7)] border border-black/10 dark:border-white/10">
+            <div
+                className="min-w-64 sm:min-w-72 flex flex-col bg-white/95 dark:bg-[#111116]/95 backdrop-blur-3xl rounded-3xl overflow-hidden shadow-[0_12px_36px_rgba(0,0,0,0.18)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.7)] border border-black/10 dark:border-white/10">
                 <div className="bg-transparent px-4 py-3.5 border-b border-black/5 dark:border-white/5">
                     <div className="flex items-center justify-between gap-2 text-black dark:text-white">
                         <div className="flex items-center gap-2.5 min-w-0">
@@ -64,16 +65,19 @@ export const BusPopupContent = memo(
 
                 <div className="px-4 py-3.5 space-y-3">
                     <div className="flex items-center justify-between gap-4">
-                        <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest shrink-0">
+                        <span
+                            className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest shrink-0">
                             {UI_TEXT.BUS_ITEM.VEHICLE_NUM}
                         </span>
-                        <div className="font-mono font-black text-xs text-slate-800 dark:text-slate-100 bg-black/5 dark:bg-white/10 px-2.5 py-1 rounded-xl border border-black/5 dark:border-white/10 tracking-tight">
+                        <div
+                            className="font-mono font-black text-xs text-slate-800 dark:text-slate-100 bg-black/5 dark:bg-white/10 px-2.5 py-1 rounded-xl border border-black/5 dark:border-white/10 tracking-tight">
                             {bus.vehicleno}
                         </div>
                     </div>
 
                     <div className="flex items-center justify-between gap-4">
-                        <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest shrink-0">
+                        <span
+                            className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest shrink-0">
                             {UI_TEXT.BUS_ITEM.CURRENT_LOC}
                         </span>
                         <div className="text-xs sm:text-[13px] font-bold text-slate-800 dark:text-slate-100 min-w-0">

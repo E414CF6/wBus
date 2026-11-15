@@ -42,17 +42,17 @@ interface UseRouteSelectFilterParams {
 }
 
 export function useRouteSelectFilter({
-    allRoutes,
-    cityRoutes,
-    cityCode,
-    bookmarks,
-    favoriteStops,
-    currentRouteStops,
-    hasUniversityShuttle,
-    showYonseiFeatures,
-    searchQuery,
-    selectedCategory,
-}: UseRouteSelectFilterParams) {
+                                         allRoutes,
+                                         cityRoutes,
+                                         cityCode,
+                                         bookmarks,
+                                         favoriteStops,
+                                         currentRouteStops,
+                                         hasUniversityShuttle,
+                                         showYonseiFeatures,
+                                         searchQuery,
+                                         selectedCategory,
+                                     }: UseRouteSelectFilterParams) {
     const sortedAllRoutes = useMemo(() => {
         const effective =
             cityRoutes && cityRoutes.length > 0

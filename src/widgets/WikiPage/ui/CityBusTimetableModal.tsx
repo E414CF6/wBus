@@ -284,6 +284,8 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                         <Search
                             className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"/>
                         <input
+                            id={`${titleId}-citybus-search`}
+                            name="cityBusSearch"
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}

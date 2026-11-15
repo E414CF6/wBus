@@ -17,14 +17,14 @@ interface NextDepartureCardsProps {
 }
 
 export const NextDepartureCards: React.FC<NextDepartureCardsProps> = ({
-    nextDepInfo,
-    dayType,
-    originName,
-    destName,
-    hourlyLocation,
-    onSelectLocation,
-    embedded = false,
-}) => (
+                                                                          nextDepInfo,
+                                                                          dayType,
+                                                                          originName,
+                                                                          destName,
+                                                                          hourlyLocation,
+                                                                          onSelectLocation,
+                                                                          embedded = false,
+                                                                      }) => (
     <div className={`grid ${embedded ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2"} gap-2.5`}>
         <div
             onClick={() => onSelectLocation("origin")}
@@ -40,7 +40,8 @@ export const NextDepartureCards: React.FC<NextDepartureCardsProps> = ({
                     <Clock className="w-3 h-3 shrink-0"/>
                     <span className="truncate">기점 ({originName}) 출발</span>
                     {hourlyLocation === "origin" && (
-                        <span className="px-1.5 py-0.2 rounded-md bg-blue-600 text-[9px] font-black text-white shrink-0">
+                        <span
+                            className="px-1.5 py-0.2 rounded-md bg-blue-600 text-[9px] font-black text-white shrink-0">
                             기준 정류장
                         </span>
                     )}
@@ -51,7 +52,8 @@ export const NextDepartureCards: React.FC<NextDepartureCardsProps> = ({
                             <span className="font-mono text-xl font-black text-blue-900 dark:text-blue-100">
                                 {nextDepInfo.nextOrigin.originDepTime}
                             </span>
-                            <span className="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 whitespace-nowrap">
+                            <span
+                                className="text-[11px] font-extrabold text-blue-600 dark:text-blue-400 whitespace-nowrap">
                                 (
                                 {nextDepInfo.originWaitMins !== null &&
                                     (nextDepInfo.originWaitMins <= 0
@@ -70,7 +72,8 @@ export const NextDepartureCards: React.FC<NextDepartureCardsProps> = ({
                     </div>
                 )}
             </div>
-            <span className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-[10px] font-black text-blue-700 dark:text-blue-300 shrink-0 self-start">
+            <span
+                className="px-2 py-0.5 rounded-lg bg-blue-500/10 text-[10px] font-black text-blue-700 dark:text-blue-300 shrink-0 self-start">
                 {dayType}
             </span>
         </div>
@@ -89,7 +92,8 @@ export const NextDepartureCards: React.FC<NextDepartureCardsProps> = ({
                     <RotateCw className="w-3 h-3 shrink-0"/>
                     <span className="truncate">회차지 ({destName}) 출발</span>
                     {hourlyLocation === "dest" && (
-                        <span className="px-1.5 py-0.2 rounded-md bg-amber-600 text-[9px] font-black text-white shrink-0">
+                        <span
+                            className="px-1.5 py-0.2 rounded-md bg-amber-600 text-[9px] font-black text-white shrink-0">
                             기준 정류장
                         </span>
                     )}
@@ -100,7 +104,8 @@ export const NextDepartureCards: React.FC<NextDepartureCardsProps> = ({
                             <span className="font-mono text-xl font-black text-amber-900 dark:text-amber-100">
                                 {nextDepInfo.nextDest.destDepTime}
                             </span>
-                            <span className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400 whitespace-nowrap">
+                            <span
+                                className="text-[11px] font-extrabold text-amber-600 dark:text-amber-400 whitespace-nowrap">
                                 (
                                 {nextDepInfo.destWaitMins !== null &&
                                     (nextDepInfo.destWaitMins <= 0
@@ -119,7 +124,8 @@ export const NextDepartureCards: React.FC<NextDepartureCardsProps> = ({
                     </div>
                 )}
             </div>
-            <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-[10px] font-black text-amber-700 dark:text-amber-300 shrink-0 self-start">
+            <span
+                className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-[10px] font-black text-amber-700 dark:text-amber-300 shrink-0 self-start">
                 {dayType}
             </span>
         </div>

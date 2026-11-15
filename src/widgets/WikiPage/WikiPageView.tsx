@@ -2,6 +2,7 @@
 
 import React, {useCallback, useEffect, useMemo, useState, useSyncExternalStore} from "react";
 import Link from "next/link";
+import {useRouter} from "next/navigation";
 import {useTheme} from "next-themes";
 import {
     ArrowLeft,
@@ -35,6 +36,7 @@ import {
 } from "@entities/schedule";
 import {getKakaoMapUrl, getKakaoRoadviewUrl} from "@entities/station";
 import {
+    normalizeWikiSlug,
     useWikiNickname,
     useWikiPage,
     WIKI_CATEGORIES,
@@ -44,6 +46,7 @@ import {
     type WikiLinkedRoute,
     type WikiPageDocument,
     type WikiShuttleBlock,
+    YONSEI_MIRAE_WIKI_SLUG,
 } from "@entities/wiki";
 import {
     WikiEditMetaBar,
@@ -62,16 +65,16 @@ import {Footer} from "@shared/ui/Footer";
 import {triggerHaptic} from "@shared/utils/haptics";
 import {buildMapUrl} from "@widgets/AppShell/hooks/useAppNavigation";
 
-import {formatHeaderClock} from "@widgets/YonseiCampusPage/lib/campusPageHelpers";
-import {type CampusDirectionMode, getNextShuttleDepartures} from "@widgets/YonseiCampusPage/lib/yonseiShuttleUtils";
-import {CampusDirectionBar} from "@widgets/YonseiCampusPage/ui/CampusDirectionBar";
-import {CityBusTimetableModal} from "@widgets/YonseiCampusPage/ui/CityBusTimetableModal";
-import {FloatingBottomNav} from "@widgets/YonseiCampusPage/ui/FloatingBottomNav";
-import {SettingsModal} from "@widgets/YonseiCampusPage/ui/SettingsModal";
-import {ShuttleSpotlightSection} from "@widgets/YonseiCampusPage/ui/ShuttleSpotlightSection";
-import {ShuttleStopsModal} from "@widgets/YonseiCampusPage/ui/ShuttleStopsModal";
-import {ShuttleTimetableModal} from "@widgets/YonseiCampusPage/ui/ShuttleTimetableModal";
-import {YonseiCityBusCard} from "@widgets/YonseiCampusPage/ui/YonseiCityBusCard";
+import {formatHeaderClock} from "./lib/campusPageHelpers";
+import {type CampusDirectionMode, getNextShuttleDepartures} from "./lib/yonseiShuttleUtils";
+import {CampusDirectionBar} from "./ui/CampusDirectionBar";
+import {CityBusTimetableModal} from "./ui/CityBusTimetableModal";
+import {FloatingBottomNav} from "./ui/FloatingBottomNav";
+import {ShuttleSpotlightSection} from "./ui/ShuttleSpotlightSection";
+import {ShuttleStopsModal} from "./ui/ShuttleStopsModal";
+import {ShuttleTimetableModal} from "./ui/ShuttleTimetableModal";
+import {WikiTransitSettingsModal} from "./ui/WikiTransitSettingsModal";
+import {YonseiCityBusCard} from "./ui/YonseiCityBusCard";
 
 const emptySubscribe = () => () => {
 };
@@ -109,13 +112,13 @@ interface WikiEditorFormProps {
 }
 
 const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
-    doc,
-    initialNickname,
-    onSaveNickname,
-    onSaved,
-    onCancel,
-    onReloadLatest,
-}) => {
+                                                           doc,
+                                                           initialNickname,
+                                                           onSaveNickname,
+                                                           onSaved,
+                                                           onCancel,
+                                                           onReloadLatest,
+                                                       }) => {
     const [baseVersion, setBaseVersion] = useState(doc.version);
     const [title, setTitle] = useState(doc.title);
     const [subtitle, setSubtitle] = useState(doc.subtitle);
@@ -195,8 +198,10 @@ const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
     return (
         <div className="space-y-5">
             {/* Basic metadata editor */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/95 p-4 sm:p-5 shadow-sm space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div
+                className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/95 p-4 sm:p-5 shadow-sm space-y-4">
+                <div
+                    className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                     <div>
                         <span className="text-xs font-black text-sky-700 dark:text-sky-400">
                             문서 편집 모드 · 기준 v{baseVersion}
@@ -205,17 +210,23 @@ const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                             기본 정보 & 구조화 데이터 편집
                         </h2>
                     </div>
-                    <span className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                        /{doc.slug}
+                    <span
+                        className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                        /wiki/{normalizeWikiSlug(title) || doc.slug}
                     </span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                            문서 제목 *
+                        <label
+                            htmlFor="wiki-edit-title"
+                            className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
+                        >
+                            문서 제목 * (제목 변경 시 주소도 함께 변경됩니다)
                         </label>
                         <input
+                            id="wiki-edit-title"
+                            name="title"
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
@@ -224,10 +235,15 @@ const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                         />
                     </div>
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                        <label
+                            htmlFor="wiki-edit-subtitle"
+                            className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
+                        >
                             한 줄 부제목
                         </label>
                         <input
+                            id="wiki-edit-subtitle"
+                            name="subtitle"
                             type="text"
                             value={subtitle}
                             onChange={(e) => setSubtitle(e.target.value)}
@@ -239,10 +255,15 @@ const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                        <label
+                            htmlFor="wiki-edit-category"
+                            className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
+                        >
                             카테고리
                         </label>
                         <select
+                            id="wiki-edit-category"
+                            name="category"
                             value={category}
                             onChange={(e) => setCategory(e.target.value as WikiCategory)}
                             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-slate-100"
@@ -255,10 +276,15 @@ const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                         </select>
                     </div>
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                        <label
+                            htmlFor="wiki-edit-city"
+                            className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
+                        >
                             연결 지역 (선택)
                         </label>
                         <select
+                            id="wiki-edit-city"
+                            name="cityCode"
                             value={cityCode}
                             onChange={(e) => setCityCode(e.target.value)}
                             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-slate-100"
@@ -272,10 +298,15 @@ const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                         </select>
                     </div>
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                        <label
+                            htmlFor="wiki-edit-tags"
+                            className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
+                        >
                             태그 (쉼표로 구분)
                         </label>
                         <input
+                            id="wiki-edit-tags"
+                            name="tags"
                             type="text"
                             value={tagsText}
                             onChange={(e) => setTagsText(e.target.value)}
@@ -287,7 +318,8 @@ const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
             </div>
 
             {/* Section switcher */}
-            <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+            <div
+                className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
                 {[
                     {id: "markdown" as const, label: "위키 본문 (마크다운)"},
                     {id: "routes" as const, label: `시내버스 노선 (${linkedRoutes.length})`},
@@ -358,10 +390,11 @@ const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
 };
 
 export const WikiPageView: React.FC<WikiPageViewProps> = ({
-    slug,
-    initialDocument,
-    initialMode = "read",
-}) => {
+                                                              slug,
+                                                              initialDocument,
+                                                              initialMode = "read",
+                                                          }) => {
+    const router = useRouter();
     const {settings, updateSettings} = useAppSettings();
     const {storedNickname, saveNickname} = useWikiNickname();
     const {
@@ -526,7 +559,8 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
         return (
             <div className="min-h-screen bg-slate-50 dark:bg-[#080c15] flex items-center justify-center p-6">
                 <div className="text-center space-y-2">
-                    <div className="w-9 h-9 mx-auto rounded-full border-2 border-[#003876] border-t-transparent animate-spin"/>
+                    <div
+                        className="w-9 h-9 mx-auto rounded-full border-2 border-[#003876] border-t-transparent animate-spin"/>
                     <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
                         위키 문서를 불러오는 중...
                     </p>
@@ -539,8 +573,10 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
         const status = (error as (Error & { status?: number }) | undefined)?.status;
         return (
             <div className="min-h-screen bg-slate-50 dark:bg-[#080c15] flex flex-col">
-                <main className="flex-1 max-w-2xl mx-auto w-full px-4 py-16 flex flex-col items-center justify-center text-center space-y-4">
-                    <div className="w-14 h-14 rounded-2xl bg-sky-100 dark:bg-sky-950/60 flex items-center justify-center text-sky-700 dark:text-sky-300">
+                <main
+                    className="flex-1 max-w-2xl mx-auto w-full px-4 py-16 flex flex-col items-center justify-center text-center space-y-4">
+                    <div
+                        className="w-14 h-14 rounded-2xl bg-sky-100 dark:bg-sky-950/60 flex items-center justify-center text-sky-700 dark:text-sky-300">
                         <BookOpen className="w-7 h-7"/>
                     </div>
                     <h1 className="text-xl font-black text-slate-900 dark:text-white">
@@ -549,7 +585,9 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                             : "위키 문서를 불러오지 못했습니다"}
                     </h1>
                     <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                        슬러그 <code className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-xs">{slug}</code> 문서를 직접 개설해 첫 번째 버스 위키 기여자가 되어 보세요.
+                        슬러그 <code
+                        className="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-xs">{slug}</code> 문서를
+                        직접 개설해 첫 번째 버스 위키 기여자가 되어 보세요.
                     </p>
                     <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
                         <Link
@@ -584,15 +622,16 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
     const linkedRouteNumbers = wikiDoc.linkedRoutes
         .filter((r) => r.cityCode === "32020")
         .map((r) => r.routeNo);
+    const isYonseiCampus =
+        wikiDoc.slug === YONSEI_MIRAE_WIKI_SLUG ||
+        (wikiDoc.category === "campus" && wikiDoc.title.includes("연세"));
 
     return (
         <div
-            className={`min-h-screen bg-[#f4f7fb] dark:bg-[#080c15] text-slate-900 dark:text-slate-100 transition-colors ${
-                hasInteractiveTransit && viewMode === "read" ? "pb-28 sm:pb-32" : "pb-10"
-            }`}
-        >
+            className="min-h-screen bg-[#f4f7fb] dark:bg-[#080c15] text-slate-900 dark:text-slate-100 transition-colors flex flex-col">
             {/* Top Sticky Header */}
-            <header className="sticky top-0 z-30 backdrop-blur-2xl bg-white/88 dark:bg-[#0b101b]/88 border-b border-slate-200/80 dark:border-white/[0.08]">
+            <header
+                className="sticky top-0 z-30 backdrop-blur-2xl bg-white/88 dark:bg-[#0b101b]/88 border-b border-slate-200/80 dark:border-white/[0.08]">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2.5">
                     <div className="flex items-center gap-2 min-w-0">
                         <Link
@@ -611,14 +650,16 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
 
                     <div className="flex items-center gap-1.5 shrink-0">
                         {hasInteractiveTransit && (
-                            <span className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-white/[0.06] text-[11px] font-extrabold text-slate-600 dark:text-slate-300 tabular-nums">
+                            <span
+                                className="hidden md:inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-white/[0.06] text-[11px] font-extrabold text-slate-600 dark:text-slate-300 tabular-nums">
                                 <Clock className="w-3 h-3 text-[#003876] dark:text-sky-400"/>
                                 {formatHeaderClock(now)}
                             </span>
                         )}
 
                         {/* Read / Edit / History Mode Buttons */}
-                        <div className="inline-flex items-center rounded-xl bg-slate-100 dark:bg-white/[0.06] p-0.5 border border-slate-200/60 dark:border-white/10">
+                        <div
+                            className="inline-flex items-center rounded-xl bg-slate-100 dark:bg-white/[0.06] p-0.5 border border-slate-200/60 dark:border-white/10">
                             <button
                                 type="button"
                                 onClick={() => setViewMode("read")}
@@ -680,7 +721,7 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                                     setIsSettingsModalOpen(true);
                                 }}
                                 title={UI_TEXT.YONSEI.MODE_OVERRIDE_LABEL}
-                                className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/[0.07] dark:hover:bg-white/15 text-[11px] font-extrabold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                                className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/[0.07] dark:hover:bg-white/15 text-[11px] font-extrabold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                             >
                                 <Calendar className="w-3.5 h-3.5 text-[#003876] dark:text-blue-400"/>
                                 <span>{dayModeBadgeLabel}</span>
@@ -707,29 +748,35 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                 </div>
             </header>
 
-            <main className="max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-6 space-y-5">
+            <main className="flex-1 w-full max-w-5xl mx-auto px-4 sm:px-6 py-5 sm:py-6 space-y-5">
                 {/* Hero Metadata Banner */}
-                <section className="rounded-3xl p-5 sm:p-6 bg-white dark:bg-[#111623] border border-slate-200/85 dark:border-white/10 shadow-xs space-y-3.5">
+                <section
+                    className="rounded-3xl p-5 sm:p-6 bg-white dark:bg-[#111623] border border-slate-200/85 dark:border-white/10 shadow-xs space-y-3.5">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                         <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-[#003876]/10 dark:bg-sky-500/20 text-[#003876] dark:text-sky-300">
+                            <span
+                                className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-[#003876]/10 dark:bg-sky-500/20 text-[#003876] dark:text-sky-300">
                                 {WIKI_CATEGORY_LABELS[wikiDoc.category]}
                             </span>
                             {cityName && (
-                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
+                                <span
+                                    className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300">
                                     {cityName}
                                 </span>
                             )}
                             {wikiDoc.isProtected && (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">
+                                <span
+                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">
                                     <Lock className="w-3 h-3"/>
                                     보호된 문서
                                 </span>
                             )}
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                            <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-black text-slate-700 dark:text-slate-200 tabular-nums">
+                        <div
+                            className="flex flex-wrap items-center gap-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            <span
+                                className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 font-black text-slate-700 dark:text-slate-200 tabular-nums">
                                 v{wikiDoc.version}
                             </span>
                             <span className="inline-flex items-center gap-1">
@@ -774,6 +821,10 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                         initialNickname={storedNickname}
                         onSaveNickname={saveNickname}
                         onSaved={async (saved) => {
+                            if (saved.slug !== slug) {
+                                router.replace(`/wiki/${encodeURIComponent(saved.slug)}`);
+                                return;
+                            }
                             await mutate(saved, false);
                             setViewMode("read");
                         }}
@@ -805,6 +856,15 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                             <CampusDirectionBar
                                 directionMode={directionMode}
                                 dayModeBadgeLabel={dayModeBadgeLabel}
+                                badgeLabel={
+                                    isYonseiCampus
+                                        ? UI_TEXT.YONSEI.HERO_BADGE
+                                        : WIKI_CATEGORY_LABELS[wikiDoc.category]
+                                }
+                                outboundTitle={isYonseiCampus ? "하교 · 시내방면" : "시내 · 종점 방면"}
+                                outboundSubtitle={isYonseiCampus ? "연세대 출발" : "주요 방면 출발"}
+                                inboundTitle={isYonseiCampus ? "등교 · 학교방면" : "학교 · 기점 방면"}
+                                inboundSubtitle={isYonseiCampus ? "장양리·시내 출발" : "반대 방향 출발"}
                                 onDirectionChange={setDirectionOverride}
                                 onOpenSettings={() => setIsSettingsModalOpen(true)}
                             />
@@ -895,7 +955,8 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                                             >
                                                 <div className="space-y-1.5">
                                                     <div className="flex items-center justify-between gap-2">
-                                                        <span className="text-sm font-black text-slate-900 dark:text-white">
+                                                        <span
+                                                            className="text-sm font-black text-slate-900 dark:text-white">
                                                             {stop.name}
                                                         </span>
                                                         <span
@@ -915,7 +976,8 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                                                     </p>
                                                     {stop.tips && (
                                                         <p className="flex items-start gap-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-white/[0.04] border border-slate-200/70 dark:border-white/[0.06] rounded-xl px-2.5 py-2">
-                                                            <Info className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#003876] dark:text-blue-400"/>
+                                                            <Info
+                                                                className="w-3.5 h-3.5 shrink-0 mt-0.5 text-[#003876] dark:text-blue-400"/>
                                                             <span>{stop.tips}</span>
                                                         </p>
                                                     )}
@@ -928,7 +990,8 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                                                         rel="noopener noreferrer"
                                                         className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-50 dark:bg-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/12 border border-slate-200/80 dark:border-white/10 text-xs font-extrabold text-slate-800 dark:text-slate-100 transition"
                                                     >
-                                                        <Navigation className="w-3.5 h-3.5 text-[#003876] dark:text-blue-400"/>
+                                                        <Navigation
+                                                            className="w-3.5 h-3.5 text-[#003876] dark:text-blue-400"/>
                                                         <span>카카오맵</span>
                                                         <ExternalLink className="w-3 h-3 opacity-60"/>
                                                     </a>
@@ -938,7 +1001,8 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                                                         rel="noopener noreferrer"
                                                         className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-50 dark:bg-white/[0.06] hover:bg-slate-100 dark:hover:bg-white/12 border border-slate-200/80 dark:border-white/10 text-xs font-extrabold text-slate-800 dark:text-slate-100 transition"
                                                     >
-                                                        <Camera className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"/>
+                                                        <Camera
+                                                            className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"/>
                                                         <span>로드뷰</span>
                                                         <ExternalLink className="w-3 h-3 opacity-60"/>
                                                     </a>
@@ -955,7 +1019,8 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                             id="wiki-article-body"
                             className="rounded-3xl p-5 sm:p-7 bg-white dark:bg-[#111623] border border-slate-200/85 dark:border-white/10 shadow-xs space-y-5"
                         >
-                            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-white/[0.07]">
+                            <div
+                                className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-white/[0.07]">
                                 <div className="flex items-center gap-2">
                                     <BookOpen className="w-4 h-4 text-[#003876] dark:text-sky-400"/>
                                     <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
@@ -1005,19 +1070,23 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                 )}
             </main>
 
-            <Footer isCampusPage={slug === "yonsei-mirae"}/>
+            <Footer isCampusPage={wikiDoc.slug === YONSEI_MIRAE_WIKI_SLUG}/>
 
             {viewMode === "read" && hasInteractiveTransit && (
                 <>
                     <FloatingBottomNav
                         activeModal={activeModal}
+                        cityCode={wikiDoc.cityCode}
+                        hasLinkedRoutes={wikiDoc.linkedRoutes.length > 0}
+                        hasShuttle={Boolean(shuttleScheduleData && shuttleInfo)}
+                        hasBoardingStops={wikiDoc.boardingStops.length > 0}
                         onScrollTop={() => {
                             triggerHaptic("light");
                             window.scrollTo({top: 0, behavior: "smooth"});
                         }}
                         onOpenCityBusModal={() =>
                             handleOpenCityTimetable(
-                                linkedRouteNumbers[0] ?? "30",
+                                linkedRouteNumbers[0] ?? wikiDoc.linkedRoutes[0]?.routeNo ?? "30",
                                 directionMode === "OUTBOUND" ? "dest" : "origin"
                             )
                         }
@@ -1065,7 +1134,7 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                         onClose={() => setIsStopsModalOpen(false)}
                     />
 
-                    <SettingsModal
+                    <WikiTransitSettingsModal
                         isOpen={isSettingsModalOpen}
                         dayMode={dayMode}
                         isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}

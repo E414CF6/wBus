@@ -1,5 +1,6 @@
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {NextRequest} from "next/server";
+import {GET} from "./route";
 
 const mockGetCachedCityRoutes = vi.fn();
 const mockFetchBusLocations = vi.fn();
@@ -22,8 +23,6 @@ vi.mock("@shared/cache", () => ({
         meta: {status: "miss", layer: "origin", ageMs: 0},
     }),
 }));
-
-import {GET} from "./route";
 
 describe("GET /api/bus", () => {
     beforeEach(() => {

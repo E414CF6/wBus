@@ -17,15 +17,15 @@ interface RunningBusesJumpStripProps {
 }
 
 export const RunningBusesJumpStrip: React.FC<RunningBusesJumpStripProps> = ({
-    jumpStripRef,
-    matchedBusesForJump,
-    nearestBusVehicleNo,
-    metaThemeBg,
-    metaThemeBadgeBg,
-    metaThemeText,
-    metaThemeBorder,
-    onJumpToBusStop,
-}) => {
+                                                                                jumpStripRef,
+                                                                                matchedBusesForJump,
+                                                                                nearestBusVehicleNo,
+                                                                                metaThemeBg,
+                                                                                metaThemeBadgeBg,
+                                                                                metaThemeText,
+                                                                                metaThemeBorder,
+                                                                                onJumpToBusStop,
+                                                                            }) => {
     if (matchedBusesForJump.length === 0) return null;
 
     return (
@@ -33,7 +33,8 @@ export const RunningBusesJumpStrip: React.FC<RunningBusesJumpStripProps> = ({
             ref={jumpStripRef}
             className="flex items-center gap-1.5 px-4 pb-2.5 overflow-x-auto custom-scrollbar-hidden shrink-0"
         >
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0 mr-0.5">
+            <span
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0 mr-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"/>
                 운행중
             </span>

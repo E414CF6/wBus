@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 };
 
 export default async function WikiNewRoutePage({
-    searchParams,
-}: {
+                                                   searchParams,
+                                               }: {
     searchParams: Promise<{ slug?: string }>;
 }) {
     const sp = await searchParams;

@@ -12,10 +12,10 @@ export interface WikiRoutesEditorProps {
 }
 
 export const WikiRoutesEditor: React.FC<WikiRoutesEditorProps> = ({
-    value,
-    onChange,
-    defaultCityCode = "32020",
-}) => {
+                                                                      value,
+                                                                      onChange,
+                                                                      defaultCityCode = "32020",
+                                                                  }) => {
     const updateRoute = (idx: number, patch: Partial<WikiLinkedRoute>) => {
         onChange(value.map((item, i) => (i === idx ? {...item, ...patch} : item)));
     };
@@ -36,8 +36,10 @@ export const WikiRoutesEditor: React.FC<WikiRoutesEditorProps> = ({
     };
 
     return (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/70 flex items-center justify-between gap-2">
+        <div
+            className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 overflow-hidden shadow-sm">
+            <div
+                className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/70 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                     <Route className="w-4 h-4 text-indigo-600 dark:text-indigo-400"/>
                     <span className="text-xs font-black text-slate-800 dark:text-slate-100">

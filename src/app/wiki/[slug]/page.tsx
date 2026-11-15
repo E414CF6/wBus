@@ -1,4 +1,6 @@
 import type {Metadata} from "next";
+import {redirect} from "next/navigation";
+import {resolveLegacyWikiSlug} from "@entities/wiki";
 import {getWikiPage} from "@entities/wiki/server";
 import {WikiPageView} from "@widgets/WikiPage";
 
@@ -6,19 +8,20 @@ export const dynamic = "force-dynamic";
 
 function decodeSlugParam(raw: string): string {
     try {
-        return decodeURIComponent(raw).trim().toLowerCase();
+        return decodeURIComponent(raw).trim();
     } catch {
-        return raw.trim().toLowerCase();
+        return raw.trim();
     }
 }
 
 export async function generateMetadata({
-    params,
-}: {
+                                           params,
+                                       }: {
     params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
     const {slug: rawSlug} = await params;
-    const slug = decodeSlugParam(rawSlug);
+    const rawDecoded = decodeSlugParam(rawSlug);
+    const slug = resolveLegacyWikiSlug(rawDecoded) ?? rawDecoded;
     const doc = await getWikiPage(slug).catch(() => null);
 
     if (!doc) {
@@ -38,16 +41,30 @@ export async function generateMetadata({
 }
 
 export default async function WikiSlugRoutePage({
-    params,
-    searchParams,
-}: {
+                                                    params,
+                                                    searchParams,
+                                                }: {
     params: Promise<{ slug: string }>;
     searchParams: Promise<{ mode?: string }>;
 }) {
     const {slug: rawSlug} = await params;
     const sp = await searchParams;
     const slug = decodeSlugParam(rawSlug);
+
+    const legacyCanonical = resolveLegacyWikiSlug(slug);
+    if (legacyCanonical && legacyCanonical !== slug) {
+        const modeSuffix =
+            sp.mode === "edit" || sp.mode === "history" ? `?mode=${sp.mode}` : "";
+        redirect(`/wiki/${encodeURIComponent(legacyCanonical)}${modeSuffix}`);
+    }
+
     const doc = await getWikiPage(slug).catch(() => null);
+    if (doc && doc.slug !== slug) {
+        const modeSuffix =
+            sp.mode === "edit" || sp.mode === "history" ? `?mode=${sp.mode}` : "";
+        redirect(`/wiki/${encodeURIComponent(doc.slug)}${modeSuffix}`);
+    }
+
     const initialMode =
         sp.mode === "edit" || sp.mode === "history" ? sp.mode : "read";
 

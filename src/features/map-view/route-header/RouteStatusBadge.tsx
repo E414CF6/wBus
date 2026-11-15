@@ -22,15 +22,15 @@ interface RouteStatusBadgeProps {
 }
 
 export const RouteStatusBadge: React.FC<RouteStatusBadgeProps> = ({
-    selectedRoute,
-    hasFetched,
-    connectionStatus,
-    runningCount,
-    isDegraded,
-    nextScheduleInfo,
-    onOpenScheduleModal,
-    onReconnect,
-}) => {
+                                                                      selectedRoute,
+                                                                      hasFetched,
+                                                                      connectionStatus,
+                                                                      runningCount,
+                                                                      isDegraded,
+                                                                      nextScheduleInfo,
+                                                                      onOpenScheduleModal,
+                                                                      onReconnect,
+                                                                  }) => {
     const statusConfig = useMemo(() => {
         if (!hasFetched || connectionStatus === "connecting") {
             return {

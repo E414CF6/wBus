@@ -100,10 +100,7 @@ export async function PUT(
 
         try {
             revalidatePath("/wiki");
-            revalidatePath(`/wiki/${slug}`);
-            if (slug === "yonsei-mirae") {
-                revalidatePath("/schedule");
-            }
+            revalidatePath("/wiki/[slug]", "page");
         } catch {
             // Ignore revalidate outside request context
         }
@@ -160,7 +157,7 @@ export async function DELETE(
         await deleteWikiPage(slug);
         try {
             revalidatePath("/wiki");
-            revalidatePath(`/wiki/${slug}`);
+            revalidatePath("/wiki/[slug]", "page");
         } catch {
             // Ignore
         }

@@ -22,33 +22,36 @@ export interface WikiEditMetaBarProps {
 }
 
 export const WikiEditMetaBar: React.FC<WikiEditMetaBarProps> = ({
-    nickname,
-    onNicknameChange,
-    summary,
-    onSummaryChange,
-    honeypot,
-    onHoneypotChange,
-    isSaving,
-    errorMessage,
-    conflictVersion,
-    onReloadLatest,
-    onForceOverwrite,
-    onSave,
-    onCancel,
-    saveLabel = "변경사항 게시하기",
-    isProtected = false,
-}) => {
+                                                                    nickname,
+                                                                    onNicknameChange,
+                                                                    summary,
+                                                                    onSummaryChange,
+                                                                    honeypot,
+                                                                    onHoneypotChange,
+                                                                    isSaving,
+                                                                    errorMessage,
+                                                                    conflictVersion,
+                                                                    onReloadLatest,
+                                                                    onForceOverwrite,
+                                                                    onSave,
+                                                                    onCancel,
+                                                                    saveLabel = "변경사항 게시하기",
+                                                                    isProtected = false,
+                                                                }) => {
     return (
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/95 p-4 sm:p-5 shadow-sm space-y-4">
+        <div
+            className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/95 p-4 sm:p-5 shadow-sm space-y-4">
             {isProtected && (
-                <div className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-semibold">
+                <div
+                    className="flex items-start gap-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-semibold">
                     <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400"/>
                     <span>이 문서는 현재 보호 상태입니다. 관리자만 수정할 수 있습니다.</span>
                 </div>
             )}
 
             {conflictVersion && (
-                <div className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 space-y-2.5">
+                <div
+                    className="p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 space-y-2.5">
                     <div className="flex items-start gap-2 text-amber-900 dark:text-amber-100 text-xs font-bold">
                         <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400"/>
                         <div>
@@ -82,7 +85,8 @@ export const WikiEditMetaBar: React.FC<WikiEditMetaBarProps> = ({
             )}
 
             {errorMessage && !conflictVersion && (
-                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-200 text-xs font-bold flex items-center gap-2">
+                <div
+                    className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-200 text-xs font-bold flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0"/>
                     <span>{errorMessage}</span>
                 </div>
@@ -104,11 +108,16 @@ export const WikiEditMetaBar: React.FC<WikiEditMetaBarProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                    <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1">
+                    <label
+                        htmlFor="wiki-editor-nickname"
+                        className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1 flex items-center gap-1"
+                    >
                         <User className="w-3 h-3"/>
                         편집자 닉네임 (선택)
                     </label>
                     <input
+                        id="wiki-editor-nickname"
+                        name="nickname"
                         type="text"
                         value={nickname}
                         onChange={(e) => onNicknameChange(e.target.value)}
@@ -118,10 +127,15 @@ export const WikiEditMetaBar: React.FC<WikiEditMetaBarProps> = ({
                     />
                 </div>
                 <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                    <label
+                        htmlFor="wiki-editor-summary"
+                        className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
+                    >
                         편집 요약 (어떤 내용을 고쳤나요?)
                     </label>
                     <input
+                        id="wiki-editor-summary"
+                        name="summary"
                         type="text"
                         value={summary}
                         onChange={(e) => onSummaryChange(e.target.value)}

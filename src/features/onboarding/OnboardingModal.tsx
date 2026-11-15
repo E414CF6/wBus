@@ -12,7 +12,6 @@ import {
     Compass,
     ExternalLink,
     GraduationCap,
-    MapIcon,
     MapPin,
     Monitor,
     Moon,
@@ -22,8 +21,8 @@ import {
 } from "lucide-react";
 
 import {NATIONWIDE_CITIES, useCityContext} from "@entities/city";
+import {YONSEI_MIRAE_WIKI_SLUG} from "@entities/wiki";
 import {ToggleSwitch} from "@features/settings/ToggleSwitch";
-import {buildPageHref, SPECIAL_PAGE_IDS} from "@shared/config/pages";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {applyThemePreference, Modal, type ThemePreference} from "@shared/ui";
 import {triggerHaptic} from "@shared/utils/haptics";
@@ -170,14 +169,14 @@ export const OnboardingModal: React.FC = () => {
                 ) : (
                     <>
                         <Link
-                            href={buildPageHref(SPECIAL_PAGE_IDS.YONSEI_MIRAE)}
+                            href={`/wiki/${encodeURIComponent(YONSEI_MIRAE_WIKI_SLUG)}`}
                             onClick={() => {
                                 triggerHaptic("light");
                                 closeOnboarding();
                             }}
                             className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-bold text-[#003876] dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition"
                         >
-                            <span>연세대 허브</span>
+                            <span>연세대 위키</span>
                             <ExternalLink className="w-3.5 h-3.5"/>
                         </Link>
                         <button
@@ -268,74 +267,6 @@ export const OnboardingModal: React.FC = () => {
                 {/* STEP 2: Interactive Personalization */}
                 {step === 1 && (
                     <div className="space-y-3.5 animate-fadeIn">
-                        {/* Default Start Page */}
-                        <div
-                            className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 space-y-2.5">
-                            <div>
-                                <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white">
-                                    주로 사용하는 시작 화면
-                                </p>
-                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                                    앱을 열었을 때 가장 먼저 보여드릴 화면을 선택하세요
-                                </p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        triggerHaptic("selection");
-                                        updateSettings({defaultStartPage: "map"});
-                                    }}
-                                    className={`flex items-center gap-2.5 p-3 rounded-xl border text-left transition-all cursor-pointer active:scale-[0.98] ${
-                                        settings.defaultStartPage === "map"
-                                            ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-sm"
-                                            : "bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 border-black/10 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10"
-                                    }`}
-                                >
-                                    <MapIcon className="w-4 h-4 shrink-0"/>
-                                    <div className="min-w-0">
-                                        <p className="text-xs font-black truncate">실시간 버스 지도</p>
-                                        <p
-                                            className={`text-[10px] truncate ${
-                                                settings.defaultStartPage === "map"
-                                                    ? "text-white/75 dark:text-slate-600"
-                                                    : "text-slate-400"
-                                            }`}
-                                        >
-                                            전국 시내버스 지도
-                                        </p>
-                                    </div>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        triggerHaptic("selection");
-                                        updateSettings({defaultStartPage: "yonsei", showYonseiFeatures: true});
-                                    }}
-                                    className={`flex items-center gap-2.5 p-3 rounded-xl border text-left transition-all cursor-pointer active:scale-[0.98] ${
-                                        settings.defaultStartPage === "yonsei"
-                                            ? "bg-[#003876] text-white border-transparent shadow-sm"
-                                            : "bg-white dark:bg-white/5 text-slate-700 dark:text-slate-200 border-black/10 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10"
-                                    }`}
-                                >
-                                    <GraduationCap className="w-4 h-4 shrink-0"/>
-                                    <div className="min-w-0">
-                                        <p className="text-xs font-black truncate">연세대 미래캠퍼스</p>
-                                        <p
-                                            className={`text-[10px] truncate ${
-                                                settings.defaultStartPage === "yonsei"
-                                                    ? "text-sky-100"
-                                                    : "text-slate-400"
-                                            }`}
-                                        >
-                                            셔틀·30·34·34-1 허브
-                                        </p>
-                                    </div>
-                                </button>
-                            </div>
-                        </div>
-
                         {/* Theme Selection */}
                         <div
                             className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 space-y-2.5">
@@ -436,8 +367,8 @@ export const OnboardingModal: React.FC = () => {
                                 선택된 설정
                             </span>
                             <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
-                                {settings.defaultStartPage === "yonsei" ? "연세대 허브" : "실시간 지도"} ·{" "}
-                                {activeTheme === "system" ? "시스템 테마" : activeTheme === "light" ? "라이트" : "다크"}
+                                {activeTheme === "system" ? "시스템 테마" : activeTheme === "light" ? "라이트" : "다크"} ·{" "}
+                                {settings.autoDetectCity ? "자동 지역 감지" : "수동 지역 선택"}
                             </span>
                         </div>
 

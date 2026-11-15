@@ -28,22 +28,24 @@ interface ShuttleSpotlightSectionProps {
 }
 
 export const ShuttleSpotlightSection: React.FC<ShuttleSpotlightSectionProps> = ({
-    directionMode,
-    shuttleDayType,
-    nextOutbound,
-    nextInbound,
+                                                                                    directionMode,
+                                                                                    shuttleDayType,
+                                                                                    nextOutbound,
+                                                                                    nextInbound,
                                                                                     shuttleSchedule = YONSEI_SHUTTLE_SCHEDULE,
-    onOpenShuttleModal,
-    onOpenStopsModal,
-}) => {
+                                                                                    onOpenShuttleModal,
+                                                                                    onOpenStopsModal,
+                                                                                }) => {
     const outboundWait = nextOutbound ? getShuttleWaitBadge(nextOutbound.waitMins) : null;
     const inboundWait = nextInbound ? getShuttleWaitBadge(nextInbound.waitMins) : null;
 
     return (
-        <section className="rounded-3xl p-4 sm:p-5 bg-white dark:bg-[#111623] border border-slate-200/85 dark:border-white/10 shadow-xs space-y-4">
+        <section
+            className="rounded-3xl p-4 sm:p-5 bg-white dark:bg-[#111623] border border-slate-200/85 dark:border-white/10 shadow-xs space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2.5">
-                    <span className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#003876] to-blue-700 text-white flex items-center justify-center shadow-xs shrink-0">
+                    <span
+                        className="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#003876] to-blue-700 text-white flex items-center justify-center shadow-xs shrink-0">
                         <GraduationCap className="w-4 h-4"/>
                     </span>
                     <div>
@@ -101,8 +103,10 @@ export const ShuttleSpotlightSection: React.FC<ShuttleSpotlightSectionProps> = (
             </div>
 
             {shuttleDayType.isSaturday ? (
-                <div className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div className="flex items-start sm:items-center gap-2.5 text-xs font-bold text-amber-900 dark:text-amber-200">
+                <div
+                    className="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div
+                        className="flex items-start sm:items-center gap-2.5 text-xs font-bold text-amber-900 dark:text-amber-200">
                         <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5 sm:mt-0"/>
                         <div>
                             <div className="font-black">토요일 셔틀 휴무</div>
@@ -136,112 +140,123 @@ export const ShuttleSpotlightSection: React.FC<ShuttleSpotlightSectionProps> = (
             ) : (
                 /* Dual Next Shuttle Spotlight Cards */
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <button
-                    type="button"
-                    onClick={() => onOpenShuttleModal("OUTBOUND")}
-                    className={`text-left p-4 rounded-2xl border transition-all cursor-pointer active:scale-[0.99] ${
-                        directionMode === "OUTBOUND"
-                            ? "bg-gradient-to-br from-blue-50/95 to-slate-50/80 dark:from-blue-950/40 dark:to-[#151c2e] border-[#003876] dark:border-blue-500 ring-1 ring-blue-500/20"
-                            : "bg-slate-50/80 dark:bg-white/[0.03] border-slate-200/80 dark:border-white/10 hover:bg-blue-50/40 dark:hover:bg-blue-950/20"
-                    }`}
-                >
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="flex items-center gap-1.5 text-xs font-black text-[#003876] dark:text-blue-300">
+                    <button
+                        type="button"
+                        onClick={() => onOpenShuttleModal("OUTBOUND")}
+                        className={`text-left p-4 rounded-2xl border transition-all cursor-pointer active:scale-[0.99] ${
+                            directionMode === "OUTBOUND"
+                                ? "bg-gradient-to-br from-blue-50/95 to-slate-50/80 dark:from-blue-950/40 dark:to-[#151c2e] border-[#003876] dark:border-blue-500 ring-1 ring-blue-500/20"
+                                : "bg-slate-50/80 dark:bg-white/[0.03] border-slate-200/80 dark:border-white/10 hover:bg-blue-50/40 dark:hover:bg-blue-950/20"
+                        }`}
+                    >
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span
+                            className="flex items-center gap-1.5 text-xs font-black text-[#003876] dark:text-blue-300">
                             <Clock className="w-3.5 h-3.5 shrink-0"/>
                             <span>{UI_TEXT.YONSEI_SHUTTLE.NEXT_FROM_CAMPUS}</span>
                         </span>
-                        {outboundWait && (
-                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] border tabular-nums ${outboundWait.pillClass}`}>
+                            {outboundWait && (
+                                <span
+                                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] border tabular-nums ${outboundWait.pillClass}`}>
                                 {outboundWait.dotClass && (
                                     <span className="relative flex h-1.5 w-1.5">
-                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${outboundWait.dotClass}`}/>
-                                        <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${outboundWait.dotClass}`}/>
+                                        <span
+                                            className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${outboundWait.dotClass}`}/>
+                                        <span
+                                            className={`relative inline-flex rounded-full h-1.5 w-1.5 ${outboundWait.dotClass}`}/>
                                     </span>
                                 )}
-                                <span>{outboundWait.label}</span>
+                                    <span>{outboundWait.label}</span>
                             </span>
-                        )}
-                    </div>
-
-                    {nextOutbound ? (
-                        <div className="space-y-1">
-                            <div className="flex items-baseline justify-between gap-2">
-                                <span className="text-2xl font-black tabular-nums tracking-tight text-slate-900 dark:text-white">
-                                    {nextOutbound.item.departure_time}
-                                </span>
-                                <span className="text-xs font-extrabold text-blue-700 dark:text-blue-300 truncate">
-                                    {nextOutbound.item.departure_point} → {nextOutbound.item.destination}
-                                </span>
-                            </div>
-                            {nextOutbound.item.via.length > 0 && (
-                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
-                                    경유: {nextOutbound.item.via.map((v) => v.name).join(" → ")}
-                                </p>
                             )}
                         </div>
-                    ) : (
-                        <p className="text-xs font-bold text-slate-400 dark:text-slate-500 py-1.5">
-                            금일 하교 셔틀 운행이 종료되었습니다
-                        </p>
-                    )}
-                </button>
 
-                <button
-                    type="button"
-                    onClick={() => onOpenShuttleModal("INBOUND")}
-                    className={`text-left p-4 rounded-2xl border transition-all cursor-pointer active:scale-[0.99] ${
-                        directionMode === "INBOUND"
-                            ? "bg-gradient-to-br from-indigo-50/95 to-slate-50/80 dark:from-indigo-950/40 dark:to-[#151c2e] border-indigo-600 dark:border-indigo-400 ring-1 ring-indigo-500/20"
-                            : "bg-slate-50/80 dark:bg-white/[0.03] border-slate-200/80 dark:border-white/10 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20"
-                    }`}
-                >
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="flex items-center gap-1.5 text-xs font-black text-indigo-700 dark:text-indigo-300">
+                        {nextOutbound ? (
+                            <div className="space-y-1">
+                                <div className="flex items-baseline justify-between gap-2">
+                                <span
+                                    className="text-2xl font-black tabular-nums tracking-tight text-slate-900 dark:text-white">
+                                    {nextOutbound.item.departure_time}
+                                </span>
+                                    <span className="text-xs font-extrabold text-blue-700 dark:text-blue-300 truncate">
+                                    {nextOutbound.item.departure_point} → {nextOutbound.item.destination}
+                                </span>
+                                </div>
+                                {nextOutbound.item.via.length > 0 && (
+                                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                                        경유: {nextOutbound.item.via.map((v) => v.name).join(" → ")}
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 py-1.5">
+                                금일 하교 셔틀 운행이 종료되었습니다
+                            </p>
+                        )}
+                    </button>
+
+                    <button
+                        type="button"
+                        onClick={() => onOpenShuttleModal("INBOUND")}
+                        className={`text-left p-4 rounded-2xl border transition-all cursor-pointer active:scale-[0.99] ${
+                            directionMode === "INBOUND"
+                                ? "bg-gradient-to-br from-indigo-50/95 to-slate-50/80 dark:from-indigo-950/40 dark:to-[#151c2e] border-indigo-600 dark:border-indigo-400 ring-1 ring-indigo-500/20"
+                                : "bg-slate-50/80 dark:bg-white/[0.03] border-slate-200/80 dark:border-white/10 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/20"
+                        }`}
+                    >
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span
+                            className="flex items-center gap-1.5 text-xs font-black text-indigo-700 dark:text-indigo-300">
                             <Bus className="w-3.5 h-3.5 shrink-0"/>
                             <span>{UI_TEXT.YONSEI_SHUTTLE.NEXT_TO_CAMPUS}</span>
                         </span>
-                        {inboundWait && (
-                            <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] border tabular-nums ${inboundWait.pillClass}`}>
+                            {inboundWait && (
+                                <span
+                                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] border tabular-nums ${inboundWait.pillClass}`}>
                                 {inboundWait.dotClass && (
                                     <span className="relative flex h-1.5 w-1.5">
-                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${inboundWait.dotClass}`}/>
-                                        <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${inboundWait.dotClass}`}/>
+                                        <span
+                                            className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${inboundWait.dotClass}`}/>
+                                        <span
+                                            className={`relative inline-flex rounded-full h-1.5 w-1.5 ${inboundWait.dotClass}`}/>
                                     </span>
                                 )}
-                                <span>{inboundWait.label}</span>
+                                    <span>{inboundWait.label}</span>
                             </span>
-                        )}
-                    </div>
-
-                    {nextInbound ? (
-                        <div className="space-y-1">
-                            <div className="flex items-baseline justify-between gap-2">
-                                <span className="text-2xl font-black tabular-nums tracking-tight text-slate-900 dark:text-white">
-                                    {nextInbound.item.departure_time}
-                                </span>
-                                <span className="text-xs font-extrabold text-indigo-700 dark:text-indigo-300 truncate">
-                                    {nextInbound.item.departure_point} 발 → 미래캠퍼스
-                                </span>
-                            </div>
-                            {nextInbound.item.via.length > 0 ? (
-                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
-                                    경유:{" "}
-                                    {nextInbound.item.via
-                                        .map((v) => (v.time ? `${v.name}(${v.time})` : v.name))
-                                        .join(" → ")}
-                                </p>
-                            ) : (
-                                <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
-                                    {nextInbound.item.note || UI_TEXT.YONSEI_SHUTTLE.NO_VIA_EXPRESS}
-                                </p>
                             )}
                         </div>
-                    ) : (
-                        <p className="text-xs font-bold text-slate-400 dark:text-slate-500 py-1.5">
-                            금일 등교 셔틀 운행이 종료되었습니다
-                        </p>
-                    )}
-                </button>
+
+                        {nextInbound ? (
+                            <div className="space-y-1">
+                                <div className="flex items-baseline justify-between gap-2">
+                                <span
+                                    className="text-2xl font-black tabular-nums tracking-tight text-slate-900 dark:text-white">
+                                    {nextInbound.item.departure_time}
+                                </span>
+                                    <span
+                                        className="text-xs font-extrabold text-indigo-700 dark:text-indigo-300 truncate">
+                                    {nextInbound.item.departure_point} 발 → 미래캠퍼스
+                                </span>
+                                </div>
+                                {nextInbound.item.via.length > 0 ? (
+                                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                                        경유:{" "}
+                                        {nextInbound.item.via
+                                            .map((v) => (v.time ? `${v.name}(${v.time})` : v.name))
+                                            .join(" → ")}
+                                    </p>
+                                ) : (
+                                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                                        {nextInbound.item.note || UI_TEXT.YONSEI_SHUTTLE.NO_VIA_EXPRESS}
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 py-1.5">
+                                금일 등교 셔틀 운행이 종료되었습니다
+                            </p>
+                        )}
+                    </button>
                 </div>
             )}
         </section>

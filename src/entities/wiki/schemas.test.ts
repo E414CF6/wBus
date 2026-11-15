@@ -1,21 +1,27 @@
 import {describe, expect, it} from "vitest";
-import {
-    isValidWikiSlug,
-    normalizeWikiSlug,
-    WikiCreatePayloadSchema,
-    WikiEditPayloadSchema,
-} from "./schemas";
+import {isValidWikiSlug, normalizeWikiSlug, WikiCreatePayloadSchema, WikiEditPayloadSchema,} from "./schemas";
 
 describe("wiki schemas and slug helpers", () => {
-    it("normalizes and validates Korean + alphanumeric slugs while blocking reserved words", () => {
-        expect(normalizeWikiSlug("  Wonju Station 1! ")).toBe("wonju-station-1");
-        expect(normalizeWikiSlug("연세대 미래캠퍼스 셔틀")).toBe("연세대-미래캠퍼스-셔틀");
-        expect(isValidWikiSlug("yonsei-mirae")).toBe(true);
+    it("normalizes and validates title-matching Korean + alphanumeric slugs while blocking reserved words", () => {
+        expect(normalizeWikiSlug("  Wonju Station 1!  ")).toBe("Wonju Station 1!");
+        expect(normalizeWikiSlug("연세대 미래캠퍼스 셔틀")).toBe("연세대 미래캠퍼스 셔틀");
+        expect(normalizeWikiSlug("원주역 (무실동 KTX)")).toBe("원주역 (무실동 KTX)");
+        expect(normalizeWikiSlug("노선/30번?안내#테스트")).toBe("노선30번안내테스트");
+        expect(isValidWikiSlug("연세대학교 미래캠퍼스")).toBe(true);
+        expect(isValidWikiSlug("원주역 (무실동 KTX)")).toBe(true);
         expect(isValidWikiSlug("원주역")).toBe(true);
         expect(isValidWikiSlug("new")).toBe(false);
         expect(isValidWikiSlug("edit")).toBe(false);
-        expect(isValidWikiSlug("-bad-")).toBe(false);
+        expect(isValidWikiSlug("NEW")).toBe(false);
+        expect(isValidWikiSlug("..")).toBe(false);
         expect(isValidWikiSlug("a")).toBe(false);
+
+        const created = WikiCreatePayloadSchema.parse({
+            title: "연세대   미래캠퍼스 정문",
+            category: "guide",
+        });
+        expect(created.title).toBe("연세대 미래캠퍼스 정문");
+        expect(created.slug).toBe("연세대 미래캠퍼스 정문");
     });
 
     it("validates shuttle HH:MM format in edit payloads", () => {

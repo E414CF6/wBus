@@ -22,19 +22,19 @@ interface FullTimetableTableProps {
 }
 
 export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
-    dayType,
-    originName,
-    destName,
-    hourlyLocation,
-    filteredTimetable,
-    nextDepInfo,
-    tableSearch,
-    onTableSearchChange,
-    tableRef,
-    onScrollToNextRow,
-    onExportCsv,
-    embedded = false,
-}) => (
+                                                                          dayType,
+                                                                          originName,
+                                                                          destName,
+                                                                          hourlyLocation,
+                                                                          filteredTimetable,
+                                                                          nextDepInfo,
+                                                                          tableSearch,
+                                                                          onTableSearchChange,
+                                                                          tableRef,
+                                                                          onScrollToNextRow,
+                                                                          onExportCsv,
+                                                                          embedded = false,
+                                                                      }) => (
     <div className="space-y-3">
         <div
             className={`flex ${
@@ -98,90 +98,93 @@ export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
             className="max-h-96 overflow-auto overscroll-contain rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11131a] shadow-xs custom-scrollbar focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
         >
             <table className="w-full min-w-[520px] sm:min-w-full border-collapse text-left text-xs">
-                <thead className="sticky top-0 z-20 bg-slate-100/95 dark:bg-[#161922]/95 backdrop-blur-md text-slate-700 dark:text-slate-200 border-b border-black/5 dark:border-white/10 font-extrabold">
-                    <tr>
-                        <th
-                            scope="col"
-                            className="sticky left-0 z-30 bg-slate-100 dark:bg-[#161922] py-2 px-2.5 w-12 text-center whitespace-nowrap border-r border-black/5 dark:border-white/10"
-                        >
-                            회차
-                        </th>
-                        <th
-                            scope="col"
-                            className={`py-2 px-3 whitespace-nowrap border-r border-black/5 dark:border-white/10 transition-colors ${
-                                hourlyLocation === "origin"
-                                    ? "bg-blue-100/70 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100"
-                                    : ""
-                            }`}
-                        >
-                            <div className="flex items-center gap-1 whitespace-nowrap">
-                                <span>기점 출발 ({originName})</span>
-                                {hourlyLocation === "origin" && (
-                                    <span className="px-1 py-0.2 rounded text-[9px] font-black bg-blue-600 text-white shrink-0">
+                <thead
+                    className="sticky top-0 z-20 bg-slate-100/95 dark:bg-[#161922]/95 backdrop-blur-md text-slate-700 dark:text-slate-200 border-b border-black/5 dark:border-white/10 font-extrabold">
+                <tr>
+                    <th
+                        scope="col"
+                        className="sticky left-0 z-30 bg-slate-100 dark:bg-[#161922] py-2 px-2.5 w-12 text-center whitespace-nowrap border-r border-black/5 dark:border-white/10"
+                    >
+                        회차
+                    </th>
+                    <th
+                        scope="col"
+                        className={`py-2 px-3 whitespace-nowrap border-r border-black/5 dark:border-white/10 transition-colors ${
+                            hourlyLocation === "origin"
+                                ? "bg-blue-100/70 dark:bg-blue-900/40 text-blue-900 dark:text-blue-100"
+                                : ""
+                        }`}
+                    >
+                        <div className="flex items-center gap-1 whitespace-nowrap">
+                            <span>기점 출발 ({originName})</span>
+                            {hourlyLocation === "origin" && (
+                                <span
+                                    className="px-1 py-0.2 rounded text-[9px] font-black bg-blue-600 text-white shrink-0">
                                         기준
                                     </span>
-                                )}
-                            </div>
-                        </th>
-                        <th
-                            scope="col"
-                            className={`py-2 px-3 whitespace-nowrap border-r border-black/5 dark:border-white/10 transition-colors ${
-                                hourlyLocation === "dest"
-                                    ? "bg-amber-100/70 dark:bg-amber-900/40 text-amber-900 dark:text-amber-100"
-                                    : ""
-                            }`}
-                        >
-                            <div className="flex items-center gap-1 whitespace-nowrap">
-                                <span>회차지 출발 ({destName})</span>
-                                {hourlyLocation === "dest" && (
-                                    <span className="px-1 py-0.2 rounded text-[9px] font-black bg-amber-600 text-white shrink-0">
+                            )}
+                        </div>
+                    </th>
+                    <th
+                        scope="col"
+                        className={`py-2 px-3 whitespace-nowrap border-r border-black/5 dark:border-white/10 transition-colors ${
+                            hourlyLocation === "dest"
+                                ? "bg-amber-100/70 dark:bg-amber-900/40 text-amber-900 dark:text-amber-100"
+                                : ""
+                        }`}
+                    >
+                        <div className="flex items-center gap-1 whitespace-nowrap">
+                            <span>회차지 출발 ({destName})</span>
+                            {hourlyLocation === "dest" && (
+                                <span
+                                    className="px-1 py-0.2 rounded text-[9px] font-black bg-amber-600 text-white shrink-0">
                                         기준
                                     </span>
-                                )}
-                            </div>
-                        </th>
-                        <th scope="col" className="py-2 px-3 whitespace-nowrap min-w-[120px]">비고</th>
-                    </tr>
+                            )}
+                        </div>
+                    </th>
+                    <th scope="col" className="py-2 px-3 whitespace-nowrap min-w-[120px]">비고</th>
+                </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5 dark:divide-white/5">
-                    {filteredTimetable.length === 0 ? (
-                        <tr>
-                            <td colSpan={4} className="py-8 text-center text-slate-400">
-                                일치하는 운행 회차가 없습니다.
-                            </td>
-                        </tr>
-                    ) : (
-                        filteredTimetable.map((row) => {
-                            const isNextOrigin = nextDepInfo?.nextOrigin?.seq === row.seq;
-                            const isNextDest = nextDepInfo?.nextDest?.seq === row.seq;
-                            const isTargetNext = hourlyLocation === "origin" ? isNextOrigin : isNextDest;
+                {filteredTimetable.length === 0 ? (
+                    <tr>
+                        <td colSpan={4} className="py-8 text-center text-slate-400">
+                            일치하는 운행 회차가 없습니다.
+                        </td>
+                    </tr>
+                ) : (
+                    filteredTimetable.map((row) => {
+                        const isNextOrigin = nextDepInfo?.nextOrigin?.seq === row.seq;
+                        const isNextDest = nextDepInfo?.nextDest?.seq === row.seq;
+                        const isTargetNext = hourlyLocation === "origin" ? isNextOrigin : isNextDest;
 
-                            return (
-                                <tr
-                                    key={row.seq}
-                                    data-next-departure={isNextOrigin || isNextDest ? "true" : undefined}
-                                    data-target-next={isTargetNext ? "true" : undefined}
-                                    className={`cv-auto-row ${
+                        return (
+                            <tr
+                                key={row.seq}
+                                data-next-departure={isNextOrigin || isNextDest ? "true" : undefined}
+                                data-target-next={isTargetNext ? "true" : undefined}
+                                className={`cv-auto-row ${
+                                    isNextOrigin || isNextDest
+                                        ? "bg-blue-50/80 dark:bg-blue-950/40 font-bold"
+                                        : "hover:bg-slate-50 dark:hover:bg-white/[0.02]"
+                                }`}
+                            >
+                                <th
+                                    scope="row"
+                                    className={`sticky left-0 z-10 py-2 px-2.5 text-center font-mono font-medium whitespace-nowrap text-slate-400 border-r border-black/5 dark:border-white/10 ${
                                         isNextOrigin || isNextDest
-                                            ? "bg-blue-50/80 dark:bg-blue-950/40 font-bold"
-                                            : "hover:bg-slate-50 dark:hover:bg-white/[0.02]"
+                                            ? "bg-blue-50 dark:bg-[#141c33]"
+                                            : "bg-white dark:bg-[#11131a]"
                                     }`}
                                 >
-                                    <th
-                                        scope="row"
-                                        className={`sticky left-0 z-10 py-2 px-2.5 text-center font-mono font-medium whitespace-nowrap text-slate-400 border-r border-black/5 dark:border-white/10 ${
-                                            isNextOrigin || isNextDest
-                                                ? "bg-blue-50 dark:bg-[#141c33]"
-                                                : "bg-white dark:bg-[#11131a]"
-                                        }`}
-                                    >
-                                        {row.seq}
-                                    </th>
-                                    <td
-                                        className={`py-2 px-3 font-mono whitespace-nowrap border-r border-black/5 dark:border-white/10 ${
-                                            hourlyLocation === "origin" ? "bg-blue-50/40 dark:bg-blue-950/20" : ""
-                                        }`}
-                                    >
+                                    {row.seq}
+                                </th>
+                                <td
+                                    className={`py-2 px-3 font-mono whitespace-nowrap border-r border-black/5 dark:border-white/10 ${
+                                        hourlyLocation === "origin" ? "bg-blue-50/40 dark:bg-blue-950/20" : ""
+                                    }`}
+                                >
                                         <span
                                             className={
                                                 isNextOrigin
@@ -191,12 +194,12 @@ export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
                                         >
                                             {row.originDepTime}
                                         </span>
-                                    </td>
-                                    <td
-                                        className={`py-2 px-3 font-mono whitespace-nowrap border-r border-black/5 dark:border-white/10 ${
-                                            hourlyLocation === "dest" ? "bg-amber-50/40 dark:bg-amber-950/20" : ""
-                                        }`}
-                                    >
+                                </td>
+                                <td
+                                    className={`py-2 px-3 font-mono whitespace-nowrap border-r border-black/5 dark:border-white/10 ${
+                                        hourlyLocation === "dest" ? "bg-amber-50/40 dark:bg-amber-950/20" : ""
+                                    }`}
+                                >
                                         <span
                                             className={
                                                 isNextDest
@@ -206,14 +209,14 @@ export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
                                         >
                                             {row.destDepTime}
                                         </span>
-                                    </td>
-                                    <td className="py-2 px-3 text-slate-600 dark:text-slate-400">
-                                        {row.notes || "-"}
-                                    </td>
-                                </tr>
-                            );
-                        })
-                    )}
+                                </td>
+                                <td className="py-2 px-3 text-slate-600 dark:text-slate-400">
+                                    {row.notes || "-"}
+                                </td>
+                            </tr>
+                        );
+                    })
+                )}
                 </tbody>
             </table>
         </div>

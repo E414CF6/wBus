@@ -1,8 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import {useRouter, useSearchParams} from "next/navigation";
-import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import React, {useCallback, useEffect, useMemo, useState} from "react";
 
 import {useBusRouteMap} from "@entities/route/hooks";
 import {useCityContext, useCityFeatures} from "@entities/city";
@@ -12,11 +11,9 @@ import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
 import {RouteScheduleModal} from "@features/map-view/RouteScheduleModal";
 import {OnboardingModal} from "@features/onboarding";
 
-import {buildPageHref, resolveSpecialPageFromSearch, SPECIAL_PAGE_IDS,} from "@shared/config/pages";
-import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {isWeekend} from "@shared/lib/timeUtils";
 import {BottomNav} from "@widgets/BottomNav";
-import {buildMapUrl, useAppNavigation} from "./hooks/useAppNavigation";
+import {useAppNavigation} from "./hooks/useAppNavigation";
 
 const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
     ssr: false,
@@ -24,55 +21,8 @@ const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
 const RouteLayer = dynamic(() => import("@widgets/MapContainer/RouteLayer"), {
     ssr: false,
 });
-const YonseiCampusPage = dynamic(
-    () => import("@widgets/YonseiCampusPage/YonseiCampusPage"),
-    {ssr: false}
-);
-const WikiDirectoryPage = dynamic(
-    () => import("@widgets/WikiDirectory/WikiDirectoryPage"),
-    {ssr: false}
-);
 
 export function AppShell() {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const {settings, hasLoadedSettings, isOnboardingOpen} = useAppSettings();
-
-    const activeSpecialPage = useMemo(
-        () => resolveSpecialPageFromSearch(searchParams),
-        [searchParams]
-    );
-
-    const hasCheckedInitialStartPageRef = useRef(false);
-
-    // Redirect root "/" (with empty query string) to "/?page=yonsei_mirae" on initial load if configured as default start page
-    useEffect(() => {
-        if (hasCheckedInitialStartPageRef.current) return;
-        if (!hasLoadedSettings) return;
-        if (isOnboardingOpen || !settings.hasCompletedOnboarding) return;
-        hasCheckedInitialStartPageRef.current = true;
-        if (settings.defaultStartPage !== "yonsei") return;
-        if (activeSpecialPage !== null) return;
-        if (typeof window === "undefined") return;
-        if (window.location.pathname === "/" && window.location.search === "") {
-            router.replace(buildPageHref(SPECIAL_PAGE_IDS.YONSEI_MIRAE));
-        }
-    }, [
-        hasLoadedSettings,
-        isOnboardingOpen,
-        settings.hasCompletedOnboarding,
-        settings.defaultStartPage,
-        activeSpecialPage,
-        router,
-    ]);
-
-    if (activeSpecialPage === SPECIAL_PAGE_IDS.YONSEI_MIRAE) {
-        return <YonseiCampusPage/>;
-    }
-    if (activeSpecialPage === SPECIAL_PAGE_IDS.WIKI) {
-        return <WikiDirectoryPage/>;
-    }
-
     return <MapAppShell/>;
 }
 
@@ -82,7 +32,6 @@ function MapAppShell() {
         setDayMode,
         selectedRoute,
         handleRouteChange,
-        isScheduleRoute,
     } = useAppNavigation();
 
     // Live weekend check for timetable badge
@@ -124,8 +73,8 @@ function MapAppShell() {
     }, [isCityReady, routeMap, selectedRoute, defaultRoute, currentCity.code]);
     const isRouteDataEnabled = isCityReady && hasRouteMap && Boolean(activeRoute);
 
-    // Centered floating RouteScheduleModal state (for cities with detailed timetable or direct /schedule visit)
-    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(isScheduleRoute);
+    // Centered floating RouteScheduleModal state (for cities with detailed timetable)
+    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
     const [scheduleLocation, setScheduleLocation] = useState<"origin" | "dest">("dest");
 
     // Handler for opening the centered Route Timetable Modal from Map Pins or Route Header
@@ -163,7 +112,6 @@ function MapAppShell() {
     useEffect(() => {
         if (!isCityReady || !hasRouteMap) return;
         if (!activeRoute || activeRoute === selectedRoute) return;
-        if (isScheduleRoute && isScheduleModalOpen) return;
         if (typeof window !== "undefined") {
             const params = new URLSearchParams(window.location.search);
             const urlCityCode = params.get("cityCode") || params.get("city");
@@ -177,8 +125,6 @@ function MapAppShell() {
         hasRouteMap,
         activeRoute,
         selectedRoute,
-        isScheduleRoute,
-        isScheduleModalOpen,
         currentCity.code,
         handleRouteChange,
     ]);
@@ -225,17 +171,12 @@ function MapAppShell() {
                 </MapWrapper>
             </div>
 
-            {/* 2. Centered Floating Full Route Timetable Modal (Cities with detailed timetable or /schedule) */}
-            {(hasDetailedTimetable || isScheduleRoute) && (
+            {/* 2. Centered Floating Full Route Timetable Modal (Cities with detailed timetable) */}
+            {hasDetailedTimetable && (
                 <RouteScheduleModal
                     isOpen={isScheduleModalOpen}
                     routeName={activeRoute}
-                    onClose={() => {
-                        setIsScheduleModalOpen(false);
-                        if (isScheduleRoute && typeof window !== "undefined") {
-                            window.history.replaceState(null, "", buildMapUrl(activeRoute, currentCity.code));
-                        }
-                    }}
+                    onClose={() => setIsScheduleModalOpen(false)}
                     dayMode={dayMode}
                     isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
                     initialLocation={scheduleLocation}

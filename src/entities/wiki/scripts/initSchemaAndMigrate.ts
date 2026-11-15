@@ -6,6 +6,7 @@ import * as schema from "../../../shared/db/schema";
 import {wikiPages, wikiRevisions} from "../../../shared/db/schema";
 import {computeWikiDelta, shouldStoreCheckpoint} from "../lib/wikiDelta";
 import {computeWikiDiffStats} from "../lib/wikiDiff";
+import {LEGACY_WIKI_SLUG_ALIASES} from "../schemas";
 import {getSeedWikiPages, PINNED_WIKI_SLUGS} from "../seeds";
 import type {WikiPageDocument, WikiRevision} from "../types";
 
@@ -36,6 +37,55 @@ async function main() {
             CREATE INDEX IF NOT EXISTS wiki_pages_markdown_trgm_idx
                 ON wiki_pages USING gin (markdown_body gin_trgm_ops);
         `);
+
+        for (const [legacySlug, canonicalSlug] of Object.entries(LEGACY_WIKI_SLUG_ALIASES)) {
+            const legacyRows = await db
+                .select()
+                .from(wikiPages)
+                .where(eq(wikiPages.slug, legacySlug))
+                .limit(1);
+            const canonicalRows = await db
+                .select({slug: wikiPages.slug})
+                .from(wikiPages)
+                .where(eq(wikiPages.slug, canonicalSlug))
+                .limit(1);
+            const oldRow = legacyRows[0];
+            if (oldRow && canonicalRows.length === 0) {
+                await db.transaction(async (tx) => {
+                    await tx
+                        .insert(wikiPages)
+                        .values({
+                            slug: canonicalSlug,
+                            title: oldRow.title,
+                            subtitle: oldRow.subtitle,
+                            category: oldRow.category,
+                            cityCode: oldRow.cityCode,
+                            tags: oldRow.tags,
+                            tagsText: oldRow.tagsText,
+                            version: oldRow.version,
+                            isProtected: oldRow.isProtected,
+                            pinned: PINNED_WIKI_SLUGS.has(canonicalSlug) || oldRow.pinned,
+                            lastEditorNickname: oldRow.lastEditorNickname,
+                            lastEditorId: oldRow.lastEditorId,
+                            linkedRoutes: oldRow.linkedRoutes,
+                            shuttle: oldRow.shuttle,
+                            boardingStops: oldRow.boardingStops,
+                            markdownBody: oldRow.markdownBody,
+                            createdAt: oldRow.createdAt,
+                            updatedAt: oldRow.updatedAt,
+                        })
+                        .onConflictDoNothing({target: wikiPages.slug});
+
+                    await tx
+                        .update(wikiRevisions)
+                        .set({slug: canonicalSlug})
+                        .where(eq(wikiRevisions.slug, legacySlug));
+
+                    await tx.delete(wikiPages).where(eq(wikiPages.slug, legacySlug));
+                });
+                console.log(`[Wiki Migration] Migrated legacy slug '${legacySlug}' -> '${canonicalSlug}'.`);
+            }
+        }
 
         const seeds = getSeedWikiPages();
         for (const seed of seeds) {

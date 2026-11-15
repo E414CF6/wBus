@@ -19,12 +19,7 @@ import {
     TELEPORT_COORD_THRESHOLD,
     VELOCITY_TAU_MS,
 } from "./constants";
-import {
-    computeCumulativeDistances,
-    polylineScalarDist,
-    positionFromSegT,
-    scalarToSegT,
-} from "./scalarGeometry";
+import {computeCumulativeDistances, polylineScalarDist, positionFromSegT, scalarToSegT,} from "./scalarGeometry";
 import {getStopSpeedMultiplier} from "./speedModulation";
 
 export interface InitialSnapResult {

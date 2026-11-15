@@ -5,7 +5,6 @@ import {setHapticEnabled} from "@shared/utils/haptics";
 export const SETTINGS_COOKIE_NAME = "wbus_settings";
 export const SETTINGS_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
-export type DefaultStartPage = "map" | "yonsei";
 export type YonseiDefaultDirection = "AUTO" | "OUTBOUND" | "INBOUND";
 export type LivePollingIntervalMs = 5000 | 10000 | 15000 | 30000;
 export type FontScale = "normal" | "large";
@@ -18,7 +17,6 @@ export const LIVE_POLLING_INTERVAL_OPTIONS: readonly LivePollingIntervalMs[] = [
 ];
 
 export interface AppSettings {
-    defaultStartPage: DefaultStartPage;
     showYonseiFeatures: boolean;
     yonseiDefaultDirection: YonseiDefaultDirection;
     defaultDayMode: DayMode;
@@ -39,7 +37,6 @@ export interface AppSettings {
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
-    defaultStartPage: "map",
     showYonseiFeatures: true,
     yonseiDefaultDirection: "AUTO",
     defaultDayMode: "AUTO",
@@ -65,11 +62,6 @@ function sanitizeSettings(raw: unknown): AppSettings {
     }
 
     const obj = raw as Record<string, unknown>;
-
-    const defaultStartPage: DefaultStartPage =
-        obj.defaultStartPage === "yonsei" || obj.defaultStartPage === "map"
-            ? obj.defaultStartPage
-            : DEFAULT_APP_SETTINGS.defaultStartPage;
 
     const showYonseiFeatures: boolean =
         typeof obj.showYonseiFeatures === "boolean"
@@ -164,7 +156,6 @@ function sanitizeSettings(raw: unknown): AppSettings {
             : DEFAULT_APP_SETTINGS.fontScale;
 
     return {
-        defaultStartPage,
         showYonseiFeatures,
         yonseiDefaultDirection,
         defaultDayMode,

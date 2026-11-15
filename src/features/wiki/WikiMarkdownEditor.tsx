@@ -11,10 +11,10 @@ export interface WikiMarkdownEditorProps {
 }
 
 export const WikiMarkdownEditor: React.FC<WikiMarkdownEditorProps> = ({
-    value,
-    onChange,
-    cityCode = "32020",
-}) => {
+                                                                          value,
+                                                                          onChange,
+                                                                          cityCode = "32020",
+                                                                      }) => {
     const [mode, setMode] = useState<"write" | "preview">("write");
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -51,7 +51,7 @@ export const WikiMarkdownEditor: React.FC<WikiMarkdownEditorProps> = ({
         {
             label: "위키 링크",
             icon: <BookOpen className="w-3.5 h-3.5"/>,
-            snippet: "[[yonsei-mirae|연세대 미래캠퍼스]]",
+            snippet: "[[연세대학교 미래캠퍼스|연세대 미래캠퍼스]]",
         },
         {
             label: "노선 배지",
@@ -115,21 +115,25 @@ export const WikiMarkdownEditor: React.FC<WikiMarkdownEditorProps> = ({
             {mode === "write" ? (
                 <div className="space-y-1.5">
                     <textarea
+                        id="wiki-markdown-editor"
+                        name="markdown"
+                        aria-label="위키 본문 마크다운"
                         ref={textareaRef}
                         value={value}
                         onChange={(e) => onChange(e.target.value)}
                         rows={14}
-                        placeholder="마크다운으로 교통 팁, 환승 정보, 정류장 주의사항을 자유롭게 작성하세요. [[slug]]로 위키 문서 링크, [[route:32020:30]]로 실시간 노선 배지를 넣을 수 있습니다."
+                        placeholder="마크다운으로 교통 팁, 환승 정보, 정류장 주의사항을 자유롭게 작성하세요. [[문서 제목]]으로 위키 문서 링크, [[route:32020:30]]로 실시간 노선 배지를 넣을 수 있습니다."
                         className="w-full p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.04] border border-slate-200/85 dark:border-white/10 focus:border-[#003876] dark:focus:border-blue-400 text-xs sm:text-sm font-mono leading-relaxed text-slate-900 dark:text-slate-100 outline-none resize-y"
                     />
                     <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                        위키 문법: <code className="font-mono">[[문서슬러그|표시명]]</code> ·{" "}
+                        위키 문법: <code className="font-mono">[[문서 제목|표시명]]</code> ·{" "}
                         <code className="font-mono">[[route:도시코드:노선번호]]</code> ·{" "}
                         <code className="font-mono">[[roadview:위도,경도,라벨]]</code>
                     </p>
                 </div>
             ) : (
-                <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10 min-h-[240px]">
+                <div
+                    className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10 min-h-[240px]">
                     <WikiMarkdownRenderer markdown={value} showToc/>
                 </div>
             )}

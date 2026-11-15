@@ -1,8 +1,13 @@
 import type {WikiPageDocument} from "../types";
-import {createWonjuStationSeed, createWonjuTerminalSeed} from "./wonjuHubSeeds";
+import {
+    createWonjuStationSeed,
+    createWonjuTerminalSeed,
+    WONJU_STATION_WIKI_SLUG,
+    WONJU_TERMINAL_WIKI_SLUG,
+} from "./wonjuHubSeeds";
 import {createYonseiMiraeSeed, YONSEI_MIRAE_WIKI_SLUG} from "./yonseiMiraeSeed";
 
-export {YONSEI_MIRAE_WIKI_SLUG};
+export {YONSEI_MIRAE_WIKI_SLUG, WONJU_TERMINAL_WIKI_SLUG, WONJU_STATION_WIKI_SLUG};
 
 export function getSeedWikiPages(): WikiPageDocument[] {
     return [
@@ -13,12 +18,12 @@ export function getSeedWikiPages(): WikiPageDocument[] {
 }
 
 export function getSeedWikiPage(slug: string): WikiPageDocument | null {
-    const normalized = slug.trim().toLowerCase();
+    const normalized = slug.trim();
     return getSeedWikiPages().find((p) => p.slug === normalized) ?? null;
 }
 
 export const PINNED_WIKI_SLUGS = new Set<string>([
     YONSEI_MIRAE_WIKI_SLUG,
-    "wonju-terminal",
-    "wonju-station",
+    WONJU_TERMINAL_WIKI_SLUG,
+    WONJU_STATION_WIKI_SLUG,
 ]);

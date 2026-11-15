@@ -30,25 +30,25 @@ export interface MarkerItemComponentProps {
 }
 
 export const MarkerItemComponent = memo(function MarkerItemComponent({
-    markerKey,
-    bus,
-    position,
-    angle,
-    polyline,
-    snapIndexHint,
-    stopCoordIndices,
-    refreshKey,
-    markerColor,
-    isSelected,
-    isFollowed,
-    showPlateNumber = false,
-    routeName,
-    effectiveAnimationDuration,
-    effectivePollingIntervalMs,
-    effectiveDataDelayMs,
-    onPositionChange,
-    onClick,
-}: MarkerItemComponentProps) {
+                                                                         markerKey,
+                                                                         bus,
+                                                                         position,
+                                                                         angle,
+                                                                         polyline,
+                                                                         snapIndexHint,
+                                                                         stopCoordIndices,
+                                                                         refreshKey,
+                                                                         markerColor,
+                                                                         isSelected,
+                                                                         isFollowed,
+                                                                         showPlateNumber = false,
+                                                                         routeName,
+                                                                         effectiveAnimationDuration,
+                                                                         effectivePollingIntervalMs,
+                                                                         effectiveDataDelayMs,
+                                                                         onPositionChange,
+                                                                         onClick,
+                                                                     }: MarkerItemComponentProps) {
     const handlePosChange = useCallback(
         (pos: Coordinate) => {
             onPositionChange?.(markerKey, pos);

@@ -2,13 +2,7 @@
 
 import {useCallback, useSyncExternalStore} from "react";
 import useSWR from "swr";
-import type {
-    WikiCategory,
-    WikiIndexData,
-    WikiPageDocument,
-    WikiRevision,
-    WikiRevisionMeta,
-} from "./types";
+import type {WikiCategory, WikiIndexData, WikiPageDocument, WikiRevision, WikiRevisionMeta,} from "./types";
 
 const WIKI_NICKNAME_KEY = "wbus_wiki_nickname_v1";
 

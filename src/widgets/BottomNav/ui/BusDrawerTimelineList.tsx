@@ -28,31 +28,32 @@ interface BusDrawerTimelineListProps {
 }
 
 export const BusDrawerTimelineList: React.FC<BusDrawerTimelineListProps> = ({
-    listRef,
-    currentStopsCount,
-    filteredStops,
-    stopSearchQuery,
-    busesByStopKey,
-    selectedStopId,
-    turningStop,
-    nearestBusVehicleNo,
-    isFavoriteStop,
-    toggleFavoriteStop,
-    onStopClick,
-    onBusBadgeClick,
-    metaThemeMainColor,
-    metaThemeBadgeBg,
-    metaThemeBg,
-    metaThemeText,
-    metaThemeShadow,
-}) => {
+                                                                                listRef,
+                                                                                currentStopsCount,
+                                                                                filteredStops,
+                                                                                stopSearchQuery,
+                                                                                busesByStopKey,
+                                                                                selectedStopId,
+                                                                                turningStop,
+                                                                                nearestBusVehicleNo,
+                                                                                isFavoriteStop,
+                                                                                toggleFavoriteStop,
+                                                                                onStopClick,
+                                                                                onBusBadgeClick,
+                                                                                metaThemeMainColor,
+                                                                                metaThemeBadgeBg,
+                                                                                metaThemeBg,
+                                                                                metaThemeText,
+                                                                                metaThemeShadow,
+                                                                            }) => {
     return (
         <div
             ref={listRef}
             className="flex-1 overflow-y-auto overscroll-contain custom-scrollbar relative min-h-0 border-t border-slate-100 dark:border-white/[0.07] pb-3"
         >
             {currentStopsCount === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
+                <div
+                    className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500 gap-3">
                     <Loader2
                         className={`w-6 h-6 animate-spin ${metaThemeText || "text-blue-600 dark:text-blue-400"}`}
                     />

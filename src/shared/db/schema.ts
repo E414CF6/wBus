@@ -1,14 +1,4 @@
-import {
-    bigint,
-    boolean,
-    index,
-    integer,
-    jsonb,
-    pgTable,
-    text,
-    timestamp,
-    uniqueIndex,
-} from "drizzle-orm/pg-core";
+import {bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex,} from "drizzle-orm/pg-core";
 import type {
     WikiBoardingStop,
     WikiCategory,

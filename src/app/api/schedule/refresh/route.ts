@@ -25,7 +25,6 @@ async function handleRefresh(request: NextRequest) {
             try {
                 invalidateScheduleTag();
                 revalidatePath("/api/schedule");
-                revalidatePath("/schedule");
             } catch (revalidateErr) {
                 console.warn("[ScheduleRefresh] revalidate error:", revalidateErr);
             }

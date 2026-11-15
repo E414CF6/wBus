@@ -1,11 +1,6 @@
 import {type NextRequest, NextResponse} from "next/server";
-import {WIKI_CATEGORIES, WikiCreatePayloadSchema, type WikiCategory} from "@entities/wiki";
-import {
-    createWikiPage,
-    enforceWikiRateLimit,
-    listWikiPages,
-    resolveEditorInfo,
-} from "@entities/wiki/server";
+import {WIKI_CATEGORIES, type WikiCategory, WikiCreatePayloadSchema} from "@entities/wiki";
+import {createWikiPage, enforceWikiRateLimit, listWikiPages, resolveEditorInfo,} from "@entities/wiki/server";
 import {extractClientIp, handleWikiApiError, WIKI_NO_STORE_HEADERS} from "./wikiApiUtils";
 
 export const dynamic = "force-dynamic";

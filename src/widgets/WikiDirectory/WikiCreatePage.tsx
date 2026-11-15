@@ -45,10 +45,8 @@ export const WikiCreatePage: React.FC<WikiCreatePageProps> = ({initialSlug = ""}
     const router = useRouter();
     const {storedNickname, saveNickname} = useWikiNickname();
 
-    const normalizedInitialSlug = normalizeWikiSlug(initialSlug);
-    const [title, setTitle] = useState(initialSlug && !normalizedInitialSlug ? initialSlug : "");
-    const [slug, setSlug] = useState(normalizedInitialSlug);
-    const [slugTouched, setSlugTouched] = useState(Boolean(normalizedInitialSlug));
+    const initialNormalized = normalizeWikiSlug(initialSlug);
+    const [title, setTitle] = useState(initialNormalized || initialSlug.trim());
     const [subtitle, setSubtitle] = useState("");
     const [category, setCategory] = useState<WikiCategory>("guide");
     const [cityCode, setCityCode] = useState("32020");
@@ -64,22 +62,12 @@ export const WikiCreatePage: React.FC<WikiCreatePageProps> = ({initialSlug = ""}
     const [isSaving, setIsSaving] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-    const handleTitleChange = (nextTitle: string) => {
-        setTitle(nextTitle);
-        if (!slugTouched) {
-            setSlug(normalizeWikiSlug(nextTitle));
-        }
-    };
+    const derivedSlug = normalizeWikiSlug(title);
 
     const handleCreate = async () => {
         if (isSaving) return;
-        const normalizedSlug = normalizeWikiSlug(slug);
-        if (!isValidWikiSlug(normalizedSlug)) {
-            setErrorMessage("슬러그는 2~64자의 한글, 영문 소문자, 숫자, 하이픈(-)만 사용할 수 있습니다.");
-            return;
-        }
-        if (title.trim().length < 2) {
-            setErrorMessage("문서 제목을 2자 이상 입력해 주세요.");
+        if (!isValidWikiSlug(derivedSlug)) {
+            setErrorMessage("문서 제목(슬러그)은 2~80자여야 하며 예약어(new, edit, api 등)나 URL 특수문자(/ ? # %)를 사용할 수 없습니다.");
             return;
         }
 
@@ -101,8 +89,8 @@ export const WikiCreatePage: React.FC<WikiCreatePageProps> = ({initialSlug = ""}
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
-                    slug: normalizedSlug,
-                    title: title.trim(),
+                    slug: derivedSlug,
+                    title: derivedSlug,
                     subtitle: subtitle.trim(),
                     category,
                     cityCode: cityCode.trim() || undefined,
@@ -138,7 +126,8 @@ export const WikiCreatePage: React.FC<WikiCreatePageProps> = ({initialSlug = ""}
 
     return (
         <div className="min-h-screen bg-[#f4f7fb] dark:bg-[#080c15] text-slate-900 dark:text-slate-100 flex flex-col">
-            <header className="sticky top-0 z-30 backdrop-blur-2xl bg-white/88 dark:bg-[#0b101b]/88 border-b border-slate-200/80 dark:border-white/[0.08]">
+            <header
+                className="sticky top-0 z-30 backdrop-blur-2xl bg-white/88 dark:bg-[#0b101b]/88 border-b border-slate-200/80 dark:border-white/[0.08]">
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
                         <Link
@@ -157,44 +146,45 @@ export const WikiCreatePage: React.FC<WikiCreatePageProps> = ({initialSlug = ""}
             </header>
 
             <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 space-y-5">
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/95 p-4 sm:p-5 shadow-sm space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div
+                    className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/95 p-4 sm:p-5 shadow-sm space-y-4">
+                    <div className="space-y-3">
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                                문서 제목 *
-                            </label>
+                            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                                <label
+                                    htmlFor="wiki-create-title"
+                                    className="block text-[11px] font-bold text-slate-500 dark:text-slate-400"
+                                >
+                                    문서 제목 * (한국어 제목이 그대로 문서 주소가 됩니다)
+                                </label>
+                                <span
+                                    className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate max-w-full">
+                                    /wiki/{derivedSlug || "문서 제목"}
+                                </span>
+                            </div>
                             <input
+                                id="wiki-create-title"
+                                name="title"
                                 type="text"
                                 value={title}
-                                onChange={(e) => handleTitleChange(e.target.value)}
+                                onChange={(e) => setTitle(e.target.value)}
                                 placeholder="예: 원주고속터미널 정류장 가이드"
                                 maxLength={80}
                                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-sm font-black"
                             />
                         </div>
-                        <div>
-                            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
-                                문서 URL 슬러그 * (/wiki/슬러그)
-                            </label>
-                            <input
-                                type="text"
-                                value={slug}
-                                onChange={(e) => {
-                                    setSlugTouched(true);
-                                    setSlug(e.target.value.toLowerCase());
-                                }}
-                                placeholder="예: wonju-express-terminal"
-                                maxLength={64}
-                                className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-sm font-mono"
-                            />
-                        </div>
                     </div>
 
                     <div>
-                        <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                        <label
+                            htmlFor="wiki-create-subtitle"
+                            className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
+                        >
                             한 줄 부제목
                         </label>
                         <input
+                            id="wiki-create-subtitle"
+                            name="subtitle"
                             type="text"
                             value={subtitle}
                             onChange={(e) => setSubtitle(e.target.value)}
@@ -206,10 +196,15 @@ export const WikiCreatePage: React.FC<WikiCreatePageProps> = ({initialSlug = ""}
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                            <label
+                                htmlFor="wiki-create-category"
+                                className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
+                            >
                                 카테고리
                             </label>
                             <select
+                                id="wiki-create-category"
+                                name="category"
                                 value={category}
                                 onChange={(e) => setCategory(e.target.value as WikiCategory)}
                                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold"
@@ -222,10 +217,15 @@ export const WikiCreatePage: React.FC<WikiCreatePageProps> = ({initialSlug = ""}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                            <label
+                                htmlFor="wiki-create-city"
+                                className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
+                            >
                                 연결 지역 (선택)
                             </label>
                             <select
+                                id="wiki-create-city"
+                                name="cityCode"
                                 value={cityCode}
                                 onChange={(e) => setCityCode(e.target.value)}
                                 className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold"
@@ -239,10 +239,15 @@ export const WikiCreatePage: React.FC<WikiCreatePageProps> = ({initialSlug = ""}
                             </select>
                         </div>
                         <div>
-                            <label className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1">
+                            <label
+                                htmlFor="wiki-create-tags"
+                                className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
+                            >
                                 태그 (쉼표로 구분)
                             </label>
                             <input
+                                id="wiki-create-tags"
+                                name="tags"
                                 type="text"
                                 value={tagsText}
                                 onChange={(e) => setTagsText(e.target.value)}
@@ -254,7 +259,8 @@ export const WikiCreatePage: React.FC<WikiCreatePageProps> = ({initialSlug = ""}
                 </div>
 
                 {/* Section Switcher */}
-                <div className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
+                <div
+                    className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
                     {[
                         {id: "markdown" as const, label: "위키 본문 (마크다운)"},
                         {id: "routes" as const, label: `시내버스 노선 (${linkedRoutes.length})`},

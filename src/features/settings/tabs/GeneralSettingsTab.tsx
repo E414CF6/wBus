@@ -22,12 +22,12 @@ interface GeneralSettingsTabProps {
 }
 
 export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
-    settings,
-    activeTheme,
-    onThemeChange,
-    onUpdateSettings,
-    onOpenYonseiModal,
-}) => (
+                                                                          settings,
+                                                                          activeTheme,
+                                                                          onThemeChange,
+                                                                          onUpdateSettings,
+                                                                          onOpenYonseiModal,
+                                                                      }) => (
     <>
         <section className="space-y-2.5">
             <SettingsSectionHeader
@@ -180,7 +180,8 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
                 className="w-full p-3.5 rounded-2xl bg-[#003876]/[0.06] hover:bg-[#003876]/10 dark:bg-blue-500/10 dark:hover:bg-blue-500/15 border border-[#003876]/15 dark:border-blue-400/20 flex items-center justify-between gap-3 text-left transition cursor-pointer active:scale-[0.99]"
             >
                 <div className="flex items-center gap-3 min-w-0">
-                    <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#003876] text-white shrink-0 shadow-xs">
+                    <div
+                        className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#003876] text-white shrink-0 shadow-xs">
                         <GraduationCap className="w-4.5 h-4.5"/>
                     </div>
                     <div className="min-w-0">
@@ -188,8 +189,8 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
                             연세대 미래캠퍼스 설정
                         </p>
                         <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                            시작: {settings.defaultStartPage === "yonsei" ? "연세대 허브" : "실시간 지도"} ·
-                            방향: {YONSEI_DIRECTION_SUMMARY[settings.yonseiDefaultDirection]}
+                            방향: {YONSEI_DIRECTION_SUMMARY[settings.yonseiDefaultDirection]} · 지도 표시:{" "}
+                            {settings.showYonseiFeatures ? "켜짐" : "꺼짐"}
                         </p>
                     </div>
                 </div>

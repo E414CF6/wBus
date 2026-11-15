@@ -19,15 +19,15 @@ interface DataSettingsTabProps {
 }
 
 export const DataSettingsTab: React.FC<DataSettingsTabProps> = ({
-    appVersion,
-    confirmClearData,
-    onSetConfirmClearData,
-    onClose,
-    onOpenOnboarding,
-    onClearApiCache,
-    onResetSettings,
-    onClearAllData,
-}) => (
+                                                                    appVersion,
+                                                                    confirmClearData,
+                                                                    onSetConfirmClearData,
+                                                                    onClose,
+                                                                    onOpenOnboarding,
+                                                                    onClearApiCache,
+                                                                    onResetSettings,
+                                                                    onClearAllData,
+                                                                }) => (
     <>
         <section className="space-y-2.5">
             <SettingsSectionHeader
@@ -45,7 +45,8 @@ export const DataSettingsTab: React.FC<DataSettingsTabProps> = ({
                     className="w-full p-3.5 rounded-2xl bg-slate-50/90 hover:bg-slate-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border border-black/5 dark:border-white/10 flex items-center justify-between gap-3 text-left transition cursor-pointer active:scale-[0.99]"
                 >
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 shrink-0">
+                        <div
+                            className="flex items-center justify-center w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-300 shrink-0">
                             <Sparkles className="w-4 h-4"/>
                         </div>
                         <div className="min-w-0">
@@ -66,7 +67,8 @@ export const DataSettingsTab: React.FC<DataSettingsTabProps> = ({
                     className="w-full p-3.5 rounded-2xl bg-slate-50/90 hover:bg-slate-100 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border border-black/5 dark:border-white/10 flex items-center justify-between gap-3 text-left transition cursor-pointer active:scale-[0.99]"
                 >
                     <div className="flex items-center gap-3 min-w-0">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 shrink-0">
+                        <div
+                            className="flex items-center justify-center w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 shrink-0">
                             <Database className="w-4 h-4"/>
                         </div>
                         <div className="min-w-0">
@@ -111,7 +113,8 @@ export const DataSettingsTab: React.FC<DataSettingsTabProps> = ({
                         <span>즐겨찾기·캐시·쿠키 전체 초기화</span>
                     </button>
                 ) : (
-                    <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-500/30 space-y-2.5">
+                    <div
+                        className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-500/30 space-y-2.5">
                         <p className="text-xs font-bold text-rose-800 dark:text-rose-200 text-center">
                             저장된 즐겨찾기, 최근 조회, 캐시, 설정이 모두 삭제됩니다. 계속할까요?
                         </p>
