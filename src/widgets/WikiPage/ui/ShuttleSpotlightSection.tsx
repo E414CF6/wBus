@@ -2,12 +2,7 @@
 
 import React from "react";
 import {AlertCircle, Bus, Clock, GraduationCap, Info, MapPin, Table2} from "lucide-react";
-import {
-    type ShuttleBusScheduleData,
-    type ShuttleInboundItem,
-    type ShuttleOutboundItem,
-    YONSEI_SHUTTLE_SCHEDULE,
-} from "@entities/schedule";
+import {type ShuttleBusScheduleData, type ShuttleInboundItem, type ShuttleOutboundItem,} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
 import {triggerHaptic} from "@shared/utils/haptics";
 import type {CampusDirectionMode, NextShuttleResult} from "../lib/yonseiShuttleUtils";
@@ -22,7 +17,7 @@ interface ShuttleSpotlightSectionProps {
     };
     nextOutbound: NextShuttleResult<ShuttleOutboundItem> | null;
     nextInbound: NextShuttleResult<ShuttleInboundItem> | null;
-    shuttleSchedule?: ShuttleBusScheduleData;
+    shuttleSchedule: ShuttleBusScheduleData;
     onOpenShuttleModal: (tab: "OUTBOUND" | "INBOUND" | "GUIDELINES") => void;
     onOpenStopsModal: () => void;
 }
@@ -32,7 +27,7 @@ export const ShuttleSpotlightSection: React.FC<ShuttleSpotlightSectionProps> = (
                                                                                     shuttleDayType,
                                                                                     nextOutbound,
                                                                                     nextInbound,
-                                                                                    shuttleSchedule = YONSEI_SHUTTLE_SCHEDULE,
+                                                                                    shuttleSchedule,
                                                                                     onOpenShuttleModal,
                                                                                     onOpenStopsModal,
                                                                                 }) => {

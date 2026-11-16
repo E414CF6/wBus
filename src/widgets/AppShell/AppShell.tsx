@@ -6,7 +6,7 @@ import React, {useCallback, useEffect, useMemo, useState} from "react";
 
 import {useBusRouteMap} from "@entities/route/hooks";
 import {useCityContext, useCityFeatures} from "@entities/city";
-import {type WikiPageDocument, YONSEI_MIRAE_WIKI_SLUG} from "@entities/wiki";
+import {type WikiPageDocument} from "@entities/wiki";
 
 import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
@@ -18,6 +18,7 @@ import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {isWeekend} from "@shared/lib/timeUtils";
 import {BottomNav} from "@widgets/BottomNav";
 import {WikiPinModal} from "@widgets/MapContainer/ui/WikiPinModal";
+import {WikiPinListModal} from "@widgets/MapContainer/ui/WikiPinListModal";
 import {WikiCreateModal} from "@widgets/MapContainer/ui/WikiCreateModal";
 import {useAppNavigation} from "./hooks/useAppNavigation";
 
@@ -72,14 +73,18 @@ function MapAppShell() {
     // Integrated Map-Wiki state
     const searchParams = useSearchParams();
     const initialQueryWiki = searchParams.get("wiki")?.trim() || null;
-    const [activeWikiSlug, setActiveWikiSlug] = useState<string | null>(initialQueryWiki);
+    const [activeWikiModal, setActiveWikiModal] = useState<{
+        slug: string;
+        mode: "read" | "edit" | "history";
+    } | null>(() => (initialQueryWiki ? {slug: initialQueryWiki, mode: "read"} : null));
     const [prevQueryWiki, setPrevQueryWiki] = useState<string | null>(initialQueryWiki);
     if (initialQueryWiki !== prevQueryWiki) {
         setPrevQueryWiki(initialQueryWiki);
         if (initialQueryWiki) {
-            setActiveWikiSlug(initialQueryWiki);
+            setActiveWikiModal({slug: initialQueryWiki, mode: "read"});
         }
     }
+    const [isWikiPinListOpen, setIsWikiPinListOpen] = useState(false);
     const [pendingPinCoords, setPendingPinCoords] = useState<{ lat: number; lng: number } | null>(null);
     const [createWikiDraft, setCreateWikiDraft] = useState<{
         lat?: number;
@@ -94,7 +99,8 @@ function MapAppShell() {
             window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
             window.dispatchEvent(new CustomEvent("wbus:close-bus-list"));
         }
-        setActiveWikiSlug(null);
+        setIsWikiPinListOpen(false);
+        setActiveWikiModal(null);
         setIsScheduleModalOpen(false);
         if (!settings.showWikiPins) {
             updateSettings({showWikiPins: true});
@@ -129,7 +135,7 @@ function MapAppShell() {
                     duration: 650,
                 });
             }
-            setActiveWikiSlug(created.slug);
+            setActiveWikiModal({slug: created.slug, mode: "read"});
         },
         [map]
     );
@@ -276,13 +282,12 @@ function MapAppShell() {
                         dayMode={dayMode}
                         isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
                         isPinPlacementMode={isPinPlacementMode}
-                        onOpenCampusWiki={() => setActiveWikiSlug(YONSEI_MIRAE_WIKI_SLUG)}
                     />
                     <WikiPinMarker
                         enabled={settings.showWikiPins}
-                        selectedSlug={activeWikiSlug}
+                        selectedSlug={activeWikiModal?.slug ?? null}
                         isPinPlacementMode={isPinPlacementMode}
-                        onSelectWikiPin={(slug) => setActiveWikiSlug(slug)}
+                        onSelectWikiPin={(slug) => setActiveWikiModal({slug, mode: "read"})}
                     />
                     {pendingPinCoords && (
                         <WikiPinPlacementOverlay
@@ -307,15 +312,26 @@ function MapAppShell() {
                 />
             )}
 
-            {/* 2-b. In-Map Wiki Pin Reader / Editor / History Modal */}
+            {/* 2-b. In-Map Wiki Pin List Modal */}
+            <WikiPinListModal
+                isOpen={isWikiPinListOpen}
+                onClose={() => setIsWikiPinListOpen(false)}
+                onStartAddPin={handleStartAddWikiPin}
+                onSelectWikiPin={(slug, mode = "read") =>
+                    setActiveWikiModal({slug, mode})
+                }
+            />
+
+            {/* 2-c. In-Map Wiki Pin Reader / Editor / History Modal */}
             <WikiPinModal
-                slug={activeWikiSlug}
-                onClose={() => setActiveWikiSlug(null)}
-                onSelectSlug={(nextSlug) => setActiveWikiSlug(nextSlug)}
+                slug={activeWikiModal?.slug ?? null}
+                initialMode={activeWikiModal?.mode ?? "read"}
+                onClose={() => setActiveWikiModal(null)}
+                onSelectSlug={(nextSlug) => setActiveWikiModal({slug: nextSlug, mode: "read"})}
                 onSelectRouteOnMap={handleSelectRouteFromWiki}
                 onCreateNewFromSlug={(missingSlug) => {
                     const center = map?.getCenter();
-                    setActiveWikiSlug(null);
+                    setActiveWikiModal(null);
                     setCreateWikiDraft({
                         slug: missingSlug,
                         lat: center?.lat ?? currentCity.lat,
@@ -324,7 +340,7 @@ function MapAppShell() {
                 }}
             />
 
-            {/* 2-c. In-Map New Wiki Document Creation Modal */}
+            {/* 2-d. In-Map New Wiki Document Creation Modal */}
             <WikiCreateModal
                 isOpen={createWikiDraft !== null}
                 initialSlug={createWikiDraft?.slug}
@@ -357,7 +373,14 @@ function MapAppShell() {
                 hasFetched={liveBusData.hasFetched}
                 lastUpdated={liveBusData.lastUpdated}
                 onReconnect={liveBusData.reconnect}
-                onStartAddWikiPin={handleStartAddWikiPin}
+                onOpenWikiPinList={() => {
+                    if (typeof window !== "undefined") {
+                        window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
+                        window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
+                        window.dispatchEvent(new CustomEvent("wbus:close-bus-list"));
+                    }
+                    setIsWikiPinListOpen(true);
+                }}
                 onCancelAddWikiPin={handleCancelPinPlacement}
                 isPinPlacementMode={isPinPlacementMode}
             />

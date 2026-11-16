@@ -1,16 +1,36 @@
 import type {MetadataRoute} from "next";
-import {getSeedWikiPages} from "@entities/wiki";
+import {YONSEI_MIRAE_WIKI_SLUG} from "@entities/wiki";
+import {listWikiPages} from "@entities/wiki/server";
 import {SITE_CONFIG} from "@shared/config/env";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export const dynamic = "force-dynamic";
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = SITE_CONFIG.METADATA.BASE_URL;
     const lastModified = new Date();
-    const wikiSeedEntries: MetadataRoute.Sitemap = getSeedWikiPages().map((page) => ({
-        url: `${baseUrl}/wiki/${encodeURIComponent(page.slug)}`,
-        lastModified,
-        changeFrequency: "daily",
-        priority: 0.9,
-    }));
+    let wikiEntries: MetadataRoute.Sitemap;
+    try {
+        const index = await listWikiPages({limit: 100});
+        wikiEntries = index.pages.map((page) => ({
+            url: `${baseUrl}/wiki/${encodeURIComponent(page.slug)}`,
+            lastModified: new Date(page.updatedAt),
+            changeFrequency: "daily" as const,
+            priority: 0.9,
+        }));
+    } catch {
+        wikiEntries = [];
+    }
+
+    if (wikiEntries.length === 0) {
+        wikiEntries = [
+            {
+                url: `${baseUrl}/wiki/${encodeURIComponent(YONSEI_MIRAE_WIKI_SLUG)}`,
+                lastModified,
+                changeFrequency: "daily" as const,
+                priority: 0.9,
+            },
+        ];
+    }
 
     return [
         {
@@ -19,7 +39,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
             changeFrequency: "hourly",
             priority: 1.0,
         },
-        ...wikiSeedEntries,
+        ...wikiEntries,
         {
             url: `${baseUrl}/privacy`,
             lastModified,

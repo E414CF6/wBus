@@ -466,8 +466,63 @@ describe("wikiStore Postgres + Delta integration", () => {
         _resetWikiBootstrapForTests();
     });
 
-    it("bootstraps seed, stores delta revisions with checkpoints every 10th version, and reverts losslessly", async () => {
+    it("migrates legacy slug row, stores delta revisions with checkpoints every 10th version, and reverts losslessly", async () => {
         const canonicalSlug = "연세대학교 미래캠퍼스";
+        const legacyNow = new Date("2026-03-01T00:00:00.000Z");
+        pageRows.set("yonsei-mirae", {
+            slug: "yonsei-mirae",
+            subtitle: "무료 셔틀버스 · 시내버스 시간표",
+            category: "campus",
+            cityCode: "32020",
+            lat: 37.2779,
+            lng: 127.9026,
+            tags: ["연세대 미래캠퍼스", "원주"],
+            tagsText: "연세대 미래캠퍼스 원주",
+            version: 1,
+            isProtected: false,
+            pinned: true,
+            lastEditorNickname: "wBus",
+            lastEditorId: "wbus-system",
+            linkedRoutes: [{routeNo: "30", cityCode: "32020", label: "30번"}],
+            shuttle: null,
+            boardingStops: [],
+            markdownBody: "## 캠퍼스 통학 핵심 요약\n초기 본문",
+            createdAt: legacyNow,
+            updatedAt: legacyNow,
+        });
+        revisionRows.push({
+            id: nextRevisionId++,
+            slug: "yonsei-mirae",
+            version: 1,
+            baseVersion: 0,
+            summary: "초기 위키 문서 생성",
+            editorNickname: "wBus",
+            editorId: "wbus-system",
+            diffStats: {added: 2, removed: 0, structuredChanges: ["문서 최초 생성"]},
+            isCheckpoint: true,
+            snapshot: {
+                slug: canonicalSlug,
+                title: canonicalSlug,
+                subtitle: "무료 셔틀버스 · 시내버스 시간표",
+                category: "campus",
+                cityCode: "32020",
+                lat: 37.2779,
+                lng: 127.9026,
+                tags: ["연세대 미래캠퍼스", "원주"],
+                version: 1,
+                createdAt: legacyNow.toISOString(),
+                updatedAt: legacyNow.toISOString(),
+                lastEditor: {nickname: "wBus", editorId: "wbus-system"},
+                isProtected: false,
+                linkedRoutes: [{routeNo: "30", cityCode: "32020", label: "30번"}],
+                shuttle: null,
+                boardingStops: [],
+                markdownBody: "## 캠퍼스 통학 핵심 요약\n초기 본문",
+            },
+            delta: null,
+            createdAt: legacyNow,
+        });
+
         const initial = await getWikiPage("yonsei-mirae");
         expect(initial).not.toBeNull();
         expect(initial?.slug).toBe(canonicalSlug);
@@ -694,6 +749,23 @@ describe("wikiStore Postgres + Delta integration", () => {
     });
 
     it("stores map pin coordinates and filters geolocated wiki pins via pinsOnly", async () => {
+        await createWikiPage({
+            slug: "연세대학교 미래캠퍼스",
+            title: "연세대학교 미래캠퍼스",
+            subtitle: "캠퍼스 허브",
+            category: "campus",
+            cityCode: "32020",
+            lat: 37.2779,
+            lng: 127.9026,
+            tags: ["연세대"],
+            linkedRoutes: [],
+            shuttle: null,
+            boardingStops: [],
+            markdownBody: "캠퍼스 위키",
+            summary: "생성",
+            editor: {nickname: "wBus", editorId: "wbus-system"},
+        });
+
         const pinnedDoc = await createWikiPage({
             slug: "단계동-정류장-핀",
             title: "단계동 정류장 핀",

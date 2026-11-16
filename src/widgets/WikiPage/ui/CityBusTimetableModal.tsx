@@ -3,7 +3,6 @@
 import React, {useCallback, useId, useMemo, useRef, useState} from "react";
 import {Clock, Info, MapPin, Search, X} from "lucide-react";
 
-import {ROUTE_CONFIG, TARGET_ROUTE_NUMBERS} from "@entities/route";
 import {
     buildFootnoteMap,
     type BusRoute,
@@ -16,6 +15,12 @@ import type {WikiLinkedRoute} from "@entities/wiki";
 import {UI_TEXT} from "@shared/config/locale";
 import {isWeekend, parseTimeToMinutes} from "@shared/lib/timeUtils";
 import {useDialogModal} from "@shared/lib/useDialogModal";
+
+const ROUTE_BADGE_GRADIENTS: Record<string, string> = {
+    "30": "from-[#003876] to-blue-700",
+    "34": "from-blue-600 to-indigo-600",
+    "34-1": "from-indigo-600 to-purple-600",
+};
 
 export interface CityBusTimetableModalProps {
     isOpen: boolean;
@@ -34,7 +39,7 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                                                                                 initialRouteNo,
                                                                                 initialLocation,
                                                                                 allRoutes,
-                                                                                routeNumbers = TARGET_ROUTE_NUMBERS,
+                                                                                routeNumbers = [],
                                                                                 routeOverrides,
                                                                                 isHolidayOrVacation,
                                                                                 now,
@@ -63,7 +68,6 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
 
     useDialogModal(dialogRef, isOpen, handleDialogOpen);
 
-    const config = ROUTE_CONFIG[routeNo];
     const override = routeOverrides?.[routeNo];
     const primaryRoute = useMemo(
         () => allRoutes.find((r) => r.routeNo === routeNo) ?? null,
@@ -106,10 +110,10 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
         });
     }, [primaryRoute, weekdayRoute, vacationRoute, searchQuery, now, footnoteMap, currentHourStr, location]);
 
-    const destLabel = override?.destLabel || config?.destLabel || "연세대 출발";
-    const originLabel = override?.originLabel || config?.originLabel || "장양리 출발";
-    const descriptionText = override?.description || config?.description || `${routeNo}번 시내버스`;
-    const viaStopsText = override?.viaStops || config?.viaStops;
+    const destLabel = override?.destLabel || "연세대 출발";
+    const originLabel = override?.originLabel || "장양리 출발";
+    const descriptionText = override?.description || `${routeNo}번 시내버스`;
+    const viaStopsText = override?.viaStops;
 
     const handleRouteChange = (no: string) => {
         setRouteNo(no);
@@ -182,7 +186,7 @@ export const CityBusTimetableModal: React.FC<CityBusTimetableModalProps> = ({
                 <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3 min-w-0">
                         <span
-                            className={`inline-flex items-center justify-center px-3 py-1.5 rounded-2xl text-xs font-black text-white shadow-xs bg-gradient-to-br ${config?.gradient ?? "from-[#003876] to-blue-700"} shrink-0 tabular-nums`}
+                            className={`inline-flex items-center justify-center px-3 py-1.5 rounded-2xl text-xs font-black text-white shadow-xs bg-gradient-to-br ${ROUTE_BADGE_GRADIENTS[routeNo] ?? "from-[#003876] to-blue-700"} shrink-0 tabular-nums`}
                         >
                             {routeNo}번
                         </span>

@@ -51,8 +51,10 @@ function stripControlChars(str: string): string {
     return out;
 }
 
+export const YONSEI_MIRAE_WIKI_SLUG = "연세대학교 미래캠퍼스";
+
 export const LEGACY_WIKI_SLUG_ALIASES: Record<string, string> = {
-    "yonsei-mirae": "연세대학교 미래캠퍼스",
+    "yonsei-mirae": YONSEI_MIRAE_WIKI_SLUG,
 };
 
 export function resolveLegacyWikiSlug(rawSlug: string): string | null {

@@ -115,7 +115,7 @@ export const YonseiSettingsModal: React.FC<YonseiSettingsModalProps> = ({
                     {/* 3. Show Yonsei Features on Map */}
                     <SettingsToggleRow
                         title="지도 화면 내 연세대 기능 표시"
-                        description="원주 지도 상단바·노선 모달 바로가기 버튼과 미래관 무료 셔틀 핀 마커를 표시합니다"
+                        description="원주 지도 상단바와 노선 선택 모달에 연세대 캠퍼스 위키 바로가기 및 배지를 표시합니다"
                         checked={settings.showYonseiFeatures}
                         onChange={(next) => {
                             triggerHaptic("selection");

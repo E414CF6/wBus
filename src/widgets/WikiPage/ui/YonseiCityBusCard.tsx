@@ -4,7 +4,6 @@ import React, {memo, useMemo} from "react";
 import Link from "next/link";
 import {ArrowRight, Clock, Map as MapIcon, Table2} from "lucide-react";
 
-import {ROUTE_CONFIG} from "@entities/route";
 import {type BusRoute, getUpcomingDepartures} from "@entities/schedule";
 import type {WikiLinkedRoute} from "@entities/wiki";
 import {UI_TEXT} from "@shared/config/locale";
@@ -25,22 +24,26 @@ const ROUTE_ACCENT_STYLES: Record<
     string,
     {
         topBar: string;
+        badgeGradient: string;
         surfaceRing: string;
         timeText: string;
     }
 > = {
     "30": {
         topBar: "from-[#003876] via-blue-700 to-blue-500",
+        badgeGradient: "from-[#003876] to-blue-700",
         surfaceRing: "hover:border-[#003876]/35 dark:hover:border-blue-500/40",
         timeText: "text-[#003876] dark:text-blue-300",
     },
     "34": {
         topBar: "from-blue-600 via-sky-500 to-indigo-600",
+        badgeGradient: "from-blue-600 to-indigo-600",
         surfaceRing: "hover:border-blue-500/35 dark:hover:border-sky-500/40",
         timeText: "text-blue-700 dark:text-sky-300",
     },
     "34-1": {
         topBar: "from-indigo-600 via-violet-600 to-purple-600",
+        badgeGradient: "from-indigo-600 to-purple-600",
         surfaceRing: "hover:border-indigo-500/35 dark:hover:border-violet-500/40",
         timeText: "text-indigo-700 dark:text-violet-300",
     },
@@ -48,6 +51,7 @@ const ROUTE_ACCENT_STYLES: Record<
 
 const DEFAULT_ROUTE_ACCENT = {
     topBar: "from-slate-700 via-blue-700 to-indigo-600",
+    badgeGradient: "from-[#003876] to-blue-700",
     surfaceRing: "hover:border-blue-500/35 dark:hover:border-blue-500/40",
     timeText: "text-slate-900 dark:text-blue-300",
 };
@@ -93,7 +97,6 @@ export const YonseiCityBusCard: React.FC<YonseiCityBusCardProps> = memo(function
                                                                                                        now,
                                                                                                        onOpenTimetable,
                                                                                                    }) {
-    const config = ROUTE_CONFIG[routeNo];
     const accent = ROUTE_ACCENT_STYLES[routeNo] ?? DEFAULT_ROUTE_ACCENT;
 
     const scheduleDirection = directionMode === "OUTBOUND" ? "DEST" : "ORIGIN";
@@ -101,12 +104,12 @@ export const YonseiCityBusCard: React.FC<YonseiCityBusCardProps> = memo(function
 
     const departureLabel = useMemo(() => {
         if (directionMode === "OUTBOUND") {
-            return routeOverride?.destLabel || config?.destLabel || "연세대 출발";
+            return routeOverride?.destLabel || "연세대 출발";
         }
-        return routeOverride?.originLabel || config?.originLabel || "기점 출발";
-    }, [directionMode, routeOverride, config]);
+        return routeOverride?.originLabel || "기점 출발";
+    }, [directionMode, routeOverride]);
 
-    const descriptionText = routeOverride?.description || config?.description || `${routeNo}번 시내버스`;
+    const descriptionText = routeOverride?.description || `${routeNo}번 시내버스`;
 
     const {nextDeparture, subsequentDepartures, allValidDepartures} = useMemo(() => {
         return getUpcomingDepartures(scheduleRoute?.timetable ?? [], scheduleDirection, now);
@@ -137,7 +140,7 @@ export const YonseiCityBusCard: React.FC<YonseiCityBusCardProps> = memo(function
                     <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2.5 min-w-0">
                             <span
-                                className={`inline-flex items-center justify-center px-3 py-1.5 rounded-2xl text-sm font-black text-white shadow-xs bg-gradient-to-br ${config?.gradient ?? "from-[#003876] to-blue-700"} shrink-0 tabular-nums`}
+                                className={`inline-flex items-center justify-center px-3 py-1.5 rounded-2xl text-sm font-black text-white shadow-xs bg-gradient-to-br ${accent.badgeGradient} shrink-0 tabular-nums`}
                             >
                                 {routeNo}번
                             </span>

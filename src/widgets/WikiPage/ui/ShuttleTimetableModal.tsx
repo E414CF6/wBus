@@ -3,12 +3,7 @@
 import React, {useId, useMemo, useRef, useState} from "react";
 import {AlertCircle, GraduationCap, Info, Search, X} from "lucide-react";
 
-import {
-    type ShuttleBusScheduleData,
-    type ShuttleInboundItem,
-    type ShuttleOutboundItem,
-    YONSEI_SHUTTLE_SCHEDULE,
-} from "@entities/schedule";
+import {type ShuttleBusScheduleData, type ShuttleInboundItem, type ShuttleOutboundItem,} from "@entities/schedule";
 import {UI_TEXT} from "@shared/config/locale";
 import {useDialogModal} from "@shared/lib/useDialogModal";
 import type {DayMode} from "@shared/types/navigation";
@@ -19,7 +14,7 @@ export interface ShuttleTimetableModalProps {
     initialTab: "OUTBOUND" | "INBOUND" | "GUIDELINES";
     dayMode: DayMode;
     now: Date;
-    shuttleSchedule?: ShuttleBusScheduleData;
+    shuttleSchedule: ShuttleBusScheduleData;
     onClose: () => void;
 }
 
@@ -30,7 +25,7 @@ export const ShuttleTimetableModal: React.FC<ShuttleTimetableModalProps> = ({
                                                                                 initialTab,
                                                                                 dayMode,
                                                                                 now,
-                                                                                shuttleSchedule = YONSEI_SHUTTLE_SCHEDULE,
+                                                                                shuttleSchedule,
                                                                                 onClose,
                                                                             }) => {
     const [activeTab, setActiveTab] = useState<ShuttleTab>(initialTab);

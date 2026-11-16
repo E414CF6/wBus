@@ -41,7 +41,7 @@ export interface BottomNavProps {
     hasFetched?: boolean;
     lastUpdated?: number | null;
     onReconnect?: () => void;
-    onStartAddWikiPin?: () => void;
+    onOpenWikiPinList?: () => void;
     onCancelAddWikiPin?: () => void;
     isPinPlacementMode?: boolean;
     className?: string;
@@ -70,7 +70,7 @@ function BottomNavComponent({
                                 hasFetched = true,
                                 lastUpdated,
                                 onReconnect,
-                                onStartAddWikiPin,
+                                onOpenWikiPinList,
                                 onCancelAddWikiPin,
                                 isPinPlacementMode = false,
                                 className = "",
@@ -359,7 +359,7 @@ function BottomNavComponent({
 
                         <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
 
-                        {/* Direct Map Wiki Pin Placement Toggle */}
+                        {/* Wiki Pin List Modal Trigger (or Cancel Pin Placement when active) */}
                         <button
                             type="button"
                             onClick={() => {
@@ -367,21 +367,25 @@ function BottomNavComponent({
                                 if (isPinPlacementMode) {
                                     onCancelAddWikiPin?.();
                                 } else {
-                                    onStartAddWikiPin?.();
+                                    onOpenWikiPinList?.();
                                 }
                             }}
-                            aria-label={isPinPlacementMode ? "위키 핀 추가 취소" : "지도에 새 위키 핀 추가"}
+                            aria-label={isPinPlacementMode ? "위키 핀 추가 취소" : "위키 핀 목록 보기"}
                             aria-pressed={isPinPlacementMode}
-                            title={isPinPlacementMode ? "핀 추가 취소" : "지도에 위키 핀 추가"}
+                            title={isPinPlacementMode ? "핀 추가 취소" : "위키 핀 목록 보기"}
                             className={`inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 ${
                                 isPinPlacementMode
                                     ? "bg-emerald-600 text-white shadow-xs"
-                                    : "text-gray-600 dark:text-gray-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
+                                    : "text-gray-600 dark:text-gray-300 hover:text-[#003876] dark:hover:text-sky-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
                             }`}
                         >
-                            <MapPinPlus className="w-4 h-4 stroke-[2.2]"/>
+                            {isPinPlacementMode ? (
+                                <MapPinPlus className="w-4 h-4 stroke-[2.2]"/>
+                            ) : (
+                                <MapPin className="w-4 h-4 stroke-[2.2]"/>
+                            )}
                             <span className="hidden sm:inline text-[11px] font-black tracking-tight">
-                                {isPinPlacementMode ? "추가 취소" : "핀 추가"}
+                                {isPinPlacementMode ? "추가 취소" : "핀 목록"}
                             </span>
                         </button>
 

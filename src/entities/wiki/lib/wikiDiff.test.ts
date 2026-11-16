@@ -1,6 +1,55 @@
 import {describe, expect, it} from "vitest";
+import type {WikiPageDocument} from "../types";
 import {computeLineDiff, computeStructuredChanges, hasWikiContentChanged} from "./wikiDiff";
-import {createYonseiMiraeSeed} from "../seeds/yonseiMiraeSeed";
+
+function createTestWikiDoc(): WikiPageDocument {
+    return {
+        slug: "연세대학교 미래캠퍼스",
+        title: "연세대학교 미래캠퍼스",
+        subtitle: "캠퍼스 셔틀·시내버스 안내",
+        category: "campus",
+        cityCode: "32020",
+        lat: 37.2779,
+        lng: 127.9026,
+        tags: ["연세대", "원주", "셔틀버스"],
+        version: 1,
+        createdAt: "2026-03-01T00:00:00.000Z",
+        updatedAt: "2026-03-01T00:00:00.000Z",
+        lastEditor: {nickname: "wBus", editorId: "ed-1"},
+        linkedRoutes: [
+            {routeNo: "30", cityCode: "32020", label: "30번"},
+            {routeNo: "34", cityCode: "32020", label: "34번"},
+            {routeNo: "34-1", cityCode: "32020", label: "34-1번"},
+        ],
+        shuttle: {
+            enabled: true,
+            title: "무료 셔틀버스 시간표",
+            stop_locations: [],
+            inbound_to_campus: [],
+            outbound_from_campus: [
+                {
+                    operation_type: "평일 운행",
+                    departure_point: "미래관",
+                    departure_time: "14:00",
+                    destination: "원주고속터미널",
+                    via: [],
+                    note: null,
+                },
+                {
+                    operation_type: "평일 운행",
+                    departure_point: "미래관",
+                    departure_time: "15:00",
+                    destination: "원주고속터미널",
+                    via: [],
+                    note: null,
+                },
+            ],
+            guidelines: [],
+        },
+        boardingStops: [],
+        markdownBody: "# 연세대학교 미래캠퍼스\n테스트 본문",
+    };
+}
 
 describe("wikiDiff utilities", () => {
     it("computes accurate line-level additions and removals", () => {
@@ -13,7 +62,7 @@ describe("wikiDiff utilities", () => {
     });
 
     it("detects structured field modifications across shuttle, routes, and stops", () => {
-        const base = createYonseiMiraeSeed();
+        const base = createTestWikiDoc();
         const next = {
             ...base,
             title: "연세대 미래캠퍼스 (수정)",

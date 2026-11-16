@@ -4,10 +4,7 @@ import {drizzle} from "drizzle-orm/neon-serverless";
 import {eq} from "drizzle-orm";
 import * as schema from "../../../shared/db/schema";
 import {wikiPages, wikiRevisions} from "@shared/db";
-import {computeWikiDelta, computeWikiDiffStats, shouldStoreCheckpoint} from "@entities/wiki";
-import {LEGACY_WIKI_SLUG_ALIASES} from "../schemas";
-import {getSeedWikiPages, PINNED_WIKI_SLUGS} from "../seeds";
-import type {WikiPageDocument, WikiRevision} from "../types";
+import {LEGACY_WIKI_SLUG_ALIASES, YONSEI_MIRAE_WIKI_SLUG} from "../schemas";
 
 config({path: ".env.local"});
 config();
@@ -69,13 +66,13 @@ async function main() {
                             subtitle: oldRow.subtitle,
                             category: oldRow.category,
                             cityCode: oldRow.cityCode,
-                            lat: oldRow.lat ?? getSeedWikiPages().find((s) => s.slug === canonicalSlug)?.lat ?? null,
-                            lng: oldRow.lng ?? getSeedWikiPages().find((s) => s.slug === canonicalSlug)?.lng ?? null,
+                            lat: oldRow.lat ?? null,
+                            lng: oldRow.lng ?? null,
                             tags: oldRow.tags,
                             tagsText: oldRow.tagsText,
                             version: oldRow.version,
                             isProtected: oldRow.isProtected,
-                            pinned: PINNED_WIKI_SLUGS.has(canonicalSlug) || oldRow.pinned,
+                            pinned: canonicalSlug === YONSEI_MIRAE_WIKI_SLUG || oldRow.pinned,
                             lastEditorNickname: oldRow.lastEditorNickname,
                             lastEditorId: oldRow.lastEditorId,
                             linkedRoutes: oldRow.linkedRoutes,
@@ -96,127 +93,6 @@ async function main() {
                 });
                 console.log(`[Wiki Migration] Migrated legacy slug '${legacySlug}' -> '${canonicalSlug}'.`);
             }
-        }
-
-        const seeds = getSeedWikiPages();
-        const seedSlugSet = new Set(seeds.map((s) => s.slug));
-
-        const allExisting = await db
-            .select({
-                slug: wikiPages.slug,
-                lastEditorId: wikiPages.lastEditorId,
-            })
-            .from(wikiPages);
-        for (const row of allExisting) {
-            if (row.lastEditorId === "seed-system" && !seedSlugSet.has(row.slug)) {
-                await db.delete(wikiPages).where(eq(wikiPages.slug, row.slug));
-                console.log(`[Wiki Migration] Removed obsolete seed '${row.slug}'.`);
-            }
-        }
-
-        for (const seed of seeds) {
-            const existing = await db
-                .select({
-                    slug: wikiPages.slug,
-                    lat: wikiPages.lat,
-                    lng: wikiPages.lng,
-                    lastEditorId: wikiPages.lastEditorId,
-                    lastEditorNickname: wikiPages.lastEditorNickname,
-                })
-                .from(wikiPages)
-                .where(eq(wikiPages.slug, seed.slug))
-                .limit(1);
-
-            if (existing.length > 0) {
-                const row = existing[0];
-                const needsCoords =
-                    (row.lat === null || row.lng === null) &&
-                    typeof seed.lat === "number" &&
-                    typeof seed.lng === "number";
-                const needsAuthorSync =
-                    row.lastEditorId === "seed-system" &&
-                    row.lastEditorNickname !== seed.lastEditor.nickname;
-
-                if (needsCoords || needsAuthorSync) {
-                    await db
-                        .update(wikiPages)
-                        .set({
-                            ...(needsCoords ? {lat: seed.lat, lng: seed.lng} : {}),
-                            ...(needsAuthorSync ? {lastEditorNickname: seed.lastEditor.nickname} : {}),
-                            ...(row.lastEditorId === "seed-system" ? {markdownBody: seed.markdownBody} : {}),
-                        })
-                        .where(eq(wikiPages.slug, seed.slug));
-                    console.log(`[Wiki Migration] Synced seed metadata for '${seed.slug}'.`);
-                } else {
-                    console.log(`[Wiki Migration] '${seed.slug}' already present in Postgres, skipping.`);
-                }
-                continue;
-            }
-
-            await db.transaction(async (tx) => {
-                const revs: WikiRevision[] = [
-                    {
-                        slug: seed.slug,
-                        version: seed.version,
-                        baseVersion: 0,
-                        summary: "초기 위키 문서 생성",
-                        editor: seed.lastEditor,
-                        createdAt: seed.createdAt,
-                        diffStats: computeWikiDiffStats(null, seed),
-                        snapshot: seed,
-                    },
-                ];
-
-                await tx
-                    .insert(wikiPages)
-                    .values({
-                        slug: seed.slug,
-                        subtitle: seed.subtitle,
-                        category: seed.category,
-                        cityCode: seed.cityCode ?? null,
-                        lat: seed.lat ?? null,
-                        lng: seed.lng ?? null,
-                        tags: seed.tags,
-                        tagsText: seed.tags.join(" "),
-                        version: seed.version,
-                        isProtected: Boolean(seed.isProtected),
-                        pinned: PINNED_WIKI_SLUGS.has(seed.slug),
-                        lastEditorNickname: seed.lastEditor.nickname,
-                        lastEditorId: seed.lastEditor.editorId,
-                        linkedRoutes: seed.linkedRoutes,
-                        shuttle: seed.shuttle,
-                        boardingStops: seed.boardingStops,
-                        markdownBody: seed.markdownBody,
-                        createdAt: new Date(seed.createdAt),
-                        updatedAt: new Date(seed.updatedAt),
-                    })
-                    .onConflictDoNothing({target: wikiPages.slug});
-
-                let prevDoc: WikiPageDocument | null = null;
-                for (const rev of revs) {
-                    const isCp = shouldStoreCheckpoint(rev.version);
-                    const delta = !isCp && prevDoc ? computeWikiDelta(prevDoc, rev.snapshot) : null;
-                    await tx
-                        .insert(wikiRevisions)
-                        .values({
-                            slug: rev.slug,
-                            version: rev.version,
-                            baseVersion: rev.baseVersion,
-                            summary: rev.summary,
-                            editorNickname: rev.editor.nickname,
-                            editorId: rev.editor.editorId,
-                            diffStats: rev.diffStats,
-                            isCheckpoint: isCp || !prevDoc,
-                            snapshot: isCp || !prevDoc ? rev.snapshot : null,
-                            delta,
-                            createdAt: new Date(rev.createdAt),
-                        })
-                        .onConflictDoNothing();
-                    prevDoc = rev.snapshot;
-                }
-            });
-
-            console.log(`[Wiki Migration] Bootstrapped seed '${seed.slug}' into Postgres.`);
         }
 
         console.log("[Wiki Migration] Completed successfully.");

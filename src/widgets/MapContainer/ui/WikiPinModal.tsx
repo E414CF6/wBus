@@ -35,6 +35,7 @@ import {WIKI_CATEGORY_PIN_STYLES} from "../lib/wikiPinTheme";
 
 export interface WikiPinModalProps {
     slug: string | null;
+    initialMode?: "read" | "edit" | "history";
     onClose: () => void;
     onSelectSlug: (nextSlug: string) => void;
     onSelectRouteOnMap: (routeNo: string, cityCode: string) => void;
@@ -60,6 +61,7 @@ function resolveCityName(cityCode?: string): string | null {
 
 export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                                                               slug,
+                                                              initialMode = "read",
                                                               onClose,
                                                               onSelectSlug,
                                                               onSelectRouteOnMap,
@@ -71,12 +73,16 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
 
     const {data: wikiDoc, error, isLoading, mutate} = useWikiPage(slug);
 
-    const [viewMode, setViewMode] = useState<"read" | "edit" | "history">("read");
+    const [viewMode, setViewMode] = useState<"read" | "edit" | "history">(initialMode);
     const [editSessionId, setEditSessionId] = useState(0);
-    const [prevSlug, setPrevSlug] = useState<string | null>(slug);
-    if (slug !== prevSlug) {
-        setPrevSlug(slug);
-        setViewMode("read");
+    const openKey = `${slug ?? ""}:${initialMode}`;
+    const [prevOpenKey, setPrevOpenKey] = useState<string>(openKey);
+    if (openKey !== prevOpenKey) {
+        setPrevOpenKey(openKey);
+        setViewMode(initialMode);
+        if (initialMode === "edit") {
+            setEditSessionId((n) => n + 1);
+        }
     }
 
     const style = useMemo(() => {

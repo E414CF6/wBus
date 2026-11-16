@@ -3,7 +3,7 @@
 import React, {useId, useMemo, useRef, useState} from "react";
 import {Camera, ExternalLink, Info, MapPin, Navigation, X} from "lucide-react";
 
-import {getKakaoMapUrl, getKakaoRoadviewUrl, YONSEI_SHUTTLE_STOPS} from "@entities/station";
+import {getKakaoMapUrl, getKakaoRoadviewUrl} from "@entities/station";
 import type {WikiBoardingStop} from "@entities/wiki";
 import {UI_TEXT} from "@shared/config/locale";
 import {useDialogModal} from "@shared/lib/useDialogModal";
@@ -25,7 +25,7 @@ function mapDirectionModeToFilter(mode: CampusDirectionMode): StopDirectionFilte
 export const ShuttleStopsModal: React.FC<ShuttleStopsModalProps> = ({
                                                                         isOpen,
                                                                         initialDirectionMode,
-                                                                        stops = YONSEI_SHUTTLE_STOPS,
+                                                                        stops = [],
                                                                         onClose,
                                                                     }) => {
     const [dirFilter, setDirFilter] = useState<StopDirectionFilter>(() =>

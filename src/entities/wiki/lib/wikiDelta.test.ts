@@ -6,8 +6,39 @@ import {
     createMarkdownPatch,
     shouldStoreCheckpoint,
 } from "./wikiDelta";
-import {createYonseiMiraeSeed} from "../seeds/yonseiMiraeSeed";
 import type {WikiPageDocument} from "../types";
+
+function createTestWikiDoc(): WikiPageDocument {
+    return {
+        slug: "연세대학교 미래캠퍼스",
+        title: "연세대학교 미래캠퍼스",
+        subtitle: "캠퍼스 셔틀·시내버스 안내",
+        category: "campus",
+        cityCode: "32020",
+        lat: 37.2779,
+        lng: 127.9026,
+        tags: ["연세대", "원주"],
+        version: 1,
+        createdAt: "2026-03-01T00:00:00.000Z",
+        updatedAt: "2026-03-01T00:00:00.000Z",
+        lastEditor: {nickname: "wBus", editorId: "ed-1"},
+        linkedRoutes: [
+            {routeNo: "30", cityCode: "32020", label: "30번"},
+            {routeNo: "34", cityCode: "32020", label: "34번"},
+            {routeNo: "34-1", cityCode: "32020", label: "34-1번"},
+        ],
+        shuttle: {
+            enabled: true,
+            title: "무료 셔틀버스 시간표",
+            stop_locations: [],
+            inbound_to_campus: [],
+            outbound_from_campus: [],
+            guidelines: [],
+        },
+        boardingStops: [],
+        markdownBody: "# 연세대학교 미래캠퍼스\n- 30번\n- 34번",
+    };
+}
 
 describe("wikiDelta checkpoint & patch engine", () => {
     it("identifies checkpoints on v1, every 10th version, and reverts", () => {
@@ -34,7 +65,7 @@ describe("wikiDelta checkpoint & patch engine", () => {
 
     it("losslessly reconstructs 15 sequential edits using v1 and v10 checkpoints", () => {
         const docs: WikiPageDocument[] = [];
-        const v1 = createYonseiMiraeSeed();
+        const v1 = createTestWikiDoc();
         docs.push(v1);
 
         for (let v = 2; v <= 15; v++) {

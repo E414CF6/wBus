@@ -5,7 +5,6 @@ import BusMarker from "./BusMarker";
 import BusRoutePolyline from "./BusRoutePolyline";
 import BusStopMarker from "./BusStopMarker";
 import TimetablePinMarker from "./TimetablePinMarker";
-import YonseiShuttlePinMarker from "./YonseiShuttlePinMarker";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import type {DayMode} from "@shared/types/navigation";
 
@@ -27,15 +26,11 @@ interface RouteLayerProps {
     dayMode?: DayMode;
     isTodayWeekendOrHoliday?: boolean;
     isPinPlacementMode?: boolean;
-    onOpenCampusWiki?: () => void;
 }
 
 // ----------------------------------------------------------------------
 // Component
 // ----------------------------------------------------------------------
-
-// Routes passing through Yonsei University Mirae Campus that show the shuttle bus pin
-export const YONSEI_SHUTTLE_ROUTES = new Set(["30", "34", "34-1"]);
 
 /**
  * Renders all map layers for a single route (markers, stops, and polyline).
@@ -55,7 +50,6 @@ const RouteLayer = memo(({
                              dayMode,
                              isTodayWeekendOrHoliday,
                              isPinPlacementMode = false,
-                             onOpenCampusWiki,
                          }: RouteLayerProps) => {
     const {settings} = useAppSettings();
     const effectiveShowNearbyStops = showNearbyStops ?? settings.showNearbyStops;
@@ -84,14 +78,6 @@ const RouteLayer = memo(({
                 isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
             />
         )}
-        {cityCode === "32020" && YONSEI_SHUTTLE_ROUTES.has(routeName) && settings.showYonseiFeatures && (
-            <YonseiShuttlePinMarker
-                enabled={enabled && settings.showYonseiFeatures}
-                dayMode={dayMode}
-                isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
-                onOpenCampusWiki={onOpenCampusWiki}
-            />
-        )}
         <BusRoutePolyline
             routeName={routeName}
             enabled={enabled}
@@ -114,8 +100,7 @@ const RouteLayer = memo(({
         prev.onClearFocusedStop === next.onClearFocusedStop &&
         prev.dayMode === next.dayMode &&
         prev.isTodayWeekendOrHoliday === next.isTodayWeekendOrHoliday &&
-        prev.isPinPlacementMode === next.isPinPlacementMode &&
-        prev.onOpenCampusWiki === next.onOpenCampusWiki
+        prev.isPinPlacementMode === next.isPinPlacementMode
     );
 });
 
