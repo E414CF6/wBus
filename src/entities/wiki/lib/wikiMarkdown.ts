@@ -208,6 +208,10 @@ function parseViaSegment(segment: string): ShuttleViaStop[] {
             const isFixed = /정시|fixed/i.test(meta);
             const timeMatch = /(\d{1,2}:\d{2})/.exec(meta);
             const time = timeMatch ? normalizeTimeHHMM(timeMatch[1]) : null;
+            // Preserve parenthetical stop qualifiers such as "원주시청사거리(무실동)" when no time/fixed marker is present
+            if (!time && !isFixed) {
+                return {name: token, time: null};
+            }
             return {
                 name,
                 time,

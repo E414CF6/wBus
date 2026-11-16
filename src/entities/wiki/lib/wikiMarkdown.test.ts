@@ -97,7 +97,10 @@ describe("wikiMarkdown parser", () => {
                         departure_point: "여주역",
                         departure_time: "07:13",
                         destination: "미래캠퍼스",
-                        via: [{name: "원주역", time: "08:05", is_fixed_time: true}],
+                        via: [
+                            {name: "원주역", time: "08:05", is_fixed_time: true},
+                            {name: "원주시청사거리(무실동)", time: null},
+                        ],
                         note: null,
                     },
                 ],
@@ -144,6 +147,10 @@ describe("wikiMarkdown parser", () => {
                 name: "원주역",
                 time: "08:05",
                 is_fixed_time: true,
+            });
+            expect(shuttleBlock.shuttle.inbound_to_campus[0].via[1]).toEqual({
+                name: "원주시청사거리(무실동)",
+                time: null,
             });
             expect(shuttleBlock.shuttle.outbound_from_campus[0].note).toBe("일요일 운행");
         }
