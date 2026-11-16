@@ -15,16 +15,20 @@ import {
 } from "@shared/db";
 import {applyWikiDelta, computeWikiDelta, shouldStoreCheckpoint,} from "./lib/wikiDelta";
 import {computeWikiDiffStats, hasWikiContentChanged} from "./lib/wikiDiff";
+import {extractWikiStructuredCounts, mergeStructuredBlocksIntoMarkdown} from "./lib/wikiMarkdown";
 import {DEFAULT_WIKI_PIN_COLOR, isValidWikiSlug, normalizeWikiSlug, WikiPageDocumentSchema,} from "./schemas";
 import type {
+    WikiBoardingStop,
     WikiEditorInfo,
     WikiIndexData,
+    WikiLinkedRoute,
     WikiPageDocument,
     WikiPageSummary,
     WikiPinColor,
     WikiRecentChangeItem,
     WikiRevision,
     WikiRevisionMeta,
+    WikiShuttleBlock,
 } from "./types";
 
 const REDIS_PAGE_PREFIX = "wiki:page:";
@@ -163,7 +167,6 @@ function rowToDocument(row: WikiPageRow): WikiPageDocument {
         title: row.slug,
         subtitle: row.subtitle,
         pinColor: row.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
-        ...(row.cityCode ? {cityCode: row.cityCode} : {}),
         ...(hasCoords ? {lat: row.lat as number, lng: row.lng as number} : {}),
         tags: row.tags ?? [],
         version: row.version,
@@ -174,21 +177,18 @@ function rowToDocument(row: WikiPageRow): WikiPageDocument {
             editorId: row.lastEditorId,
         },
         isProtected: row.isProtected,
-        linkedRoutes: row.linkedRoutes ?? [],
-        shuttle: row.shuttle ?? null,
-        boardingStops: row.boardingStops ?? [],
         markdownBody: row.markdownBody,
     };
 }
 
 function rowToSummary(row: WikiPageRow): WikiPageSummary {
     const hasCoords = typeof row.lat === "number" && typeof row.lng === "number";
+    const structuredCounts = extractWikiStructuredCounts(row.markdownBody);
     return {
         slug: row.slug,
         title: row.slug,
         subtitle: row.subtitle,
         pinColor: row.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
-        ...(row.cityCode ? {cityCode: row.cityCode} : {}),
         ...(hasCoords ? {lat: row.lat as number, lng: row.lng as number} : {}),
         tags: row.tags ?? [],
         version: row.version,
@@ -198,9 +198,7 @@ function rowToSummary(row: WikiPageRow): WikiPageSummary {
             editorId: row.lastEditorId,
         },
         isProtected: row.isProtected,
-        hasShuttle: Boolean(row.shuttle?.enabled),
-        linkedRouteCount: (row.linkedRoutes ?? []).length,
-        boardingStopCount: (row.boardingStops ?? []).length,
+        ...structuredCounts,
         pinned: row.pinned,
     };
 }
@@ -279,7 +277,6 @@ async function importDocumentIntoDb(
                 slug: doc.slug,
                 subtitle: doc.subtitle,
                 pinColor: doc.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
-                cityCode: doc.cityCode ?? null,
                 lat: doc.lat ?? null,
                 lng: doc.lng ?? null,
                 tags: doc.tags,
@@ -289,9 +286,6 @@ async function importDocumentIntoDb(
                 pinned: false,
                 lastEditorNickname: doc.lastEditor.nickname,
                 lastEditorId: doc.lastEditor.editorId,
-                linkedRoutes: doc.linkedRoutes,
-                shuttle: doc.shuttle,
-                boardingStops: doc.boardingStops,
                 markdownBody: doc.markdownBody,
                 createdAt: new Date(doc.createdAt),
                 updatedAt: new Date(doc.updatedAt),
@@ -353,18 +347,39 @@ function resolveCanonicalSlug(rawSlug: string): string {
     return rawSlug.trim();
 }
 
+type LegacyBlobDocument = WikiPageDocument & {
+    linkedRoutes?: WikiLinkedRoute[];
+    shuttle?: WikiShuttleBlock | null;
+    boardingStops?: WikiBoardingStop[];
+};
+
+function normalizeBlobDocument(raw: LegacyBlobDocument): WikiPageDocument {
+    return {
+        ...raw,
+        markdownBody: mergeStructuredBlocksIntoMarkdown(raw.markdownBody, {
+            linkedRoutes: raw.linkedRoutes,
+            shuttle: raw.shuttle,
+            boardingStops: raw.boardingStops,
+        }),
+    };
+}
+
 async function migrateSingleSlugFromBlob(
     db: WikiDatabase,
     slug: string
 ): Promise<WikiPageDocument | null> {
     const blobPageRes = await artifactStore
-        .getJson<WikiPageDocument>(`${BLOB_PAGE_PREFIX}/${slug}.json`, {bypassTmp: true})
+        .getJson<LegacyBlobDocument>(`${BLOB_PAGE_PREFIX}/${slug}.json`, {bypassTmp: true})
         .catch(() => null);
 
     if (blobPageRes?.data) {
-        const parsed = WikiPageDocumentSchema.safeParse(blobPageRes.data);
+        const normalized = normalizeBlobDocument(blobPageRes.data);
+        const parsed = WikiPageDocumentSchema.safeParse(normalized);
         if (parsed.success) {
-            const blobRevs = await readBlobRevisionsForSlug(slug);
+            const blobRevs = (await readBlobRevisionsForSlug(slug)).map((rev) => ({
+                ...rev,
+                snapshot: normalizeBlobDocument(rev.snapshot as LegacyBlobDocument),
+            }));
             return importDocumentIntoDb(db, parsed.data, blobRevs);
         }
     }
@@ -535,7 +550,6 @@ export async function getWikiPage(slug: string): Promise<WikiPageDocument | null
 }
 
 export async function listWikiPages(filters?: {
-    cityCode?: string;
     pinsOnly?: boolean;
     query?: string;
     limit?: number;
@@ -555,9 +569,6 @@ export async function listWikiPages(filters?: {
     await ensureLegacyMigrated(db);
 
     const conditions = [];
-    if (filters?.cityCode) {
-        conditions.push(eq(wikiPages.cityCode, filters.cityCode));
-    }
     if (filters?.pinsOnly) {
         conditions.push(isNotNull(wikiPages.lat), isNotNull(wikiPages.lng));
     }
@@ -643,13 +654,9 @@ export async function createWikiPage(input: {
     title: string;
     subtitle: string;
     pinColor?: WikiPinColor;
-    cityCode?: string;
     lat?: number;
     lng?: number;
     tags: string[];
-    linkedRoutes: WikiPageDocument["linkedRoutes"];
-    shuttle: WikiPageDocument["shuttle"];
-    boardingStops: WikiPageDocument["boardingStops"];
     markdownBody: string;
     summary: string;
     editor: WikiEditorInfo;
@@ -673,7 +680,6 @@ export async function createWikiPage(input: {
         title,
         subtitle: input.subtitle,
         pinColor,
-        ...(input.cityCode ? {cityCode: input.cityCode} : {}),
         ...(hasCoords ? {lat: input.lat, lng: input.lng} : {}),
         tags: dedupedTags,
         version: 1,
@@ -681,9 +687,6 @@ export async function createWikiPage(input: {
         updatedAt: nowIso,
         lastEditor: input.editor,
         isProtected: false,
-        linkedRoutes: input.linkedRoutes,
-        shuttle: input.shuttle,
-        boardingStops: input.boardingStops,
         markdownBody: input.markdownBody,
     };
 
@@ -706,7 +709,6 @@ export async function createWikiPage(input: {
                 slug,
                 subtitle: doc.subtitle,
                 pinColor: doc.pinColor,
-                cityCode: doc.cityCode ?? null,
                 lat: doc.lat ?? null,
                 lng: doc.lng ?? null,
                 tags: dedupedTags,
@@ -716,9 +718,6 @@ export async function createWikiPage(input: {
                 pinned: false,
                 lastEditorNickname: input.editor.nickname,
                 lastEditorId: input.editor.editorId,
-                linkedRoutes: doc.linkedRoutes,
-                shuttle: doc.shuttle,
-                boardingStops: doc.boardingStops,
                 markdownBody: doc.markdownBody,
                 createdAt: now,
                 updatedAt: now,
@@ -758,13 +757,9 @@ export async function saveWikiPageEdit(input: {
     title: string;
     subtitle: string;
     pinColor?: WikiPinColor;
-    cityCode?: string;
     lat?: number;
     lng?: number;
     tags: string[];
-    linkedRoutes: WikiPageDocument["linkedRoutes"];
-    shuttle: WikiPageDocument["shuttle"];
-    boardingStops: WikiPageDocument["boardingStops"];
     markdownBody: string;
     summary: string;
     editor: WikiEditorInfo;
@@ -838,15 +833,11 @@ export async function saveWikiPageEdit(input: {
             title: nextSlug,
             subtitle: input.subtitle,
             pinColor: input.pinColor ?? current.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
-            ...(input.cityCode ? {cityCode: input.cityCode} : {cityCode: undefined}),
             ...(hasCoords ? {lat: input.lat, lng: input.lng} : {lat: undefined, lng: undefined}),
             tags: dedupedTags,
             version: nextVersion,
             updatedAt: nowIso,
             lastEditor: input.editor,
-            linkedRoutes: input.linkedRoutes,
-            shuttle: input.shuttle,
-            boardingStops: input.boardingStops,
             markdownBody: input.markdownBody,
         };
 
@@ -868,7 +859,6 @@ export async function saveWikiPageEdit(input: {
                     slug: nextSlug,
                     subtitle: nextDoc.subtitle,
                     pinColor: nextDoc.pinColor,
-                    cityCode: nextDoc.cityCode ?? null,
                     lat: nextDoc.lat ?? null,
                     lng: nextDoc.lng ?? null,
                     tags: dedupedTags,
@@ -878,9 +868,6 @@ export async function saveWikiPageEdit(input: {
                     pinned: Boolean(currentRow.pinned),
                     lastEditorNickname: input.editor.nickname,
                     lastEditorId: input.editor.editorId,
-                    linkedRoutes: nextDoc.linkedRoutes,
-                    shuttle: nextDoc.shuttle,
-                    boardingStops: nextDoc.boardingStops,
                     markdownBody: nextDoc.markdownBody,
                     createdAt: currentRow.createdAt,
                     updatedAt: now,
@@ -904,7 +891,6 @@ export async function saveWikiPageEdit(input: {
                 .set({
                     subtitle: nextDoc.subtitle,
                     pinColor: nextDoc.pinColor,
-                    cityCode: nextDoc.cityCode ?? null,
                     lat: nextDoc.lat ?? null,
                     lng: nextDoc.lng ?? null,
                     tags: dedupedTags,
@@ -912,9 +898,6 @@ export async function saveWikiPageEdit(input: {
                     version: nextVersion,
                     lastEditorNickname: input.editor.nickname,
                     lastEditorId: input.editor.editorId,
-                    linkedRoutes: nextDoc.linkedRoutes,
-                    shuttle: nextDoc.shuttle,
-                    boardingStops: nextDoc.boardingStops,
                     markdownBody: nextDoc.markdownBody,
                     updatedAt: now,
                 })
@@ -1094,7 +1077,6 @@ export async function revertWikiPage(input: {
             .set({
                 subtitle: nextDoc.subtitle,
                 pinColor: nextDoc.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
-                cityCode: nextDoc.cityCode ?? null,
                 lat: nextDoc.lat ?? null,
                 lng: nextDoc.lng ?? null,
                 tags: nextDoc.tags,
@@ -1102,9 +1084,6 @@ export async function revertWikiPage(input: {
                 version: nextVersion,
                 lastEditorNickname: input.editor.nickname,
                 lastEditorId: input.editor.editorId,
-                linkedRoutes: nextDoc.linkedRoutes,
-                shuttle: nextDoc.shuttle,
-                boardingStops: nextDoc.boardingStops,
                 markdownBody: nextDoc.markdownBody,
                 updatedAt: now,
             })

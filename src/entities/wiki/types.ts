@@ -52,7 +52,6 @@ export interface WikiPageDocument {
     title: string;
     subtitle: string;
     pinColor: WikiPinColor;
-    cityCode?: string;
     lat?: number;
     lng?: number;
     tags: string[];
@@ -61,9 +60,6 @@ export interface WikiPageDocument {
     updatedAt: string;
     lastEditor: WikiEditorInfo;
     isProtected?: boolean;
-    linkedRoutes: WikiLinkedRoute[];
-    shuttle: WikiShuttleBlock | null;
-    boardingStops: WikiBoardingStop[];
     markdownBody: string;
 }
 
@@ -99,7 +95,6 @@ export interface WikiPageSummary {
     title: string;
     subtitle: string;
     pinColor: WikiPinColor;
-    cityCode?: string;
     lat?: number;
     lng?: number;
     tags: string[];
@@ -137,13 +132,9 @@ export interface WikiFieldsPatch {
     title?: string;
     subtitle?: string;
     pinColor?: WikiPinColor;
-    cityCode?: string | null;
     lat?: number | null;
     lng?: number | null;
     tags?: string[];
-    linkedRoutes?: WikiLinkedRoute[];
-    shuttle?: WikiShuttleBlock | null;
-    boardingStops?: WikiBoardingStop[];
 }
 
 export interface WikiRevisionDelta {

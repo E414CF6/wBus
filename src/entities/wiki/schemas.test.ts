@@ -36,59 +36,16 @@ describe("wiki schemas and slug helpers", () => {
         expect(defaulted.pinColor).toBe("navy");
     });
 
-    it("validates shuttle HH:MM format in edit payloads", () => {
+    it("accepts unified markdownBody containing routes, shuttle, and stops directives", () => {
         const valid = WikiEditPayloadSchema.safeParse({
             baseVersion: 1,
             title: "테스트 문서",
             subtitle: "",
             pinColor: "emerald",
             tags: ["원주"],
-            linkedRoutes: [],
-            shuttle: {
-                enabled: true,
-                title: "셔틀",
-                stop_locations: [],
-                inbound_to_campus: [],
-                outbound_from_campus: [
-                    {
-                        operation_type: "평일",
-                        departure_point: "정문",
-                        departure_time: "09:30",
-                        destination: "원주역",
-                        via: [{name: "터미널", time: "09:50", is_fixed_time: true}],
-                        note: null,
-                    },
-                ],
-                guidelines: [],
-            },
-            boardingStops: [],
-            markdownBody: "본문",
+            markdownBody: "## 본문\n```routes\n32020 | 30 | 30번\n```",
         });
         expect(valid.success).toBe(true);
-
-        const invalidTime = WikiCreatePayloadSchema.safeParse({
-            slug: "bad-time-test",
-            title: "테스트 문서",
-            pinColor: "navy",
-            shuttle: {
-                enabled: true,
-                title: "셔틀",
-                stop_locations: [],
-                inbound_to_campus: [],
-                outbound_from_campus: [
-                    {
-                        operation_type: "평일",
-                        departure_point: "정문",
-                        departure_time: "25:99",
-                        destination: "원주역",
-                        via: [],
-                        note: null,
-                    },
-                ],
-                guidelines: [],
-            },
-        });
-        expect(invalidTime.success).toBe(false);
     });
 
     it("validates paired map pin lat/lng coordinates and Korean bounds", () => {
@@ -135,14 +92,12 @@ describe("wiki schemas and slug helpers", () => {
             }).success,
         ).toBe(true);
 
-        // Must provide at least one field (color or coords)
         expect(
             WikiPinPatchPayloadSchema.safeParse({
                 baseVersion: 2,
             }).success,
         ).toBe(false);
 
-        // Unpaired coords rejected
         expect(
             WikiPinPatchPayloadSchema.safeParse({
                 baseVersion: 2,

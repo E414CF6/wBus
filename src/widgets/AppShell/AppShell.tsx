@@ -18,6 +18,7 @@ import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
 import {RouteScheduleModal} from "@features/map-view/RouteScheduleModal";
 import {OnboardingModal} from "@features/onboarding";
+import type {WikiFormDraft} from "@features/wiki";
 
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
@@ -84,6 +85,7 @@ function MapAppShell() {
     const [activeWikiModal, setActiveWikiModal] = useState<{
         slug: string;
         mode: "read" | "edit" | "history";
+        draft?: Partial<WikiFormDraft> | null;
     } | null>(() => (initialQueryWiki ? {slug: initialQueryWiki, mode: "read"} : null));
     const [prevQueryWiki, setPrevQueryWiki] = useState<string | null>(initialQueryWiki);
     if (initialQueryWiki !== prevQueryWiki) {
@@ -100,6 +102,11 @@ function MapAppShell() {
         version: number;
         pinColor: WikiPinColor;
     } | null>(null);
+    const [editingPickTarget, setEditingPickTarget] = useState<{
+        slug: string;
+        draft: WikiFormDraft;
+    } | null>(null);
+    const [pendingCreateFormDraft, setPendingCreateFormDraft] = useState<Partial<WikiFormDraft> | null>(null);
     const [pinContextMenu, setPinContextMenu] = useState<{
         page: WikiPageSummary;
         position: { x: number; y: number };
@@ -110,6 +117,7 @@ function MapAppShell() {
         lat?: number;
         lng?: number;
         slug?: string;
+        draft?: Partial<WikiFormDraft>;
     } | null>(null);
     const isPinPlacementMode = pendingPinCoords !== null;
 
@@ -126,6 +134,8 @@ function MapAppShell() {
     const handleStartAddWikiPin = useCallback(() => {
         closeMapPopupsForWiki();
         setMovingPinTarget(null);
+        setEditingPickTarget(null);
+        setPendingCreateFormDraft(null);
         setIsWikiPinListOpen(false);
         setActiveWikiModal(null);
         setIsScheduleModalOpen(false);
@@ -149,6 +159,8 @@ function MapAppShell() {
             lng?: number | null
         }) => {
             closeMapPopupsForWiki();
+            setEditingPickTarget(null);
+            setPendingCreateFormDraft(null);
             setIsWikiPinListOpen(false);
             setActiveWikiModal(null);
             setIsScheduleModalOpen(false);
@@ -165,6 +177,25 @@ function MapAppShell() {
             setPendingPinCoords({
                 lat: typeof target.lat === "number" ? target.lat : (center?.lat ?? currentCity.lat),
                 lng: typeof target.lng === "number" ? target.lng : (center?.lng ?? currentCity.lng),
+            });
+        },
+        [closeMapPopupsForWiki, map, currentCity.lat, currentCity.lng, settings.showWikiPins, updateSettings],
+    );
+
+    const handleStartPickLocationInEditor = useCallback(
+        (slug: string, draft: WikiFormDraft) => {
+            closeMapPopupsForWiki();
+            setMovingPinTarget(null);
+            setPendingCreateFormDraft(null);
+            setActiveWikiModal(null);
+            if (!settings.showWikiPins) {
+                updateSettings({showWikiPins: true});
+            }
+            const center = map?.getCenter();
+            setEditingPickTarget({slug, draft});
+            setPendingPinCoords({
+                lat: typeof draft.lat === "number" ? draft.lat : (center?.lat ?? currentCity.lat),
+                lng: typeof draft.lng === "number" ? draft.lng : (center?.lng ?? currentCity.lng),
             });
         },
         [closeMapPopupsForWiki, map, currentCity.lat, currentCity.lng, settings.showWikiPins, updateSettings],
@@ -256,17 +287,55 @@ function MapAppShell() {
             return;
         }
 
+        if (editingPickTarget) {
+            const target = editingPickTarget;
+            setEditingPickTarget(null);
+            setPendingPinCoords(null);
+            setActiveWikiModal({
+                slug: target.slug,
+                mode: "edit",
+                draft: {
+                    ...target.draft,
+                    lat: pendingPinCoords.lat,
+                    lng: pendingPinCoords.lng,
+                },
+            });
+            return;
+        }
+
+        const preservedDraft = pendingCreateFormDraft;
+        setPendingCreateFormDraft(null);
         setCreateWikiDraft({
             lat: pendingPinCoords.lat,
             lng: pendingPinCoords.lng,
+            ...(preservedDraft ? {draft: preservedDraft} : {}),
         });
         setPendingPinCoords(null);
-    }, [pendingPinCoords, movingPinTarget, isUpdatingPinMeta, storedNickname]);
+    }, [
+        pendingPinCoords,
+        movingPinTarget,
+        editingPickTarget,
+        pendingCreateFormDraft,
+        isUpdatingPinMeta,
+        storedNickname,
+    ]);
 
     const handleCancelPinPlacement = useCallback(() => {
+        if (editingPickTarget) {
+            const target = editingPickTarget;
+            setEditingPickTarget(null);
+            setPendingPinCoords(null);
+            setActiveWikiModal({
+                slug: target.slug,
+                mode: "edit",
+                draft: target.draft,
+            });
+            return;
+        }
         setPendingPinCoords(null);
         setMovingPinTarget(null);
-    }, []);
+        setPendingCreateFormDraft(null);
+    }, [editingPickTarget]);
 
     const handleWikiCreated = useCallback(
         (created: WikiPageDocument) => {
@@ -298,13 +367,12 @@ function MapAppShell() {
         if (!isPinPlacementMode) return;
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
-                setPendingPinCoords(null);
-                setMovingPinTarget(null);
+                handleCancelPinPlacement();
             }
         };
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [isPinPlacementMode]);
+    }, [isPinPlacementMode, handleCancelPinPlacement]);
 
     // Fetch route map for current city once URL/localStorage city has resolved
     const routeMap = useBusRouteMap(isCityReady, currentCity.code);
@@ -441,9 +509,14 @@ function MapAppShell() {
                     />
                     {pendingPinCoords && (
                         <WikiPinPlacementOverlay
-                            mode={movingPinTarget ? "move" : "create"}
-                            targetTitle={movingPinTarget?.title}
-                            pinColor={movingPinTarget?.pinColor}
+                            mode={movingPinTarget || editingPickTarget ? "move" : "create"}
+                            targetTitle={
+                                movingPinTarget?.title ??
+                                (editingPickTarget
+                                    ? editingPickTarget.draft.title || editingPickTarget.slug
+                                    : undefined)
+                            }
+                            pinColor={movingPinTarget?.pinColor ?? editingPickTarget?.draft.pinColor}
                             isSubmitting={isUpdatingPinMeta}
                             coords={pendingPinCoords}
                             onChangeCoords={setPendingPinCoords}
@@ -509,6 +582,7 @@ function MapAppShell() {
             <WikiPinModal
                 slug={activeWikiModal?.slug ?? null}
                 initialMode={activeWikiModal?.mode ?? "read"}
+                initialEditDraft={activeWikiModal?.draft ?? null}
                 onClose={() => setActiveWikiModal(null)}
                 onSelectSlug={(nextSlug) => setActiveWikiModal({slug: nextSlug, mode: "read"})}
                 onSelectRouteOnMap={handleSelectRouteFromWiki}
@@ -522,6 +596,7 @@ function MapAppShell() {
                         lng: doc.lng,
                     })
                 }
+                onPickLocationInEditor={handleStartPickLocationInEditor}
                 onCreateNewFromSlug={(missingSlug) => {
                     const center = map?.getCenter();
                     setActiveWikiModal(null);
@@ -539,12 +614,16 @@ function MapAppShell() {
                 initialSlug={createWikiDraft?.slug}
                 initialLat={createWikiDraft?.lat}
                 initialLng={createWikiDraft?.lng}
-                initialCityCode={currentCity.code}
-                onClose={() => setCreateWikiDraft(null)}
+                initialDraft={createWikiDraft?.draft}
+                onClose={() => {
+                    setCreateWikiDraft(null);
+                    setPendingCreateFormDraft(null);
+                }}
                 onCreated={handleWikiCreated}
-                onRepickLocation={() => {
-                    const fallbackLat = createWikiDraft?.lat ?? currentCity.lat;
-                    const fallbackLng = createWikiDraft?.lng ?? currentCity.lng;
+                onRepickLocation={(draft) => {
+                    const fallbackLat = draft.lat ?? createWikiDraft?.lat ?? currentCity.lat;
+                    const fallbackLng = draft.lng ?? createWikiDraft?.lng ?? currentCity.lng;
+                    setPendingCreateFormDraft(draft);
                     setCreateWikiDraft(null);
                     setPendingPinCoords({lat: fallbackLat, lng: fallbackLng});
                 }}

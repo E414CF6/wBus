@@ -20,7 +20,6 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 export function useWikiIndex(options?: {
-    cityCode?: string;
     pinsOnly?: boolean;
     query?: string;
     limit?: number;
@@ -29,9 +28,6 @@ export function useWikiIndex(options?: {
     fallbackData?: WikiIndexData;
 }) {
     const params = new URLSearchParams();
-    if (options?.cityCode) {
-        params.set("cityCode", options.cityCode);
-    }
     if (options?.pinsOnly) {
         params.set("pinsOnly", "true");
     }
@@ -55,10 +51,9 @@ export function useWikiIndex(options?: {
     });
 }
 
-export function useWikiPins(options?: { cityCode?: string; enabled?: boolean }) {
+export function useWikiPins(options?: { enabled?: boolean }) {
     return useWikiIndex({
         pinsOnly: true,
-        cityCode: options?.cityCode,
         limit: 100,
         enabled: options?.enabled ?? true,
     });

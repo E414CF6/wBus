@@ -9,6 +9,7 @@ import {type BusRoute, getUpcomingDepartures, resolveActiveScheduleVariant, useS
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {getCityFeatures} from "@entities/city";
 import type {DayMode} from "@shared/types/navigation";
+import {type RegisteredMapPin, usePublishMapPinObstacles} from "./lib/pinOverlapLayout";
 
 // ----------------------------------------------------------------------
 // Helper to safely format terminus names (strip 차고지, (시내방면), etc.)
@@ -196,16 +197,45 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
         [map, originStop, turningStop, onOpenScheduleModal, routeName]
     );
 
+    const isSameLocation = Boolean(
+        turningStop &&
+        originStop &&
+        originStop.nodeid === turningStop.nodeid &&
+        Math.abs(originStop.gpslati - turningStop.gpslati) < 0.0001 &&
+        Math.abs(originStop.gpslong - turningStop.gpslong) < 0.0001
+    );
+
+    const publishedObstacles = useMemo<RegisteredMapPin[]>(() => {
+        if (!enabled || !hasDetailedTimetable || !stops.length || !originStop) {
+            return [];
+        }
+        const list: RegisteredMapPin[] = [
+            {
+                id: "timetable-origin",
+                lng: originStop.gpslong,
+                lat: originStop.gpslati,
+                width: 185,
+                height: 48,
+            },
+        ];
+        if (turningStop && !isSameLocation) {
+            list.push({
+                id: "timetable-dest",
+                lng: turningStop.gpslong,
+                lat: turningStop.gpslati,
+                width: 185,
+                height: 48,
+            });
+        }
+        return list;
+    }, [enabled, hasDetailedTimetable, stops.length, originStop, turningStop, isSameLocation]);
+
+    usePublishMapPinObstacles("timetable", publishedObstacles);
+
     // Timetable pins are only supported for cities with detailed schedule
     if (!enabled || !hasDetailedTimetable || !stops.length || !originStop) {
         return null;
     }
-
-    const isSameLocation =
-        turningStop &&
-        originStop.nodeid === turningStop.nodeid &&
-        Math.abs(originStop.gpslati - turningStop.gpslati) < 0.0001 &&
-        Math.abs(originStop.gpslong - turningStop.gpslong) < 0.0001;
 
     const formattedOriginName = formatTerminalStopName(originStop.nodenm);
     const formattedTurningName = turningStop ? formatTerminalStopName(turningStop.nodenm) : "";

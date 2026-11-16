@@ -6,6 +6,7 @@ import {AlertTriangle, BookOpen, Bus, Camera, ExternalLink, Info, Lightbulb} fro
 import {getKakaoRoadviewUrl} from "@entities/station";
 import {parseWikiMarkdown, type WikiBlockNode, type WikiCalloutTone, type WikiInlineNode,} from "@entities/wiki";
 import {buildMapUrl} from "@widgets/AppShell/hooks/useAppNavigation";
+import {WikiEmbeddedRoutesBlock, WikiEmbeddedShuttleBlock, WikiEmbeddedStopsBlock,} from "./WikiEmbeddedBlocks";
 
 export interface WikiMarkdownRenderCallbacks {
     onOpenWikiSlug?: (slug: string) => void;
@@ -90,7 +91,7 @@ function renderInlineNodes(
                 return (
                     <Link
                         key={key}
-                        href={`/wiki/${encodeURIComponent(node.slug)}`}
+                        href={`/?wiki=${encodeURIComponent(node.slug)}`}
                         className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/15 dark:hover:bg-blue-500/25 border border-blue-200/80 dark:border-blue-400/25 text-[0.9em] font-extrabold text-[#003876] dark:text-blue-300 transition-colors align-baseline"
                     >
                         <BookOpen className="w-3 h-3 shrink-0"/>
@@ -289,6 +290,18 @@ function renderBlock(
                     </table>
                 </div>
             );
+        case "routes":
+            return (
+                <WikiEmbeddedRoutesBlock
+                    key={key}
+                    routes={block.routes}
+                    onSelectRoute={callbacks?.onSelectRoute}
+                />
+            );
+        case "shuttle":
+            return <WikiEmbeddedShuttleBlock key={key} shuttle={block.shuttle}/>;
+        case "stops":
+            return <WikiEmbeddedStopsBlock key={key} stops={block.stops}/>;
         case "hr":
             return <hr key={key} className="border-slate-200/80 dark:border-white/10 my-2"/>;
     }

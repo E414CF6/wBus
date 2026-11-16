@@ -1,7 +1,7 @@
 "use client";
 
 import React, {memo, useCallback, useEffect, useMemo, useState} from "react";
-import {Bus, ChevronDown, Compass, MapIcon, MapPin, MapPinPlus, Settings, Sparkles, X,} from "lucide-react";
+import {BookOpen, Bus, ChevronDown, Compass, MapIcon, MapPin, MapPinPlus, Settings, Sparkles, X,} from "lucide-react";
 
 import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
@@ -353,7 +353,7 @@ function BottomNavComponent({
 
                         <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
 
-                        {/* Wiki Pin List Modal Trigger (or Cancel Pin Placement when active) */}
+                        {/* Wiki Modal Trigger (or Cancel Pin Placement when active) */}
                         <button
                             type="button"
                             onClick={() => {
@@ -364,9 +364,9 @@ function BottomNavComponent({
                                     onOpenWikiPinList?.();
                                 }
                             }}
-                            aria-label={isPinPlacementMode ? "위키 핀 추가 취소" : "위키 핀 목록 보기"}
+                            aria-label={isPinPlacementMode ? "위키 핀 추가 취소" : "지도 위키 열기"}
                             aria-pressed={isPinPlacementMode}
-                            title={isPinPlacementMode ? "핀 추가 취소" : "위키 핀 목록 보기"}
+                            title={isPinPlacementMode ? "핀 추가 취소" : "위키"}
                             className={`inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 ${
                                 isPinPlacementMode
                                     ? "bg-emerald-600 text-white shadow-xs"
@@ -376,10 +376,10 @@ function BottomNavComponent({
                             {isPinPlacementMode ? (
                                 <MapPinPlus className="w-4 h-4 stroke-[2.2]"/>
                             ) : (
-                                <MapPin className="w-4 h-4 stroke-[2.2]"/>
+                                <BookOpen className="w-4 h-4 stroke-[2.2]"/>
                             )}
                             <span className="hidden sm:inline text-[11px] font-black tracking-tight">
-                                {isPinPlacementMode ? "추가 취소" : "핀 목록"}
+                                {isPinPlacementMode ? "추가 취소" : "위키"}
                             </span>
                         </button>
 

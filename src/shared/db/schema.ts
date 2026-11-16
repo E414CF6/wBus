@@ -10,15 +10,7 @@ import {
     timestamp,
     uniqueIndex,
 } from "drizzle-orm/pg-core";
-import type {
-    WikiBoardingStop,
-    WikiDiffStats,
-    WikiLinkedRoute,
-    WikiPageDocument,
-    WikiPinColor,
-    WikiRevisionDelta,
-    WikiShuttleBlock,
-} from "../../entities/wiki/types";
+import type {WikiDiffStats, WikiPageDocument, WikiPinColor, WikiRevisionDelta,} from "../../entities/wiki/types";
 
 export const wikiPages = pgTable(
     "wiki_pages",
@@ -26,7 +18,6 @@ export const wikiPages = pgTable(
         slug: text("slug").primaryKey(),
         subtitle: text("subtitle").notNull().default(""),
         pinColor: text("pin_color").$type<WikiPinColor>().notNull().default("navy"),
-        cityCode: text("city_code"),
         lat: doublePrecision("lat"),
         lng: doublePrecision("lng"),
         tags: jsonb("tags").$type<string[]>().notNull().default([]),
@@ -36,9 +27,6 @@ export const wikiPages = pgTable(
         pinned: boolean("pinned").notNull().default(false),
         lastEditorNickname: text("last_editor_nickname").notNull(),
         lastEditorId: text("last_editor_id").notNull(),
-        linkedRoutes: jsonb("linked_routes").$type<WikiLinkedRoute[]>().notNull().default([]),
-        shuttle: jsonb("shuttle").$type<WikiShuttleBlock | null>(),
-        boardingStops: jsonb("boarding_stops").$type<WikiBoardingStop[]>().notNull().default([]),
         markdownBody: text("markdown_body").notNull().default(""),
         createdAt: timestamp("created_at", {withTimezone: true}).notNull().defaultNow(),
         updatedAt: timestamp("updated_at", {withTimezone: true}).notNull().defaultNow(),
@@ -49,7 +37,7 @@ export const wikiPages = pgTable(
         index("wiki_pages_slug_trgm_idx").using("gin", table.slug.op("gin_trgm_ops")),
         index("wiki_pages_tags_text_trgm_idx").using("gin", table.tagsText.op("gin_trgm_ops")),
         index("wiki_pages_markdown_trgm_idx").using("gin", table.markdownBody.op("gin_trgm_ops")),
-    ]
+    ],
 );
 
 export const wikiRevisions = pgTable(
@@ -73,7 +61,7 @@ export const wikiRevisions = pgTable(
     (table) => [
         uniqueIndex("wiki_revisions_slug_version_uidx").on(table.slug, table.version),
         index("wiki_revisions_created_at_idx").on(table.createdAt),
-    ]
+    ],
 );
 
 export type WikiPageRow = typeof wikiPages.$inferSelect;

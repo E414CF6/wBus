@@ -1,19 +1,23 @@
 "use client";
 
 import React, {useRef, useState} from "react";
-import {BookOpen, Bus, Camera, Eye, Heading2, Info, List, PenLine, Table2} from "lucide-react";
+import {BookOpen, Bus, Camera, Clock, Eye, Heading2, Info, List, MapPin, PenLine, Route, Table2,} from "lucide-react";
 import {WikiMarkdownRenderer} from "./WikiMarkdownRenderer";
 
 export interface WikiMarkdownEditorProps {
     value: string;
     onChange: (next: string) => void;
-    cityCode?: string;
 }
+
+const ROUTES_SNIPPET = `\n## 연결 시내버스\n\n\`\`\`routes\n32020 | 30 | 30번 | 기점 ↔ 종점 설명 | 주요 경유지\n\`\`\`\n`;
+
+const SHUTTLE_SNIPPET = `\n## 셔틀 시간표\n\n\`\`\`shuttle\ntitle: 무료 셔틀버스 시간표\n\n[stops]\n- 정류장명 | 탑승 위치 설명\n\n[inbound]\n- 평일 운행 | 08:00 | 출발지 -> 도착지 | 경유: 경유지(08:15 정시)\n\n[outbound]\n- 평일 운행 | 17:00 | 출발지 -> 도착지 | 비고: 막차\n\n[guidelines]\n- 출발 5분 전까지 승강장에 대기해 주세요.\n\`\`\`\n`;
+
+const STOPS_SNIPPET = `\n## 주요 승강장\n\n\`\`\`stops\n- 승강장 이름 | 공통 | 37.343832, 127.932123 | 상세 위치 설명 | 참고 팁\n\`\`\`\n`;
 
 export const WikiMarkdownEditor: React.FC<WikiMarkdownEditorProps> = ({
                                                                           value,
                                                                           onChange,
-                                                                          cityCode = "",
                                                                       }) => {
     const [mode, setMode] = useState<"write" | "preview">("write");
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -49,6 +53,21 @@ export const WikiMarkdownEditor: React.FC<WikiMarkdownEditorProps> = ({
             snippet: "\n| 구분 | 안내 |\n| :--- | :--- |\n| 내용 | 설명 |\n",
         },
         {
+            label: "노선 카드",
+            icon: <Route className="w-3.5 h-3.5"/>,
+            snippet: ROUTES_SNIPPET,
+        },
+        {
+            label: "셔틀 시간표",
+            icon: <Clock className="w-3.5 h-3.5"/>,
+            snippet: SHUTTLE_SNIPPET,
+        },
+        {
+            label: "승강장",
+            icon: <MapPin className="w-3.5 h-3.5"/>,
+            snippet: STOPS_SNIPPET,
+        },
+        {
             label: "위키 링크",
             icon: <BookOpen className="w-3.5 h-3.5"/>,
             snippet: "[[문서 제목|표시 텍스트]]",
@@ -56,7 +75,7 @@ export const WikiMarkdownEditor: React.FC<WikiMarkdownEditorProps> = ({
         {
             label: "노선 배지",
             icon: <Bus className="w-3.5 h-3.5"/>,
-            snippet: cityCode ? `[[route:${cityCode}:100]]` : "[[route:도시코드:노선번호]]",
+            snippet: "[[route:도시코드:노선번호]]",
         },
         {
             label: "로드뷰",
@@ -102,7 +121,7 @@ export const WikiMarkdownEditor: React.FC<WikiMarkdownEditorProps> = ({
                                 key={btn.label}
                                 type="button"
                                 onClick={() => insertSnippet(btn.snippet)}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/12 text-[11px] font-bold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.06] dark:hover:bg-white/[0.12] text-[11px] font-bold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
                             >
                                 {btn.icon}
                                 <span>{btn.label}</span>
@@ -113,28 +132,18 @@ export const WikiMarkdownEditor: React.FC<WikiMarkdownEditorProps> = ({
             </div>
 
             {mode === "write" ? (
-                <div className="space-y-1.5">
-                    <textarea
-                        id="wiki-markdown-editor"
-                        name="markdown"
-                        aria-label="위키 본문 마크다운"
-                        ref={textareaRef}
-                        value={value}
-                        onChange={(e) => onChange(e.target.value)}
-                        rows={14}
-                        placeholder="마크다운으로 교통 팁, 환승 정보, 정류장 주의사항을 자유롭게 작성하세요. [[문서 제목]]으로 위키 문서 링크, [[route:32020:30]]로 실시간 노선 배지를 넣을 수 있습니다."
-                        className="w-full p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.04] border border-slate-200/85 dark:border-white/10 focus:border-[#003876] dark:focus:border-blue-400 text-xs sm:text-sm font-mono leading-relaxed text-slate-900 dark:text-slate-100 outline-none resize-y"
-                    />
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                        위키 문법: <code className="font-mono">[[문서 제목|표시명]]</code> ·{" "}
-                        <code className="font-mono">[[route:도시코드:노선번호]]</code> ·{" "}
-                        <code className="font-mono">[[roadview:위도,경도,라벨]]</code>
-                    </p>
-                </div>
+                <textarea
+                    ref={textareaRef}
+                    value={value}
+                    onChange={(e) => onChange(e.target.value)}
+                    rows={18}
+                    placeholder="마크다운으로 문서와 노선(```routes), 셔틀 시간표(```shuttle), 승강장(```stops)을 한 번에 작성하세요."
+                    className="w-full rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900/90 p-4 font-mono text-xs sm:text-sm text-slate-800 dark:text-slate-100 leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#003876]/40 dark:focus:ring-blue-500/40 resize-y min-h-[340px]"
+                />
             ) : (
                 <div
-                    className="p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/10 min-h-[240px]">
-                    <WikiMarkdownRenderer markdown={value} showToc/>
+                    className="rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900/90 p-5 min-h-[340px]">
+                    <WikiMarkdownRenderer markdown={value}/>
                 </div>
             )}
         </div>

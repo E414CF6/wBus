@@ -111,9 +111,6 @@ export function computeWikiDelta(
     if (before.title !== after.title) fieldsPatch.title = after.title;
     if (before.subtitle !== after.subtitle) fieldsPatch.subtitle = after.subtitle;
     if (before.pinColor !== after.pinColor) fieldsPatch.pinColor = after.pinColor;
-    if ((before.cityCode ?? null) !== (after.cityCode ?? null)) {
-        fieldsPatch.cityCode = after.cityCode ?? null;
-    }
     if ((before.lat ?? null) !== (after.lat ?? null)) {
         fieldsPatch.lat = after.lat ?? null;
     }
@@ -122,15 +119,6 @@ export function computeWikiDelta(
     }
     if (JSON.stringify(before.tags) !== JSON.stringify(after.tags)) {
         fieldsPatch.tags = after.tags;
-    }
-    if (JSON.stringify(before.linkedRoutes) !== JSON.stringify(after.linkedRoutes)) {
-        fieldsPatch.linkedRoutes = after.linkedRoutes;
-    }
-    if (JSON.stringify(before.shuttle) !== JSON.stringify(after.shuttle)) {
-        fieldsPatch.shuttle = after.shuttle;
-    }
-    if (JSON.stringify(before.boardingStops) !== JSON.stringify(after.boardingStops)) {
-        fieldsPatch.boardingStops = after.boardingStops;
     }
 
     const delta: WikiRevisionDelta = {};
@@ -158,8 +146,6 @@ export function applyWikiDelta(
     }
 ): WikiPageDocument {
     const fp = delta.fieldsPatch;
-    const nextCityCode =
-        fp && "cityCode" in fp ? (fp.cityCode ?? undefined) : base.cityCode;
     const nextLat =
         fp && "lat" in fp ? (fp.lat ?? undefined) : base.lat;
     const nextLng =
@@ -170,13 +156,9 @@ export function applyWikiDelta(
         title: fp?.title ?? base.title,
         subtitle: fp?.subtitle ?? base.subtitle,
         pinColor: fp?.pinColor ?? base.pinColor,
-        cityCode: nextCityCode,
         lat: nextLat,
         lng: nextLng,
         tags: fp?.tags ?? base.tags,
-        linkedRoutes: fp?.linkedRoutes ?? base.linkedRoutes,
-        shuttle: fp && "shuttle" in fp ? (fp.shuttle ?? null) : base.shuttle,
-        boardingStops: fp?.boardingStops ?? base.boardingStops,
         markdownBody: delta.markdownPatch
             ? applyMarkdownPatch(base.markdownBody, delta.markdownPatch)
             : base.markdownBody,

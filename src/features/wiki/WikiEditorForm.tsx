@@ -1,88 +1,59 @@
 "use client";
 
 import React, {useState} from "react";
-import {NATIONWIDE_CITIES} from "@entities/city";
-import {
-    DEFAULT_WIKI_PIN_COLOR,
-    normalizeWikiSlug,
-    type WikiBoardingStop,
-    type WikiLinkedRoute,
-    type WikiPageDocument,
-    type WikiPinColor,
-    type WikiShuttleBlock,
-} from "@entities/wiki";
+import {DEFAULT_WIKI_PIN_COLOR, normalizeWikiSlug, type WikiPageDocument, type WikiPinColor,} from "@entities/wiki";
+import type {WikiFormDraft} from "./WikiCreateForm";
 import {WikiEditMetaBar} from "./WikiEditMetaBar";
 import {WikiMarkdownEditor} from "./WikiMarkdownEditor";
 import {WikiPinColorSelector} from "./WikiPinColorSelector";
 import {WikiPinLocationFields} from "./WikiPinLocationFields";
-import {WikiRoutesEditor} from "./WikiRoutesEditor";
-import {WikiShuttleEditor} from "./WikiShuttleEditor";
-import {WikiStopsEditor} from "./WikiStopsEditor";
 
 export interface WikiEditorFormProps {
     doc: WikiPageDocument;
     initialNickname: string;
+    initialDraft?: Partial<WikiFormDraft>;
     onSaveNickname: (nickname: string) => void;
     onSaved: (saved: WikiPageDocument) => Promise<void> | void;
     onCancel: () => void;
     onReloadLatest: () => Promise<void>;
+    onPickOnMap?: (draft: WikiFormDraft) => void;
 }
 
 export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                                                                   doc,
                                                                   initialNickname,
+                                                                  initialDraft,
                                                                   onSaveNickname,
                                                                   onSaved,
                                                                   onCancel,
                                                                   onReloadLatest,
+                                                                  onPickOnMap,
                                                               }) => {
     const [baseVersion, setBaseVersion] = useState(doc.version);
-    const [title, setTitle] = useState(doc.title);
-    const [subtitle, setSubtitle] = useState(doc.subtitle);
-    const [pinColor, setPinColor] = useState<WikiPinColor>(doc.pinColor ?? DEFAULT_WIKI_PIN_COLOR);
-    const [cityCode, setCityCode] = useState(doc.cityCode ?? "");
-    const [latText, setLatText] = useState(
-        typeof doc.lat === "number" && Number.isFinite(doc.lat) ? doc.lat.toFixed(6) : "",
+    const [title, setTitle] = useState(initialDraft?.title ?? doc.title);
+    const [subtitle, setSubtitle] = useState(initialDraft?.subtitle ?? doc.subtitle);
+    const [pinColor, setPinColor] = useState<WikiPinColor>(
+        initialDraft?.pinColor ?? doc.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
     );
-    const [lngText, setLngText] = useState(
-        typeof doc.lng === "number" && Number.isFinite(doc.lng) ? doc.lng.toFixed(6) : "",
+    const [lat, setLat] = useState<number | undefined>(
+        initialDraft && "lat" in initialDraft ? initialDraft.lat : doc.lat,
     );
-    const [tagsText, setTagsText] = useState(doc.tags.join(", "));
-    const [markdownBody, setMarkdownBody] = useState(doc.markdownBody);
-    const [linkedRoutes, setLinkedRoutes] = useState<WikiLinkedRoute[]>(doc.linkedRoutes);
-    const [shuttle, setShuttle] = useState<WikiShuttleBlock | null>(doc.shuttle);
-    const [boardingStops, setBoardingStops] = useState<WikiBoardingStop[]>(doc.boardingStops);
+    const [lng, setLng] = useState<number | undefined>(
+        initialDraft && "lng" in initialDraft ? initialDraft.lng : doc.lng,
+    );
+    const [tagsText, setTagsText] = useState(initialDraft?.tagsText ?? doc.tags.join(", "));
+    const [markdownBody, setMarkdownBody] = useState(
+        initialDraft?.markdownBody ?? doc.markdownBody,
+    );
     const [nickname, setNickname] = useState(initialNickname);
-    const [summary, setSummary] = useState("");
+    const [summary, setSummary] = useState(initialDraft?.summary ?? "");
     const [honeypot, setHoneypot] = useState("");
-    const [editorTab, setEditorTab] = useState<"markdown" | "routes" | "shuttle" | "stops">(
-        "markdown",
-    );
     const [isSaving, setIsSaving] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [conflictVersion, setConflictVersion] = useState<number | null>(null);
 
     const submitSave = async (overrideBaseVersion?: number) => {
         if (isSaving) return;
-
-        const tLat = latText.trim();
-        const tLng = lngText.trim();
-        if ((tLat && !tLng) || (!tLat && tLng)) {
-            setErrorMessage("지도 핀 좌표는 위도와 경도를 함께 입력하거나 모두 비워 주세요.");
-            return;
-        }
-        let parsedLat: number | null = null;
-        let parsedLng: number | null = null;
-        if (tLat && tLng) {
-            const nLat = Number(tLat);
-            const nLng = Number(tLng);
-            if (!Number.isFinite(nLat) || !Number.isFinite(nLng)) {
-                setErrorMessage("올바른 숫자 형식의 위도·경도를 입력해 주세요.");
-                return;
-            }
-            parsedLat = nLat;
-            parsedLng = nLng;
-        }
 
         setIsSaving(true);
         setErrorMessage(null);
@@ -94,10 +65,11 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
             .filter(Boolean)
             .slice(0, 12);
 
-        const cleanedRoutes = linkedRoutes.filter((r) => r.routeNo.trim().length > 0);
-        const cleanedStops = boardingStops.filter(
-            (s) => s.name.trim().length > 0 && s.locationDescription.trim().length > 0,
-        );
+        const hasCoords =
+            typeof lat === "number" &&
+            Number.isFinite(lat) &&
+            typeof lng === "number" &&
+            Number.isFinite(lng);
 
         try {
             const res = await fetch(`/api/wiki/${encodeURIComponent(doc.slug)}`, {
@@ -108,13 +80,9 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                     title,
                     subtitle,
                     pinColor,
-                    cityCode: cityCode.trim() || undefined,
-                    lat: parsedLat,
-                    lng: parsedLng,
+                    lat: hasCoords ? lat : null,
+                    lng: hasCoords ? lng : null,
                     tags: cleanedTags,
-                    linkedRoutes: cleanedRoutes,
-                    shuttle,
-                    boardingStops: cleanedStops,
                     markdownBody,
                     nickname: nickname.trim(),
                     summary: summary.trim(),
@@ -158,7 +126,7 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                             문서 편집 모드 · 기준 v{baseVersion}
                         </span>
                         <h2 className="text-base font-black text-slate-900 dark:text-white mt-0.5">
-                            기본 정보 &amp; 구조화 데이터 편집
+                            기본 정보 &amp; 통합 마크다운 편집
                         </h2>
                     </div>
                     <span
@@ -204,106 +172,52 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                        <label
-                            htmlFor="wiki-edit-tags"
-                            className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
-                        >
-                            해시태그 (쉼표로 구분 · 최대 3개가 지도 핀에 표시됨)
-                        </label>
-                        <input
-                            id="wiki-edit-tags"
-                            name="tags"
-                            type="text"
-                            value={tagsText}
-                            onChange={(e) => setTagsText(e.target.value)}
-                            placeholder="예: 정류장, 환승, 첫차팁"
-                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-semibold text-slate-900 dark:text-slate-100"
-                        />
-                    </div>
-                    <div>
-                        <label
-                            htmlFor="wiki-edit-city"
-                            className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
-                        >
-                            연결 지역 (선택)
-                        </label>
-                        <select
-                            id="wiki-edit-city"
-                            name="cityCode"
-                            value={cityCode}
-                            onChange={(e) => setCityCode(e.target.value)}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-slate-100"
-                        >
-                            <option value="">전국 / 공통</option>
-                            {NATIONWIDE_CITIES.map((city) => (
-                                <option key={city.code} value={city.code}>
-                                    {city.name} ({city.code})
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                <div>
+                    <label
+                        htmlFor="wiki-edit-tags"
+                        className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
+                    >
+                        해시태그 (쉼표로 구분 · 최대 3개가 지도 핀에 표시됨)
+                    </label>
+                    <input
+                        id="wiki-edit-tags"
+                        name="tags"
+                        type="text"
+                        value={tagsText}
+                        onChange={(e) => setTagsText(e.target.value)}
+                        placeholder="예: 정류장, 환승, 첫차팁"
+                        className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-semibold text-slate-900 dark:text-slate-100"
+                    />
                 </div>
 
                 <WikiPinColorSelector id="wiki-edit-pin-color" value={pinColor} onChange={setPinColor}/>
 
                 <WikiPinLocationFields
-                    lat={latText}
-                    lng={lngText}
-                    onChangeLat={setLatText}
-                    onChangeLng={setLngText}
+                    lat={lat}
+                    lng={lng}
                     onClear={() => {
-                        setLatText("");
-                        setLngText("");
+                        setLat(undefined);
+                        setLng(undefined);
                     }}
+                    onPickOnMap={
+                        onPickOnMap
+                            ? () =>
+                                onPickOnMap({
+                                    title,
+                                    subtitle,
+                                    pinColor,
+                                    tagsText,
+                                    markdownBody,
+                                    lat,
+                                    lng,
+                                    summary,
+                                })
+                            : undefined
+                    }
                 />
             </div>
 
-            {/* Section switcher */}
-            <div
-                className="flex flex-wrap items-center gap-1.5 p-1.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs">
-                {[
-                    {id: "markdown" as const, label: "위키 본문 (마크다운)"},
-                    {id: "routes" as const, label: `시내버스 노선 (${linkedRoutes.length})`},
-                    {id: "shuttle" as const, label: `셔틀 시간표${shuttle?.enabled ? " (ON)" : ""}`},
-                    {id: "stops" as const, label: `승강장 안내 (${boardingStops.length})`},
-                ].map((tab) => (
-                    <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setEditorTab(tab.id)}
-                        className={`flex-1 min-w-[130px] py-2 px-3 rounded-xl text-xs font-black transition cursor-pointer ${
-                            editorTab === tab.id
-                                ? "bg-[#003876] dark:bg-sky-600 text-white shadow-xs"
-                                : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
-            </div>
-
-            {editorTab === "markdown" && (
-                <WikiMarkdownEditor
-                    value={markdownBody}
-                    onChange={setMarkdownBody}
-                    cityCode={cityCode}
-                />
-            )}
-            {editorTab === "routes" && (
-                <WikiRoutesEditor
-                    value={linkedRoutes}
-                    onChange={setLinkedRoutes}
-                    defaultCityCode={cityCode}
-                />
-            )}
-            {editorTab === "shuttle" && (
-                <WikiShuttleEditor value={shuttle} onChange={setShuttle}/>
-            )}
-            {editorTab === "stops" && (
-                <WikiStopsEditor value={boardingStops} onChange={setBoardingStops}/>
-            )}
+            <WikiMarkdownEditor value={markdownBody} onChange={setMarkdownBody}/>
 
             <WikiEditMetaBar
                 nickname={nickname}

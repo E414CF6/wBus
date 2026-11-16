@@ -14,7 +14,6 @@ function createTestWikiDoc(): WikiPageDocument {
         title: "연세대학교 미래캠퍼스",
         subtitle: "셔틀·시내버스 안내",
         pinColor: "navy",
-        cityCode: "32020",
         lat: 37.2779,
         lng: 127.9026,
         tags: ["연세대", "원주"],
@@ -22,20 +21,6 @@ function createTestWikiDoc(): WikiPageDocument {
         createdAt: "2026-03-01T00:00:00.000Z",
         updatedAt: "2026-03-01T00:00:00.000Z",
         lastEditor: {nickname: "wBus", editorId: "ed-1"},
-        linkedRoutes: [
-            {routeNo: "30", cityCode: "32020", label: "30번"},
-            {routeNo: "34", cityCode: "32020", label: "34번"},
-            {routeNo: "34-1", cityCode: "32020", label: "34-1번"},
-        ],
-        shuttle: {
-            enabled: true,
-            title: "무료 셔틀버스 시간표",
-            stop_locations: [],
-            inbound_to_campus: [],
-            outbound_from_campus: [],
-            guidelines: [],
-        },
-        boardingStops: [],
         markdownBody: "# 연세대학교 미래캠퍼스\n- 30번\n- 34번",
     };
 }
@@ -58,7 +43,6 @@ describe("wikiDelta checkpoint & patch engine", () => {
         const patch = createMarkdownPatch(before, after);
         expect(applyMarkdownPatch(before, patch)).toBe(after);
 
-        // Edge case: deleting everything down to single line
         const emptyPatch = createMarkdownPatch(after, "초기화됨");
         expect(applyMarkdownPatch(after, emptyPatch)).toBe("초기화됨");
     });
@@ -78,8 +62,6 @@ describe("wikiDelta checkpoint & patch engine", () => {
                 lat: v === 6 ? 37.2791 : prev.lat,
                 lng: v === 6 ? 127.9033 : prev.lng,
                 tags: v === 7 ? [...prev.tags, "KTX환승"] : prev.tags,
-                linkedRoutes:
-                    v === 12 ? prev.linkedRoutes.slice(0, 2) : prev.linkedRoutes,
                 markdownBody: `${prev.markdownBody}\n- v${v} 편집 추가 팁`,
                 updatedAt: `2026-03-01T00:${String(v).padStart(2, "0")}:00.000Z`,
                 lastEditor: {nickname: `학우${v}`, editorId: `ed-${v}`},
@@ -102,25 +84,21 @@ describe("wikiDelta checkpoint & patch engine", () => {
             };
         });
 
-        // Verify v1 and v10 are checkpoints and intermediate edits store compact deltas
         expect(stored[0].isCheckpoint).toBe(true);
         expect(stored[9].isCheckpoint).toBe(true);
         expect(stored[2].isCheckpoint).toBe(false);
         expect(stored[2].snapshot).toBeNull();
-        // Structured fields weren't mutated on v3, so fieldsPatch must be omitted
         expect(stored[2].delta?.fieldsPatch).toBeUndefined();
-        // pinColor changed on v5 -> compact fieldsPatch only records pinColor
         expect(stored[4].delta?.fieldsPatch).toEqual({pinColor: "teal"});
 
-        // Reconstruct every single version v1..v15 from nearest prior checkpoint
         for (const expected of docs) {
-            const startIdx = expected.version >= 10 ? 9 : 0; // v10 or v1
+            const startIdx = expected.version >= 10 ? 9 : 0;
             let reconstructed = stored[startIdx].snapshot!;
             for (let i = startIdx + 1; i < expected.version; i++) {
                 reconstructed = applyWikiDelta(
                     reconstructed,
                     stored[i].delta!,
-                    stored[i].meta
+                    stored[i].meta,
                 );
             }
             expect(reconstructed).toEqual(expected);

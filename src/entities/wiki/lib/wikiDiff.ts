@@ -120,20 +120,6 @@ export function computeStructuredChanges(
         changes.push("태그 수정");
     }
 
-    if (JSON.stringify(before.linkedRoutes) !== JSON.stringify(after.linkedRoutes)) {
-        changes.push(`연결 노선 변경 (${before.linkedRoutes.length} → ${after.linkedRoutes.length})`);
-    }
-
-    if (JSON.stringify(before.shuttle) !== JSON.stringify(after.shuttle)) {
-        const beforeCount = (before.shuttle?.inbound_to_campus.length ?? 0) + (before.shuttle?.outbound_from_campus.length ?? 0);
-        const afterCount = (after.shuttle?.inbound_to_campus.length ?? 0) + (after.shuttle?.outbound_from_campus.length ?? 0);
-        changes.push(`셔틀 시간표 변경 (${beforeCount}회 → ${afterCount}회)`);
-    }
-
-    if (JSON.stringify(before.boardingStops) !== JSON.stringify(after.boardingStops)) {
-        changes.push(`탑승 장소 변경 (${before.boardingStops.length}곳 → ${after.boardingStops.length}곳)`);
-    }
-
     if (before.markdownBody !== after.markdownBody) {
         changes.push("본문 문서 수정");
     }
@@ -168,13 +154,9 @@ export function hasWikiContentChanged(
         before.title !== after.title ||
         before.subtitle !== after.subtitle ||
         before.pinColor !== after.pinColor ||
-        (before.cityCode ?? "") !== (after.cityCode ?? "") ||
         (before.lat ?? null) !== (after.lat ?? null) ||
         (before.lng ?? null) !== (after.lng ?? null) ||
         JSON.stringify(before.tags) !== JSON.stringify(after.tags) ||
-        JSON.stringify(before.linkedRoutes) !== JSON.stringify(after.linkedRoutes) ||
-        JSON.stringify(before.shuttle) !== JSON.stringify(after.shuttle) ||
-        JSON.stringify(before.boardingStops) !== JSON.stringify(after.boardingStops) ||
         before.markdownBody !== after.markdownBody
     );
 }

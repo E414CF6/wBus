@@ -63,23 +63,20 @@ describe("wiki API routes", () => {
         });
     });
 
-    it("forwards pinsOnly and cityCode filters on GET /api/wiki", async () => {
+    it("forwards pinsOnly filter on GET /api/wiki", async () => {
         mockWikiServer.listWikiPages.mockResolvedValue({
             updatedAt: "2026-03-01T00:00:00.000Z",
             pages: [],
             recentChanges: [],
         });
 
-        const req = new NextRequest(
-            "http://localhost/api/wiki?pinsOnly=true&cityCode=32020&limit=100",
-        );
+        const req = new NextRequest("http://localhost/api/wiki?pinsOnly=true&limit=100");
         const res = await listWikiGET(req);
         expect(res.status).toBe(200);
         expect(mockWikiServer.listWikiPages).toHaveBeenCalledWith({
             query: undefined,
             limit: 100,
             offset: undefined,
-            cityCode: "32020",
             pinsOnly: true,
         });
     });
@@ -90,7 +87,6 @@ describe("wiki API routes", () => {
             title: "원주역 광장 핀",
             subtitle: "",
             pinColor: "emerald",
-            cityCode: "32020",
             lat: 37.3152,
             lng: 127.9222,
             tags: ["원주역"],
@@ -98,9 +94,6 @@ describe("wiki API routes", () => {
             createdAt: "2026-03-01T00:00:00.000Z",
             updatedAt: "2026-03-01T00:00:00.000Z",
             lastEditor: {nickname: "익명 버스러", editorId: "ed-test"},
-            linkedRoutes: [],
-            shuttle: null,
-            boardingStops: [],
             markdownBody: "",
         });
 
@@ -110,7 +103,6 @@ describe("wiki API routes", () => {
             body: JSON.stringify({
                 title: "원주역 광장 핀",
                 pinColor: "emerald",
-                cityCode: "32020",
                 lat: 37.3152,
                 lng: 127.9222,
                 tags: ["원주역"],

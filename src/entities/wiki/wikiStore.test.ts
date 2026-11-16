@@ -44,15 +44,6 @@ function evalPageRowPredicate(
     // Split top-level AND clauses when checking filters + search OR
     let result = true;
 
-    const cityIdx = sqlText.indexOf('"wiki_pages"."city_code" = $');
-    if (cityIdx !== -1) {
-        const m = sqlText.slice(cityIdx).match(/\$(\d+)/);
-        if (m) {
-            const city = params[Number(m[1]) - 1];
-            if (row.cityCode !== city) result = false;
-        }
-    }
-
     if (sqlText.includes('"wiki_pages"."lat" is not null') && row.lat == null) {
         result = false;
     }
@@ -261,7 +252,6 @@ function createFakeDb() {
                                 slug,
                                 subtitle: String(val.subtitle ?? ""),
                                 pinColor: (val.pinColor as realSchema.WikiPageRow["pinColor"]) ?? "navy",
-                                cityCode: (val.cityCode as string | null) ?? null,
                                 lat: (val.lat as number | null) ?? null,
                                 lng: (val.lng as number | null) ?? null,
                                 tags: (val.tags as string[]) ?? [],
@@ -271,9 +261,6 @@ function createFakeDb() {
                                 pinned: Boolean(val.pinned ?? false),
                                 lastEditorNickname: String(val.lastEditorNickname),
                                 lastEditorId: String(val.lastEditorId),
-                                linkedRoutes: (val.linkedRoutes as realSchema.WikiPageRow["linkedRoutes"]) ?? [],
-                                shuttle: (val.shuttle as realSchema.WikiPageRow["shuttle"]) ?? null,
-                                boardingStops: (val.boardingStops as realSchema.WikiPageRow["boardingStops"]) ?? [],
                                 markdownBody: String(val.markdownBody ?? ""),
                                 createdAt: (val.createdAt as Date) ?? new Date(),
                                 updatedAt: (val.updatedAt as Date) ?? new Date(),
@@ -466,14 +453,10 @@ describe("wikiStore Postgres + Delta integration", () => {
             title: canonicalSlug,
             subtitle: "무료 셔틀버스 · 시내버스 시간표",
             pinColor: "navy",
-            cityCode: "32020",
             lat: 37.2779,
             lng: 127.9026,
             tags: ["연세대 미래캠퍼스", "원주"],
-            linkedRoutes: [{routeNo: "30", cityCode: "32020", label: "30번"}],
-            shuttle: null,
-            boardingStops: [],
-            markdownBody: "## 통학 핵심 요약\n초기 본문",
+            markdownBody: "## 통학 핵심 요약\n초기 본문\n\n```routes\n32020 | 30 | 30번\n```",
             summary: "초기 위키 문서 생성",
             editor: {nickname: "wBus", editorId: "wbus-system"},
         });
@@ -490,11 +473,7 @@ describe("wikiStore Postgres + Delta integration", () => {
                 title: currentDoc.title,
                 subtitle: currentDoc.subtitle,
                 pinColor: currentDoc.pinColor,
-                cityCode: currentDoc.cityCode,
                 tags: currentDoc.tags,
-                linkedRoutes: currentDoc.linkedRoutes,
-                shuttle: currentDoc.shuttle,
-                boardingStops: currentDoc.boardingStops,
                 markdownBody: `${currentDoc.markdownBody}\n- v${v} 학우 제보 팁`,
                 summary: `v${v} 팁 추가`,
                 editor: {nickname: `학우${v}`, editorId: `ed-${v}`},
@@ -528,11 +507,7 @@ describe("wikiStore Postgres + Delta integration", () => {
                 title: currentDoc.title,
                 subtitle: currentDoc.subtitle,
                 pinColor: currentDoc.pinColor,
-                cityCode: currentDoc.cityCode,
                 tags: currentDoc.tags,
-                linkedRoutes: currentDoc.linkedRoutes,
-                shuttle: currentDoc.shuttle,
-                boardingStops: currentDoc.boardingStops,
                 markdownBody: "충돌 시도",
                 summary: "충돌",
                 editor: {nickname: "학우X", editorId: "ed-x"},
@@ -577,13 +552,12 @@ describe("wikiStore Postgres + Delta integration", () => {
             title: "기존 Blob 정류장 문서",
             subtitle: "마이그레이션 검증",
             pinColor: "blue" as const,
-            cityCode: "32020",
             tags: ["기존블롭"],
             version: 2,
             createdAt: "2026-03-01T00:00:00.000Z",
             updatedAt: "2026-03-02T00:00:00.000Z",
             lastEditor: {nickname: "기존기여자", editorId: "ed-blob"},
-            linkedRoutes: [],
+            linkedRoutes: [{cityCode: "32020", routeNo: "30", label: "30번"}],
             shuttle: null,
             boardingStops: [],
             markdownBody: "## 기존 내용\nBlob에서 Postgres로 자동 이관됩니다.",
@@ -618,7 +592,7 @@ describe("wikiStore Postgres + Delta integration", () => {
             editor: {nickname: "기존기여자", editorId: "ed-blob"},
             createdAt: "2026-03-01T00:00:00.000Z",
             diffStats: {added: 2, removed: 0, structuredChanges: ["문서 최초 생성"]},
-            snapshot: {...legacyDoc, version: 1, markdownBody: "## 초기 내용"},
+            snapshot: {...legacyDoc, version: 1, linkedRoutes: [], markdownBody: "## 초기 내용"},
         });
         memBlobs.set("wiki/revisions/legacy-blob-hub/v2.json", {
             slug: "legacy-blob-hub",
@@ -633,6 +607,7 @@ describe("wikiStore Postgres + Delta integration", () => {
 
         const migrated = await getWikiPage("legacy-blob-hub");
         expect(migrated?.version).toBe(2);
+        expect(migrated?.markdownBody).toContain("```routes");
         expect(pageRows.has("legacy-blob-hub")).toBe(true);
 
         const rev1 = await getWikiRevision("legacy-blob-hub", 1);
@@ -645,11 +620,7 @@ describe("wikiStore Postgres + Delta integration", () => {
             title: "남원주역 정류장 가이드",
             subtitle: "KTX 환승 버스 안내",
             pinColor: "indigo",
-            cityCode: "32020",
             tags: ["남원주역"],
-            linkedRoutes: [],
-            shuttle: null,
-            boardingStops: [],
             markdownBody: "## 위치\n남원주역 광장 앞 유니크키워드XY123 탑승장",
             summary: "문서 개설",
             editor: {nickname: "개설자", editorId: "ed-3"},
@@ -672,11 +643,7 @@ describe("wikiStore Postgres + Delta integration", () => {
                 title: created.title,
                 subtitle: created.subtitle,
                 pinColor: created.pinColor,
-                cityCode: created.cityCode,
                 tags: created.tags,
-                linkedRoutes: [],
-                shuttle: null,
-                boardingStops: [],
                 markdownBody: "비관리자 수정 시도",
                 summary: "차단 대상",
                 editor: {nickname: "일반", editorId: "ed-4"},
@@ -692,11 +659,7 @@ describe("wikiStore Postgres + Delta integration", () => {
             title: "남원주역 KTX 버스 승강장",
             subtitle: created.subtitle,
             pinColor: created.pinColor,
-            cityCode: created.cityCode,
             tags: created.tags,
-            linkedRoutes: [],
-            shuttle: null,
-            boardingStops: [],
             markdownBody: created.markdownBody,
             summary: "제목 및 슬러그 통일",
             editor: {nickname: "편집자", editorId: "ed-5"},
@@ -714,9 +677,6 @@ describe("wikiStore Postgres + Delta integration", () => {
             subtitle: "고정 테스트",
             pinColor: "navy",
             tags: [],
-            linkedRoutes: [],
-            shuttle: null,
-            boardingStops: [],
             markdownBody: "본문",
             summary: "생성",
             editor: {nickname: "관리자", editorId: "ed-admin"},
@@ -736,14 +696,10 @@ describe("wikiStore Postgres + Delta integration", () => {
             title: "연세대학교 미래캠퍼스",
             subtitle: "셔틀·버스 안내",
             pinColor: "navy",
-            cityCode: "32020",
             lat: 37.2779,
             lng: 127.9026,
             tags: ["연세대"],
-            linkedRoutes: [],
-            shuttle: null,
-            boardingStops: [],
-            markdownBody: "안내 위키",
+            markdownBody: "안내 위키\n\n```routes\n32020 | 30 | 30번\n```",
             summary: "생성",
             editor: {nickname: "wBus", editorId: "wbus-system"},
         });
@@ -753,13 +709,9 @@ describe("wikiStore Postgres + Delta integration", () => {
             title: "단계동 정류장 핀",
             subtitle: "터미널 사거리 탑승 안내",
             pinColor: "teal",
-            cityCode: "32020",
             lat: 37.3456,
             lng: 127.9311,
             tags: ["단계동"],
-            linkedRoutes: [],
-            shuttle: null,
-            boardingStops: [],
             markdownBody: "단계동 정류장 설명",
             summary: "핀 추가",
             editor: {nickname: "핀작성자", editorId: "ed-pin-1"},
@@ -772,20 +724,17 @@ describe("wikiStore Postgres + Delta integration", () => {
             title: "좌표없는 가이드",
             subtitle: "일반 안내",
             pinColor: "navy",
-            cityCode: "32020",
             tags: [],
-            linkedRoutes: [],
-            shuttle: null,
-            boardingStops: [],
             markdownBody: "일반 팁",
             summary: "생성",
             editor: {nickname: "작성자", editorId: "ed-pin-2"},
         });
 
-        const pinsList = await listWikiPages({pinsOnly: true, cityCode: "32020"});
+        const pinsList = await listWikiPages({pinsOnly: true});
         const slugs = pinsList.pages.map((p) => p.slug);
         expect(slugs).toEqual(["연세대학교 미래캠퍼스", "단계동 정류장 핀"]);
         expect(slugs).not.toContain("좌표없는 가이드");
+        expect(pinsList.pages[0].linkedRouteCount).toBe(1);
 
         const yonsei = await getWikiPage("연세대학교 미래캠퍼스");
         expect(yonsei?.lastEditor.nickname).toBe("wBus");

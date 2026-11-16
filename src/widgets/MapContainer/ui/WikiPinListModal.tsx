@@ -3,7 +3,6 @@
 import React, {useMemo, useState} from "react";
 import {Eye, EyeOff, Lock, MapPin, MapPinPlus, PenLine, Search, X} from "lucide-react";
 
-import {useCityContext} from "@entities/city";
 import {useWikiPins, type WikiPageSummary} from "@entities/wiki";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
@@ -26,7 +25,6 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                                                                       onSelectWikiPin,
                                                                   }) => {
     const {map} = useAppMapContext();
-    const {currentCity} = useCityContext();
     const {settings, updateSettings} = useAppSettings();
     const [query, setQuery] = useState("");
 
@@ -56,15 +54,12 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
             : raw;
 
         return filtered.slice().sort((a, b) => {
-            const aCity = a.cityCode === currentCity.code ? 0 : 1;
-            const bCity = b.cityCode === currentCity.code ? 0 : 1;
-            if (aCity !== bCity) return aCity - bCity;
             const aPinned = a.pinned ? 0 : 1;
             const bPinned = b.pinned ? 0 : 1;
             if (aPinned !== bPinned) return aPinned - bPinned;
             return b.updatedAt.localeCompare(a.updatedAt);
         });
-    }, [data?.pages, query, currentCity.code]);
+    }, [data?.pages, query]);
 
     const handleOpenPin = (page: WikiPageSummary, mode: "read" | "edit") => {
         triggerHaptic("selection");
@@ -146,7 +141,7 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="지도 위키 핀 목록"
+            title="지도 위키"
             subtitle="등록된 위키 핀을 탐색하고 바로 편집하거나 새 핀을 추가할 수 있습니다"
             icon={modalIcon}
             headerActions={headerActions}
@@ -155,7 +150,7 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
             height="default"
             zIndex="z-[120]"
             modalId="wiki-pin-list"
-            ariaLabel="지도 위키 핀 목록 모달"
+            ariaLabel="지도 위키 목록 모달"
         >
             <div className="flex-1 min-h-0 flex flex-col p-4 sm:p-5 gap-3.5">
                 {/* Search input */}

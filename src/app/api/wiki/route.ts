@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
     try {
         const query = request.nextUrl.searchParams.get("q") ?? undefined;
-        const cityCode = request.nextUrl.searchParams.get("cityCode")?.trim() || undefined;
         const pinsOnlyParam = request.nextUrl.searchParams.get("pinsOnly");
         const pinsOnly = pinsOnlyParam === "true" || pinsOnlyParam === "1";
         const limitParam = request.nextUrl.searchParams.get("limit");
@@ -18,7 +17,6 @@ export async function GET(request: NextRequest) {
 
         const data = await listWikiPages({
             query,
-            ...(cityCode ? {cityCode} : {}),
             ...(pinsOnly ? {pinsOnly: true} : {}),
             limit: Number.isFinite(limit) && (limit ?? 0) > 0 ? limit : undefined,
             offset: Number.isFinite(offset) && (offset ?? 0) >= 0 ? offset : undefined,
@@ -60,13 +58,9 @@ export async function POST(request: NextRequest) {
             title: parsed.data.title,
             subtitle: parsed.data.subtitle,
             pinColor: parsed.data.pinColor,
-            cityCode: parsed.data.cityCode,
             lat: parsed.data.lat,
             lng: parsed.data.lng,
             tags: parsed.data.tags,
-            linkedRoutes: parsed.data.linkedRoutes,
-            shuttle: parsed.data.shuttle,
-            boardingStops: parsed.data.boardingStops,
             markdownBody: parsed.data.markdownBody,
             summary: parsed.data.summary,
             editor,

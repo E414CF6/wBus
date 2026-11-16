@@ -2,9 +2,8 @@
 
 import React from "react";
 import {BookPlus} from "lucide-react";
-import {useCityContext} from "@entities/city";
 import {mutateAllWikiQueries, type WikiPageDocument} from "@entities/wiki";
-import {WikiCreateForm} from "@features/wiki";
+import {WikiCreateForm, type WikiFormDraft} from "@features/wiki";
 import {Modal} from "@shared/ui";
 
 export interface WikiCreateModalProps {
@@ -12,10 +11,10 @@ export interface WikiCreateModalProps {
     initialSlug?: string;
     initialLat?: number;
     initialLng?: number;
-    initialCityCode?: string;
+    initialDraft?: Partial<WikiFormDraft>;
     onClose: () => void;
     onCreated: (doc: WikiPageDocument) => void;
-    onRepickLocation?: () => void;
+    onRepickLocation?: (draft: WikiFormDraft) => void;
 }
 
 export const WikiCreateModal: React.FC<WikiCreateModalProps> = ({
@@ -23,14 +22,11 @@ export const WikiCreateModal: React.FC<WikiCreateModalProps> = ({
                                                                     initialSlug,
                                                                     initialLat,
                                                                     initialLng,
-                                                                    initialCityCode,
+                                                                    initialDraft,
                                                                     onClose,
                                                                     onCreated,
                                                                     onRepickLocation,
                                                                 }) => {
-    const {currentCity} = useCityContext();
-    const resolvedCityCode = initialCityCode ?? currentCity.code;
-
     const modalIcon = (
         <div
             className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-emerald-600 text-white shadow-sm shrink-0">
@@ -60,7 +56,7 @@ export const WikiCreateModal: React.FC<WikiCreateModalProps> = ({
                             initialSlug={initialSlug}
                             initialLat={initialLat}
                             initialLng={initialLng}
-                            initialCityCode={resolvedCityCode}
+                            initialDraft={initialDraft}
                             onPickOnMap={onRepickLocation}
                             onCreated={async (created) => {
                                 await mutateAllWikiQueries().catch(() => []);

@@ -1,5 +1,12 @@
 import {describe, expect, it} from "vitest";
-import {isSafeWikiHref, parseInlineMarkdown, parseWikiMarkdown, slugifyHeadingId} from "./wikiMarkdown";
+import {
+    extractWikiStructuredCounts,
+    isSafeWikiHref,
+    parseInlineMarkdown,
+    parseWikiMarkdown,
+    serializeStructuredBlocksToMarkdown,
+    slugifyHeadingId,
+} from "./wikiMarkdown";
 
 describe("wikiMarkdown parser", () => {
     it("blocks unsafe URL schemes and protocol-relative links", () => {
@@ -67,5 +74,90 @@ describe("wikiMarkdown parser", () => {
             expect(secondItem.some((n) => n.type === "link" && n.href === "https://wbus.kr")).toBe(true);
             expect(secondItem.some((n) => n.type === "link" && n.href.startsWith("javascript:"))).toBe(false);
         }
+    });
+
+    it("serializes and parses unified routes, shuttle, and stops directives inside markdown", () => {
+        const md = serializeStructuredBlocksToMarkdown({
+            linkedRoutes: [
+                {
+                    cityCode: "32020",
+                    routeNo: "30",
+                    label: "30번",
+                    description: "장양리 ↔ 연세대",
+                    viaStops: "장양리 - 원주역 - 연세대학교",
+                },
+            ],
+            shuttle: {
+                enabled: true,
+                title: "무료 셔틀버스 시간표",
+                stop_locations: [{name: "원주역", location_description: "원주역 시내버스정류장"}],
+                inbound_to_campus: [
+                    {
+                        operation_type: "평일 운행",
+                        departure_point: "여주역",
+                        departure_time: "07:13",
+                        destination: "미래캠퍼스",
+                        via: [{name: "원주역", time: "08:05", is_fixed_time: true}],
+                        note: null,
+                    },
+                ],
+                outbound_from_campus: [
+                    {
+                        operation_type: "일요일 운행",
+                        departure_point: "미래관",
+                        departure_time: "20:05",
+                        destination: "원주고속터미널",
+                        via: [{name: "매지리", time: null}],
+                        note: "일요일 운행",
+                    },
+                ],
+                guidelines: ["출발 5분 전 탑승 완료"],
+            },
+            boardingStops: [
+                {
+                    id: "stop-1",
+                    name: "미래관",
+                    directionTag: "시내방면",
+                    lat: 37.283476,
+                    lng: 127.900657,
+                    locationDescription: "미래관 앞 승하차장",
+                    tips: "출발 장소",
+                },
+            ],
+        });
+
+        const parsed = parseWikiMarkdown(md);
+        const routesBlock = parsed.blocks.find((b) => b.type === "routes");
+        const shuttleBlock = parsed.blocks.find((b) => b.type === "shuttle");
+        const stopsBlock = parsed.blocks.find((b) => b.type === "stops");
+
+        expect(routesBlock?.type).toBe("routes");
+        if (routesBlock?.type === "routes") {
+            expect(routesBlock.routes).toHaveLength(1);
+            expect(routesBlock.routes[0].routeNo).toBe("30");
+            expect(routesBlock.routes[0].cityCode).toBe("32020");
+        }
+
+        expect(shuttleBlock?.type).toBe("shuttle");
+        if (shuttleBlock?.type === "shuttle") {
+            expect(shuttleBlock.shuttle.inbound_to_campus[0].via[0]).toEqual({
+                name: "원주역",
+                time: "08:05",
+                is_fixed_time: true,
+            });
+            expect(shuttleBlock.shuttle.outbound_from_campus[0].note).toBe("일요일 운행");
+        }
+
+        expect(stopsBlock?.type).toBe("stops");
+        if (stopsBlock?.type === "stops") {
+            expect(stopsBlock.stops[0].lat).toBeCloseTo(37.283476);
+            expect(stopsBlock.stops[0].tips).toBe("출발 장소");
+        }
+
+        expect(extractWikiStructuredCounts(md)).toEqual({
+            hasShuttle: true,
+            linkedRouteCount: 1,
+            boardingStopCount: 1,
+        });
     });
 });
