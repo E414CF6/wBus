@@ -33,10 +33,6 @@ interface MapRouteHeaderProps {
     onReconnect?: () => void;
     selectedVariantId?: string | null;
     onSelectVariant?: (variantId: string | null) => void;
-    /** @deprecated Use selectedVariantId / onSelectVariant instead */
-    selectedDirection?: "all" | "up" | "down";
-    /** @deprecated Use selectedVariantId / onSelectVariant instead */
-    onSelectDirection?: (dir: "all" | "up" | "down") => void;
     onOpenScheduleModal?: (docOrSubTab?: string, initialLocation?: "origin" | "dest") => void;
     enabled?: boolean;
 }

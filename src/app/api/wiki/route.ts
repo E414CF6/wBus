@@ -1,3 +1,4 @@
+import {revalidatePath} from "next/cache";
 import {type NextRequest, NextResponse} from "next/server";
 import {WIKI_CATEGORIES, type WikiCategory, WikiCreatePayloadSchema} from "@entities/wiki";
 import {createWikiPage, enforceWikiRateLimit, listWikiPages, resolveEditorInfo,} from "@entities/wiki/server";
@@ -9,6 +10,9 @@ export async function GET(request: NextRequest) {
     try {
         const rawCategory = request.nextUrl.searchParams.get("category");
         const query = request.nextUrl.searchParams.get("q") ?? undefined;
+        const cityCode = request.nextUrl.searchParams.get("cityCode")?.trim() || undefined;
+        const pinsOnlyParam = request.nextUrl.searchParams.get("pinsOnly");
+        const pinsOnly = pinsOnlyParam === "true" || pinsOnlyParam === "1";
         const limitParam = request.nextUrl.searchParams.get("limit");
         const offsetParam = request.nextUrl.searchParams.get("offset");
         const limit = limitParam ? Number(limitParam) : undefined;
@@ -22,6 +26,8 @@ export async function GET(request: NextRequest) {
         const data = await listWikiPages({
             category,
             query,
+            ...(cityCode ? {cityCode} : {}),
+            ...(pinsOnly ? {pinsOnly: true} : {}),
             limit: Number.isFinite(limit) && (limit ?? 0) > 0 ? limit : undefined,
             offset: Number.isFinite(offset) && (offset ?? 0) >= 0 ? offset : undefined,
         });
@@ -63,6 +69,8 @@ export async function POST(request: NextRequest) {
             subtitle: parsed.data.subtitle,
             category: parsed.data.category,
             cityCode: parsed.data.cityCode,
+            lat: parsed.data.lat,
+            lng: parsed.data.lng,
             tags: parsed.data.tags,
             linkedRoutes: parsed.data.linkedRoutes,
             shuttle: parsed.data.shuttle,
@@ -71,6 +79,13 @@ export async function POST(request: NextRequest) {
             summary: parsed.data.summary,
             editor,
         });
+
+        try {
+            revalidatePath("/wiki");
+            revalidatePath("/wiki/[slug]", "page");
+        } catch {
+            // Ignore revalidate outside request context
+        }
 
         return NextResponse.json(created, {status: 201, headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {

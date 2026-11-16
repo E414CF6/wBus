@@ -1,18 +1,24 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import {useSearchParams} from "next/navigation";
 import React, {useCallback, useEffect, useMemo, useState} from "react";
 
 import {useBusRouteMap} from "@entities/route/hooks";
 import {useCityContext, useCityFeatures} from "@entities/city";
+import {YONSEI_MIRAE_WIKI_SLUG, type WikiPageDocument} from "@entities/wiki";
 
 import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
 import {RouteScheduleModal} from "@features/map-view/RouteScheduleModal";
 import {OnboardingModal} from "@features/onboarding";
 
+import {useAppMapContext} from "@shared/context/AppMapContext";
+import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {isWeekend} from "@shared/lib/timeUtils";
 import {BottomNav} from "@widgets/BottomNav";
+import {WikiPinModal} from "@widgets/MapContainer/ui/WikiPinModal";
+import {WikiCreateModal} from "@widgets/MapContainer/ui/WikiCreateModal";
 import {useAppNavigation} from "./hooks/useAppNavigation";
 
 const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
@@ -21,6 +27,16 @@ const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
 const RouteLayer = dynamic(() => import("@widgets/MapContainer/RouteLayer"), {
     ssr: false,
 });
+const WikiPinMarker = dynamic(() => import("@widgets/MapContainer/WikiPinMarker"), {
+    ssr: false,
+});
+const WikiPinPlacementOverlay = dynamic(
+    () =>
+        import("@widgets/MapContainer/WikiPinPlacementOverlay").then(
+            (mod) => mod.WikiPinPlacementOverlay
+        ),
+    {ssr: false}
+);
 
 export function AppShell() {
     return <MapAppShell/>;
@@ -44,8 +60,101 @@ function MapAppShell() {
         return () => clearInterval(timer);
     }, []);
 
-    const {currentCity, isCityReady} = useCityContext();
+    const {currentCity, isCityReady, setCity} = useCityContext();
     const {hasDetailedTimetable, defaultQuickRoutes, defaultRoute} = useCityFeatures();
+    const {map} = useAppMapContext();
+    const {settings, updateSettings} = useAppSettings();
+
+    // Centered floating RouteScheduleModal state (for cities with detailed timetable)
+    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+    const [scheduleLocation, setScheduleLocation] = useState<"origin" | "dest">("dest");
+
+    // Integrated Map-Wiki state
+    const searchParams = useSearchParams();
+    const initialQueryWiki = searchParams.get("wiki")?.trim() || null;
+    const [activeWikiSlug, setActiveWikiSlug] = useState<string | null>(initialQueryWiki);
+    const [prevQueryWiki, setPrevQueryWiki] = useState<string | null>(initialQueryWiki);
+    if (initialQueryWiki !== prevQueryWiki) {
+        setPrevQueryWiki(initialQueryWiki);
+        if (initialQueryWiki) {
+            setActiveWikiSlug(initialQueryWiki);
+        }
+    }
+    const [pendingPinCoords, setPendingPinCoords] = useState<{ lat: number; lng: number } | null>(null);
+    const [createWikiDraft, setCreateWikiDraft] = useState<{
+        lat?: number;
+        lng?: number;
+        slug?: string;
+    } | null>(null);
+    const isPinPlacementMode = pendingPinCoords !== null;
+
+    const handleStartAddWikiPin = useCallback(() => {
+        if (typeof window !== "undefined") {
+            window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
+            window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
+            window.dispatchEvent(new CustomEvent("wbus:close-bus-list"));
+        }
+        setActiveWikiSlug(null);
+        setIsScheduleModalOpen(false);
+        if (!settings.showWikiPins) {
+            updateSettings({showWikiPins: true});
+        }
+        const center = map?.getCenter();
+        setPendingPinCoords({
+            lat: center?.lat ?? currentCity.lat,
+            lng: center?.lng ?? currentCity.lng,
+        });
+    }, [map, currentCity.lat, currentCity.lng, settings.showWikiPins, updateSettings]);
+
+    const handleConfirmPinLocation = useCallback(() => {
+        if (!pendingPinCoords) return;
+        setCreateWikiDraft({
+            lat: pendingPinCoords.lat,
+            lng: pendingPinCoords.lng,
+        });
+        setPendingPinCoords(null);
+    }, [pendingPinCoords]);
+
+    const handleCancelPinPlacement = useCallback(() => {
+        setPendingPinCoords(null);
+    }, []);
+
+    const handleWikiCreated = useCallback(
+        (created: WikiPageDocument) => {
+            setCreateWikiDraft(null);
+            if (map && typeof created.lat === "number" && typeof created.lng === "number") {
+                map.flyTo({
+                    center: [created.lng, created.lat],
+                    zoom: Math.max(map.getZoom(), 15.5),
+                    duration: 650,
+                });
+            }
+            setActiveWikiSlug(created.slug);
+        },
+        [map]
+    );
+
+    const handleSelectRouteFromWiki = useCallback(
+        (routeNo: string, targetCityCode: string) => {
+            if (targetCityCode && targetCityCode !== currentCity.code) {
+                setCity(targetCityCode, {skipFlyTo: true});
+            }
+            handleRouteChange(routeNo, targetCityCode || currentCity.code);
+        },
+        [currentCity.code, setCity, handleRouteChange]
+    );
+
+    // Allow Escape key to exit wiki pin placement mode
+    useEffect(() => {
+        if (!isPinPlacementMode) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                setPendingPinCoords(null);
+            }
+        };
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [isPinPlacementMode]);
 
     // Fetch route map for current city once URL/localStorage city has resolved
     const routeMap = useBusRouteMap(isCityReady, currentCity.code);
@@ -72,10 +181,6 @@ function MapAppShell() {
         return Object.keys(routeMap)[0] ?? selectedRoute;
     }, [isCityReady, routeMap, selectedRoute, defaultRoute, currentCity.code]);
     const isRouteDataEnabled = isCityReady && hasRouteMap && Boolean(activeRoute);
-
-    // Centered floating RouteScheduleModal state (for cities with detailed timetable)
-    const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-    const [scheduleLocation, setScheduleLocation] = useState<"origin" | "dest">("dest");
 
     // Handler for opening the centered Route Timetable Modal from Map Pins or Route Header
     const handleOpenSchedule = useCallback(
@@ -157,7 +262,10 @@ function MapAppShell() {
                     enabled={isRouteDataEnabled}
                 />
 
-                <MapWrapper>
+                <MapWrapper
+                    isPinPlacementMode={isPinPlacementMode}
+                    onPinPlacementClick={(coords) => setPendingPinCoords(coords)}
+                >
                     <RouteLayer
                         routeName={activeRoute}
                         onRouteChange={handleRouteChange}
@@ -167,7 +275,23 @@ function MapAppShell() {
                         cityCode={currentCity.code}
                         dayMode={dayMode}
                         isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                        isPinPlacementMode={isPinPlacementMode}
+                        onOpenCampusWiki={() => setActiveWikiSlug(YONSEI_MIRAE_WIKI_SLUG)}
                     />
+                    <WikiPinMarker
+                        enabled={settings.showWikiPins}
+                        selectedSlug={activeWikiSlug}
+                        isPinPlacementMode={isPinPlacementMode}
+                        onSelectWikiPin={(slug) => setActiveWikiSlug(slug)}
+                    />
+                    {pendingPinCoords && (
+                        <WikiPinPlacementOverlay
+                            coords={pendingPinCoords}
+                            onChangeCoords={setPendingPinCoords}
+                            onConfirm={handleConfirmPinLocation}
+                            onCancel={handleCancelPinPlacement}
+                        />
+                    )}
                 </MapWrapper>
             </div>
 
@@ -182,6 +306,40 @@ function MapAppShell() {
                     initialLocation={scheduleLocation}
                 />
             )}
+
+            {/* 2-b. In-Map Wiki Pin Reader / Editor / History Modal */}
+            <WikiPinModal
+                slug={activeWikiSlug}
+                onClose={() => setActiveWikiSlug(null)}
+                onSelectSlug={(nextSlug) => setActiveWikiSlug(nextSlug)}
+                onSelectRouteOnMap={handleSelectRouteFromWiki}
+                onCreateNewFromSlug={(missingSlug) => {
+                    const center = map?.getCenter();
+                    setActiveWikiSlug(null);
+                    setCreateWikiDraft({
+                        slug: missingSlug,
+                        lat: center?.lat ?? currentCity.lat,
+                        lng: center?.lng ?? currentCity.lng,
+                    });
+                }}
+            />
+
+            {/* 2-c. In-Map New Wiki Document Creation Modal */}
+            <WikiCreateModal
+                isOpen={createWikiDraft !== null}
+                initialSlug={createWikiDraft?.slug}
+                initialLat={createWikiDraft?.lat}
+                initialLng={createWikiDraft?.lng}
+                initialCityCode={currentCity.code}
+                onClose={() => setCreateWikiDraft(null)}
+                onCreated={handleWikiCreated}
+                onRepickLocation={() => {
+                    const fallbackLat = createWikiDraft?.lat ?? currentCity.lat;
+                    const fallbackLng = createWikiDraft?.lng ?? currentCity.lng;
+                    setCreateWikiDraft(null);
+                    setPendingPinCoords({lat: fallbackLat, lng: fallbackLng});
+                }}
+            />
 
             {/* 3. Unified Bottom Floating Pill Navigation Bar */}
             <BottomNav
@@ -199,6 +357,9 @@ function MapAppShell() {
                 hasFetched={liveBusData.hasFetched}
                 lastUpdated={liveBusData.lastUpdated}
                 onReconnect={liveBusData.reconnect}
+                onStartAddWikiPin={handleStartAddWikiPin}
+                onOpenWikiSlug={(slug) => setActiveWikiSlug(slug)}
+                isPinPlacementMode={isPinPlacementMode}
             />
 
             {/* 4. First-Visit Onboarding Modal */}

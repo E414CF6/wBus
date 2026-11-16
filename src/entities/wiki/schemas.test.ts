@@ -78,4 +78,34 @@ describe("wiki schemas and slug helpers", () => {
         });
         expect(invalidTime.success).toBe(false);
     });
+
+    it("validates paired map pin lat/lng coordinates and Korean bounds", () => {
+        const withCoords = WikiCreatePayloadSchema.safeParse({
+            title: "원주 중앙시장 정류장",
+            category: "stop",
+            lat: 37.3489,
+            lng: 127.9512,
+        });
+        expect(withCoords.success).toBe(true);
+        if (withCoords.success) {
+            expect(withCoords.data.lat).toBe(37.3489);
+            expect(withCoords.data.lng).toBe(127.9512);
+        }
+
+        const missingLng = WikiCreatePayloadSchema.safeParse({
+            title: "좌표 한쪽 누락",
+            category: "stop",
+            lat: 37.3489,
+        });
+        expect(missingLng.success).toBe(false);
+
+        const outOfBounds = WikiEditPayloadSchema.safeParse({
+            baseVersion: 1,
+            title: "범위 초과 테스트",
+            category: "stop",
+            lat: 10,
+            lng: 127.9,
+        });
+        expect(outOfBounds.success).toBe(false);
+    });
 });

@@ -1,17 +1,17 @@
 "use client";
 
 import {useCallback, useEffect, useRef, useState} from "react";
-import {usePathname, useSearchParams} from "next/navigation";
+import {useSearchParams} from "next/navigation";
 import {APP_CONFIG, getRecentRoutesStorageKey, MAP_SETTINGS, STORAGE_KEYS} from "@shared/config/env";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {useCityContext} from "@entities/city";
-import type {DayMode, NavTab} from "@shared/types/navigation";
+import type {DayMode} from "@shared/types/navigation";
 
-export function resolveTabFromPathname(_path: string): NavTab {
-    return "map";
-}
-
-export function buildMapUrl(route: string | null | undefined, cityCode?: string): string {
+export function buildMapUrl(
+    route: string | null | undefined,
+    cityCode?: string,
+    wikiSlug?: string | null
+): string {
     const params = new URLSearchParams();
     if (cityCode) {
         params.set("cityCode", cityCode);
@@ -19,23 +19,17 @@ export function buildMapUrl(route: string | null | undefined, cityCode?: string)
     if (route !== null && route !== undefined && route !== "") {
         params.set("route", route);
     }
+    if (wikiSlug && wikiSlug.trim()) {
+        params.set("wiki", wikiSlug.trim());
+    }
     const qs = params.toString();
     return qs ? `/?${qs}` : "/";
 }
 
 export function useAppNavigation() {
-    const pathname = usePathname();
     const searchParams = useSearchParams();
     const {currentCity, isCityReady} = useCityContext();
     const currentCityCode = currentCity.code;
-    const locationKey = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
-
-    const [activeTab, setActiveTab] = useState<NavTab>(() => resolveTabFromPathname(locationKey));
-    const [prevLocationKey, setPrevLocationKey] = useState(locationKey);
-    if (locationKey !== prevLocationKey) {
-        setPrevLocationKey(locationKey);
-        setActiveTab(resolveTabFromPathname(locationKey));
-    }
 
     const {settings} = useAppSettings();
     const [dayMode, setDayMode] = useState<DayMode>(settings.defaultDayMode);
@@ -64,8 +58,6 @@ export function useAppNavigation() {
         }
     }
 
-    const isMapActive = activeTab === "map";
-
     // Synchronize route when searchParams change
     const [prevSearchParams, setPrevSearchParams] = useState(searchParams);
     if (searchParams !== prevSearchParams) {
@@ -80,10 +72,6 @@ export function useAppNavigation() {
     useEffect(() => {
         const handlePopState = () => {
             if (typeof window === "undefined") return;
-            const nextTab = resolveTabFromPathname(
-                `${window.location.pathname}${window.location.search}`
-            );
-            setActiveTab(nextTab);
             const search = new URLSearchParams(window.location.search);
             const queryRoute = search.get("route");
             if (queryRoute !== null && queryRoute !== "") setSelectedRoute(queryRoute);
@@ -134,35 +122,19 @@ export function useAppNavigation() {
             } catch {
                 // Ignore
             }
-            if (typeof window !== "undefined" && activeTab === "map") {
+            if (typeof window !== "undefined") {
                 const targetUrl = buildMapUrl(route, targetCityCode);
                 window.history.replaceState(null, "", targetUrl);
             }
         },
-        [activeTab, currentCityCode]
-    );
-
-    const handleSelectMapRoute = useCallback(
-        (routeName: string, cityCode?: string) => {
-            const targetCityCode = cityCode || currentCityCode;
-            handleRouteChange(routeName, targetCityCode);
-            setActiveTab("map");
-            if (typeof window !== "undefined") {
-                const targetUrl = buildMapUrl(routeName, targetCityCode);
-                window.history.pushState(null, "", targetUrl);
-            }
-        },
-        [handleRouteChange, currentCityCode]
+        [currentCityCode]
     );
 
     return {
-        activeTab,
         dayMode,
         setDayMode,
         selectedRoute,
         setSelectedRoute,
-        isMapActive,
         handleRouteChange,
-        handleSelectMapRoute,
     };
 }

@@ -17,6 +17,8 @@ describe("wikiDiff utilities", () => {
         const next = {
             ...base,
             title: "연세대 미래캠퍼스 (수정)",
+            lat: 37.28,
+            lng: 127.905,
             tags: [...base.tags, "통학"],
             linkedRoutes: base.linkedRoutes.slice(0, 2),
             shuttle: base.shuttle
@@ -29,6 +31,7 @@ describe("wikiDiff utilities", () => {
 
         const changes = computeStructuredChanges(base, next);
         expect(changes).toContain("문서 제목·분류 수정");
+        expect(changes).toContain("지도 핀 위치 수정");
         expect(changes).toContain("태그 수정");
         expect(changes.some((c) => c.startsWith("연결 노선 변경"))).toBe(true);
         expect(changes.some((c) => c.startsWith("셔틀 시간표 변경"))).toBe(true);

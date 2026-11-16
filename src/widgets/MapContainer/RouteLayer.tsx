@@ -26,6 +26,8 @@ interface RouteLayerProps {
     onClearFocusedStop?: () => void;
     dayMode?: DayMode;
     isTodayWeekendOrHoliday?: boolean;
+    isPinPlacementMode?: boolean;
+    onOpenCampusWiki?: () => void;
 }
 
 // ----------------------------------------------------------------------
@@ -52,6 +54,8 @@ const RouteLayer = memo(({
                              onClearFocusedStop,
                              dayMode,
                              isTodayWeekendOrHoliday,
+                             isPinPlacementMode = false,
+                             onOpenCampusWiki,
                          }: RouteLayerProps) => {
     const {settings} = useAppSettings();
     const effectiveShowNearbyStops = showNearbyStops ?? settings.showNearbyStops;
@@ -67,6 +71,7 @@ const RouteLayer = memo(({
             showStopLabels={settings.showStopLabels}
             focusedStopId={focusedStopId}
             onClearFocusedStop={onClearFocusedStop}
+            isInteractionDisabled={isPinPlacementMode}
         />
         {settings.showTimetablePins && (
             <TimetablePinMarker
@@ -84,6 +89,7 @@ const RouteLayer = memo(({
                 enabled={enabled && settings.showYonseiFeatures}
                 dayMode={dayMode}
                 isTodayWeekendOrHoliday={isTodayWeekendOrHoliday}
+                onOpenCampusWiki={onOpenCampusWiki}
             />
         )}
         <BusRoutePolyline
@@ -107,7 +113,9 @@ const RouteLayer = memo(({
         prev.focusedStopId === next.focusedStopId &&
         prev.onClearFocusedStop === next.onClearFocusedStop &&
         prev.dayMode === next.dayMode &&
-        prev.isTodayWeekendOrHoliday === next.isTodayWeekendOrHoliday
+        prev.isTodayWeekendOrHoliday === next.isTodayWeekendOrHoliday &&
+        prev.isPinPlacementMode === next.isPinPlacementMode &&
+        prev.onOpenCampusWiki === next.onOpenCampusWiki
     );
 });
 

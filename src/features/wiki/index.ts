@@ -5,3 +5,6 @@ export {WikiStopsEditor, type WikiStopsEditorProps} from "./WikiStopsEditor";
 export {WikiRoutesEditor, type WikiRoutesEditorProps} from "./WikiRoutesEditor";
 export {WikiEditMetaBar, type WikiEditMetaBarProps} from "./WikiEditMetaBar";
 export {WikiHistoryPanel, type WikiHistoryPanelProps} from "./WikiHistoryPanel";
+export {WikiCreateForm, type WikiCreateFormProps} from "./WikiCreateForm";
+export {WikiEditorForm, type WikiEditorFormProps} from "./WikiEditorForm";
+export {WikiPinLocationFields, type WikiPinLocationFieldsProps} from "./WikiPinLocationFields";

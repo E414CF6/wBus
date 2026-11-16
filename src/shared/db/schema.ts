@@ -1,4 +1,15 @@
-import {bigint, boolean, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex,} from "drizzle-orm/pg-core";
+import {
+    bigint,
+    boolean,
+    doublePrecision,
+    index,
+    integer,
+    jsonb,
+    pgTable,
+    text,
+    timestamp,
+    uniqueIndex,
+} from "drizzle-orm/pg-core";
 import type {
     WikiBoardingStop,
     WikiCategory,
@@ -17,6 +28,8 @@ export const wikiPages = pgTable(
         subtitle: text("subtitle").notNull().default(""),
         category: text("category").$type<WikiCategory>().notNull(),
         cityCode: text("city_code"),
+        lat: doublePrecision("lat"),
+        lng: doublePrecision("lng"),
         tags: jsonb("tags").$type<string[]>().notNull().default([]),
         tagsText: text("tags_text").notNull().default(""),
         version: integer("version").notNull().default(1),
@@ -34,6 +47,7 @@ export const wikiPages = pgTable(
     (table) => [
         index("wiki_pages_pinned_updated_idx").on(table.pinned, table.updatedAt),
         index("wiki_pages_category_idx").on(table.category),
+        index("wiki_pages_lat_lng_idx").on(table.lat, table.lng),
         index("wiki_pages_title_trgm_idx").using("gin", table.title.op("gin_trgm_ops")),
         index("wiki_pages_tags_text_trgm_idx").using("gin", table.tagsText.op("gin_trgm_ops")),
         index("wiki_pages_markdown_trgm_idx").using("gin", table.markdownBody.op("gin_trgm_ops")),

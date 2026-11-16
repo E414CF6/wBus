@@ -43,6 +43,8 @@ describe("wikiDelta checkpoint & patch engine", () => {
                 ...prev,
                 version: v,
                 title: v === 4 ? "연세대 미래캠퍼스 (수정)" : prev.title,
+                lat: v === 6 ? 37.2791 : prev.lat,
+                lng: v === 6 ? 127.9033 : prev.lng,
                 tags: v === 7 ? [...prev.tags, "KTX환승"] : prev.tags,
                 linkedRoutes:
                     v === 12 ? prev.linkedRoutes.slice(0, 2) : prev.linkedRoutes,

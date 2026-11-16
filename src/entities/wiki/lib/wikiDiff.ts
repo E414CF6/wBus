@@ -108,6 +108,10 @@ export function computeStructuredChanges(
         changes.push("문서 제목·분류 수정");
     }
 
+    if ((before.lat ?? null) !== (after.lat ?? null) || (before.lng ?? null) !== (after.lng ?? null)) {
+        changes.push("지도 핀 위치 수정");
+    }
+
     if (JSON.stringify(before.tags) !== JSON.stringify(after.tags)) {
         changes.push("태그 수정");
     }
@@ -161,6 +165,8 @@ export function hasWikiContentChanged(
         before.subtitle !== after.subtitle ||
         before.category !== after.category ||
         (before.cityCode ?? "") !== (after.cityCode ?? "") ||
+        (before.lat ?? null) !== (after.lat ?? null) ||
+        (before.lng ?? null) !== (after.lng ?? null) ||
         JSON.stringify(before.tags) !== JSON.stringify(after.tags) ||
         JSON.stringify(before.linkedRoutes) !== JSON.stringify(after.linkedRoutes) ||
         JSON.stringify(before.shuttle) !== JSON.stringify(after.shuttle) ||

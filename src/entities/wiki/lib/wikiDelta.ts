@@ -114,6 +114,12 @@ export function computeWikiDelta(
     if ((before.cityCode ?? null) !== (after.cityCode ?? null)) {
         fieldsPatch.cityCode = after.cityCode ?? null;
     }
+    if ((before.lat ?? null) !== (after.lat ?? null)) {
+        fieldsPatch.lat = after.lat ?? null;
+    }
+    if ((before.lng ?? null) !== (after.lng ?? null)) {
+        fieldsPatch.lng = after.lng ?? null;
+    }
     if (JSON.stringify(before.tags) !== JSON.stringify(after.tags)) {
         fieldsPatch.tags = after.tags;
     }
@@ -154,6 +160,10 @@ export function applyWikiDelta(
     const fp = delta.fieldsPatch;
     const nextCityCode =
         fp && "cityCode" in fp ? (fp.cityCode ?? undefined) : base.cityCode;
+    const nextLat =
+        fp && "lat" in fp ? (fp.lat ?? undefined) : base.lat;
+    const nextLng =
+        fp && "lng" in fp ? (fp.lng ?? undefined) : base.lng;
 
     return {
         ...base,
@@ -161,6 +171,8 @@ export function applyWikiDelta(
         subtitle: fp?.subtitle ?? base.subtitle,
         category: fp?.category ?? base.category,
         cityCode: nextCityCode,
+        lat: nextLat,
+        lng: nextLng,
         tags: fp?.tags ?? base.tags,
         linkedRoutes: fp?.linkedRoutes ?? base.linkedRoutes,
         shuttle: fp && "shuttle" in fp ? (fp.shuttle ?? null) : base.shuttle,

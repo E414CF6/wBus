@@ -38,6 +38,7 @@ export interface BusStopMarkerProps {
     showStopLabels?: boolean;
     focusedStopId?: string | null;
     onClearFocusedStop?: () => void;
+    isInteractionDisabled?: boolean;
 }
 
 export const BusStopMarker = ({
@@ -49,6 +50,7 @@ export const BusStopMarker = ({
                                   showStopLabels = true,
                                   focusedStopId = null,
                                   onClearFocusedStop,
+                                  isInteractionDisabled = false,
                               }: BusStopMarkerProps) => {
     const {currentCity} = useCityContext();
     const effectiveCityCode = cityCode || currentCity?.code || "32020";
@@ -213,6 +215,7 @@ export const BusStopMarker = ({
         if (!mapInstance) return;
 
         const handleLayerClick = (e: MapLayerMouseEvent) => {
+            if (isInteractionDisabled) return;
             const feature = e.features?.[0];
             const stopKey = feature?.properties?.stopKey as string | undefined;
             if (!stopKey) return;
@@ -270,7 +273,7 @@ export const BusStopMarker = ({
                 mapInstance.off("mouseleave", layerId, handleLayerMouseLeave);
             }
         };
-    }, [map, isDesktop]);
+    }, [map, isDesktop, isInteractionDisabled]);
 
     const handleSelectOppositeStop = useCallback(
         (targetStop: BusStop) => {

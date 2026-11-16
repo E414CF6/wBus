@@ -62,6 +62,69 @@ describe("wiki API routes", () => {
         });
     });
 
+    it("forwards pinsOnly and cityCode filters on GET /api/wiki", async () => {
+        mockWikiServer.listWikiPages.mockResolvedValue({
+            updatedAt: "2026-03-01T00:00:00.000Z",
+            pages: [],
+            recentChanges: [],
+        });
+
+        const req = new NextRequest("http://localhost/api/wiki?pinsOnly=true&cityCode=32020&limit=100");
+        const res = await listWikiGET(req);
+        expect(res.status).toBe(200);
+        expect(mockWikiServer.listWikiPages).toHaveBeenCalledWith({
+            category: "all",
+            query: undefined,
+            cityCode: "32020",
+            pinsOnly: true,
+            limit: 100,
+            offset: undefined,
+        });
+    });
+
+    it("passes lat/lng map pin coordinates on POST /api/wiki", async () => {
+        mockWikiServer.createWikiPage.mockResolvedValue({
+            slug: "원주역 광장 핀",
+            title: "원주역 광장 핀",
+            subtitle: "",
+            category: "stop",
+            cityCode: "32020",
+            lat: 37.3152,
+            lng: 127.9222,
+            tags: [],
+            version: 1,
+            createdAt: "2026-03-01T00:00:00.000Z",
+            updatedAt: "2026-03-01T00:00:00.000Z",
+            lastEditor: {nickname: "익명 버스러", editorId: "ed-test"},
+            linkedRoutes: [],
+            shuttle: null,
+            boardingStops: [],
+            markdownBody: "",
+        });
+
+        const req = new NextRequest("http://localhost/api/wiki", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                title: "원주역 광장 핀",
+                category: "stop",
+                cityCode: "32020",
+                lat: 37.3152,
+                lng: 127.9222,
+            }),
+        });
+
+        const res = await createWikiPOST(req);
+        expect(res.status).toBe(201);
+        expect(mockWikiServer.createWikiPage).toHaveBeenCalledWith(
+            expect.objectContaining({
+                title: "원주역 광장 핀",
+                lat: 37.3152,
+                lng: 127.9222,
+            })
+        );
+    });
+
     it("rejects honeypot spam submissions with 400 on POST /api/wiki", async () => {
         const req = new NextRequest("http://localhost/api/wiki", {
             method: "POST",

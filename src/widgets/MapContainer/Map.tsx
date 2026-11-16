@@ -31,6 +31,10 @@ if (typeof window !== "undefined") {
 interface MapProps {
     /** Callback fired once when the map base layer is fully loaded */
     onReady?: () => void;
+    /** When true, map clicks place a wiki pin instead of closing popups */
+    isPinPlacementMode?: boolean;
+    /** Callback fired when clicking the map in pin placement mode */
+    onPinPlacementClick?: (coords: { lat: number; lng: number }) => void;
     /** Content to render inside the map (route layers, markers, etc.) */
     children?: React.ReactNode;
 }
@@ -44,7 +48,12 @@ interface LocationToastState {
 // Main Component
 // ----------------------------------------------------------------------
 
-export default function Map({onReady, children}: MapProps) {
+export default function Map({
+                                onReady,
+                                isPinPlacementMode = false,
+                                onPinPlacementClick,
+                                children,
+                            }: MapProps) {
     const mapRef = useRef<MapRef>(null);
     const {setMap} = useAppMapContext();
     const {settings} = useAppSettings();
@@ -211,8 +220,13 @@ export default function Map({onReady, children}: MapProps) {
                 ]}
                 maxCanvasSize={maxCanvasSize}
                 style={{width: "100%", height: "100%", position: "absolute", inset: 0}}
+                cursor={isPinPlacementMode ? "crosshair" : undefined}
                 touchPitch={false}
                 onClick={(e) => {
+                    if (isPinPlacementMode && onPinPlacementClick) {
+                        onPinPlacementClick({lat: e.lngLat.lat, lng: e.lngLat.lng});
+                        return;
+                    }
                     if (e.defaultPrevented) return;
                     if (typeof window !== "undefined") {
                         window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));

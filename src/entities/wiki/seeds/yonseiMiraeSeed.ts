@@ -14,6 +14,8 @@ export function createYonseiMiraeSeed(): WikiPageDocument {
         subtitle: "무료 셔틀버스 · 시내버스(30·34·34-1) 시간표와 탑승 위치, 학우들이 직접 업데이트하는 통학 위키",
         category: "campus",
         cityCode: "32020",
+        lat: 37.2779,
+        lng: 127.9026,
         tags: ["연세대 미래캠퍼스", "원주", "셔틀버스", "30번", "34번", "34-1번"],
         version: 1,
         createdAt: SEED_TIMESTAMP,

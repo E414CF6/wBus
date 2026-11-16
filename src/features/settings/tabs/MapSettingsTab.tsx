@@ -146,6 +146,17 @@ export const MapSettingsTab: React.FC<MapSettingsTabProps> = ({settings, onUpdat
                 />
 
                 <SettingsToggleRow
+                    title="지도 위키 핀 표시"
+                    description="지도 위 캠퍼스·터미널·정류장·팁 위키 핀을 표시해 바로 열람하고 편집합니다"
+                    checked={settings.showWikiPins}
+                    onChange={(next) => {
+                        triggerHaptic("selection");
+                        onUpdateSettings({showWikiPins: next});
+                    }}
+                    ariaLabel="지도 위키 핀 표시 전환"
+                />
+
+                <SettingsToggleRow
                     title="지도 줌·나침반 버튼 표시"
                     description="지도 우측 상단의 확대/축소 및 나침반 컨트롤 버튼을 표시합니다"
                     checked={settings.showMapControls}

@@ -29,6 +29,7 @@ export interface AppSettings {
     showStopLabels: boolean;
     autoFitRouteBounds: boolean;
     showTimetablePins: boolean;
+    showWikiPins: boolean;
     showBusPlateNumber: boolean;
     rememberMapView: boolean;
     showMapControls: boolean;
@@ -49,6 +50,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
     showStopLabels: true,
     autoFitRouteBounds: true,
     showTimetablePins: true,
+    showWikiPins: true,
     showBusPlateNumber: false,
     rememberMapView: true,
     showMapControls: true,
@@ -130,6 +132,11 @@ function sanitizeSettings(raw: unknown): AppSettings {
             ? obj.showTimetablePins
             : DEFAULT_APP_SETTINGS.showTimetablePins;
 
+    const showWikiPins: boolean =
+        typeof obj.showWikiPins === "boolean"
+            ? obj.showWikiPins
+            : DEFAULT_APP_SETTINGS.showWikiPins;
+
     const showBusPlateNumber: boolean =
         typeof obj.showBusPlateNumber === "boolean"
             ? obj.showBusPlateNumber
@@ -168,6 +175,7 @@ function sanitizeSettings(raw: unknown): AppSettings {
         showStopLabels,
         autoFitRouteBounds,
         showTimetablePins,
+        showWikiPins,
         showBusPlateNumber,
         rememberMapView,
         showMapControls,

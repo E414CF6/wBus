@@ -1,7 +1,7 @@
 import "server-only";
 
 import {createHash} from "crypto";
-import {and, asc, count, desc, eq, gte, ilike, lte, or} from "drizzle-orm";
+import {and, asc, count, desc, eq, gte, ilike, isNotNull, lte, or} from "drizzle-orm";
 import {artifactStore} from "@shared/cache/artifactStore";
 import {distributedCache} from "@shared/cache/distributedCache";
 import {
@@ -165,12 +165,14 @@ function escapeLikePattern(raw: string): string {
 }
 
 function rowToDocument(row: WikiPageRow): WikiPageDocument {
+    const hasCoords = typeof row.lat === "number" && typeof row.lng === "number";
     return {
         slug: row.slug,
         title: row.title,
         subtitle: row.subtitle,
         category: row.category,
         ...(row.cityCode ? {cityCode: row.cityCode} : {}),
+        ...(hasCoords ? {lat: row.lat as number, lng: row.lng as number} : {}),
         tags: row.tags ?? [],
         version: row.version,
         createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt),
@@ -188,12 +190,14 @@ function rowToDocument(row: WikiPageRow): WikiPageDocument {
 }
 
 function rowToSummary(row: WikiPageRow): WikiPageSummary {
+    const hasCoords = typeof row.lat === "number" && typeof row.lng === "number";
     return {
         slug: row.slug,
         title: row.title,
         subtitle: row.subtitle,
         category: row.category,
         ...(row.cityCode ? {cityCode: row.cityCode} : {}),
+        ...(hasCoords ? {lat: row.lat as number, lng: row.lng as number} : {}),
         tags: row.tags ?? [],
         version: row.version,
         updatedAt: row.updatedAt instanceof Date ? row.updatedAt.toISOString() : String(row.updatedAt),
@@ -210,12 +214,14 @@ function rowToSummary(row: WikiPageRow): WikiPageSummary {
 }
 
 function toPageSummary(doc: WikiPageDocument): WikiPageSummary {
+    const hasCoords = typeof doc.lat === "number" && typeof doc.lng === "number";
     return {
         slug: doc.slug,
         title: doc.title,
         subtitle: doc.subtitle,
         category: doc.category,
         ...(doc.cityCode ? {cityCode: doc.cityCode} : {}),
+        ...(hasCoords ? {lat: doc.lat, lng: doc.lng} : {}),
         tags: doc.tags,
         version: doc.version,
         updatedAt: doc.updatedAt,
@@ -304,6 +310,8 @@ async function importDocumentIntoDb(
                 subtitle: doc.subtitle,
                 category: doc.category,
                 cityCode: doc.cityCode ?? null,
+                lat: doc.lat ?? null,
+                lng: doc.lng ?? null,
                 tags: doc.tags,
                 tagsText: doc.tags.join(" "),
                 version: doc.version,
@@ -408,9 +416,16 @@ async function ensureSeedAndBlobBootstrapped(db: WikiDatabase): Promise<void> {
         const seedSlugs = seeds.map((s) => s.slug);
 
         const existingRows = await db
-            .select({slug: wikiPages.slug})
+            .select({
+                slug: wikiPages.slug,
+                lat: wikiPages.lat,
+                lng: wikiPages.lng,
+            })
             .from(wikiPages);
         const existingSet = new Set(existingRows.map((r) => r.slug));
+        const existingCoordMap = new Map(
+            existingRows.map((r) => [r.slug, {lat: r.lat, lng: r.lng}])
+        );
 
         // 1. Check legacy Blob index for any community-created custom pages
         if (existingSet.size === 0) {
@@ -449,6 +464,8 @@ async function ensureSeedAndBlobBootstrapped(db: WikiDatabase): Promise<void> {
                             subtitle: oldRow.subtitle,
                             category: oldRow.category,
                             cityCode: oldRow.cityCode,
+                            lat: oldRow.lat ?? getSeedWikiPage(canonicalSlug)?.lat ?? null,
+                            lng: oldRow.lng ?? getSeedWikiPage(canonicalSlug)?.lng ?? null,
                             tags: oldRow.tags,
                             tagsText: oldRow.tagsText,
                             version: oldRow.version,
@@ -480,10 +497,24 @@ async function ensureSeedAndBlobBootstrapped(db: WikiDatabase): Promise<void> {
             }
         }
 
-        // 3. Ensure any newly bundled built-in seeds exist
+        // 3. Ensure any newly bundled built-in seeds exist and have map pin coordinates backfilled
         for (const seed of seeds) {
             if (!existingSet.has(seed.slug)) {
                 await migrateSingleSlugFromBlobOrSeed(db, seed.slug);
+            } else {
+                const coords = existingCoordMap.get(seed.slug);
+                if (
+                    coords &&
+                    (coords.lat === null || coords.lng === null) &&
+                    typeof seed.lat === "number" &&
+                    typeof seed.lng === "number"
+                ) {
+                    await db
+                        .update(wikiPages)
+                        .set({lat: seed.lat, lng: seed.lng})
+                        .where(eq(wikiPages.slug, seed.slug));
+                    await distributedCache.del(`${REDIS_PAGE_PREFIX}${seed.slug}`).catch(() => false);
+                }
             }
         }
     })().catch((err) => {
@@ -627,20 +658,29 @@ export async function getWikiPage(slug: string): Promise<WikiPageDocument | null
 
 export async function listWikiPages(filters?: {
     category?: WikiCategory | "all";
+    cityCode?: string;
+    pinsOnly?: boolean;
     query?: string;
     limit?: number;
     offset?: number;
 }): Promise<WikiIndexData> {
     if (!isDatabaseConfigured()) {
         const seeds = getSeedWikiPages();
-        let pages = seeds.map(toPageSummary);
+        let paired = seeds.map((s) => ({summary: toPageSummary(s), body: s.markdownBody}));
         if (filters?.category && filters.category !== "all") {
-            pages = pages.filter((p) => p.category === filters.category);
+            paired = paired.filter((item) => item.summary.category === filters.category);
+        }
+        if (filters?.cityCode) {
+            paired = paired.filter((item) => item.summary.cityCode === filters.cityCode);
+        }
+        if (filters?.pinsOnly) {
+            paired = paired.filter(
+                (item) => typeof item.summary.lat === "number" && typeof item.summary.lng === "number"
+            );
         }
         const q = filters?.query?.trim();
         if (q) {
-            pages = pages.filter((p, idx) => {
-                const body = seeds[idx]?.markdownBody ?? "";
+            paired = paired.filter(({summary: p, body}) => {
                 return (
                     matchesHangul(p.title, q) ||
                     matchesHangul(p.subtitle, q) ||
@@ -650,6 +690,7 @@ export async function listWikiPages(filters?: {
                 );
             });
         }
+        const pages = paired.map((item) => item.summary);
         const offset = Math.max(0, filters?.offset ?? 0);
         const limit = Math.min(MAX_LIST_LIMIT, Math.max(1, filters?.limit ?? DEFAULT_LIST_LIMIT));
         const sliced = pages.slice(offset, offset + limit);
@@ -668,6 +709,12 @@ export async function listWikiPages(filters?: {
     const conditions = [];
     if (filters?.category && filters.category !== "all") {
         conditions.push(eq(wikiPages.category, filters.category));
+    }
+    if (filters?.cityCode) {
+        conditions.push(eq(wikiPages.cityCode, filters.cityCode));
+    }
+    if (filters?.pinsOnly) {
+        conditions.push(isNotNull(wikiPages.lat), isNotNull(wikiPages.lng));
     }
 
     const q = filters?.query?.trim();
@@ -754,6 +801,8 @@ export async function createWikiPage(input: {
     subtitle: string;
     category: WikiCategory;
     cityCode?: string;
+    lat?: number;
+    lng?: number;
     tags: string[];
     linkedRoutes: WikiPageDocument["linkedRoutes"];
     shuttle: WikiPageDocument["shuttle"];
@@ -773,6 +822,7 @@ export async function createWikiPage(input: {
     const now = new Date();
     const nowIso = now.toISOString();
     const dedupedTags = Array.from(new Set(input.tags));
+    const hasCoords = typeof input.lat === "number" && typeof input.lng === "number";
 
     const doc: WikiPageDocument = {
         slug,
@@ -780,6 +830,7 @@ export async function createWikiPage(input: {
         subtitle: input.subtitle,
         category: input.category,
         ...(input.cityCode ? {cityCode: input.cityCode} : {}),
+        ...(hasCoords ? {lat: input.lat, lng: input.lng} : {}),
         tags: dedupedTags,
         version: 1,
         createdAt: nowIso,
@@ -813,6 +864,8 @@ export async function createWikiPage(input: {
                 subtitle: doc.subtitle,
                 category: doc.category,
                 cityCode: doc.cityCode ?? null,
+                lat: doc.lat ?? null,
+                lng: doc.lng ?? null,
                 tags: dedupedTags,
                 tagsText: dedupedTags.join(" "),
                 version: 1,
@@ -863,6 +916,8 @@ export async function saveWikiPageEdit(input: {
     subtitle: string;
     category: WikiCategory;
     cityCode?: string;
+    lat?: number;
+    lng?: number;
     tags: string[];
     linkedRoutes: WikiPageDocument["linkedRoutes"];
     shuttle: WikiPageDocument["shuttle"];
@@ -933,6 +988,7 @@ export async function saveWikiPageEdit(input: {
         const nextVersion = current.version + 1;
         const dedupedTags = Array.from(new Set(input.tags));
 
+        const hasCoords = typeof input.lat === "number" && typeof input.lng === "number";
         const nextDoc: WikiPageDocument = {
             ...current,
             slug: nextSlug,
@@ -940,6 +996,7 @@ export async function saveWikiPageEdit(input: {
             subtitle: input.subtitle,
             category: input.category,
             ...(input.cityCode ? {cityCode: input.cityCode} : {cityCode: undefined}),
+            ...(hasCoords ? {lat: input.lat, lng: input.lng} : {lat: undefined, lng: undefined}),
             tags: dedupedTags,
             version: nextVersion,
             updatedAt: nowIso,
@@ -970,6 +1027,8 @@ export async function saveWikiPageEdit(input: {
                     subtitle: nextDoc.subtitle,
                     category: nextDoc.category,
                     cityCode: nextDoc.cityCode ?? null,
+                    lat: nextDoc.lat ?? null,
+                    lng: nextDoc.lng ?? null,
                     tags: dedupedTags,
                     tagsText: dedupedTags.join(" "),
                     version: nextVersion,
@@ -1005,6 +1064,8 @@ export async function saveWikiPageEdit(input: {
                     subtitle: nextDoc.subtitle,
                     category: nextDoc.category,
                     cityCode: nextDoc.cityCode ?? null,
+                    lat: nextDoc.lat ?? null,
+                    lng: nextDoc.lng ?? null,
                     tags: dedupedTags,
                     tagsText: dedupedTags.join(" "),
                     version: nextVersion,
@@ -1209,6 +1270,8 @@ export async function revertWikiPage(input: {
                 subtitle: nextDoc.subtitle,
                 category: nextDoc.category,
                 cityCode: nextDoc.cityCode ?? null,
+                lat: nextDoc.lat ?? null,
+                lng: nextDoc.lng ?? null,
                 tags: nextDoc.tags,
                 tagsText: nextDoc.tags.join(" "),
                 version: nextVersion,

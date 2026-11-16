@@ -88,6 +88,8 @@ export async function PUT(
             subtitle: parsed.data.subtitle,
             category: parsed.data.category,
             cityCode: parsed.data.cityCode,
+            lat: parsed.data.lat,
+            lng: parsed.data.lng,
             tags: parsed.data.tags,
             linkedRoutes: parsed.data.linkedRoutes,
             shuttle: parsed.data.shuttle,

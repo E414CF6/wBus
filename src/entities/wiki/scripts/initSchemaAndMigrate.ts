@@ -23,7 +23,13 @@ async function main() {
     const db = drizzle(pool, {schema});
 
     try {
-        console.log("[Wiki Migration] Ensuring pg_trgm extension and GIN trigram indexes...");
+        console.log("[Wiki Migration] Ensuring lat/lng columns, pg_trgm extension and indexes...");
+        await pool.query(`ALTER TABLE wiki_pages ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;`);
+        await pool.query(`ALTER TABLE wiki_pages ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;`);
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS wiki_pages_lat_lng_idx
+                ON wiki_pages (lat, lng);
+        `);
         await pool.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm;`);
         await pool.query(`
             CREATE INDEX IF NOT EXISTS wiki_pages_title_trgm_idx
@@ -60,6 +66,8 @@ async function main() {
                             subtitle: oldRow.subtitle,
                             category: oldRow.category,
                             cityCode: oldRow.cityCode,
+                            lat: oldRow.lat ?? getSeedWikiPages().find((s) => s.slug === canonicalSlug)?.lat ?? null,
+                            lng: oldRow.lng ?? getSeedWikiPages().find((s) => s.slug === canonicalSlug)?.lng ?? null,
                             tags: oldRow.tags,
                             tagsText: oldRow.tagsText,
                             version: oldRow.version,
@@ -90,13 +98,21 @@ async function main() {
         const seeds = getSeedWikiPages();
         for (const seed of seeds) {
             const existing = await db
-                .select({slug: wikiPages.slug})
+                .select({slug: wikiPages.slug, lat: wikiPages.lat, lng: wikiPages.lng})
                 .from(wikiPages)
                 .where(eq(wikiPages.slug, seed.slug))
                 .limit(1);
 
             if (existing.length > 0) {
-                console.log(`[Wiki Migration] '${seed.slug}' already present in Postgres, skipping.`);
+                if ((existing[0].lat === null || existing[0].lng === null) && typeof seed.lat === "number" && typeof seed.lng === "number") {
+                    await db
+                        .update(wikiPages)
+                        .set({lat: seed.lat, lng: seed.lng})
+                        .where(eq(wikiPages.slug, seed.slug));
+                    console.log(`[Wiki Migration] Backfilled lat/lng for '${seed.slug}'.`);
+                } else {
+                    console.log(`[Wiki Migration] '${seed.slug}' already present in Postgres, skipping.`);
+                }
                 continue;
             }
 
@@ -122,6 +138,8 @@ async function main() {
                         subtitle: seed.subtitle,
                         category: seed.category,
                         cityCode: seed.cityCode ?? null,
+                        lat: seed.lat ?? null,
+                        lng: seed.lng ?? null,
                         tags: seed.tags,
                         tagsText: seed.tags.join(" "),
                         version: seed.version,

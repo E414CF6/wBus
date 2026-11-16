@@ -51,6 +51,22 @@ function evalPageRowPredicate(
         }
     }
 
+    const cityIdx = sqlText.indexOf('"wiki_pages"."city_code" = $');
+    if (cityIdx !== -1) {
+        const m = sqlText.slice(cityIdx).match(/\$(\d+)/);
+        if (m) {
+            const city = params[Number(m[1]) - 1];
+            if (row.cityCode !== city) result = false;
+        }
+    }
+
+    if (sqlText.includes('"wiki_pages"."lat" is not null') && row.lat == null) {
+        result = false;
+    }
+    if (sqlText.includes('"wiki_pages"."lng" is not null') && row.lng == null) {
+        result = false;
+    }
+
     const slugEqMatch = sqlText.match(/^"wiki_pages"\."slug" = \$1$/);
     if (slugEqMatch) {
         return row.slug === params[0];
@@ -256,6 +272,8 @@ function createFakeDb() {
                                 subtitle: String(val.subtitle ?? ""),
                                 category: val.category as realSchema.WikiPageRow["category"],
                                 cityCode: (val.cityCode as string | null) ?? null,
+                                lat: (val.lat as number | null) ?? null,
+                                lng: (val.lng as number | null) ?? null,
                                 tags: (val.tags as string[]) ?? [],
                                 tagsText: String(val.tagsText ?? ""),
                                 version: Number(val.version ?? 1),
@@ -676,5 +694,47 @@ describe("wikiStore Postgres + Delta integration", () => {
         // Custom page can be deleted
         await deleteWikiPage("남원주역 KTX 버스 승강장");
         expect(pageRows.has("남원주역 KTX 버스 승강장")).toBe(false);
+    });
+
+    it("stores map pin coordinates and filters geolocated wiki pins via pinsOnly", async () => {
+        const pinnedDoc = await createWikiPage({
+            slug: "단계동-정류장-핀",
+            title: "단계동 정류장 핀",
+            subtitle: "터미널 사거리 탑승 안내",
+            category: "stop",
+            cityCode: "32020",
+            lat: 37.3456,
+            lng: 127.9311,
+            tags: ["단계동"],
+            linkedRoutes: [],
+            shuttle: null,
+            boardingStops: [],
+            markdownBody: "단계동 정류장 설명",
+            summary: "핀 추가",
+            editor: {nickname: "핀작성자", editorId: "ed-pin-1"},
+        });
+        expect(pinnedDoc.lat).toBe(37.3456);
+        expect(pinnedDoc.lng).toBe(127.9311);
+
+        await createWikiPage({
+            slug: "좌표없는-가이드",
+            title: "좌표없는 가이드",
+            subtitle: "일반 안내",
+            category: "guide",
+            cityCode: "32020",
+            tags: [],
+            linkedRoutes: [],
+            shuttle: null,
+            boardingStops: [],
+            markdownBody: "일반 팁",
+            summary: "생성",
+            editor: {nickname: "작성자", editorId: "ed-pin-2"},
+        });
+
+        const pinsList = await listWikiPages({pinsOnly: true, cityCode: "32020"});
+        const slugs = pinsList.pages.map((p) => p.slug);
+        expect(slugs).toContain("단계동 정류장 핀");
+        expect(slugs).toContain("연세대학교 미래캠퍼스");
+        expect(slugs).not.toContain("좌표없는 가이드");
     });
 });

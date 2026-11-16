@@ -15,10 +15,22 @@ export const metadata: Metadata = {
 export default async function WikiNewRoutePage({
                                                    searchParams,
                                                }: {
-    searchParams: Promise<{ slug?: string }>;
+    searchParams: Promise<{ slug?: string; lat?: string; lng?: string; cityCode?: string }>;
 }) {
     const sp = await searchParams;
     const initialSlug = typeof sp.slug === "string" ? sp.slug : "";
+    const parsedLat = sp.lat ? Number(sp.lat) : undefined;
+    const parsedLng = sp.lng ? Number(sp.lng) : undefined;
+    const initialLat = typeof parsedLat === "number" && Number.isFinite(parsedLat) ? parsedLat : undefined;
+    const initialLng = typeof parsedLng === "number" && Number.isFinite(parsedLng) ? parsedLng : undefined;
+    const initialCityCode = typeof sp.cityCode === "string" && sp.cityCode.trim() ? sp.cityCode.trim() : undefined;
 
-    return <WikiCreatePage initialSlug={initialSlug}/>;
+    return (
+        <WikiCreatePage
+            initialSlug={initialSlug}
+            initialLat={initialLat}
+            initialLng={initialLng}
+            initialCityCode={initialCityCode}
+        />
+    );
 }

@@ -45,6 +45,8 @@ export interface WikiPageDocument {
     subtitle: string;
     category: WikiCategory;
     cityCode?: string;
+    lat?: number;
+    lng?: number;
     tags: string[];
     version: number;
     createdAt: string;
@@ -90,6 +92,8 @@ export interface WikiPageSummary {
     subtitle: string;
     category: WikiCategory;
     cityCode?: string;
+    lat?: number;
+    lng?: number;
     tags: string[];
     version: number;
     updatedAt: string;
@@ -126,6 +130,8 @@ export interface WikiFieldsPatch {
     subtitle?: string;
     category?: WikiCategory;
     cityCode?: string | null;
+    lat?: number | null;
+    lng?: number | null;
     tags?: string[];
     linkedRoutes?: WikiLinkedRoute[];
     shuttle?: WikiShuttleBlock | null;

@@ -169,14 +169,14 @@ export const OnboardingModal: React.FC = () => {
                 ) : (
                     <>
                         <Link
-                            href={`/wiki/${encodeURIComponent(YONSEI_MIRAE_WIKI_SLUG)}`}
+                            href={`/?wiki=${encodeURIComponent(YONSEI_MIRAE_WIKI_SLUG)}`}
                             onClick={() => {
                                 triggerHaptic("light");
                                 closeOnboarding();
                             }}
                             className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-bold text-[#003876] dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition"
                         >
-                            <span>연세대 위키</span>
+                            <span>연세대 위키 핀</span>
                             <ExternalLink className="w-3.5 h-3.5"/>
                         </Link>
                         <button
@@ -396,10 +396,10 @@ export const OnboardingModal: React.FC = () => {
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white">
-                                        정류장 &amp; 기점·종점 핀 활용하기
+                                        정류장 · 시간표 · 지도 위키 핀 활용하기
                                     </p>
                                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                                        정류장 마커를 누르면 실시간 도착 예정과 로드뷰를, 기점·종점 핀을 누르면 다음 출발 시각을 바로 확인합니다.
+                                        정류장 마커와 기점·종점 핀으로 실시간 도착·시간표를 보고, 위키 핀을 추가하거나 눌러 버스 팁을 바로 확인하세요.
                                     </p>
                                 </div>
                             </div>

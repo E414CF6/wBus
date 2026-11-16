@@ -1,19 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {getBookmarkStorageKey, getRecentRoutesStorageKey} from "@shared/config/env";
-import {buildMapUrl, resolveTabFromPathname} from "./useAppNavigation";
-
-describe("resolveTabFromPathname", () => {
-    it("maps all routes to map tab in map-centric architecture", () => {
-        expect(resolveTabFromPathname("/")).toBe("map");
-        expect(resolveTabFromPathname("/live")).toBe("map");
-        expect(resolveTabFromPathname("/map")).toBe("map");
-        expect(resolveTabFromPathname("/live/30")).toBe("map");
-        expect(resolveTabFromPathname("/?route=30")).toBe("map");
-        expect(resolveTabFromPathname("/?cityCode=32020&route=34")).toBe("map");
-        expect(resolveTabFromPathname("/?modal=notice-214")).toBe("map");
-        expect(resolveTabFromPathname("/unknown")).toBe("map");
-    });
-});
+import {buildMapUrl} from "./useAppNavigation";
 
 describe("buildMapUrl", () => {
     it("preserves route=0 with cityCode parameter correctly", () => {
@@ -22,6 +9,12 @@ describe("buildMapUrl", () => {
 
     it("builds map URL with standard route and cityCode", () => {
         expect(buildMapUrl("30", "32020")).toBe("/?cityCode=32020&route=30");
+    });
+
+    it("includes optional wiki slug parameter when provided", () => {
+        expect(buildMapUrl("30", "32020", "연세대학교 미래캠퍼스")).toBe(
+            "/?cityCode=32020&route=30&wiki=%EC%97%B0%EC%84%B8%EB%8C%80%ED%95%99%EA%B5%90+%EB%AF%B8%EB%9E%98%EC%BA%A0%ED%8D%BC%EC%8A%A4"
+        );
     });
 
     it("builds map URL with only route when cityCode is not supplied", () => {

@@ -2,7 +2,7 @@
 
 import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {Marker} from "react-map-gl/maplibre";
-import {Clock, ExternalLink, GraduationCap, MapPin, RotateCw, X,} from "lucide-react";
+import {BookOpen, Clock, ExternalLink, GraduationCap, MapPin, RotateCw, X,} from "lucide-react";
 
 import {type ShuttleInboundItem, type ShuttleOutboundItem, YONSEI_SHUTTLE_SCHEDULE,} from "@entities/schedule";
 import {getKakaoRoadviewUrl} from "@entities/station";
@@ -54,6 +54,7 @@ export interface YonseiShuttlePinMarkerProps {
     dayMode?: DayMode;
     isTodayWeekendOrHoliday?: boolean;
     currentTime?: Date;
+    onOpenCampusWiki?: () => void;
 }
 
 type ShuttleDirection = "OUTBOUND" | "INBOUND";
@@ -68,6 +69,7 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
                                                                                dayMode = "AUTO",
                                                                                isTodayWeekendOrHoliday: _isTodayWeekendOrHoliday,
                                                                                currentTime,
+                                                                               onOpenCampusWiki,
                                                                            }: YonseiShuttlePinMarkerProps) {
     const {map} = useAppMapContext();
 
@@ -581,14 +583,30 @@ export const YonseiShuttlePinMarker = memo(function YonseiShuttlePinMarker({
 
                     {/* External Links */}
                     <div className="pt-1 flex items-center justify-between gap-2 text-xs shrink-0">
-                        <button
-                            type="button"
-                            onClick={handleFlyToCampus}
-                            className="flex items-center gap-1 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:text-blue-600 transition cursor-pointer"
-                        >
-                            <MapPin className="w-3.5 h-3.5 text-blue-600"/>
-                            <span>미래관으로 이동</span>
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                type="button"
+                                onClick={handleFlyToCampus}
+                                className="flex items-center gap-1 text-[11px] font-bold text-slate-600 dark:text-slate-400 hover:text-blue-600 transition cursor-pointer"
+                            >
+                                <MapPin className="w-3.5 h-3.5 text-blue-600"/>
+                                <span>미래관으로 이동</span>
+                            </button>
+
+                            {onOpenCampusWiki && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsPopupOpen(false);
+                                        onOpenCampusWiki();
+                                    }}
+                                    className="flex items-center gap-1 text-[11px] font-extrabold text-[#003876] dark:text-sky-400 hover:underline cursor-pointer"
+                                >
+                                    <BookOpen className="w-3.5 h-3.5"/>
+                                    <span>캠퍼스 위키</span>
+                                </button>
+                            )}
+                        </div>
 
                         <a
                             href={getKakaoRoadviewUrl(YONSEI_CAMPUS_LAT, YONSEI_CAMPUS_LNG)}

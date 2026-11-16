@@ -7,7 +7,16 @@ import {getKakaoRoadviewUrl} from "@entities/station";
 import {parseWikiMarkdown, type WikiBlockNode, type WikiCalloutTone, type WikiInlineNode,} from "@entities/wiki";
 import {buildMapUrl} from "@widgets/AppShell/hooks/useAppNavigation";
 
-function renderInlineNodes(nodes: WikiInlineNode[], keyPrefix: string): React.ReactNode {
+export interface WikiMarkdownRenderCallbacks {
+    onOpenWikiSlug?: (slug: string) => void;
+    onSelectRoute?: (routeNo: string, cityCode: string) => void;
+}
+
+function renderInlineNodes(
+    nodes: WikiInlineNode[],
+    keyPrefix: string,
+    callbacks?: WikiMarkdownRenderCallbacks
+): React.ReactNode {
     return nodes.map((node, idx) => {
         const key = `${keyPrefix}-${idx}`;
         switch (node.type) {
@@ -16,19 +25,19 @@ function renderInlineNodes(nodes: WikiInlineNode[], keyPrefix: string): React.Re
             case "strong":
                 return (
                     <strong key={key} className="font-black text-slate-900 dark:text-white">
-                        {renderInlineNodes(node.children, key)}
+                        {renderInlineNodes(node.children, key, callbacks)}
                     </strong>
                 );
             case "em":
                 return (
                     <em key={key} className="italic">
-                        {renderInlineNodes(node.children, key)}
+                        {renderInlineNodes(node.children, key, callbacks)}
                     </em>
                 );
             case "del":
                 return (
                     <del key={key} className="line-through text-slate-400 dark:text-slate-500">
-                        {renderInlineNodes(node.children, key)}
+                        {renderInlineNodes(node.children, key, callbacks)}
                     </del>
                 );
             case "code":
@@ -65,6 +74,19 @@ function renderInlineNodes(nodes: WikiInlineNode[], keyPrefix: string): React.Re
                     </Link>
                 );
             case "wikilink":
+                if (callbacks?.onOpenWikiSlug) {
+                    return (
+                        <button
+                            key={key}
+                            type="button"
+                            onClick={() => callbacks.onOpenWikiSlug?.(node.slug)}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-0.5 rounded-lg bg-blue-50 hover:bg-blue-100 dark:bg-blue-500/15 dark:hover:bg-blue-500/25 border border-blue-200/80 dark:border-blue-400/25 text-[0.9em] font-extrabold text-[#003876] dark:text-blue-300 transition-colors align-baseline cursor-pointer"
+                        >
+                            <BookOpen className="w-3 h-3 shrink-0"/>
+                            <span>{node.label}</span>
+                        </button>
+                    );
+                }
                 return (
                     <Link
                         key={key}
@@ -76,6 +98,19 @@ function renderInlineNodes(nodes: WikiInlineNode[], keyPrefix: string): React.Re
                     </Link>
                 );
             case "routelink":
+                if (callbacks?.onSelectRoute) {
+                    return (
+                        <button
+                            key={key}
+                            type="button"
+                            onClick={() => callbacks.onSelectRoute?.(node.routeNo, node.cityCode)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 mx-0.5 rounded-full bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:hover:bg-emerald-500/25 border border-emerald-200/80 dark:border-emerald-400/25 text-[0.85em] font-black text-emerald-800 dark:text-emerald-300 transition-colors align-baseline cursor-pointer"
+                        >
+                            <Bus className="w-3 h-3 shrink-0"/>
+                            <span>{node.label}</span>
+                        </button>
+                    );
+                }
                 return (
                     <Link
                         key={key}
@@ -133,7 +168,11 @@ const CALLOUT_STYLES: Record<
     },
 };
 
-function renderBlock(block: WikiBlockNode, idx: number): React.ReactNode {
+function renderBlock(
+    block: WikiBlockNode,
+    idx: number,
+    callbacks?: WikiMarkdownRenderCallbacks
+): React.ReactNode {
     const key = `block-${idx}`;
     switch (block.type) {
         case "heading": {
@@ -144,17 +183,17 @@ function renderBlock(block: WikiBlockNode, idx: number): React.ReactNode {
                         ? "text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white pt-3 pb-1 border-b border-slate-200/70 dark:border-white/10 scroll-mt-20"
                         : "text-sm sm:text-base font-black tracking-tight text-slate-800 dark:text-slate-100 pt-2 scroll-mt-20";
             if (block.level === 1) {
-                return <h2 key={key} id={block.id} className={cls}>{renderInlineNodes(block.children, key)}</h2>;
+                return <h2 key={key} id={block.id} className={cls}>{renderInlineNodes(block.children, key, callbacks)}</h2>;
             }
             if (block.level === 2) {
-                return <h2 key={key} id={block.id} className={cls}>{renderInlineNodes(block.children, key)}</h2>;
+                return <h2 key={key} id={block.id} className={cls}>{renderInlineNodes(block.children, key, callbacks)}</h2>;
             }
-            return <h3 key={key} id={block.id} className={cls}>{renderInlineNodes(block.children, key)}</h3>;
+            return <h3 key={key} id={block.id} className={cls}>{renderInlineNodes(block.children, key, callbacks)}</h3>;
         }
         case "paragraph":
             return (
                 <p key={key} className="text-xs sm:text-sm leading-relaxed text-slate-700 dark:text-slate-300">
-                    {renderInlineNodes(block.children, key)}
+                    {renderInlineNodes(block.children, key, callbacks)}
                 </p>
             );
         case "list":
@@ -164,7 +203,7 @@ function renderBlock(block: WikiBlockNode, idx: number): React.ReactNode {
                         className="list-decimal pl-5 space-y-1.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
                         {block.items.map((item, itemIdx) => (
                             <li key={`${key}-li-${itemIdx}`} className="leading-relaxed">
-                                {renderInlineNodes(item, `${key}-li-${itemIdx}`)}
+                                {renderInlineNodes(item, `${key}-li-${itemIdx}`, callbacks)}
                             </li>
                         ))}
                     </ol>
@@ -175,7 +214,7 @@ function renderBlock(block: WikiBlockNode, idx: number): React.ReactNode {
                     className="list-disc pl-5 space-y-1.5 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
                     {block.items.map((item, itemIdx) => (
                         <li key={`${key}-li-${itemIdx}`} className="leading-relaxed">
-                            {renderInlineNodes(item, `${key}-li-${itemIdx}`)}
+                            {renderInlineNodes(item, `${key}-li-${itemIdx}`, callbacks)}
                         </li>
                     ))}
                 </ul>
@@ -187,7 +226,7 @@ function renderBlock(block: WikiBlockNode, idx: number): React.ReactNode {
                     className="pl-3.5 py-1 border-l-4 border-[#003876]/40 dark:border-blue-400/40 text-xs sm:text-sm text-slate-600 dark:text-slate-300 space-y-1"
                 >
                     {block.children.map((line, lIdx) => (
-                        <p key={`${key}-q-${lIdx}`}>{renderInlineNodes(line, `${key}-q-${lIdx}`)}</p>
+                        <p key={`${key}-q-${lIdx}`}>{renderInlineNodes(line, `${key}-q-${lIdx}`, callbacks)}</p>
                     ))}
                 </blockquote>
             );
@@ -201,7 +240,7 @@ function renderBlock(block: WikiBlockNode, idx: number): React.ReactNode {
                     </div>
                     <div className="space-y-1 text-xs sm:text-sm leading-relaxed">
                         {block.lines.map((line, lIdx) => (
-                            <p key={`${key}-c-${lIdx}`}>{renderInlineNodes(line, `${key}-c-${lIdx}`)}</p>
+                            <p key={`${key}-c-${lIdx}`}>{renderInlineNodes(line, `${key}-c-${lIdx}`, callbacks)}</p>
                         ))}
                     </div>
                 </div>
@@ -227,7 +266,7 @@ function renderBlock(block: WikiBlockNode, idx: number): React.ReactNode {
                                     key={`${key}-th-${hIdx}`}
                                     className="px-3.5 py-2.5 border-b border-slate-200/80 dark:border-white/10 whitespace-nowrap"
                                 >
-                                    {renderInlineNodes(header, `${key}-th-${hIdx}`)}
+                                    {renderInlineNodes(header, `${key}-th-${hIdx}`, callbacks)}
                                 </th>
                             ))}
                         </tr>
@@ -239,7 +278,7 @@ function renderBlock(block: WikiBlockNode, idx: number): React.ReactNode {
                                 {row.map((cell, cIdx) => (
                                     <td key={`${key}-td-${rIdx}-${cIdx}`}
                                         className="px-3.5 py-2.5 text-slate-700 dark:text-slate-300">
-                                        {renderInlineNodes(cell, `${key}-td-${rIdx}-${cIdx}`)}
+                                        {renderInlineNodes(cell, `${key}-td-${rIdx}-${cIdx}`, callbacks)}
                                     </td>
                                 ))}
                             </tr>
@@ -253,7 +292,7 @@ function renderBlock(block: WikiBlockNode, idx: number): React.ReactNode {
     }
 }
 
-export interface WikiMarkdownRendererProps {
+export interface WikiMarkdownRendererProps extends WikiMarkdownRenderCallbacks {
     markdown: string;
     showToc?: boolean;
 }
@@ -261,8 +300,17 @@ export interface WikiMarkdownRendererProps {
 export const WikiMarkdownRenderer: React.FC<WikiMarkdownRendererProps> = ({
                                                                               markdown,
                                                                               showToc = true,
+                                                                              onOpenWikiSlug,
+                                                                              onSelectRoute,
                                                                           }) => {
     const {blocks, toc} = useMemo(() => parseWikiMarkdown(markdown), [markdown]);
+    const callbacks = useMemo<WikiMarkdownRenderCallbacks | undefined>(
+        () =>
+            onOpenWikiSlug || onSelectRoute
+                ? {onOpenWikiSlug, onSelectRoute}
+                : undefined,
+        [onOpenWikiSlug, onSelectRoute]
+    );
 
     if (blocks.length === 0) {
         return (
@@ -299,7 +347,7 @@ export const WikiMarkdownRenderer: React.FC<WikiMarkdownRendererProps> = ({
                 </nav>
             )}
             <div className="space-y-3.5">
-                {blocks.map((block, idx) => renderBlock(block, idx))}
+                {blocks.map((block, idx) => renderBlock(block, idx, callbacks))}
             </div>
         </div>
     );

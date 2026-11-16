@@ -148,12 +148,35 @@ export const WikiEditorInfoSchema = z.object({
     editorId: z.string().trim().min(1).max(64),
 });
 
+const OptionalLatSchema = z
+    .number()
+    .finite()
+    .min(32, "위도는 32~39.5 범위여야 합니다")
+    .max(39.5, "위도는 32~39.5 범위여야 합니다")
+    .nullable()
+    .optional()
+    .transform((v) => (v === null ? undefined : v));
+
+const OptionalLngSchema = z
+    .number()
+    .finite()
+    .min(124, "경도는 124~132.5 범위여야 합니다")
+    .max(132.5, "경도는 124~132.5 범위여야 합니다")
+    .nullable()
+    .optional()
+    .transform((v) => (v === null ? undefined : v));
+
+const hasPairedCoordinates = (d: { lat?: number; lng?: number }) =>
+    (d.lat === undefined) === (d.lng === undefined);
+
 export const WikiPageDocumentSchema = z.object({
     slug: z.string().trim().refine(isValidWikiSlug, "유효하지 않은 위키 슬러그입니다"),
     title: z.string().trim().min(2, "제목은 2자 이상이어야 합니다").max(80),
     subtitle: z.string().trim().max(160).default(""),
     category: z.enum(["campus", "route", "stop", "terminal", "guide"]),
     cityCode: z.string().trim().regex(/^\d{2,10}$/).optional().or(z.literal("")).transform((v) => (v === "" ? undefined : v)),
+    lat: OptionalLatSchema,
+    lng: OptionalLngSchema,
     tags: z.array(z.string().trim().min(1).max(24)).max(12).default([]),
     version: z.number().int().min(1),
     createdAt: z.string().min(1),
@@ -164,7 +187,7 @@ export const WikiPageDocumentSchema = z.object({
     shuttle: WikiShuttleBlockSchema.nullable().default(null),
     boardingStops: z.array(WikiBoardingStopSchema).max(50).default([]),
     markdownBody: z.string().max(50000).default(""),
-});
+}).refine(hasPairedCoordinates, "지도 핀 좌표는 위도와 경도를 함께 지정해야 합니다");
 
 export const WikiEditPayloadSchema = z.object({
     baseVersion: z.number().int().min(1),
@@ -180,6 +203,8 @@ export const WikiEditPayloadSchema = z.object({
     subtitle: z.string().trim().max(160).default(""),
     category: z.enum(["campus", "route", "stop", "terminal", "guide"]),
     cityCode: z.string().trim().regex(/^\d{2,10}$/).optional().or(z.literal("")).transform((v) => (v === "" ? undefined : v)),
+    lat: OptionalLatSchema,
+    lng: OptionalLngSchema,
     tags: z.array(z.string().trim().min(1).max(24)).max(12).default([]),
     linkedRoutes: z.array(WikiLinkedRouteSchema).max(20).default([]),
     shuttle: WikiShuttleBlockSchema.nullable().default(null),
@@ -188,7 +213,7 @@ export const WikiEditPayloadSchema = z.object({
     nickname: z.string().trim().max(24).optional().default(""),
     summary: z.string().trim().max(160).optional().default(""),
     website: z.string().optional(), // Honeypot field (must remain empty)
-});
+}).refine(hasPairedCoordinates, "지도 핀 좌표는 위도와 경도를 함께 지정해야 합니다");
 
 export const WikiCreatePayloadSchema = z.object({
     slug: z.string().optional(),
@@ -204,6 +229,8 @@ export const WikiCreatePayloadSchema = z.object({
     subtitle: z.string().trim().max(160).default(""),
     category: z.enum(["campus", "route", "stop", "terminal", "guide"]),
     cityCode: z.string().trim().regex(/^\d{2,10}$/).optional().or(z.literal("")).transform((v) => (v === "" ? undefined : v)),
+    lat: OptionalLatSchema,
+    lng: OptionalLngSchema,
     tags: z.array(z.string().trim().min(1).max(24)).max(12).default([]),
     linkedRoutes: z.array(WikiLinkedRouteSchema).max(20).default([]),
     shuttle: WikiShuttleBlockSchema.nullable().default(null),
@@ -212,15 +239,17 @@ export const WikiCreatePayloadSchema = z.object({
     nickname: z.string().trim().max(24).optional().default(""),
     summary: z.string().trim().max(160).optional().default("새 위키 문서 생성"),
     website: z.string().optional(), // Honeypot field
-}).transform((data) => {
-    const derivedSlug = normalizeWikiSlug(data.title);
-    const derivedTitle = derivedSlug || data.title;
-    return {
-        ...data,
-        title: derivedTitle,
-        slug: derivedSlug,
-    };
-});
+})
+    .refine(hasPairedCoordinates, "지도 핀 좌표는 위도와 경도를 함께 지정해야 합니다")
+    .transform((data) => {
+        const derivedSlug = normalizeWikiSlug(data.title);
+        const derivedTitle = derivedSlug || data.title;
+        return {
+            ...data,
+            title: derivedTitle,
+            slug: derivedSlug,
+        };
+    });
 
 export const WikiRevertPayloadSchema = z.object({
     targetVersion: z.number().int().min(1),

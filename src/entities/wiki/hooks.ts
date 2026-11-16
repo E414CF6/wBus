@@ -1,7 +1,7 @@
 "use client";
 
 import {useCallback, useSyncExternalStore} from "react";
-import useSWR from "swr";
+import useSWR, {mutate as globalMutate} from "swr";
 import type {WikiCategory, WikiIndexData, WikiPageDocument, WikiRevision, WikiRevisionMeta,} from "./types";
 
 const WIKI_NICKNAME_KEY = "wbus_wiki_nickname_v1";
@@ -21,14 +21,23 @@ async function fetchJson<T>(url: string): Promise<T> {
 
 export function useWikiIndex(options?: {
     category?: WikiCategory | "all";
+    cityCode?: string;
+    pinsOnly?: boolean;
     query?: string;
     limit?: number;
     offset?: number;
+    enabled?: boolean;
     fallbackData?: WikiIndexData;
 }) {
     const params = new URLSearchParams();
     if (options?.category && options.category !== "all") {
         params.set("category", options.category);
+    }
+    if (options?.cityCode) {
+        params.set("cityCode", options.cityCode);
+    }
+    if (options?.pinsOnly) {
+        params.set("pinsOnly", "true");
     }
     if (options?.query && options.query.trim()) {
         params.set("q", options.query.trim());
@@ -40,13 +49,31 @@ export function useWikiIndex(options?: {
         params.set("offset", String(options.offset));
     }
     const qs = params.toString();
-    const key = qs ? `/api/wiki?${qs}` : "/api/wiki";
+    const enabled = options?.enabled ?? true;
+    const key = enabled ? (qs ? `/api/wiki?${qs}` : "/api/wiki") : null;
 
     return useSWR<WikiIndexData>(key, fetchJson, {
         fallbackData: options?.fallbackData,
         revalidateOnFocus: false,
         dedupingInterval: 10_000,
     });
+}
+
+export function useWikiPins(options?: { cityCode?: string; enabled?: boolean }) {
+    return useWikiIndex({
+        pinsOnly: true,
+        cityCode: options?.cityCode,
+        limit: 100,
+        enabled: options?.enabled ?? true,
+    });
+}
+
+export function mutateAllWikiQueries(): Promise<unknown[]> {
+    return globalMutate(
+        (key) => typeof key === "string" && key.startsWith("/api/wiki"),
+        undefined,
+        {revalidate: true}
+    );
 }
 
 export function useWikiPage(slug: string | null | undefined, fallbackData?: WikiPageDocument) {
