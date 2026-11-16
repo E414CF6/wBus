@@ -28,11 +28,11 @@ type MapWrapperProps = {
  * to avoid cross-feature imports.
  */
 const MapWrapper: React.FC<MapWrapperProps> = ({
-                                                 onReady,
-                                                 isPinPlacementMode,
-                                                 onPinPlacementClick,
-                                                 children,
-                                             }) => {
+                                                   onReady,
+                                                   isPinPlacementMode,
+                                                   onPinPlacementClick,
+                                                   children,
+                                               }) => {
     return (
         <Map
             onReady={onReady}

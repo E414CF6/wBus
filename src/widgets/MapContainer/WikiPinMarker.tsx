@@ -15,11 +15,11 @@ export interface WikiPinMarkerProps {
 }
 
 export const WikiPinMarker = memo(function WikiPinMarker({
-                                                            enabled = true,
-                                                            selectedSlug = null,
-                                                            isPinPlacementMode = false,
-                                                            onSelectWikiPin,
-                                                        }: WikiPinMarkerProps) {
+                                                             enabled = true,
+                                                             selectedSlug = null,
+                                                             isPinPlacementMode = false,
+                                                             onSelectWikiPin,
+                                                         }: WikiPinMarkerProps) {
     const {map} = useAppMapContext();
     const {data} = useWikiPins({enabled});
     const pins = data?.pages ?? [];

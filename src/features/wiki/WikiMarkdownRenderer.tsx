@@ -183,10 +183,12 @@ function renderBlock(
                         ? "text-base sm:text-lg font-black tracking-tight text-slate-900 dark:text-white pt-3 pb-1 border-b border-slate-200/70 dark:border-white/10 scroll-mt-20"
                         : "text-sm sm:text-base font-black tracking-tight text-slate-800 dark:text-slate-100 pt-2 scroll-mt-20";
             if (block.level === 1) {
-                return <h2 key={key} id={block.id} className={cls}>{renderInlineNodes(block.children, key, callbacks)}</h2>;
+                return <h2 key={key} id={block.id}
+                           className={cls}>{renderInlineNodes(block.children, key, callbacks)}</h2>;
             }
             if (block.level === 2) {
-                return <h2 key={key} id={block.id} className={cls}>{renderInlineNodes(block.children, key, callbacks)}</h2>;
+                return <h2 key={key} id={block.id}
+                           className={cls}>{renderInlineNodes(block.children, key, callbacks)}</h2>;
             }
             return <h3 key={key} id={block.id} className={cls}>{renderInlineNodes(block.children, key, callbacks)}</h3>;
         }

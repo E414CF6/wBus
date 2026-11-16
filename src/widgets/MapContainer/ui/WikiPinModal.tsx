@@ -222,7 +222,8 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
             modalId="wiki-pin"
             ariaLabel={wikiDoc ? `${wikiDoc.title} 위키 문서` : "위키 문서 모달"}
         >
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 custom-scrollbar select-text">
+            <div
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 custom-scrollbar select-text">
                 {isLoading && !wikiDoc && (
                     <div className="py-16 text-center space-y-2.5">
                         <div
@@ -347,7 +348,8 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                         {/* Linked Routes */}
                         {wikiDoc.linkedRoutes.length > 0 && (
                             <section className="space-y-2.5">
-                                <div className="flex items-center gap-1.5 text-xs font-black text-slate-900 dark:text-white">
+                                <div
+                                    className="flex items-center gap-1.5 text-xs font-black text-slate-900 dark:text-white">
                                     <Bus className="w-4 h-4 text-[#003876] dark:text-sky-400"/>
                                     <span>연결 시내버스 ({wikiDoc.linkedRoutes.length})</span>
                                 </div>
@@ -367,7 +369,8 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                                                 <span className="text-xs font-black text-[#003876] dark:text-sky-300">
                                                     {route.label || `${route.routeNo}번`}
                                                 </span>
-                                                <span className="text-[10px] font-black text-sky-600 dark:text-sky-400 group-hover:underline">
+                                                <span
+                                                    className="text-[10px] font-black text-sky-600 dark:text-sky-400 group-hover:underline">
                                                     지도에서 보기 →
                                                 </span>
                                             </div>
@@ -387,7 +390,8 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                             <section
                                 className="rounded-2xl border border-sky-200/80 dark:border-sky-800/60 bg-sky-50/60 dark:bg-sky-950/25 p-3.5 space-y-2">
                                 <div className="flex items-center justify-between gap-2">
-                                    <div className="flex items-center gap-1.5 text-xs font-black text-[#003876] dark:text-sky-300">
+                                    <div
+                                        className="flex items-center gap-1.5 text-xs font-black text-[#003876] dark:text-sky-300">
                                         <Clock className="w-4 h-4"/>
                                         <span>{wikiDoc.shuttle.title}</span>
                                     </div>
@@ -398,7 +402,8 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                                         전체 셔틀 시간표 →
                                     </Link>
                                 </div>
-                                <div className="flex flex-wrap gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                                <div
+                                    className="flex flex-wrap gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300">
                                     <span>등교 {wikiDoc.shuttle.inbound_to_campus.length}회</span>
                                     <span>·</span>
                                     <span>하교 {wikiDoc.shuttle.outbound_from_campus.length}회</span>
@@ -411,7 +416,8 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                         {/* Boarding Stops */}
                         {wikiDoc.boardingStops.length > 0 && (
                             <section className="space-y-2.5">
-                                <div className="flex items-center gap-1.5 text-xs font-black text-slate-900 dark:text-white">
+                                <div
+                                    className="flex items-center gap-1.5 text-xs font-black text-slate-900 dark:text-white">
                                     <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400"/>
                                     <span>주요 승강장 · 탑승 위치 ({wikiDoc.boardingStops.length})</span>
                                 </div>
@@ -422,7 +428,8 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                                             className="p-3 rounded-2xl border border-slate-200/85 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.03] space-y-1.5"
                                         >
                                             <div className="flex items-center justify-between gap-2">
-                                                <span className="text-xs font-black text-slate-900 dark:text-white truncate">
+                                                <span
+                                                    className="text-xs font-black text-slate-900 dark:text-white truncate">
                                                     {stop.name}
                                                 </span>
                                                 <span

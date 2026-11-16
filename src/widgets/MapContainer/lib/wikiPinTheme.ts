@@ -1,4 +1,4 @@
-import {BookOpen, Bus, GraduationCap, MapPin, TrainFront, type LucideIcon} from "lucide-react";
+import {BookOpen, Bus, GraduationCap, type LucideIcon, MapPin, TrainFront} from "lucide-react";
 import type {WikiCategory} from "@entities/wiki";
 
 export interface WikiCategoryPinStyle {

@@ -26,7 +26,8 @@ export const WikiPinLocationFields: React.FC<WikiPinLocationFieldsProps> = ({
         <div
             className="rounded-xl border border-emerald-200/80 dark:border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20 p-3 space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 text-[11px] font-black text-emerald-800 dark:text-emerald-300">
+                <div
+                    className="flex items-center gap-1.5 text-[11px] font-black text-emerald-800 dark:text-emerald-300">
                     <MapPin className="w-3.5 h-3.5 shrink-0"/>
                     <span>지도 핀 위치 좌표 (선택 · 입력 시 지도에 위키 핀으로 표시)</span>
                 </div>

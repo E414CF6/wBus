@@ -44,11 +44,7 @@ import {
     type WikiPageDocument,
     YONSEI_MIRAE_WIKI_SLUG,
 } from "@entities/wiki";
-import {
-    WikiEditorForm,
-    WikiHistoryPanel,
-    WikiMarkdownRenderer,
-} from "@features/wiki";
+import {WikiEditorForm, WikiHistoryPanel, WikiMarkdownRenderer,} from "@features/wiki";
 import {UI_TEXT} from "@shared/config/locale";
 import {resolveInitialCampusDirection} from "@shared/config/settingsCookie";
 import {useAppSettings} from "@shared/context/AppSettingsContext";

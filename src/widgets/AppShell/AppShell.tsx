@@ -6,7 +6,7 @@ import React, {useCallback, useEffect, useMemo, useState} from "react";
 
 import {useBusRouteMap} from "@entities/route/hooks";
 import {useCityContext, useCityFeatures} from "@entities/city";
-import {YONSEI_MIRAE_WIKI_SLUG, type WikiPageDocument} from "@entities/wiki";
+import {type WikiPageDocument, YONSEI_MIRAE_WIKI_SLUG} from "@entities/wiki";
 
 import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
