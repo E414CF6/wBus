@@ -53,8 +53,6 @@ function stripControlChars(str: string): string {
 
 export const LEGACY_WIKI_SLUG_ALIASES: Record<string, string> = {
     "yonsei-mirae": "연세대학교 미래캠퍼스",
-    "wonju-terminal": "원주 고속·시외버스터미널",
-    "wonju-station": "원주역 (무실동 KTX)",
 };
 
 export function resolveLegacyWikiSlug(rawSlug: string): string | null {

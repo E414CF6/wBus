@@ -733,8 +733,10 @@ describe("wikiStore Postgres + Delta integration", () => {
 
         const pinsList = await listWikiPages({pinsOnly: true, cityCode: "32020"});
         const slugs = pinsList.pages.map((p) => p.slug);
-        expect(slugs).toContain("단계동 정류장 핀");
-        expect(slugs).toContain("연세대학교 미래캠퍼스");
+        expect(slugs).toEqual(["연세대학교 미래캠퍼스", "단계동 정류장 핀"]);
         expect(slugs).not.toContain("좌표없는 가이드");
+
+        const yonsei = await getWikiPage("연세대학교 미래캠퍼스");
+        expect(yonsei?.lastEditor.nickname).toBe("wBus");
     });
 });

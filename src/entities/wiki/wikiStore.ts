@@ -414,18 +414,19 @@ async function ensureSeedAndBlobBootstrapped(db: WikiDatabase): Promise<void> {
     bootstrapPromise = (async () => {
         const seeds = getSeedWikiPages();
         const seedSlugs = seeds.map((s) => s.slug);
+        const seedSlugSet = new Set(seedSlugs);
 
         const existingRows = await db
             .select({
                 slug: wikiPages.slug,
                 lat: wikiPages.lat,
                 lng: wikiPages.lng,
+                lastEditorId: wikiPages.lastEditorId,
+                lastEditorNickname: wikiPages.lastEditorNickname,
             })
             .from(wikiPages);
         const existingSet = new Set(existingRows.map((r) => r.slug));
-        const existingCoordMap = new Map(
-            existingRows.map((r) => [r.slug, {lat: r.lat, lng: r.lng}])
-        );
+        const existingMetaMap = new Map(existingRows.map((r) => [r.slug, r]));
 
         // 1. Check legacy Blob index for any community-created custom pages
         if (existingSet.size === 0) {
@@ -497,21 +498,37 @@ async function ensureSeedAndBlobBootstrapped(db: WikiDatabase): Promise<void> {
             }
         }
 
-        // 3. Ensure any newly bundled built-in seeds exist and have map pin coordinates backfilled
+        // 3. Remove obsolete unedited seed rows (keep only current seeds like 연세대학교 미래캠퍼스)
+        for (const row of existingRows) {
+            if (row.lastEditorId === "seed-system" && !seedSlugSet.has(row.slug)) {
+                await db.delete(wikiPages).where(eq(wikiPages.slug, row.slug));
+                existingSet.delete(row.slug);
+                await distributedCache.del(`${REDIS_PAGE_PREFIX}${row.slug}`).catch(() => false);
+            }
+        }
+
+        // 4. Ensure built-in seeds exist, have map pin coordinates, and reflect updated seed author name ("wBus")
         for (const seed of seeds) {
             if (!existingSet.has(seed.slug)) {
                 await migrateSingleSlugFromBlobOrSeed(db, seed.slug);
             } else {
-                const coords = existingCoordMap.get(seed.slug);
-                if (
-                    coords &&
-                    (coords.lat === null || coords.lng === null) &&
+                const meta = existingMetaMap.get(seed.slug);
+                if (!meta) continue;
+                const needsCoords =
+                    (meta.lat === null || meta.lng === null) &&
                     typeof seed.lat === "number" &&
-                    typeof seed.lng === "number"
-                ) {
+                    typeof seed.lng === "number";
+                const needsAuthorSync =
+                    meta.lastEditorId === "seed-system" &&
+                    meta.lastEditorNickname !== seed.lastEditor.nickname;
+
+                if (needsCoords || needsAuthorSync) {
                     await db
                         .update(wikiPages)
-                        .set({lat: seed.lat, lng: seed.lng})
+                        .set({
+                            ...(needsCoords ? {lat: seed.lat, lng: seed.lng} : {}),
+                            ...(needsAuthorSync ? {lastEditorNickname: seed.lastEditor.nickname} : {}),
+                        })
                         .where(eq(wikiPages.slug, seed.slug));
                     await distributedCache.del(`${REDIS_PAGE_PREFIX}${seed.slug}`).catch(() => false);
                 }

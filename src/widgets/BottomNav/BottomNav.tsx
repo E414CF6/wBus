@@ -1,7 +1,7 @@
 "use client";
 
 import React, {memo, useCallback, useEffect, useMemo, useState} from "react";
-import {BookOpen, Bus, ChevronDown, Compass, MapIcon, MapPin, Settings, Sparkles, X,} from "lucide-react";
+import {Bus, ChevronDown, Compass, MapIcon, MapPin, MapPinPlus, Settings, Sparkles, X,} from "lucide-react";
 
 import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
@@ -9,14 +9,12 @@ import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useIsDesktop} from "@shared/ui/useIsDesktop";
 import {useCityContext, useCityFeatures} from "@entities/city";
 import {getRouteMeta, YONSEI_ROUTE_SET} from "@entities/route";
-import type {WikiPageSummary} from "@entities/wiki";
 import {CitySelectModal} from "@features/city-select";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
 import {SettingsModal} from "@features/settings";
 import {triggerHaptic} from "@shared/utils/haptics";
 
 import {BusListDrawer} from "./BusListDrawer";
-import {WikiMapHubModal} from "./ui/WikiMapHubModal";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 import type {DirectionCode} from "@entities/route/types";
@@ -44,7 +42,7 @@ export interface BottomNavProps {
     lastUpdated?: number | null;
     onReconnect?: () => void;
     onStartAddWikiPin?: () => void;
-    onOpenWikiSlug?: (slug: string) => void;
+    onCancelAddWikiPin?: () => void;
     isPinPlacementMode?: boolean;
     className?: string;
 }
@@ -73,7 +71,7 @@ function BottomNavComponent({
                                 lastUpdated,
                                 onReconnect,
                                 onStartAddWikiPin,
-                                onOpenWikiSlug,
+                                onCancelAddWikiPin,
                                 isPinPlacementMode = false,
                                 className = "",
                             }: BottomNavProps) {
@@ -92,7 +90,6 @@ function BottomNavComponent({
     const [isCityModalOpen, setIsCityModalOpen] = useState(false);
     const [isRoutePickerOpen, setIsRoutePickerOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-    const [isWikiHubOpen, setIsWikiHubOpen] = useState(false);
 
     const handleToggleBusList = useCallback(() => {
         if (isDesktop) {
@@ -176,14 +173,6 @@ function BottomNavComponent({
             <SettingsModal
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
-            />
-
-            {/* 2-c. Map-Integrated Wiki Hub Modal */}
-            <WikiMapHubModal
-                isOpen={isWikiHubOpen}
-                onClose={() => setIsWikiHubOpen(false)}
-                onStartAddPin={() => onStartAddWikiPin?.()}
-                onSelectWikiPage={(page: WikiPageSummary) => onOpenWikiSlug?.(page.slug)}
             />
 
             {/* 3. Expandable Floating Running Bus List (Desktop Sidebar / Mobile BottomSheet) */}
@@ -370,23 +359,30 @@ function BottomNavComponent({
 
                         <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
 
-                        {/* Integrated Map Wiki Hub Button */}
+                        {/* Direct Map Wiki Pin Placement Toggle */}
                         <button
                             type="button"
                             onClick={() => {
-                                triggerHaptic("light");
-                                setIsWikiHubOpen(true);
+                                triggerHaptic("selection");
+                                if (isPinPlacementMode) {
+                                    onCancelAddWikiPin?.();
+                                } else {
+                                    onStartAddWikiPin?.();
+                                }
                             }}
-                            aria-label="지도 위키 열기"
-                            title="지도 위키 · 핀 추가"
+                            aria-label={isPinPlacementMode ? "위키 핀 추가 취소" : "지도에 새 위키 핀 추가"}
+                            aria-pressed={isPinPlacementMode}
+                            title={isPinPlacementMode ? "핀 추가 취소" : "지도에 위키 핀 추가"}
                             className={`inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 ${
-                                isPinPlacementMode || isWikiHubOpen
+                                isPinPlacementMode
                                     ? "bg-emerald-600 text-white shadow-xs"
-                                    : "text-gray-600 dark:text-gray-300 hover:text-[#003876] dark:hover:text-sky-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
+                                    : "text-gray-600 dark:text-gray-300 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
                             }`}
                         >
-                            <BookOpen className="w-4 h-4 stroke-[2.2]"/>
-                            <span className="hidden sm:inline text-[11px] font-black tracking-tight">위키</span>
+                            <MapPinPlus className="w-4 h-4 stroke-[2.2]"/>
+                            <span className="hidden sm:inline text-[11px] font-black tracking-tight">
+                                {isPinPlacementMode ? "추가 취소" : "핀 추가"}
+                            </span>
                         </button>
 
                         {/* Settings Modal Button */}

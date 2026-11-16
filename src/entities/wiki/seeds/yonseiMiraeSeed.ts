@@ -21,7 +21,7 @@ export function createYonseiMiraeSeed(): WikiPageDocument {
         createdAt: SEED_TIMESTAMP,
         updatedAt: SEED_TIMESTAMP,
         lastEditor: {
-            nickname: "wBus 초기 데이터",
+            nickname: "wBus",
             editorId: "seed-system",
         },
         isProtected: false,
@@ -69,8 +69,8 @@ export function createYonseiMiraeSeed(): WikiPageDocument {
 
 ## 기차역 · 터미널 환승 팁
 
-- **KTX 원주역(무실동)**: 시내버스 [[route:32020:30]] 또는 [[route:32020:34-1]]을 이용하거나, 시간대가 맞다면 [[원주역 (무실동 KTX)|원주역 환승 위키]]에 정리된 무료 셔틀을 이용하세요.
-- **원주고속·시외버스터미널**: 터미널 건너편 정류장에서 [[route:32020:30]]·[[route:32020:34]] 탑승이 가능하며, 셔틀은 그랜드치과병원 앞에서 출발합니다. 자세한 위치는 [[원주 고속·시외버스터미널|원주터미널 위키]]에서도 확인할 수 있습니다.
+- **KTX 원주역(무실동)**: 시내버스 [[route:32020:30]] 또는 [[route:32020:34-1]]을 이용하거나, 시간대가 맞다면 역 광장 앞 승강장에서 무료 셔틀을 이용하세요.
+- **원주고속·시외버스터미널**: 터미널 건너편(그랜드치과병원 앞) 정류장에서 [[route:32020:30]]·[[route:32020:34]] 탑승이 가능하며, 학교행 무료 셔틀도 같은 정류장 부근에서 출발합니다.
 - **만종역(KTX 강릉선)**: 등·하교 무료 셔틀 직통편이 하루 2~3회 운행됩니다.
 
 > [!NOTE]

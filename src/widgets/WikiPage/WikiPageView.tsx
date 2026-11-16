@@ -21,7 +21,6 @@ import {
     Moon,
     Navigation,
     PenLine,
-    Plus,
     Sun,
     User,
 } from "lucide-react";
@@ -292,18 +291,11 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                     </p>
                     <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
                         <Link
-                            href="/wiki"
-                            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-extrabold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                        >
-                            <ArrowLeft className="w-3.5 h-3.5"/>
-                            위키 전체 목록
-                        </Link>
-                        <Link
-                            href={`/wiki/new?slug=${encodeURIComponent(slug)}`}
+                            href="/"
                             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#003876] hover:bg-[#00295a] dark:bg-sky-600 dark:hover:bg-sky-500 text-white text-xs font-black transition shadow-sm"
                         >
-                            <Plus className="w-3.5 h-3.5"/>
-                            이 이름으로 새 위키 만들기
+                            <ArrowLeft className="w-3.5 h-3.5"/>
+                            실시간 지도에서 핀 추가하기
                         </Link>
                     </div>
                 </main>
@@ -337,12 +329,12 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                 <div className="max-w-5xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2.5">
                     <div className="flex items-center gap-2 min-w-0">
                         <Link
-                            href="/wiki"
+                            href={mapHref}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/[0.07] dark:hover:bg-white/15 text-xs font-black text-slate-700 dark:text-slate-200 transition shrink-0"
                         >
-                            <BookOpen className="w-3.5 h-3.5 text-[#003876] dark:text-sky-400"/>
-                            <span className="hidden xs:inline">wBus 위키</span>
-                            <span className="xs:hidden">위키</span>
+                            <MapIcon className="w-3.5 h-3.5 text-[#003876] dark:text-sky-400"/>
+                            <span className="hidden xs:inline">실시간 지도</span>
+                            <span className="xs:hidden">지도</span>
                         </Link>
                         <span className="text-slate-300 dark:text-slate-700 text-xs">/</span>
                         <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
@@ -503,13 +495,12 @@ export const WikiPageView: React.FC<WikiPageViewProps> = ({
                     {wikiDoc.tags.length > 0 && (
                         <div className="flex flex-wrap gap-1.5 pt-0.5">
                             {wikiDoc.tags.map((tag) => (
-                                <Link
+                                <span
                                     key={tag}
-                                    href={`/wiki?q=${encodeURIComponent(tag)}`}
-                                    className="px-2.5 py-0.5 rounded-lg bg-slate-100/90 hover:bg-sky-50 dark:bg-white/[0.06] dark:hover:bg-sky-950/40 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-[#003876] dark:hover:text-sky-300 transition"
+                                    className="px-2.5 py-0.5 rounded-lg bg-slate-100/90 dark:bg-white/[0.06] text-[11px] font-bold text-slate-600 dark:text-slate-300"
                                 >
                                     #{tag}
-                                </Link>
+                                </span>
                             ))}
                         </div>
                     )}

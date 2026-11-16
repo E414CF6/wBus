@@ -19,12 +19,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
             changeFrequency: "hourly",
             priority: 1.0,
         },
-        {
-            url: `${baseUrl}/wiki`,
-            lastModified,
-            changeFrequency: "daily",
-            priority: 0.9,
-        },
         ...wikiSeedEntries,
         {
             url: `${baseUrl}/privacy`,

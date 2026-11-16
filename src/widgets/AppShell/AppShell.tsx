@@ -358,7 +358,7 @@ function MapAppShell() {
                 lastUpdated={liveBusData.lastUpdated}
                 onReconnect={liveBusData.reconnect}
                 onStartAddWikiPin={handleStartAddWikiPin}
-                onOpenWikiSlug={(slug) => setActiveWikiSlug(slug)}
+                onCancelAddWikiPin={handleCancelPinPlacement}
                 isPinPlacementMode={isPinPlacementMode}
             />
 

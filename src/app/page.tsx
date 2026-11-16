@@ -17,10 +17,10 @@ export default async function HomePage({
 }) {
     const sp = await searchParams;
     if (sp.page === "yonsei_mirae") {
-        redirect(`/wiki/${encodeURIComponent(YONSEI_MIRAE_WIKI_SLUG)}`);
+        redirect(`/?wiki=${encodeURIComponent(YONSEI_MIRAE_WIKI_SLUG)}`);
     }
     if (sp.page === "wiki") {
-        redirect("/wiki");
+        redirect("/");
     }
 
     return <MainApp/>;

@@ -1,36 +1,5 @@
-import type {Metadata} from "next";
-import {WikiCreatePage} from "@widgets/WikiDirectory";
+import {redirect} from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-    title: "새 위키 문서 만들기 | wBus 커뮤니티 위키",
-    description: "새로운 정류장, 노선, 캠퍼스 또는 터미널 위키 문서를 개설하세요.",
-    robots: {
-        index: false,
-        follow: true,
-    },
-};
-
-export default async function WikiNewRoutePage({
-                                                   searchParams,
-                                               }: {
-    searchParams: Promise<{ slug?: string; lat?: string; lng?: string; cityCode?: string }>;
-}) {
-    const sp = await searchParams;
-    const initialSlug = typeof sp.slug === "string" ? sp.slug : "";
-    const parsedLat = sp.lat ? Number(sp.lat) : undefined;
-    const parsedLng = sp.lng ? Number(sp.lng) : undefined;
-    const initialLat = typeof parsedLat === "number" && Number.isFinite(parsedLat) ? parsedLat : undefined;
-    const initialLng = typeof parsedLng === "number" && Number.isFinite(parsedLng) ? parsedLng : undefined;
-    const initialCityCode = typeof sp.cityCode === "string" && sp.cityCode.trim() ? sp.cityCode.trim() : undefined;
-
-    return (
-        <WikiCreatePage
-            initialSlug={initialSlug}
-            initialLat={initialLat}
-            initialLng={initialLng}
-            initialCityCode={initialCityCode}
-        />
-    );
+export default function WikiNewRedirectPage() {
+    redirect("/");
 }

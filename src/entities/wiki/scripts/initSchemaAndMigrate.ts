@@ -96,20 +96,53 @@ async function main() {
         }
 
         const seeds = getSeedWikiPages();
+        const seedSlugSet = new Set(seeds.map((s) => s.slug));
+
+        const allExisting = await db
+            .select({
+                slug: wikiPages.slug,
+                lastEditorId: wikiPages.lastEditorId,
+            })
+            .from(wikiPages);
+        for (const row of allExisting) {
+            if (row.lastEditorId === "seed-system" && !seedSlugSet.has(row.slug)) {
+                await db.delete(wikiPages).where(eq(wikiPages.slug, row.slug));
+                console.log(`[Wiki Migration] Removed obsolete seed '${row.slug}'.`);
+            }
+        }
+
         for (const seed of seeds) {
             const existing = await db
-                .select({slug: wikiPages.slug, lat: wikiPages.lat, lng: wikiPages.lng})
+                .select({
+                    slug: wikiPages.slug,
+                    lat: wikiPages.lat,
+                    lng: wikiPages.lng,
+                    lastEditorId: wikiPages.lastEditorId,
+                    lastEditorNickname: wikiPages.lastEditorNickname,
+                })
                 .from(wikiPages)
                 .where(eq(wikiPages.slug, seed.slug))
                 .limit(1);
 
             if (existing.length > 0) {
-                if ((existing[0].lat === null || existing[0].lng === null) && typeof seed.lat === "number" && typeof seed.lng === "number") {
+                const row = existing[0];
+                const needsCoords =
+                    (row.lat === null || row.lng === null) &&
+                    typeof seed.lat === "number" &&
+                    typeof seed.lng === "number";
+                const needsAuthorSync =
+                    row.lastEditorId === "seed-system" &&
+                    row.lastEditorNickname !== seed.lastEditor.nickname;
+
+                if (needsCoords || needsAuthorSync) {
                     await db
                         .update(wikiPages)
-                        .set({lat: seed.lat, lng: seed.lng})
+                        .set({
+                            ...(needsCoords ? {lat: seed.lat, lng: seed.lng} : {}),
+                            ...(needsAuthorSync ? {lastEditorNickname: seed.lastEditor.nickname} : {}),
+                        })
                         .where(eq(wikiPages.slug, seed.slug));
-                    console.log(`[Wiki Migration] Backfilled lat/lng for '${seed.slug}'.`);
+                    console.log(`[Wiki Migration] Synced seed metadata for '${seed.slug}'.`);
                 } else {
                     console.log(`[Wiki Migration] '${seed.slug}' already present in Postgres, skipping.`);
                 }
