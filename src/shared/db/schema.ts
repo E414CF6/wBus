@@ -24,7 +24,6 @@ export const wikiPages = pgTable(
     "wiki_pages",
     {
         slug: text("slug").primaryKey(),
-        title: text("title").notNull(),
         subtitle: text("subtitle").notNull().default(""),
         category: text("category").$type<WikiCategory>().notNull(),
         cityCode: text("city_code"),
@@ -48,7 +47,7 @@ export const wikiPages = pgTable(
         index("wiki_pages_pinned_updated_idx").on(table.pinned, table.updatedAt),
         index("wiki_pages_category_idx").on(table.category),
         index("wiki_pages_lat_lng_idx").on(table.lat, table.lng),
-        index("wiki_pages_title_trgm_idx").using("gin", table.title.op("gin_trgm_ops")),
+        index("wiki_pages_slug_trgm_idx").using("gin", table.slug.op("gin_trgm_ops")),
         index("wiki_pages_tags_text_trgm_idx").using("gin", table.tagsText.op("gin_trgm_ops")),
         index("wiki_pages_markdown_trgm_idx").using("gin", table.markdownBody.op("gin_trgm_ops")),
     ]
@@ -74,7 +73,6 @@ export const wikiRevisions = pgTable(
     },
     (table) => [
         uniqueIndex("wiki_revisions_slug_version_uidx").on(table.slug, table.version),
-        index("wiki_revisions_slug_version_desc_idx").on(table.slug, table.version),
         index("wiki_revisions_created_at_idx").on(table.createdAt),
     ]
 );

@@ -3,9 +3,8 @@ import {Pool} from "@neondatabase/serverless";
 import {drizzle} from "drizzle-orm/neon-serverless";
 import {eq} from "drizzle-orm";
 import * as schema from "../../../shared/db/schema";
-import {wikiPages, wikiRevisions} from "../../../shared/db/schema";
-import {computeWikiDelta, shouldStoreCheckpoint} from "../lib/wikiDelta";
-import {computeWikiDiffStats} from "../lib/wikiDiff";
+import {wikiPages, wikiRevisions} from "@shared/db";
+import {computeWikiDelta, computeWikiDiffStats, shouldStoreCheckpoint} from "@entities/wiki";
 import {LEGACY_WIKI_SLUG_ALIASES} from "../schemas";
 import {getSeedWikiPages, PINNED_WIKI_SLUGS} from "../seeds";
 import type {WikiPageDocument, WikiRevision} from "../types";
@@ -23,17 +22,22 @@ async function main() {
     const db = drizzle(pool, {schema});
 
     try {
-        console.log("[Wiki Migration] Ensuring lat/lng columns, pg_trgm extension and indexes...");
-        await pool.query(`ALTER TABLE wiki_pages ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;`);
-        await pool.query(`ALTER TABLE wiki_pages ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;`);
+        console.log("[Wiki Migration] Normalizing wiki_pages schema (dropping duplicate title column, ensuring lat/lng & indexes)...");
+        await pool.query(`ALTER TABLE wiki_pages
+            ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;`);
+        await pool.query(`ALTER TABLE wiki_pages
+            ADD COLUMN IF NOT EXISTS lng DOUBLE PRECISION;`);
         await pool.query(`
             CREATE INDEX IF NOT EXISTS wiki_pages_lat_lng_idx
                 ON wiki_pages (lat, lng);
         `);
         await pool.query(`CREATE EXTENSION IF NOT EXISTS pg_trgm;`);
+        await pool.query(`DROP INDEX IF EXISTS wiki_pages_title_trgm_idx;`);
+        await pool.query(`DROP INDEX IF EXISTS wiki_revisions_slug_version_desc_idx;`);
+        await pool.query(`ALTER TABLE wiki_pages DROP COLUMN IF EXISTS title;`);
         await pool.query(`
-            CREATE INDEX IF NOT EXISTS wiki_pages_title_trgm_idx
-                ON wiki_pages USING gin (title gin_trgm_ops);
+            CREATE INDEX IF NOT EXISTS wiki_pages_slug_trgm_idx
+                ON wiki_pages USING gin (slug gin_trgm_ops);
         `);
         await pool.query(`
             CREATE INDEX IF NOT EXISTS wiki_pages_tags_text_trgm_idx
@@ -62,7 +66,6 @@ async function main() {
                         .insert(wikiPages)
                         .values({
                             slug: canonicalSlug,
-                            title: oldRow.title,
                             subtitle: oldRow.subtitle,
                             category: oldRow.category,
                             cityCode: oldRow.cityCode,
@@ -140,6 +143,7 @@ async function main() {
                         .set({
                             ...(needsCoords ? {lat: seed.lat, lng: seed.lng} : {}),
                             ...(needsAuthorSync ? {lastEditorNickname: seed.lastEditor.nickname} : {}),
+                            ...(row.lastEditorId === "seed-system" ? {markdownBody: seed.markdownBody} : {}),
                         })
                         .where(eq(wikiPages.slug, seed.slug));
                     console.log(`[Wiki Migration] Synced seed metadata for '${seed.slug}'.`);
@@ -167,7 +171,6 @@ async function main() {
                     .insert(wikiPages)
                     .values({
                         slug: seed.slug,
-                        title: seed.title,
                         subtitle: seed.subtitle,
                         category: seed.category,
                         cityCode: seed.cityCode ?? null,

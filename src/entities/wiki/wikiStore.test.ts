@@ -79,17 +79,15 @@ function evalPageRowPredicate(
             const rawPattern = String(params[Number(match[2]) - 1] ?? "");
             const needle = rawPattern.replace(/^%|%$/g, "").replace(/\\([%_\\])/g, "$1").toLowerCase();
             const val =
-                col === "title"
-                    ? row.title
+                col === "slug"
+                    ? row.slug
                     : col === "subtitle"
                         ? row.subtitle
-                        : col === "slug"
-                            ? row.slug
-                            : col === "tags_text"
-                                ? row.tagsText
-                                : col === "markdown_body"
-                                    ? row.markdownBody
-                                    : "";
+                        : col === "tags_text"
+                            ? row.tagsText
+                            : col === "markdown_body"
+                                ? row.markdownBody
+                                : "";
             return val.toLowerCase().includes(needle);
         });
         if (!matchedAny) result = false;
@@ -182,7 +180,7 @@ function createFakeDb() {
                                         const page = pageRows.get(rev.slug)!;
                                         return {
                                             slug: rev.slug,
-                                            title: page.title,
+                                            title: page.slug,
                                             category: page.category,
                                             version: rev.version,
                                             summary: rev.summary,
@@ -268,7 +266,6 @@ function createFakeDb() {
                             }
                             const row: realSchema.WikiPageRow = {
                                 slug,
-                                title: String(val.title),
                                 subtitle: String(val.subtitle ?? ""),
                                 category: val.category as realSchema.WikiPageRow["category"],
                                 cityCode: (val.cityCode as string | null) ?? null,

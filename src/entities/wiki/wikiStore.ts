@@ -168,7 +168,7 @@ function rowToDocument(row: WikiPageRow): WikiPageDocument {
     const hasCoords = typeof row.lat === "number" && typeof row.lng === "number";
     return {
         slug: row.slug,
-        title: row.title,
+        title: row.slug,
         subtitle: row.subtitle,
         category: row.category,
         ...(row.cityCode ? {cityCode: row.cityCode} : {}),
@@ -193,7 +193,7 @@ function rowToSummary(row: WikiPageRow): WikiPageSummary {
     const hasCoords = typeof row.lat === "number" && typeof row.lng === "number";
     return {
         slug: row.slug,
-        title: row.title,
+        title: row.slug,
         subtitle: row.subtitle,
         category: row.category,
         ...(row.cityCode ? {cityCode: row.cityCode} : {}),
@@ -306,7 +306,6 @@ async function importDocumentIntoDb(
             .insert(wikiPages)
             .values({
                 slug: doc.slug,
-                title: doc.title,
                 subtitle: doc.subtitle,
                 category: doc.category,
                 cityCode: doc.cityCode ?? null,
@@ -461,7 +460,6 @@ async function ensureSeedAndBlobBootstrapped(db: WikiDatabase): Promise<void> {
                         .insert(wikiPages)
                         .values({
                             slug: canonicalSlug,
-                            title: oldRow.title,
                             subtitle: oldRow.subtitle,
                             category: oldRow.category,
                             cityCode: oldRow.cityCode,
@@ -628,6 +626,7 @@ async function reconstructRevision(
         snapshot: {
             ...currentDoc,
             slug,
+            title: currentDoc.title || slug,
             ...(isProtected !== undefined ? {isProtected} : {}),
         },
     };
@@ -739,9 +738,8 @@ export async function listWikiPages(filters?: {
         const pattern = `%${escapeLikePattern(q)}%`;
         conditions.push(
             or(
-                ilike(wikiPages.title, pattern),
-                ilike(wikiPages.subtitle, pattern),
                 ilike(wikiPages.slug, pattern),
+                ilike(wikiPages.subtitle, pattern),
                 ilike(wikiPages.tagsText, pattern),
                 ilike(wikiPages.markdownBody, pattern)
             )
@@ -767,7 +765,6 @@ export async function listWikiPages(filters?: {
         db
             .select({
                 slug: wikiRevisions.slug,
-                title: wikiPages.title,
                 category: wikiPages.category,
                 version: wikiRevisions.version,
                 summary: wikiRevisions.summary,
@@ -787,7 +784,7 @@ export async function listWikiPages(filters?: {
 
     const recentChanges: WikiRecentChangeItem[] = recentRows.map((r) => ({
         slug: r.slug,
-        title: r.title,
+        title: r.slug,
         category: r.category,
         version: r.version,
         summary: r.summary,
@@ -877,7 +874,6 @@ export async function createWikiPage(input: {
 
             await tx.insert(wikiPages).values({
                 slug,
-                title: doc.title,
                 subtitle: doc.subtitle,
                 category: doc.category,
                 cityCode: doc.cityCode ?? null,
@@ -1040,7 +1036,6 @@ export async function saveWikiPageEdit(input: {
                 .insert(wikiPages)
                 .values({
                     slug: nextSlug,
-                    title: nextDoc.title,
                     subtitle: nextDoc.subtitle,
                     category: nextDoc.category,
                     cityCode: nextDoc.cityCode ?? null,
@@ -1077,7 +1072,6 @@ export async function saveWikiPageEdit(input: {
             const updatedRows = await tx
                 .update(wikiPages)
                 .set({
-                    title: nextDoc.title,
                     subtitle: nextDoc.subtitle,
                     category: nextDoc.category,
                     cityCode: nextDoc.cityCode ?? null,
@@ -1283,7 +1277,6 @@ export async function revertWikiPage(input: {
         const updatedRows = await tx
             .update(wikiPages)
             .set({
-                title: nextDoc.title,
                 subtitle: nextDoc.subtitle,
                 category: nextDoc.category,
                 cityCode: nextDoc.cityCode ?? null,
