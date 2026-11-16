@@ -78,8 +78,7 @@ export function isValidWikiSlug(slug: string): boolean {
     if (trimmed === "." || trimmed === "..") return false;
     if (RESERVED_WIKI_SLUGS.has(trimmed.toLowerCase())) return false;
     if (hasControlChar(trimmed) || WIKI_SLUG_DISALLOWED_CHARS_REGEX.test(trimmed)) return false;
-    if (/\s{2,}/.test(trimmed)) return false;
-    return true;
+    return !/\s{2,}/.test(trimmed);
 }
 
 const ShuttleViaStopSchema = z.object({
