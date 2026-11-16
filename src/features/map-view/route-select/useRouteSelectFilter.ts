@@ -1,18 +1,12 @@
 "use client";
 
 import {useMemo} from "react";
-import {
-    getRouteMeta,
-    resolveRouteCategory,
-    type RouteCategoryInfo,
-    type RouteMeta,
-    YONSEI_ROUTE_SET,
-} from "@entities/route";
+import {getRouteMeta, resolveRouteCategory, type RouteCategoryInfo, type RouteMeta,} from "@entities/route";
 import type {RawCityRoute} from "@entities/bus/api/publicApi";
 import type {BusStop, FavoriteStop} from "@entities/station/types";
 import {UI_TEXT} from "@shared/config/locale";
 import {matchesHangul} from "@shared/utils/hangul";
-import {GraduationCap, MapPin, Star} from "lucide-react";
+import {MapPin, Star} from "lucide-react";
 
 function sortRoutes(routes: string[]): string[] {
     return [...routes].sort((a, b) =>
@@ -35,8 +29,6 @@ interface UseRouteSelectFilterParams {
     bookmarks: string[];
     favoriteStops: FavoriteStop[];
     currentRouteStops: BusStop[];
-    hasUniversityShuttle: boolean;
-    showYonseiFeatures: boolean;
     searchQuery: string;
     selectedCategory: string;
 }
@@ -48,8 +40,6 @@ export function useRouteSelectFilter({
                                          bookmarks,
                                          favoriteStops,
                                          currentRouteStops,
-                                         hasUniversityShuttle,
-                                         showYonseiFeatures,
                                          searchQuery,
                                          selectedCategory,
                                      }: UseRouteSelectFilterParams) {
@@ -139,21 +129,12 @@ export function useRouteSelectFilter({
             });
         }
 
-        if (hasUniversityShuttle && showYonseiFeatures) {
-            list.push({
-                id: "YONSEI",
-                label: UI_TEXT.ROUTE_SELECT.CATEGORY_YONSEI,
-                icon: GraduationCap,
-                activeClass: "bg-[#003876] text-white shadow-md shadow-[#003876]/30 scale-[1.02]",
-            });
-        }
-
         for (const cat of dynamicCategories) {
             list.push(cat);
         }
 
         return list;
-    }, [hasUniversityShuttle, showYonseiFeatures, sortedAllRoutes, bookmarks, favoriteStops.length, dynamicCategories]);
+    }, [sortedAllRoutes, bookmarks, favoriteStops.length, dynamicCategories]);
 
     const effectiveCategory = useMemo(() => {
         if (selectedCategory !== "ALL" && !categories.some((c) => c.id === selectedCategory)) {
@@ -206,8 +187,6 @@ export function useRouteSelectFilter({
 
         if (effectiveCategory === "BOOKMARKS") {
             list = list.filter((r) => bookmarks.includes(r));
-        } else if (effectiveCategory === "YONSEI") {
-            list = list.filter((r) => YONSEI_ROUTE_SET.has(r));
         } else if (effectiveCategory !== "ALL" && effectiveCategory !== "FAV_STOPS") {
             list = list.filter((r) => routeCategoryMap.get(r)?.id === effectiveCategory);
         }

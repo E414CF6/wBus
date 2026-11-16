@@ -5,15 +5,12 @@ export interface RouteMeta {
     origin: string;
     destination: string;
     description?: string;
-    isYonsei?: boolean;
     firstTime?: string;
     lastTime?: string;
     routeType?: string;
     genericType: GenericRouteType;
     colorTheme: RouteColorConfig;
 }
-
-export const YONSEI_ROUTE_SET = new Set(["30", "34", "34-1"]);
 
 const STATIC_ROUTE_METADATA: Record<string, {
     origin: string;
@@ -123,7 +120,6 @@ export function registerDynamicRouteMeta(
             origin,
             destination,
             description: routeType ? `[${routeType}] ${origin} ↔ ${destination}` : `${origin} ↔ ${destination}`,
-            isYonsei: cityCode === "32020" && YONSEI_ROUTE_SET.has(routeNo),
             firstTime: firstTime ?? existing?.firstTime,
             lastTime: lastTime ?? existing?.lastTime,
             routeType: routeType ?? existing?.routeType,
@@ -143,7 +139,6 @@ export function getRouteMeta(routeName: string, cityCode = "32020"): RouteMeta {
     }
 
     if (cityCode === "32020") {
-        const isYonsei = YONSEI_ROUTE_SET.has(routeName);
         const staticInfo = STATIC_ROUTE_METADATA[routeName];
 
         const origin = staticInfo?.origin || "관설동/장양리";
@@ -157,7 +152,6 @@ export function getRouteMeta(routeName: string, cityCode = "32020"): RouteMeta {
             origin,
             destination,
             description,
-            isYonsei,
             routeType,
             genericType,
             colorTheme: ROUTE_TYPE_COLORS[genericType],
@@ -171,7 +165,6 @@ export function getRouteMeta(routeName: string, cityCode = "32020"): RouteMeta {
         origin: "기점",
         destination: "종점",
         description: `${routeName}번 시내버스`,
-        isYonsei: false,
         genericType,
         colorTheme: ROUTE_TYPE_COLORS[genericType],
     };

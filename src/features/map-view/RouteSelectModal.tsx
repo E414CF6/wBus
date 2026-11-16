@@ -1,19 +1,16 @@
 "use client";
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
-import Link from "next/link";
-import {Bus, ChevronRight, Clock, GraduationCap, MapPin, Search, X} from "lucide-react";
+import {Bus, Clock, MapPin, Search, X} from "lucide-react";
 import {getRouteMeta, useRecentRoutes, useRouteBookmarks} from "@entities/route";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {YONSEI_MIRAE_WIKI_SLUG} from "@entities/wiki";
-import {useAppSettings} from "@shared/context/AppSettingsContext";
-import {useCityContext, useCityFeatures} from "@entities/city";
+import {useCityContext} from "@entities/city";
 import {useCityRoutes} from "@entities/route/hooks";
 import {useBusStop, useFavoriteStops} from "@entities/station/hooks";
 import type {BusStop} from "@entities/station/types";
 import {triggerHaptic} from "@shared/utils/haptics";
-import {isCoarsePointerDevice, isDesktopViewport, markModalNavigating, markModalReplacing, Modal} from "@shared/ui";
+import {isCoarsePointerDevice, isDesktopViewport, markModalReplacing, Modal} from "@shared/ui";
 import {MatchedStopsSection} from "./route-select/MatchedStopsSection";
 import {RouteGridCard} from "./route-select/RouteGridCard";
 import {useRouteSelectFilter} from "./route-select/useRouteSelectFilter";
@@ -35,9 +32,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                                                       onSelectRoute,
                                                                   }) => {
     const {currentCity} = useCityContext();
-    const {hasUniversityShuttle} = useCityFeatures();
     const {map} = useAppMapContext();
-    const {settings} = useAppSettings();
 
     const {routes: cityRoutes = []} = useCityRoutes(currentCity.code);
     const {favoriteStops, isFavoriteStop, toggleFavoriteStop} = useFavoriteStops(currentCity.code);
@@ -123,8 +118,6 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         bookmarks,
         favoriteStops,
         currentRouteStops,
-        hasUniversityShuttle,
-        showYonseiFeatures: settings.showYonseiFeatures,
         searchQuery,
         selectedCategory,
     });
@@ -296,33 +289,6 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                 onScroll={handleScroll}
                 className="flex-1 overflow-y-auto p-4 sm:p-6 pt-2 sm:pt-3 custom-scrollbar space-y-4"
             >
-                {hasUniversityShuttle && settings.showYonseiFeatures && !searchQuery && (
-                    <Link
-                        href={`/wiki/${encodeURIComponent(YONSEI_MIRAE_WIKI_SLUG)}`}
-                        onClick={() => {
-                            markModalNavigating();
-                            onClose();
-                        }}
-                        className="flex items-center justify-between gap-3 p-3.5 rounded-2xl bg-gradient-to-r from-[#003876] to-blue-800 text-white shadow-sm hover:shadow-md transition-all active:scale-[0.99] group"
-                    >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                            <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-white/15 shrink-0">
-                                <GraduationCap className="w-5 h-5"/>
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-xs sm:text-sm font-black tracking-tight truncate">
-                                    연세대학교 미래캠퍼스 위키 허브
-                                </p>
-                                <p className="text-[11px] font-semibold text-sky-100/90 truncate">
-                                    무료 셔틀버스 · 30/34/34-1번 · 사용자 편집 위키 바로가기
-                                </p>
-                            </div>
-                        </div>
-                        <ChevronRight
-                            className="w-4 h-4 shrink-0 text-white/80 group-hover:translate-x-0.5 transition-transform"/>
-                    </Link>
-                )}
-
                 {matchedStops.length > 0 && (
                     <MatchedStopsSection
                         matchedStops={matchedStops}
@@ -368,7 +334,6 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                                     meta={meta}
                                     categoryLabel={routeCategoryMap.get(route)?.label}
                                     isSelected={route === selectedRoute}
-                                    isYonsei={Boolean(settings.showYonseiFeatures && meta.isYonsei)}
                                     isBookmarked={bookmarks.includes(route)}
                                     onSelect={handleSelect}
                                     onToggleBookmark={toggleBookmark}

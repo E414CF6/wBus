@@ -7,8 +7,8 @@ import {APP_CONFIG, MAP_SETTINGS} from "@shared/config/env";
 import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useIsDesktop} from "@shared/ui/useIsDesktop";
-import {useCityContext, useCityFeatures} from "@entities/city";
-import {getRouteMeta, YONSEI_ROUTE_SET} from "@entities/route";
+import {useCityContext} from "@entities/city";
+import {getRouteMeta} from "@entities/route";
 import {CitySelectModal} from "@features/city-select";
 import {RouteSelectModal} from "@features/map-view/RouteSelectModal";
 import {SettingsModal} from "@features/settings";
@@ -145,8 +145,6 @@ function BottomNavComponent({
     const isConnecting = !hasFetched || connectionStatus === "connecting";
     const shortCityName = currentCity.name.split("/")[0];
     const hasPendingRegion = Boolean(detectedCity && detectedCity.code !== currentCity.code);
-    const {hasUniversityShuttle} = useCityFeatures();
-    const isYonseiSelected = hasUniversityShuttle && YONSEI_ROUTE_SET.has(selectedRoute);
     const routeMeta = useMemo(() => getRouteMeta(selectedRoute, currentCity.code), [selectedRoute, currentCity.code]);
 
     return (
@@ -309,11 +307,7 @@ function BottomNavComponent({
                                 triggerHaptic("light");
                                 setIsRoutePickerOpen(true);
                             }}
-                            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${
-                                isYonseiSelected
-                                    ? "bg-[#003876]/15 dark:bg-[#003876]/35 hover:bg-[#003876]/25 border border-[#003876]/40 text-[#003876] dark:text-blue-300"
-                                    : `${routeMeta.colorTheme.badgeBg} border ${routeMeta.colorTheme.border} ${routeMeta.colorTheme.text}`
-                            }`}
+                            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${routeMeta.colorTheme.badgeBg} border ${routeMeta.colorTheme.border} ${routeMeta.colorTheme.text}`}
                             title="노선 선택 (검색/목록)"
                         >
                             <Bus className="w-3.5 h-3.5 shrink-0"/>

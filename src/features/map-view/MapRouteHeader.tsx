@@ -9,7 +9,6 @@ import {useFavoriteStops} from "@entities/station/hooks";
 import type {FavoriteStop} from "@entities/station/types";
 import {getNextDeparture, useSchedule} from "@entities/schedule";
 import {useAppMapContext} from "@shared/context/AppMapContext";
-import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {useRecentRoutes, useRouteBookmarks, useRouteVariations} from "@entities/route";
 import {MarqueeText} from "@shared/ui/MarqueeText";
 
@@ -55,9 +54,8 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                                                   enabled = true,
                                                               }) => {
     const {currentCity} = useCityContext();
-    const {hasDetailedTimetable, hasUniversityShuttle, defaultQuickRoutes} = useCityFeatures();
+    const {hasDetailedTimetable, defaultQuickRoutes} = useCityFeatures();
     const {map} = useAppMapContext();
-    const {settings} = useAppSettings();
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
     const [isVariantMenuOpen, setIsVariantMenuOpen] = useState(false);
     const variantMenuRef = useRef<HTMLDivElement>(null);
@@ -358,13 +356,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                             {meta.routeType || (meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : meta.genericType === "VILLAGE" ? "마을" : "간선")}
                                         </span>
                                     )}
-
-                                    {meta.isYonsei && settings.showYonseiFeatures && (
-                                        <span
-                                            className="hidden xs:inline-flex px-1.5 py-0.2 rounded-full text-[9px] font-black bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 shrink-0">
-                                            연세대
-                                        </span>
-                                    )}
                                 </div>
                             </div>
                         </button>
@@ -429,9 +420,6 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                     quickRoutes={quickRoutes}
                     selectedRoute={selectedRoute}
                     meta={meta}
-                    showYonseiFeatures={settings.showYonseiFeatures}
-                    hasUniversityShuttle={hasUniversityShuttle}
-                    defaultQuickRoutes={defaultQuickRoutes}
                     isClient={isClient}
                     favoriteStops={favoriteStops}
                     onSelectRoute={onSelectRoute}

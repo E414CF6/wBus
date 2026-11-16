@@ -1,10 +1,5 @@
 import {config} from "dotenv";
 import {Pool} from "@neondatabase/serverless";
-import {drizzle} from "drizzle-orm/neon-serverless";
-import {eq} from "drizzle-orm";
-import * as schema from "../../../shared/db/schema";
-import {wikiPages, wikiRevisions} from "@shared/db";
-import {LEGACY_WIKI_SLUG_ALIASES, YONSEI_MIRAE_WIKI_SLUG} from "../schemas";
 
 config({path: ".env.local"});
 config();
@@ -16,10 +11,13 @@ async function main() {
     }
 
     const pool = new Pool({connectionString: url});
-    const db = drizzle(pool, {schema});
 
     try {
-        console.log("[Wiki Migration] Normalizing wiki_pages schema (dropping duplicate title column, ensuring lat/lng & indexes)...");
+        console.log("[Wiki Migration] Updating wiki_pages schema (adding pin_color, dropping category, ensuring lat/lng & indexes)...");
+        await pool.query(`ALTER TABLE wiki_pages
+            ADD COLUMN IF NOT EXISTS pin_color TEXT NOT NULL DEFAULT 'navy';`);
+        await pool.query(`DROP INDEX IF EXISTS wiki_pages_category_idx;`);
+        await pool.query(`ALTER TABLE wiki_pages DROP COLUMN IF EXISTS category;`);
         await pool.query(`ALTER TABLE wiki_pages
             ADD COLUMN IF NOT EXISTS lat DOUBLE PRECISION;`);
         await pool.query(`ALTER TABLE wiki_pages
@@ -45,55 +43,21 @@ async function main() {
                 ON wiki_pages USING gin (markdown_body gin_trgm_ops);
         `);
 
-        for (const [legacySlug, canonicalSlug] of Object.entries(LEGACY_WIKI_SLUG_ALIASES)) {
-            const legacyRows = await db
-                .select()
-                .from(wikiPages)
-                .where(eq(wikiPages.slug, legacySlug))
-                .limit(1);
-            const canonicalRows = await db
-                .select({slug: wikiPages.slug})
-                .from(wikiPages)
-                .where(eq(wikiPages.slug, canonicalSlug))
-                .limit(1);
-            const oldRow = legacyRows[0];
-            if (oldRow && canonicalRows.length === 0) {
-                await db.transaction(async (tx) => {
-                    await tx
-                        .insert(wikiPages)
-                        .values({
-                            slug: canonicalSlug,
-                            subtitle: oldRow.subtitle,
-                            category: oldRow.category,
-                            cityCode: oldRow.cityCode,
-                            lat: oldRow.lat ?? null,
-                            lng: oldRow.lng ?? null,
-                            tags: oldRow.tags,
-                            tagsText: oldRow.tagsText,
-                            version: oldRow.version,
-                            isProtected: oldRow.isProtected,
-                            pinned: canonicalSlug === YONSEI_MIRAE_WIKI_SLUG || oldRow.pinned,
-                            lastEditorNickname: oldRow.lastEditorNickname,
-                            lastEditorId: oldRow.lastEditorId,
-                            linkedRoutes: oldRow.linkedRoutes,
-                            shuttle: oldRow.shuttle,
-                            boardingStops: oldRow.boardingStops,
-                            markdownBody: oldRow.markdownBody,
-                            createdAt: oldRow.createdAt,
-                            updatedAt: oldRow.updatedAt,
-                        })
-                        .onConflictDoNothing({target: wikiPages.slug});
-
-                    await tx
-                        .update(wikiRevisions)
-                        .set({slug: canonicalSlug})
-                        .where(eq(wikiRevisions.slug, legacySlug));
-
-                    await tx.delete(wikiPages).where(eq(wikiPages.slug, legacySlug));
-                });
-                console.log(`[Wiki Migration] Migrated legacy slug '${legacySlug}' -> '${canonicalSlug}'.`);
-            }
-        }
+        // Remove deprecated category keys from stored revision snapshots & deltas
+        await pool.query(`
+            UPDATE wiki_revisions
+            SET
+                snapshot = CASE
+                    WHEN snapshot IS NOT NULL THEN (snapshot - 'category') || jsonb_build_object('pinColor', COALESCE(snapshot->>'pinColor', 'navy'))
+                    ELSE NULL
+                END,
+                delta = CASE
+                    WHEN delta IS NOT NULL AND delta ? 'fieldsPatch' THEN jsonb_set(delta, '{fieldsPatch}', (delta->'fieldsPatch') - 'category')
+                    ELSE delta
+                END
+            WHERE (snapshot IS NOT NULL AND (snapshot ? 'category' OR NOT (snapshot ? 'pinColor')))
+               OR (delta IS NOT NULL AND delta ? 'fieldsPatch' AND (delta->'fieldsPatch') ? 'category');
+        `);
 
         console.log("[Wiki Migration] Completed successfully.");
     } finally {

@@ -6,8 +6,8 @@ function createTestWikiDoc(): WikiPageDocument {
     return {
         slug: "연세대학교 미래캠퍼스",
         title: "연세대학교 미래캠퍼스",
-        subtitle: "캠퍼스 셔틀·시내버스 안내",
-        category: "campus",
+        subtitle: "셔틀·시내버스 안내",
+        pinColor: "navy",
         cityCode: "32020",
         lat: 37.2779,
         lng: 127.9026,
@@ -53,7 +53,10 @@ function createTestWikiDoc(): WikiPageDocument {
 
 describe("wikiDiff utilities", () => {
     it("computes accurate line-level additions and removals", () => {
-        const diff = computeLineDiff("line 1\nline 2\nline 3", "line 1\nline 2 edited\nline 3\nline 4");
+        const diff = computeLineDiff(
+            "line 1\nline 2\nline 3",
+            "line 1\nline 2 edited\nline 3\nline 4",
+        );
         const added = diff.filter((d) => d.type === "add");
         const removed = diff.filter((d) => d.type === "remove");
 
@@ -61,11 +64,12 @@ describe("wikiDiff utilities", () => {
         expect(added.map((a) => a.line)).toEqual(["line 2 edited", "line 4"]);
     });
 
-    it("detects structured field modifications across shuttle, routes, and stops", () => {
+    it("detects structured field modifications across shuttle, routes, pin color, and stops", () => {
         const base = createTestWikiDoc();
-        const next = {
+        const next: WikiPageDocument = {
             ...base,
             title: "연세대 미래캠퍼스 (수정)",
+            pinColor: "emerald",
             lat: 37.28,
             lng: 127.905,
             tags: [...base.tags, "통학"],
@@ -79,7 +83,8 @@ describe("wikiDiff utilities", () => {
         };
 
         const changes = computeStructuredChanges(base, next);
-        expect(changes).toContain("문서 제목·분류 수정");
+        expect(changes).toContain("문서 제목·부제목 수정");
+        expect(changes).toContain("핀 색상 변경");
         expect(changes).toContain("지도 핀 위치 수정");
         expect(changes).toContain("태그 수정");
         expect(changes.some((c) => c.startsWith("연결 노선 변경"))).toBe(true);

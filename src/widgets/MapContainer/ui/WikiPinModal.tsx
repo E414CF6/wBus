@@ -1,37 +1,38 @@
 "use client";
 
 import React, {useMemo, useState} from "react";
-import Link from "next/link";
 import {
     BookOpen,
     Bus,
     Camera,
     Clock,
-    ExternalLink,
     History,
     Info,
     Lock,
     MapPin,
+    Move,
     Navigation,
     PenLine,
     Plus,
+    Search,
     User,
 } from "lucide-react";
 
-import {NATIONWIDE_CITIES} from "@entities/city";
 import {getKakaoMapUrl, getKakaoRoadviewUrl} from "@entities/station";
 import {
+    filterShuttleSchedule,
+    getNextShuttleDepartures,
     mutateAllWikiQueries,
+    type ShuttleDayFilter,
     useWikiNickname,
     useWikiPage,
-    WIKI_CATEGORY_LABELS,
     type WikiPageDocument,
 } from "@entities/wiki";
 import {WikiEditorForm, WikiHistoryPanel, WikiMarkdownRenderer} from "@features/wiki";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {Modal} from "@shared/ui";
 import {triggerHaptic} from "@shared/utils/haptics";
-import {WIKI_CATEGORY_PIN_STYLES} from "../lib/wikiPinTheme";
+import {resolveWikiPinTheme} from "../lib/wikiPinTheme";
 
 export interface WikiPinModalProps {
     slug: string | null;
@@ -40,7 +41,10 @@ export interface WikiPinModalProps {
     onSelectSlug: (nextSlug: string) => void;
     onSelectRouteOnMap: (routeNo: string, cityCode: string) => void;
     onCreateNewFromSlug?: (slug: string) => void;
+    onRequestMovePin?: (doc: WikiPageDocument) => void;
 }
+
+type ShuttleTab = "outbound" | "inbound" | "stops" | "guidelines";
 
 function formatUpdatedAt(iso: string): string {
     const d = new Date(iso);
@@ -54,11 +58,6 @@ function formatUpdatedAt(iso: string): string {
     });
 }
 
-function resolveCityName(cityCode?: string): string | null {
-    if (!cityCode) return null;
-    return NATIONWIDE_CITIES.find((c) => c.code === cityCode)?.name ?? null;
-}
-
 export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                                                               slug,
                                                               initialMode = "read",
@@ -66,6 +65,7 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                                                               onSelectSlug,
                                                               onSelectRouteOnMap,
                                                               onCreateNewFromSlug,
+                                                              onRequestMovePin,
                                                           }) => {
     const isOpen = Boolean(slug);
     const {map} = useAppMapContext();
@@ -75,23 +75,47 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
 
     const [viewMode, setViewMode] = useState<"read" | "edit" | "history">(initialMode);
     const [editSessionId, setEditSessionId] = useState(0);
+    const [shuttleTab, setShuttleTab] = useState<ShuttleTab>("outbound");
+    const [shuttleDayFilter, setShuttleDayFilter] = useState<ShuttleDayFilter>("ALL");
+    const [shuttleQuery, setShuttleQuery] = useState("");
+
     const openKey = `${slug ?? ""}:${initialMode}`;
     const [prevOpenKey, setPrevOpenKey] = useState<string>(openKey);
     if (openKey !== prevOpenKey) {
         setPrevOpenKey(openKey);
         setViewMode(initialMode);
+        setShuttleQuery("");
+        setShuttleDayFilter("ALL");
         if (initialMode === "edit") {
             setEditSessionId((n) => n + 1);
         }
     }
 
-    const style = useMemo(() => {
-        const cat = wikiDoc?.category ?? "guide";
-        return WIKI_CATEGORY_PIN_STYLES[cat] ?? WIKI_CATEGORY_PIN_STYLES.guide;
-    }, [wikiDoc?.category]);
+    const theme = useMemo(() => resolveWikiPinTheme(wikiDoc?.pinColor), [wikiDoc?.pinColor]);
+    const shuttle = wikiDoc?.shuttle ?? null;
 
-    const CategoryIcon = style.icon;
-    const cityName = resolveCityName(wikiDoc?.cityCode);
+    const shuttleSummary = useMemo(() => {
+        if (!shuttle?.enabled) return null;
+        return getNextShuttleDepartures(shuttle, "AUTO");
+    }, [shuttle]);
+
+    const filteredInbound = useMemo(() => {
+        if (!shuttle?.enabled) return [];
+        return filterShuttleSchedule(
+            shuttle.inbound_to_campus,
+            shuttleDayFilter,
+            shuttleQuery,
+        );
+    }, [shuttle, shuttleDayFilter, shuttleQuery]);
+
+    const filteredOutbound = useMemo(() => {
+        if (!shuttle?.enabled) return [];
+        return filterShuttleSchedule(
+            shuttle.outbound_from_campus,
+            shuttleDayFilter,
+            shuttleQuery,
+        );
+    }, [shuttle, shuttleDayFilter, shuttleQuery]);
 
     const handleFlyToPin = (doc: WikiPageDocument) => {
         if (!map || typeof doc.lat !== "number" || typeof doc.lng !== "number") return;
@@ -106,11 +130,36 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
 
     const modalIcon = (
         <div
-            className={`flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl text-white shadow-sm shrink-0 ${style.badgeBg}`}
+            className={`flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl text-white shadow-sm shrink-0 ${theme.badgeBg}`}
         >
-            <CategoryIcon className="w-5 h-5"/>
+            <MapPin className="w-5 h-5"/>
         </div>
     );
+
+    const headerSubtitle = useMemo(() => {
+        if (!wikiDoc) return undefined;
+        const hasTags = wikiDoc.tags.length > 0;
+        const hasSubtitle = Boolean(wikiDoc.subtitle?.trim());
+        if (!hasTags && !hasSubtitle) return undefined;
+
+        return (
+            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                {wikiDoc.tags.slice(0, 5).map((tag) => (
+                    <span
+                        key={tag}
+                        className={`inline-flex items-center px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.08] text-[10.5px] font-bold ${theme.pillTextClass}`}
+                    >
+                        #{tag}
+                    </span>
+                ))}
+                {hasSubtitle && (
+                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-md">
+                        {wikiDoc.subtitle}
+                    </span>
+                )}
+            </div>
+        );
+    }, [wikiDoc, theme.pillTextClass]);
 
     const headerBadge = wikiDoc ? (
         <span
@@ -126,7 +175,7 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                 <button
                     type="button"
                     onClick={() => setViewMode("read")}
-                    className={`px-2 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
                         viewMode === "read"
                             ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
                             : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
@@ -141,9 +190,9 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                         setEditSessionId((n) => n + 1);
                         setViewMode("edit");
                     }}
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
                         viewMode === "edit"
-                            ? "bg-[#003876] dark:bg-sky-600 text-white shadow-xs"
+                            ? `${theme.badgeBg} text-white shadow-xs`
                             : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                     }`}
                 >
@@ -156,25 +205,16 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                         triggerHaptic("light");
                         setViewMode("history");
                     }}
-                    className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
                         viewMode === "history"
                             ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
                             : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
                     }`}
                 >
                     <History className="w-3 h-3"/>
-                    <span className="hidden sm:inline">이력</span>
+                    <span>이력</span>
                 </button>
             </div>
-
-            <Link
-                href={`/wiki/${encodeURIComponent(wikiDoc.slug)}`}
-                title="전체 페이지로 열기"
-                className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/[0.07] dark:hover:bg-white/15 text-[11px] font-extrabold text-slate-700 dark:text-slate-200 transition"
-            >
-                <span>전체 보기</span>
-                <ExternalLink className="w-3 h-3"/>
-            </Link>
         </div>
     ) : null;
 
@@ -188,17 +228,10 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                 <span className="hidden sm:inline">· {formatUpdatedAt(wikiDoc.updatedAt)}</span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-                <Link
-                    href={`/wiki/${encodeURIComponent(wikiDoc.slug)}`}
-                    className="sm:hidden inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-white/10 text-[11px] font-extrabold text-slate-700 dark:text-slate-200"
-                >
-                    <span>전체 페이지</span>
-                    <ExternalLink className="w-3 h-3"/>
-                </Link>
                 <button
                     type="button"
                     onClick={onClose}
-                    className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black cursor-pointer hover:opacity-90 transition active:scale-95"
+                    className="px-4 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black cursor-pointer hover:opacity-90 transition active:scale-95"
                 >
                     닫기
                 </button>
@@ -208,28 +241,27 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
 
     const errorStatus = (error as (Error & { status?: number }) | undefined)?.status;
 
+    const activeScheduleList =
+        shuttleTab === "inbound" ? filteredInbound : shuttleTab === "outbound" ? filteredOutbound : [];
+
     return (
         <Modal
             isOpen={isOpen}
             onClose={onClose}
             title={wikiDoc?.title ?? slug ?? "위키 문서"}
-            subtitle={
-                wikiDoc
-                    ? `${WIKI_CATEGORY_LABELS[wikiDoc.category]}${cityName ? ` · ${cityName}` : ""}${wikiDoc.subtitle ? ` — ${wikiDoc.subtitle}` : ""}`
-                    : "커뮤니티 버스 위키"
-            }
+            subtitle={headerSubtitle}
             icon={modalIcon}
             headerBadge={headerBadge}
             headerActions={headerActions}
             footer={modalFooter}
-            maxWidth="2xl"
-            height="tall"
+            maxWidth="full"
+            height="full"
             zIndex="z-[120]"
             modalId="wiki-pin"
             ariaLabel={wikiDoc ? `${wikiDoc.title} 위키 문서` : "위키 문서 모달"}
         >
             <div
-                className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-5 custom-scrollbar select-text">
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:px-8 space-y-6 custom-scrollbar select-text">
                 {isLoading && !wikiDoc && (
                     <div className="py-16 text-center space-y-2.5">
                         <div
@@ -241,7 +273,7 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                 )}
 
                 {!isLoading && (error || !wikiDoc) && slug && (
-                    <div className="py-10 text-center space-y-3.5 max-w-md mx-auto">
+                    <div className="py-12 text-center space-y-3.5 max-w-md mx-auto">
                         <div
                             className="w-12 h-12 mx-auto rounded-2xl bg-sky-100 dark:bg-sky-950/60 flex items-center justify-center text-sky-700 dark:text-sky-300">
                             <BookOpen className="w-6 h-6"/>
@@ -271,45 +303,49 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                 )}
 
                 {wikiDoc && viewMode === "edit" && (
-                    <WikiEditorForm
-                        key={`${wikiDoc.slug}:${wikiDoc.version}:${editSessionId}`}
-                        doc={wikiDoc}
-                        initialNickname={storedNickname}
-                        onSaveNickname={saveNickname}
-                        onSaved={async (saved) => {
-                            await mutate(saved, false);
-                            await mutateAllWikiQueries().catch(() => []);
-                            if (saved.slug !== slug) {
-                                onSelectSlug(saved.slug);
-                            }
-                            setViewMode("read");
-                        }}
-                        onCancel={() => setViewMode("read")}
-                        onReloadLatest={async () => {
-                            await mutate();
-                            setEditSessionId((n) => n + 1);
-                        }}
-                    />
+                    <div className="max-w-5xl mx-auto">
+                        <WikiEditorForm
+                            key={`${wikiDoc.slug}:${wikiDoc.version}:${editSessionId}`}
+                            doc={wikiDoc}
+                            initialNickname={storedNickname}
+                            onSaveNickname={saveNickname}
+                            onSaved={async (saved) => {
+                                await mutate(saved, false);
+                                await mutateAllWikiQueries().catch(() => []);
+                                if (saved.slug !== slug) {
+                                    onSelectSlug(saved.slug);
+                                }
+                                setViewMode("read");
+                            }}
+                            onCancel={() => setViewMode("read")}
+                            onReloadLatest={async () => {
+                                await mutate();
+                                setEditSessionId((n) => n + 1);
+                            }}
+                        />
+                    </div>
                 )}
 
                 {wikiDoc && viewMode === "history" && (
-                    <WikiHistoryPanel
-                        slug={wikiDoc.slug}
-                        currentVersion={wikiDoc.version}
-                        nickname={storedNickname}
-                        isProtected={Boolean(wikiDoc.isProtected)}
-                        onReverted={async () => {
-                            await mutate();
-                            await mutateAllWikiQueries().catch(() => []);
-                            setViewMode("read");
-                        }}
-                    />
+                    <div className="max-w-5xl mx-auto">
+                        <WikiHistoryPanel
+                            slug={wikiDoc.slug}
+                            currentVersion={wikiDoc.version}
+                            nickname={storedNickname}
+                            isProtected={Boolean(wikiDoc.isProtected)}
+                            onReverted={async () => {
+                                await mutate();
+                                await mutateAllWikiQueries().catch(() => []);
+                                setViewMode("read");
+                            }}
+                        />
+                    </div>
                 )}
 
                 {wikiDoc && viewMode === "read" && (
-                    <>
-                        {/* Badges, Tags & Map Pin Location Bar */}
-                        <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="max-w-5xl mx-auto space-y-6">
+                        {/* Badges, All Hashtags & Map Pin Actions */}
+                        <div className="flex flex-wrap items-center justify-between gap-2.5">
                             <div className="flex flex-wrap items-center gap-1.5">
                                 {wikiDoc.isProtected && (
                                     <span
@@ -336,8 +372,21 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800 text-[11px] font-black text-emerald-700 dark:text-emerald-300 transition cursor-pointer"
                                     >
                                         <MapPin className="w-3 h-3"/>
-                                        <span>핀 위치로 이동</span>
+                                        <span>지도에서 보기</span>
                                     </button>
+                                    {onRequestMovePin && !wikiDoc.isProtected && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                triggerHaptic("light");
+                                                onRequestMovePin(wikiDoc);
+                                            }}
+                                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/[0.08] dark:hover:bg-white/[0.14] border border-slate-200 dark:border-white/10 text-[11px] font-black text-slate-700 dark:text-slate-200 transition cursor-pointer"
+                                        >
+                                            <Move className="w-3 h-3"/>
+                                            <span>핀 위치 이동</span>
+                                        </button>
+                                    )}
                                     <a
                                         href={getKakaoRoadviewUrl(wikiDoc.lat, wikiDoc.lng)}
                                         target="_blank"
@@ -359,7 +408,7 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                                     <Bus className="w-4 h-4 text-[#003876] dark:text-sky-400"/>
                                     <span>연결 시내버스 ({wikiDoc.linkedRoutes.length})</span>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                                     {wikiDoc.linkedRoutes.map((route) => (
                                         <button
                                             key={`${route.cityCode}:${route.routeNo}`}
@@ -391,31 +440,254 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                             </section>
                         )}
 
-                        {/* Shuttle Summary Card */}
+                        {/* Interactive Embedded Shuttle Schedule Viewer */}
                         {wikiDoc.shuttle?.enabled && (
                             <section
-                                className="rounded-2xl border border-sky-200/80 dark:border-sky-800/60 bg-sky-50/60 dark:bg-sky-950/25 p-3.5 space-y-2">
-                                <div className="flex items-center justify-between gap-2">
+                                className="rounded-2xl border border-sky-200/80 dark:border-sky-800/60 bg-sky-50/50 dark:bg-sky-950/20 p-4 space-y-3.5">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
                                     <div
-                                        className="flex items-center gap-1.5 text-xs font-black text-[#003876] dark:text-sky-300">
-                                        <Clock className="w-4 h-4"/>
+                                        className="flex items-center gap-2 text-xs sm:text-sm font-black text-[#003876] dark:text-sky-300">
+                                        <Clock className="w-4 h-4 shrink-0"/>
                                         <span>{wikiDoc.shuttle.title}</span>
                                     </div>
-                                    <Link
-                                        href={`/wiki/${encodeURIComponent(wikiDoc.slug)}`}
-                                        className="text-[11px] font-black text-[#003876] dark:text-sky-300 hover:underline"
-                                    >
-                                        전체 셔틀 시간표 →
-                                    </Link>
+                                    {shuttleSummary && (
+                                        <span
+                                            className="px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold bg-white dark:bg-slate-900 border border-sky-200/70 dark:border-sky-800 text-slate-700 dark:text-slate-200">
+                                            {shuttleSummary.dayType.label}
+                                        </span>
+                                    )}
                                 </div>
-                                <div
-                                    className="flex flex-wrap gap-2 text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                                    <span>등교 {wikiDoc.shuttle.inbound_to_campus.length}회</span>
-                                    <span>·</span>
-                                    <span>하교 {wikiDoc.shuttle.outbound_from_campus.length}회</span>
-                                    <span>·</span>
-                                    <span>정류장 {wikiDoc.shuttle.stop_locations.length}곳</span>
+
+                                {/* Next Departures Strip */}
+                                {shuttleSummary && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                        <div
+                                            className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-sky-100 dark:border-white/10">
+                                            <div
+                                                className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                다음 진입 / 등교
+                                            </div>
+                                            {shuttleSummary.nextInbound ? (
+                                                <div className="mt-0.5 flex items-baseline justify-between gap-2">
+                                                    <span
+                                                        className="text-sm font-black text-slate-900 dark:text-white tabular-nums">
+                                                        {shuttleSummary.nextInbound.item.departure_time} ·{" "}
+                                                        {shuttleSummary.nextInbound.item.departure_point}
+                                                    </span>
+                                                    <span
+                                                        className="text-[11px] font-black text-sky-600 dark:text-sky-400 tabular-nums">
+                                                        {shuttleSummary.nextInbound.waitMins === 0
+                                                            ? "곧 출발"
+                                                            : `${shuttleSummary.nextInbound.waitMins}분 후`}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <p className="mt-0.5 text-xs font-bold text-slate-400">
+                                                    금일 잔여 운행 없음
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div
+                                            className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-sky-100 dark:border-white/10">
+                                            <div
+                                                className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                다음 출발 / 하교
+                                            </div>
+                                            {shuttleSummary.nextOutbound ? (
+                                                <div className="mt-0.5 flex items-baseline justify-between gap-2">
+                                                    <span
+                                                        className="text-sm font-black text-slate-900 dark:text-white tabular-nums">
+                                                        {shuttleSummary.nextOutbound.item.departure_time} ·{" "}
+                                                        {shuttleSummary.nextOutbound.item.destination}
+                                                    </span>
+                                                    <span
+                                                        className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                                        {shuttleSummary.nextOutbound.waitMins === 0
+                                                            ? "곧 출발"
+                                                            : `${shuttleSummary.nextOutbound.waitMins}분 후`}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <p className="mt-0.5 text-xs font-bold text-slate-400">
+                                                    금일 잔여 운행 없음
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Tabs */}
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div
+                                        className="flex flex-wrap items-center gap-1 rounded-xl bg-white/80 dark:bg-slate-900/80 p-1 border border-slate-200/70 dark:border-white/10">
+                                        {(
+                                            [
+                                                {
+                                                    id: "outbound",
+                                                    label: `출발·하교 (${wikiDoc.shuttle.outbound_from_campus.length})`,
+                                                },
+                                                {
+                                                    id: "inbound",
+                                                    label: `진입·등교 (${wikiDoc.shuttle.inbound_to_campus.length})`,
+                                                },
+                                                {
+                                                    id: "stops",
+                                                    label: `정류장 (${wikiDoc.shuttle.stop_locations.length})`,
+                                                },
+                                                {
+                                                    id: "guidelines",
+                                                    label: `안내 (${wikiDoc.shuttle.guidelines.length})`,
+                                                },
+                                            ] as Array<{ id: ShuttleTab; label: string }>
+                                        ).map((tab) => (
+                                            <button
+                                                key={tab.id}
+                                                type="button"
+                                                onClick={() => setShuttleTab(tab.id)}
+                                                className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
+                                                    shuttleTab === tab.id
+                                                        ? "bg-[#003876] dark:bg-sky-600 text-white"
+                                                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10"
+                                                }`}
+                                            >
+                                                {tab.label}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {(shuttleTab === "inbound" || shuttleTab === "outbound") && (
+                                        <div className="flex flex-wrap items-center gap-1.5">
+                                            {(["ALL", "WEEKDAY", "SUNDAY"] as ShuttleDayFilter[]).map(
+                                                (day) => (
+                                                    <button
+                                                        key={day}
+                                                        type="button"
+                                                        onClick={() => setShuttleDayFilter(day)}
+                                                        className={`px-2 py-1 rounded-lg text-[10.5px] font-extrabold transition cursor-pointer ${
+                                                            shuttleDayFilter === day
+                                                                ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900"
+                                                                : "bg-white/80 dark:bg-slate-900/60 text-slate-600 dark:text-slate-300"
+                                                        }`}
+                                                    >
+                                                        {day === "ALL"
+                                                            ? "전체"
+                                                            : day === "WEEKDAY"
+                                                                ? "평일"
+                                                                : "일요일"}
+                                                    </button>
+                                                ),
+                                            )}
+                                            <div className="relative flex items-center">
+                                                <Search
+                                                    className="w-3 h-3 absolute left-2 text-slate-400 pointer-events-none"/>
+                                                <input
+                                                    type="text"
+                                                    value={shuttleQuery}
+                                                    onChange={(e) => setShuttleQuery(e.target.value)}
+                                                    placeholder="시간·정류장 검색"
+                                                    aria-label="셔틀 시간표 검색"
+                                                    className="w-36 sm:w-44 pl-6 pr-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* Tab Content */}
+                                {(shuttleTab === "inbound" || shuttleTab === "outbound") && (
+                                    <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+                                        {activeScheduleList.length === 0 ? (
+                                            <p className="py-6 text-center text-xs font-bold text-slate-400">
+                                                일치하는 시간표가 없습니다.
+                                            </p>
+                                        ) : (
+                                            activeScheduleList.map((item, idx) => (
+                                                <div
+                                                    key={`${item.departure_time}-${item.departure_point}-${idx}`}
+                                                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/70 dark:border-white/10"
+                                                >
+                                                    <div className="flex items-center gap-2.5 min-w-0">
+                                                        <span
+                                                            className="text-sm font-black text-[#003876] dark:text-sky-300 tabular-nums shrink-0">
+                                                            {item.departure_time}
+                                                        </span>
+                                                        <span
+                                                            className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-[10px] font-bold text-slate-600 dark:text-slate-300 shrink-0">
+                                                            {item.operation_type}
+                                                        </span>
+                                                        <span
+                                                            className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                                                            {item.departure_point} → {item.destination}
+                                                        </span>
+                                                    </div>
+                                                    {(item.via.length > 0 || item.note) && (
+                                                        <div
+                                                            className="flex flex-wrap items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400">
+                                                            {item.via.length > 0 && (
+                                                                <span>
+                                                                    경유:{" "}
+                                                                    {item.via
+                                                                        .map((v) =>
+                                                                            v.time
+                                                                                ? `${v.name}(${v.time})`
+                                                                                : v.name,
+                                                                        )
+                                                                        .join(" · ")}
+                                                                </span>
+                                                            )}
+                                                            {item.note && (
+                                                                <span
+                                                                    className="px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold">
+                                                                    {item.note}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+
+                                {shuttleTab === "stops" && (
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                        {wikiDoc.shuttle.stop_locations.length === 0 ? (
+                                            <p className="py-4 text-xs font-bold text-slate-400">
+                                                등록된 셔틀 정류장 안내가 없습니다.
+                                            </p>
+                                        ) : (
+                                            wikiDoc.shuttle.stop_locations.map((stop, idx) => (
+                                                <div
+                                                    key={`${stop.name}-${idx}`}
+                                                    className="p-2.5 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/70 dark:border-white/10"
+                                                >
+                                                    <div className="text-xs font-black text-slate-900 dark:text-white">
+                                                        {stop.name}
+                                                    </div>
+                                                    <div
+                                                        className="text-[11px] font-medium text-slate-600 dark:text-slate-300 mt-0.5">
+                                                        {stop.location_description}
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+
+                                {shuttleTab === "guidelines" && (
+                                    <ul className="space-y-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 list-disc pl-4">
+                                        {wikiDoc.shuttle.guidelines.length === 0 ? (
+                                            <li className="list-none text-slate-400">
+                                                등록된 이용 안내가 없습니다.
+                                            </li>
+                                        ) : (
+                                            wikiDoc.shuttle.guidelines.map((line, idx) => (
+                                                <li key={idx}>{line}</li>
+                                            ))
+                                        )}
+                                    </ul>
+                                )}
                             </section>
                         )}
 
@@ -427,7 +699,7 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                                     <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400"/>
                                     <span>주요 승강장 · 탑승 위치 ({wikiDoc.boardingStops.length})</span>
                                 </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                                     {wikiDoc.boardingStops.map((stop) => (
                                         <div
                                             key={stop.id}
@@ -480,13 +752,13 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
 
                         {/* Markdown Article Body */}
                         <section
-                            className="rounded-2xl p-4 sm:p-5 bg-white dark:bg-slate-900/60 border border-slate-200/85 dark:border-white/10 space-y-4">
+                            className="rounded-2xl p-4 sm:p-6 bg-white dark:bg-slate-900/60 border border-slate-200/85 dark:border-white/10 space-y-4">
                             <div
                                 className="flex items-center justify-between gap-2 pb-2.5 border-b border-slate-100 dark:border-white/[0.07]">
                                 <div className="flex items-center gap-1.5">
                                     <BookOpen className="w-4 h-4 text-[#003876] dark:text-sky-400"/>
                                     <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                        커뮤니티 위키 본문
+                                        본문
                                     </h3>
                                 </div>
                                 {!wikiDoc.isProtected && (
@@ -518,7 +790,7 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                                 }}
                             />
                         </section>
-                    </>
+                    </div>
                 )}
             </div>
         </Modal>

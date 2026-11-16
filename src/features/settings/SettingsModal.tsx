@@ -10,7 +10,6 @@ import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {applyThemePreference, Modal, type ThemePreference} from "@shared/ui";
 import {triggerHaptic} from "@shared/utils/haptics";
 
-import {YonseiSettingsModal} from "./YonseiSettingsModal";
 import {DataSettingsTab} from "./tabs/DataSettingsTab";
 import {DeviceSettingsTab} from "./tabs/DeviceSettingsTab";
 import {GeneralSettingsTab} from "./tabs/GeneralSettingsTab";
@@ -55,7 +54,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
     const [activeTab, setActiveTab] = useState<SettingsTabId>("general");
     const [confirmClearData, setConfirmClearData] = useState(false);
     const [statusNotice, setStatusNotice] = useState<string | null>(null);
-    const [isYonseiModalOpen, setIsYonseiModalOpen] = useState(false);
 
     const [prevIsOpen, setPrevIsOpen] = useState(isOpen);
     if (isOpen !== prevIsOpen) {
@@ -64,7 +62,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
             setConfirmClearData(false);
             setStatusNotice(null);
         }
-        setIsYonseiModalOpen(false);
     }
 
     const activeTheme: ThemePreference = mounted
@@ -162,21 +159,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
     );
 
     return (
-        <>
-            <Modal
-                isOpen={isOpen}
-                onClose={onClose}
-                title="환경설정"
-                subtitle="화면, 지도, 실시간 추적 및 앱 데이터를 관리합니다"
-                icon={modalIcon}
-                headerBadge={headerBadge}
-                footer={modalFooter}
-                maxWidth="lg"
-                height="default"
-                modalId="settings"
-                suspended={isYonseiModalOpen}
-                ariaLabel="wBus 환경설정 모달"
-            >
+        <Modal
+            isOpen={isOpen}
+            onClose={onClose}
+            title="환경설정"
+            subtitle="화면, 지도, 실시간 추적 및 앱 데이터를 관리합니다"
+            icon={modalIcon}
+            headerBadge={headerBadge}
+            footer={modalFooter}
+            maxWidth="lg"
+            height="default"
+            modalId="settings"
+            ariaLabel="wBus 환경설정 모달"
+        >
                 <div
                     className="px-4 sm:px-6 pt-3 pb-2.5 border-b border-black/5 dark:border-white/5 bg-slate-50/40 dark:bg-white/[0.01] shrink-0">
                     <div
@@ -237,7 +232,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                             activeTheme={activeTheme}
                             onThemeChange={handleThemeChange}
                             onUpdateSettings={updateSettings}
-                            onOpenYonseiModal={() => setIsYonseiModalOpen(true)}
                         />
                     )}
 
@@ -272,13 +266,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                     )}
                 </div>
             </Modal>
-
-            <YonseiSettingsModal
-                isOpen={isYonseiModalOpen}
-                onClose={() => setIsYonseiModalOpen(false)}
-                onCloseParent={onClose}
-            />
-        </>
     );
 };
 

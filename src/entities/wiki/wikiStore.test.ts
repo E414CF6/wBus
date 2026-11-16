@@ -12,6 +12,7 @@ import {
     revertWikiPage,
     saveWikiPageEdit,
     setWikiPageProtection,
+    updateWikiPinMeta,
     WikiServiceError,
 } from "./wikiStore";
 
@@ -40,16 +41,8 @@ function evalPageRowPredicate(
 ): boolean {
     if (!sqlText) return true;
 
-    // Split top-level AND clauses when checking category + search OR
+    // Split top-level AND clauses when checking filters + search OR
     let result = true;
-    const categoryIdx = sqlText.indexOf('"wiki_pages"."category" = $');
-    if (categoryIdx !== -1) {
-        const m = sqlText.slice(categoryIdx).match(/\$(\d+)/);
-        if (m) {
-            const cat = params[Number(m[1]) - 1];
-            if (row.category !== cat) result = false;
-        }
-    }
 
     const cityIdx = sqlText.indexOf('"wiki_pages"."city_code" = $');
     if (cityIdx !== -1) {
@@ -181,7 +174,7 @@ function createFakeDb() {
                                         return {
                                             slug: rev.slug,
                                             title: page.slug,
-                                            category: page.category,
+                                            pinColor: page.pinColor,
                                             version: rev.version,
                                             summary: rev.summary,
                                             editorNickname: rev.editorNickname,
@@ -267,7 +260,7 @@ function createFakeDb() {
                             const row: realSchema.WikiPageRow = {
                                 slug,
                                 subtitle: String(val.subtitle ?? ""),
-                                category: val.category as realSchema.WikiPageRow["category"],
+                                pinColor: (val.pinColor as realSchema.WikiPageRow["pinColor"]) ?? "navy",
                                 cityCode: (val.cityCode as string | null) ?? null,
                                 lat: (val.lat as number | null) ?? null,
                                 lng: (val.lng as number | null) ?? null,
@@ -466,77 +459,37 @@ describe("wikiStore Postgres + Delta integration", () => {
         _resetWikiBootstrapForTests();
     });
 
-    it("migrates legacy slug row, stores delta revisions with checkpoints every 10th version, and reverts losslessly", async () => {
+    it("stores delta revisions with checkpoints every 10th version, reverts losslessly, and updates pin meta", async () => {
         const canonicalSlug = "연세대학교 미래캠퍼스";
-        const legacyNow = new Date("2026-03-01T00:00:00.000Z");
-        pageRows.set("yonsei-mirae", {
-            slug: "yonsei-mirae",
+        const initial = await createWikiPage({
+            slug: canonicalSlug,
+            title: canonicalSlug,
             subtitle: "무료 셔틀버스 · 시내버스 시간표",
-            category: "campus",
+            pinColor: "navy",
             cityCode: "32020",
             lat: 37.2779,
             lng: 127.9026,
             tags: ["연세대 미래캠퍼스", "원주"],
-            tagsText: "연세대 미래캠퍼스 원주",
-            version: 1,
-            isProtected: false,
-            pinned: true,
-            lastEditorNickname: "wBus",
-            lastEditorId: "wbus-system",
             linkedRoutes: [{routeNo: "30", cityCode: "32020", label: "30번"}],
             shuttle: null,
             boardingStops: [],
-            markdownBody: "## 캠퍼스 통학 핵심 요약\n초기 본문",
-            createdAt: legacyNow,
-            updatedAt: legacyNow,
-        });
-        revisionRows.push({
-            id: nextRevisionId++,
-            slug: "yonsei-mirae",
-            version: 1,
-            baseVersion: 0,
+            markdownBody: "## 통학 핵심 요약\n초기 본문",
             summary: "초기 위키 문서 생성",
-            editorNickname: "wBus",
-            editorId: "wbus-system",
-            diffStats: {added: 2, removed: 0, structuredChanges: ["문서 최초 생성"]},
-            isCheckpoint: true,
-            snapshot: {
-                slug: canonicalSlug,
-                title: canonicalSlug,
-                subtitle: "무료 셔틀버스 · 시내버스 시간표",
-                category: "campus",
-                cityCode: "32020",
-                lat: 37.2779,
-                lng: 127.9026,
-                tags: ["연세대 미래캠퍼스", "원주"],
-                version: 1,
-                createdAt: legacyNow.toISOString(),
-                updatedAt: legacyNow.toISOString(),
-                lastEditor: {nickname: "wBus", editorId: "wbus-system"},
-                isProtected: false,
-                linkedRoutes: [{routeNo: "30", cityCode: "32020", label: "30번"}],
-                shuttle: null,
-                boardingStops: [],
-                markdownBody: "## 캠퍼스 통학 핵심 요약\n초기 본문",
-            },
-            delta: null,
-            createdAt: legacyNow,
+            editor: {nickname: "wBus", editorId: "wbus-system"},
         });
-
-        const initial = await getWikiPage("yonsei-mirae");
-        expect(initial).not.toBeNull();
-        expect(initial?.slug).toBe(canonicalSlug);
-        expect(initial?.version).toBe(1);
+        expect(initial.slug).toBe(canonicalSlug);
+        expect(initial.version).toBe(1);
+        expect(initial.pinColor).toBe("navy");
 
         // Edit sequentially v1 -> v11 (v1 and v10 checkpoints, v2..v9 & v11 deltas)
-        let currentDoc = initial!;
+        let currentDoc = initial;
         for (let v = 2; v <= 11; v++) {
             const editRes = await saveWikiPageEdit({
                 slug: canonicalSlug,
                 baseVersion: currentDoc.version,
                 title: currentDoc.title,
                 subtitle: currentDoc.subtitle,
-                category: currentDoc.category,
+                pinColor: currentDoc.pinColor,
                 cityCode: currentDoc.cityCode,
                 tags: currentDoc.tags,
                 linkedRoutes: currentDoc.linkedRoutes,
@@ -574,7 +527,7 @@ describe("wikiStore Postgres + Delta integration", () => {
                 baseVersion: 4,
                 title: currentDoc.title,
                 subtitle: currentDoc.subtitle,
-                category: currentDoc.category,
+                pinColor: currentDoc.pinColor,
                 cityCode: currentDoc.cityCode,
                 tags: currentDoc.tags,
                 linkedRoutes: currentDoc.linkedRoutes,
@@ -599,9 +552,23 @@ describe("wikiStore Postgres + Delta integration", () => {
             editor: {nickname: "관리자", editorId: "ed-admin"},
         });
         expect(revertRes.document.version).toBe(12);
-        expect(revertRes.document.markdownBody).toBe(initial!.markdownBody);
+        expect(revertRes.document.markdownBody).toBe(initial.markdownBody);
         const rev12Row = revisionRows.find((r) => r.slug === canonicalSlug && r.version === 12);
         expect(rev12Row?.isCheckpoint).toBe(true);
+
+        // Atomic pin meta update (move + color change -> v13)
+        const pinUpdateRes = await updateWikiPinMeta({
+            slug: canonicalSlug,
+            baseVersion: 12,
+            lat: 37.281,
+            lng: 127.905,
+            pinColor: "emerald",
+            editor: {nickname: "핀편집자", editorId: "ed-pin"},
+        });
+        expect(pinUpdateRes.document.version).toBe(13);
+        expect(pinUpdateRes.document.pinColor).toBe("emerald");
+        expect(pinUpdateRes.document.lat).toBe(37.281);
+        expect(pinUpdateRes.document.lng).toBe(127.905);
     });
 
     it("migrates existing Vercel Blob pages/revisions lazily into Postgres without data loss", async () => {
@@ -609,7 +576,7 @@ describe("wikiStore Postgres + Delta integration", () => {
             slug: "legacy-blob-hub",
             title: "기존 Blob 정류장 문서",
             subtitle: "마이그레이션 검증",
-            category: "stop" as const,
+            pinColor: "blue" as const,
             cityCode: "32020",
             tags: ["기존블롭"],
             version: 2,
@@ -677,7 +644,7 @@ describe("wikiStore Postgres + Delta integration", () => {
             slug: "custom-stop-guide",
             title: "남원주역 정류장 가이드",
             subtitle: "KTX 환승 버스 안내",
-            category: "terminal",
+            pinColor: "indigo",
             cityCode: "32020",
             tags: ["남원주역"],
             linkedRoutes: [],
@@ -704,7 +671,7 @@ describe("wikiStore Postgres + Delta integration", () => {
                 baseVersion: 1,
                 title: created.title,
                 subtitle: created.subtitle,
-                category: created.category,
+                pinColor: created.pinColor,
                 cityCode: created.cityCode,
                 tags: created.tags,
                 linkedRoutes: [],
@@ -724,7 +691,7 @@ describe("wikiStore Postgres + Delta integration", () => {
             baseVersion: 1,
             title: "남원주역 KTX 버스 승강장",
             subtitle: created.subtitle,
-            category: created.category,
+            pinColor: created.pinColor,
             cityCode: created.cityCode,
             tags: created.tags,
             linkedRoutes: [],
@@ -740,8 +707,23 @@ describe("wikiStore Postgres + Delta integration", () => {
         const renamedRevs = await getWikiRevisionList("남원주역 KTX 버스 승강장");
         expect(renamedRevs.length).toBe(2);
 
-        // Pinned hubs cannot be deleted
-        await expect(deleteWikiPage("연세대학교 미래캠퍼스")).rejects.toMatchObject({status: 400});
+        // Pinned documents cannot be deleted
+        await createWikiPage({
+            slug: "고정 핀 문서",
+            title: "고정 핀 문서",
+            subtitle: "고정 테스트",
+            pinColor: "navy",
+            tags: [],
+            linkedRoutes: [],
+            shuttle: null,
+            boardingStops: [],
+            markdownBody: "본문",
+            summary: "생성",
+            editor: {nickname: "관리자", editorId: "ed-admin"},
+        });
+        const pinnedRow = pageRows.get("고정 핀 문서");
+        if (pinnedRow) pinnedRow.pinned = true;
+        await expect(deleteWikiPage("고정 핀 문서")).rejects.toMatchObject({status: 400});
 
         // Custom page can be deleted
         await deleteWikiPage("남원주역 KTX 버스 승강장");
@@ -752,8 +734,8 @@ describe("wikiStore Postgres + Delta integration", () => {
         await createWikiPage({
             slug: "연세대학교 미래캠퍼스",
             title: "연세대학교 미래캠퍼스",
-            subtitle: "캠퍼스 허브",
-            category: "campus",
+            subtitle: "셔틀·버스 안내",
+            pinColor: "navy",
             cityCode: "32020",
             lat: 37.2779,
             lng: 127.9026,
@@ -761,7 +743,7 @@ describe("wikiStore Postgres + Delta integration", () => {
             linkedRoutes: [],
             shuttle: null,
             boardingStops: [],
-            markdownBody: "캠퍼스 위키",
+            markdownBody: "안내 위키",
             summary: "생성",
             editor: {nickname: "wBus", editorId: "wbus-system"},
         });
@@ -770,7 +752,7 @@ describe("wikiStore Postgres + Delta integration", () => {
             slug: "단계동-정류장-핀",
             title: "단계동 정류장 핀",
             subtitle: "터미널 사거리 탑승 안내",
-            category: "stop",
+            pinColor: "teal",
             cityCode: "32020",
             lat: 37.3456,
             lng: 127.9311,
@@ -789,7 +771,7 @@ describe("wikiStore Postgres + Delta integration", () => {
             slug: "좌표없는-가이드",
             title: "좌표없는 가이드",
             subtitle: "일반 안내",
-            category: "guide",
+            pinColor: "navy",
             cityCode: "32020",
             tags: [],
             linkedRoutes: [],

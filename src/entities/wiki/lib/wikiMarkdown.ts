@@ -1,4 +1,4 @@
-import {normalizeWikiSlug, resolveLegacyWikiSlug} from "../schemas";
+import {normalizeWikiSlug} from "../schemas";
 
 export type WikiInlineNode =
     | { type: "text"; text: string }
@@ -214,8 +214,7 @@ function parseWikiBracketToken(token: string): WikiInlineNode | null {
 
     // [[slug]] or [[slug|표시명]]
     const [rawSlug, rawLabel] = token.split("|");
-    const normalizedSlug = normalizeWikiSlug(rawSlug);
-    const slug = resolveLegacyWikiSlug(normalizedSlug) ?? normalizedSlug;
+    const slug = normalizeWikiSlug(rawSlug);
     if (!slug) return null;
     return {
         type: "wikilink",

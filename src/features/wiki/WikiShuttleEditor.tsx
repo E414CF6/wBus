@@ -60,7 +60,7 @@ export const WikiShuttleEditor: React.FC<WikiShuttleEditorProps> = ({value, onCh
                         셔틀버스 시간표 블록 (비활성)
                     </h4>
                     <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-1">
-                        학교·기관 셔틀 등하교 시간표와 실시간 다음 출발 카운트다운을 이 문서에 포함할 수 있습니다.
+                        셔틀·순환버스 시간표와 실시간 다음 출발 카운트다운을 이 문서에 포함할 수 있습니다.
                     </p>
                 </div>
                 <button
@@ -114,7 +114,7 @@ export const WikiShuttleEditor: React.FC<WikiShuttleEditorProps> = ({value, onCh
                     departure_point: "출발지",
                     departure_time: "08:00",
                     via: [],
-                    destination: "캠퍼스",
+                    destination: "도착지",
                     note: null,
                 },
             ],

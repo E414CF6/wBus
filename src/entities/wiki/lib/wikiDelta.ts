@@ -110,7 +110,7 @@ export function computeWikiDelta(
 
     if (before.title !== after.title) fieldsPatch.title = after.title;
     if (before.subtitle !== after.subtitle) fieldsPatch.subtitle = after.subtitle;
-    if (before.category !== after.category) fieldsPatch.category = after.category;
+    if (before.pinColor !== after.pinColor) fieldsPatch.pinColor = after.pinColor;
     if ((before.cityCode ?? null) !== (after.cityCode ?? null)) {
         fieldsPatch.cityCode = after.cityCode ?? null;
     }
@@ -169,7 +169,7 @@ export function applyWikiDelta(
         ...base,
         title: fp?.title ?? base.title,
         subtitle: fp?.subtitle ?? base.subtitle,
-        category: fp?.category ?? base.category,
+        pinColor: fp?.pinColor ?? base.pinColor,
         cityCode: nextCityCode,
         lat: nextLat,
         lng: nextLng,

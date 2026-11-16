@@ -1,24 +1,17 @@
 "use client";
 
 import React from "react";
-import {Calendar, ChevronRight, GraduationCap, Monitor, Moon, Sparkles, Sun} from "lucide-react";
+import {Calendar, Monitor, Moon, Sparkles, Sun} from "lucide-react";
 import type {AppSettings, FontScale} from "@shared/config/settingsCookie";
 import type {ThemePreference} from "@shared/ui";
 import {triggerHaptic} from "@shared/utils/haptics";
 import {SettingsBlock, SettingsGroup, SettingsSectionHeader} from "../SettingsPrimitives";
-
-const YONSEI_DIRECTION_SUMMARY = {
-    AUTO: "시간대 자동",
-    OUTBOUND: "하교 고정",
-    INBOUND: "등교 고정",
-} as const;
 
 interface GeneralSettingsTabProps {
     settings: AppSettings;
     activeTheme: ThemePreference;
     onThemeChange: (theme: ThemePreference) => void;
     onUpdateSettings: (patch: Partial<AppSettings>) => void;
-    onOpenYonseiModal: () => void;
 }
 
 export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
@@ -26,7 +19,6 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
                                                                           activeTheme,
                                                                           onThemeChange,
                                                                           onUpdateSettings,
-                                                                          onOpenYonseiModal,
                                                                       }) => (
     <>
         <section className="space-y-2.5">
@@ -164,38 +156,6 @@ export const GeneralSettingsTab: React.FC<GeneralSettingsTabProps> = ({
                     </div>
                 </SettingsBlock>
             </SettingsGroup>
-        </section>
-
-        <section className="space-y-2.5">
-            <SettingsSectionHeader
-                icon={<GraduationCap className="w-3.5 h-3.5 text-[#003876] dark:text-blue-400"/>}
-                title="캠퍼스 · 특화 허브"
-            />
-            <button
-                type="button"
-                onClick={() => {
-                    triggerHaptic("light");
-                    onOpenYonseiModal();
-                }}
-                className="w-full p-3.5 rounded-2xl bg-[#003876]/[0.06] hover:bg-[#003876]/10 dark:bg-blue-500/10 dark:hover:bg-blue-500/15 border border-[#003876]/15 dark:border-blue-400/20 flex items-center justify-between gap-3 text-left transition cursor-pointer active:scale-[0.99]"
-            >
-                <div className="flex items-center gap-3 min-w-0">
-                    <div
-                        className="flex items-center justify-center w-9 h-9 rounded-xl bg-[#003876] text-white shrink-0 shadow-xs">
-                        <GraduationCap className="w-4.5 h-4.5"/>
-                    </div>
-                    <div className="min-w-0">
-                        <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white truncate">
-                            연세대 미래캠퍼스 설정
-                        </p>
-                        <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                            방향: {YONSEI_DIRECTION_SUMMARY[settings.yonseiDefaultDirection]} · 지도 표시:{" "}
-                            {settings.showYonseiFeatures ? "켜짐" : "꺼짐"}
-                        </p>
-                    </div>
-                </div>
-                <ChevronRight className="w-4 h-4 text-[#003876] dark:text-blue-300 shrink-0"/>
-            </button>
         </section>
     </>
 );

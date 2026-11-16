@@ -1,9 +1,8 @@
-import type {ShuttleBusScheduleData, ShuttleInboundItem, ShuttleOutboundItem,} from "@entities/schedule";
+import type {ShuttleBusScheduleData, ShuttleInboundItem, ShuttleOutboundItem} from "@entities/schedule";
 import {isSaturday, parseTimeToMinutes} from "@shared/lib/timeUtils";
 import type {DayMode} from "@shared/types/navigation";
 import {matchesHangul} from "@shared/utils/hangul";
 
-export type CampusDirectionMode = "OUTBOUND" | "INBOUND";
 export type ShuttleDayFilter = "ALL" | "WEEKDAY" | "SUNDAY";
 
 export interface ShuttleEffectiveDayType {
@@ -20,9 +19,6 @@ export interface NextShuttleResult<T> {
 
 /**
  * Resolves today's effective shuttle operating mode based on DayMode and current Date.
- * - Saturday: Shuttles do not operate (unless overridden to WEEKDAY).
- * - Sunday / VACATION: Sunday special schedule applies.
- * - Weekday: Regular weekday schedule applies.
  */
 export function resolveEffectiveShuttleDayType(
     dayMode: DayMode,

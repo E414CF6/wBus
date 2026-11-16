@@ -8,3 +8,4 @@ export {WikiHistoryPanel, type WikiHistoryPanelProps} from "./WikiHistoryPanel";
 export {WikiCreateForm, type WikiCreateFormProps} from "./WikiCreateForm";
 export {WikiEditorForm, type WikiEditorFormProps} from "./WikiEditorForm";
 export {WikiPinLocationFields, type WikiPinLocationFieldsProps} from "./WikiPinLocationFields";
+export {WikiPinColorSelector, type WikiPinColorSelectorProps} from "./WikiPinColorSelector";

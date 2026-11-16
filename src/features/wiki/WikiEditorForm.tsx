@@ -3,17 +3,17 @@
 import React, {useState} from "react";
 import {NATIONWIDE_CITIES} from "@entities/city";
 import {
+    DEFAULT_WIKI_PIN_COLOR,
     normalizeWikiSlug,
-    WIKI_CATEGORIES,
-    WIKI_CATEGORY_LABELS,
     type WikiBoardingStop,
-    type WikiCategory,
     type WikiLinkedRoute,
     type WikiPageDocument,
+    type WikiPinColor,
     type WikiShuttleBlock,
 } from "@entities/wiki";
 import {WikiEditMetaBar} from "./WikiEditMetaBar";
 import {WikiMarkdownEditor} from "./WikiMarkdownEditor";
+import {WikiPinColorSelector} from "./WikiPinColorSelector";
 import {WikiPinLocationFields} from "./WikiPinLocationFields";
 import {WikiRoutesEditor} from "./WikiRoutesEditor";
 import {WikiShuttleEditor} from "./WikiShuttleEditor";
@@ -39,13 +39,13 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
     const [baseVersion, setBaseVersion] = useState(doc.version);
     const [title, setTitle] = useState(doc.title);
     const [subtitle, setSubtitle] = useState(doc.subtitle);
-    const [category, setCategory] = useState<WikiCategory>(doc.category);
+    const [pinColor, setPinColor] = useState<WikiPinColor>(doc.pinColor ?? DEFAULT_WIKI_PIN_COLOR);
     const [cityCode, setCityCode] = useState(doc.cityCode ?? "");
     const [latText, setLatText] = useState(
-        typeof doc.lat === "number" && Number.isFinite(doc.lat) ? doc.lat.toFixed(6) : ""
+        typeof doc.lat === "number" && Number.isFinite(doc.lat) ? doc.lat.toFixed(6) : "",
     );
     const [lngText, setLngText] = useState(
-        typeof doc.lng === "number" && Number.isFinite(doc.lng) ? doc.lng.toFixed(6) : ""
+        typeof doc.lng === "number" && Number.isFinite(doc.lng) ? doc.lng.toFixed(6) : "",
     );
     const [tagsText, setTagsText] = useState(doc.tags.join(", "));
     const [markdownBody, setMarkdownBody] = useState(doc.markdownBody);
@@ -55,7 +55,9 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
     const [nickname, setNickname] = useState(initialNickname);
     const [summary, setSummary] = useState("");
     const [honeypot, setHoneypot] = useState("");
-    const [editorTab, setEditorTab] = useState<"markdown" | "routes" | "shuttle" | "stops">("markdown");
+    const [editorTab, setEditorTab] = useState<"markdown" | "routes" | "shuttle" | "stops">(
+        "markdown",
+    );
     const [isSaving, setIsSaving] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [conflictVersion, setConflictVersion] = useState<number | null>(null);
@@ -88,12 +90,14 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
 
         const cleanedTags = tagsText
             .split(",")
-            .map((t) => t.trim())
+            .map((t) => t.trim().replace(/^#+/, ""))
             .filter(Boolean)
             .slice(0, 12);
 
         const cleanedRoutes = linkedRoutes.filter((r) => r.routeNo.trim().length > 0);
-        const cleanedStops = boardingStops.filter((s) => s.name.trim().length > 0 && s.locationDescription.trim().length > 0);
+        const cleanedStops = boardingStops.filter(
+            (s) => s.name.trim().length > 0 && s.locationDescription.trim().length > 0,
+        );
 
         try {
             const res = await fetch(`/api/wiki/${encodeURIComponent(doc.slug)}`, {
@@ -103,7 +107,7 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                     baseVersion: overrideBaseVersion ?? baseVersion,
                     title,
                     subtitle,
-                    category,
+                    pinColor,
                     cityCode: cityCode.trim() || undefined,
                     lat: parsedLat,
                     lng: parsedLng,
@@ -134,7 +138,9 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
             }
             await onSaved(body.document as WikiPageDocument);
         } catch (err) {
-            setErrorMessage(err instanceof Error ? err.message : "저장 중 네트워크 오류가 발생했습니다.");
+            setErrorMessage(
+                err instanceof Error ? err.message : "저장 중 네트워크 오류가 발생했습니다.",
+            );
         } finally {
             setIsSaving(false);
         }
@@ -157,7 +163,7 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                     </div>
                     <span
                         className="text-[11px] font-mono px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                        /wiki/{normalizeWikiSlug(title) || doc.slug}
+                        #{normalizeWikiSlug(title) || doc.slug}
                     </span>
                 </div>
 
@@ -167,7 +173,7 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                             htmlFor="wiki-edit-title"
                             className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
                         >
-                            문서 제목 * (제목 변경 시 주소도 함께 변경됩니다)
+                            문서 제목 * (제목 변경 시 문서 키도 함께 변경됩니다)
                         </label>
                         <input
                             id="wiki-edit-title"
@@ -198,27 +204,23 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label
-                            htmlFor="wiki-edit-category"
+                            htmlFor="wiki-edit-tags"
                             className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
                         >
-                            카테고리
+                            해시태그 (쉼표로 구분 · 최대 3개가 지도 핀에 표시됨)
                         </label>
-                        <select
-                            id="wiki-edit-category"
-                            name="category"
-                            value={category}
-                            onChange={(e) => setCategory(e.target.value as WikiCategory)}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-slate-100"
-                        >
-                            {WIKI_CATEGORIES.map((cat) => (
-                                <option key={cat} value={cat}>
-                                    {WIKI_CATEGORY_LABELS[cat]}
-                                </option>
-                            ))}
-                        </select>
+                        <input
+                            id="wiki-edit-tags"
+                            name="tags"
+                            type="text"
+                            value={tagsText}
+                            onChange={(e) => setTagsText(e.target.value)}
+                            placeholder="예: 정류장, 환승, 첫차팁"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-semibold text-slate-900 dark:text-slate-100"
+                        />
                     </div>
                     <div>
                         <label
@@ -242,24 +244,9 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                             ))}
                         </select>
                     </div>
-                    <div>
-                        <label
-                            htmlFor="wiki-edit-tags"
-                            className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
-                        >
-                            태그 (쉼표로 구분)
-                        </label>
-                        <input
-                            id="wiki-edit-tags"
-                            name="tags"
-                            type="text"
-                            value={tagsText}
-                            onChange={(e) => setTagsText(e.target.value)}
-                            placeholder="예: 원주, 연세대, 셔틀, 30번"
-                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-semibold text-slate-900 dark:text-slate-100"
-                        />
-                    </div>
                 </div>
+
+                <WikiPinColorSelector id="wiki-edit-pin-color" value={pinColor} onChange={setPinColor}/>
 
                 <WikiPinLocationFields
                     lat={latText}
@@ -301,14 +288,14 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                 <WikiMarkdownEditor
                     value={markdownBody}
                     onChange={setMarkdownBody}
-                    cityCode={cityCode || "32020"}
+                    cityCode={cityCode}
                 />
             )}
             {editorTab === "routes" && (
                 <WikiRoutesEditor
                     value={linkedRoutes}
                     onChange={setLinkedRoutes}
-                    defaultCityCode={cityCode || "32020"}
+                    defaultCityCode={cityCode}
                 />
             )}
             {editorTab === "shuttle" && (

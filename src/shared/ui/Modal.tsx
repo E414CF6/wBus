@@ -16,14 +16,14 @@ const MAX_WIDTH_CLASSES: Record<ModalMaxWidth, string> = {
     xl: "max-w-xl lg:max-w-3xl",
     "2xl": "max-w-2xl lg:max-w-4xl xl:max-w-5xl",
     "3xl": "max-w-3xl lg:max-w-5xl xl:max-w-6xl",
-    full: "max-w-[calc(100vw-1.5rem)] sm:max-w-5xl lg:max-w-6xl",
+    full: "max-w-[calc(100vw-0.75rem)] sm:max-w-[calc(100vw-2rem)] xl:max-w-[1440px]",
 };
 
 const HEIGHT_CLASSES: Record<ModalHeight, string> = {
     default: "h-[78dvh] sm:h-[82dvh] max-h-[78dvh] sm:max-h-[82dvh]",
     tall: "h-[85dvh] sm:h-[88dvh] max-h-[780px] sm:max-h-[820px]",
     auto: "h-auto max-h-[85dvh]",
-    full: "h-[92dvh] max-h-[92dvh]",
+    full: "h-[calc(100dvh-0.75rem)] sm:h-[94dvh] max-h-[calc(100dvh-0.75rem)] sm:max-h-[94dvh]",
 };
 
 export interface ModalProps {

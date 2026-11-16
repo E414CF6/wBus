@@ -1,60 +1,95 @@
-import {BookOpen, Bus, GraduationCap, type LucideIcon, MapPin, TrainFront} from "lucide-react";
-import type {WikiCategory} from "@entities/wiki";
+import type {WikiPinColor} from "@entities/wiki";
 
-export interface WikiCategoryPinStyle {
+export interface WikiPinColorTheme {
+    id: WikiPinColor;
     label: string;
-    shortLabel: string;
     badgeBg: string;
     borderClass: string;
     dotBg: string;
     pillTextClass: string;
-    icon: LucideIcon;
+    swatchClass: string;
 }
 
-export const WIKI_CATEGORY_PIN_STYLES: Record<WikiCategory, WikiCategoryPinStyle> = {
-    campus: {
-        label: "캠퍼스 허브",
-        shortLabel: "캠퍼스",
-        badgeBg: "bg-[#003876]",
-        borderClass: "border-[#003876]/35 dark:border-sky-400/40",
-        dotBg: "bg-[#003876]",
-        pillTextClass: "text-[#003876] dark:text-sky-300",
-        icon: GraduationCap,
+export const WIKI_PIN_COLOR_THEMES: Record<WikiPinColor, WikiPinColorTheme> = {
+    navy: {
+        id: "navy",
+        label: "네이비",
+        badgeBg: "bg-[#003366]",
+        borderClass: "border-[#003366]/35",
+        dotBg: "bg-[#003366]",
+        pillTextClass: "text-[#003366] dark:text-sky-300",
+        swatchClass: "bg-[#003366]",
     },
-    terminal: {
-        label: "터미널 · 역",
-        shortLabel: "터미널·역",
+    blue: {
+        id: "blue",
+        label: "블루",
+        badgeBg: "bg-blue-600",
+        borderClass: "border-blue-500/40",
+        dotBg: "bg-blue-600",
+        pillTextClass: "text-blue-700 dark:text-blue-300",
+        swatchClass: "bg-blue-600",
+    },
+    emerald: {
+        id: "emerald",
+        label: "에메랄드",
         badgeBg: "bg-emerald-600",
-        borderClass: "border-emerald-500/35 dark:border-emerald-400/40",
+        borderClass: "border-emerald-500/40",
         dotBg: "bg-emerald-600",
         pillTextClass: "text-emerald-700 dark:text-emerald-300",
-        icon: TrainFront,
+        swatchClass: "bg-emerald-600",
     },
-    stop: {
-        label: "정류장 · 환승",
-        shortLabel: "정류장",
+    teal: {
+        id: "teal",
+        label: "틸",
         badgeBg: "bg-teal-600",
-        borderClass: "border-teal-500/35 dark:border-teal-400/40",
+        borderClass: "border-teal-500/40",
         dotBg: "bg-teal-600",
         pillTextClass: "text-teal-700 dark:text-teal-300",
-        icon: MapPin,
+        swatchClass: "bg-teal-600",
     },
-    route: {
-        label: "노선 가이드",
-        shortLabel: "노선",
+    indigo: {
+        id: "indigo",
+        label: "인디고",
         badgeBg: "bg-indigo-600",
-        borderClass: "border-indigo-500/35 dark:border-indigo-400/40",
+        borderClass: "border-indigo-500/40",
         dotBg: "bg-indigo-600",
         pillTextClass: "text-indigo-700 dark:text-indigo-300",
-        icon: Bus,
+        swatchClass: "bg-indigo-600",
     },
-    guide: {
-        label: "이용 팁 · 안내",
-        shortLabel: "위키 팁",
+    violet: {
+        id: "violet",
+        label: "바이올렛",
         badgeBg: "bg-violet-600",
-        borderClass: "border-violet-500/35 dark:border-violet-400/40",
+        borderClass: "border-violet-500/40",
         dotBg: "bg-violet-600",
         pillTextClass: "text-violet-700 dark:text-violet-300",
-        icon: BookOpen,
+        swatchClass: "bg-violet-600",
+    },
+    amber: {
+        id: "amber",
+        label: "앰버",
+        badgeBg: "bg-amber-600",
+        borderClass: "border-amber-500/40",
+        dotBg: "bg-amber-600",
+        pillTextClass: "text-amber-700 dark:text-amber-300",
+        swatchClass: "bg-amber-600",
+    },
+    rose: {
+        id: "rose",
+        label: "로즈",
+        badgeBg: "bg-rose-600",
+        borderClass: "border-rose-500/40",
+        dotBg: "bg-rose-600",
+        pillTextClass: "text-rose-700 dark:text-rose-300",
+        swatchClass: "bg-rose-600",
     },
 };
+
+export const WIKI_PIN_COLOR_LIST: WikiPinColorTheme[] = Object.values(WIKI_PIN_COLOR_THEMES);
+
+export function resolveWikiPinTheme(color?: WikiPinColor | null): WikiPinColorTheme {
+    if (color && color in WIKI_PIN_COLOR_THEMES) {
+        return WIKI_PIN_COLOR_THEMES[color];
+    }
+    return WIKI_PIN_COLOR_THEMES.navy;
+}

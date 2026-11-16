@@ -3,19 +3,19 @@
 import React, {useState} from "react";
 import {NATIONWIDE_CITIES} from "@entities/city";
 import {
+    DEFAULT_WIKI_PIN_COLOR,
     isValidWikiSlug,
     normalizeWikiSlug,
     useWikiNickname,
-    WIKI_CATEGORIES,
-    WIKI_CATEGORY_LABELS,
     type WikiBoardingStop,
-    type WikiCategory,
     type WikiLinkedRoute,
     type WikiPageDocument,
+    type WikiPinColor,
     type WikiShuttleBlock,
 } from "@entities/wiki";
 import {WikiEditMetaBar} from "./WikiEditMetaBar";
 import {WikiMarkdownEditor} from "./WikiMarkdownEditor";
+import {WikiPinColorSelector} from "./WikiPinColorSelector";
 import {WikiPinLocationFields} from "./WikiPinLocationFields";
 import {WikiRoutesEditor} from "./WikiRoutesEditor";
 import {WikiShuttleEditor} from "./WikiShuttleEditor";
@@ -26,14 +26,14 @@ export interface WikiCreateFormProps {
     initialLat?: number;
     initialLng?: number;
     initialCityCode?: string;
-    initialCategory?: WikiCategory;
+    initialPinColor?: WikiPinColor;
     onCreated: (created: WikiPageDocument) => void | Promise<void>;
     onCancel: () => void;
     onPickOnMap?: () => void;
 }
 
 const DEFAULT_MARKDOWN_TEMPLATE = `## 개요
-이 정류장·캠퍼스·노선에 대한 핵심 이용 안내를 적어 주세요.
+이 장소·정류장·노선에 대한 핵심 이용 안내를 적어 주세요.
 
 > [!TIP]
 > 첫차·막차 혼잡 시간대나 탑승 위치를 공유하면 큰 도움이 됩니다.
@@ -42,11 +42,13 @@ const DEFAULT_MARKDOWN_TEMPLATE = `## 개요
 - 탑승 위치 및 환승 팁을 자유롭게 추가하세요.
 `;
 
-function parseOptionalCoords(latText: string, lngText: string): {
+function parseOptionalCoords(latText: string, lngText: string):
+    | {
     ok: true;
     lat?: number;
     lng?: number;
-} | {
+}
+    | {
     ok: false;
     message: string;
 } {
@@ -70,8 +72,8 @@ export const WikiCreateForm: React.FC<WikiCreateFormProps> = ({
                                                                   initialSlug = "",
                                                                   initialLat,
                                                                   initialLng,
-                                                                  initialCityCode = "32020",
-                                                                  initialCategory = "stop",
+                                                                  initialCityCode = "",
+                                                                  initialPinColor = DEFAULT_WIKI_PIN_COLOR,
                                                                   onCreated,
                                                                   onCancel,
                                                                   onPickOnMap,
@@ -81,13 +83,13 @@ export const WikiCreateForm: React.FC<WikiCreateFormProps> = ({
     const initialNormalized = normalizeWikiSlug(initialSlug);
     const [title, setTitle] = useState(initialNormalized || initialSlug.trim());
     const [subtitle, setSubtitle] = useState("");
-    const [category, setCategory] = useState<WikiCategory>(initialCategory);
+    const [pinColor, setPinColor] = useState<WikiPinColor>(initialPinColor);
     const [cityCode, setCityCode] = useState(initialCityCode);
     const [latText, setLatText] = useState(
-        typeof initialLat === "number" && Number.isFinite(initialLat) ? initialLat.toFixed(6) : ""
+        typeof initialLat === "number" && Number.isFinite(initialLat) ? initialLat.toFixed(6) : "",
     );
     const [lngText, setLngText] = useState(
-        typeof initialLng === "number" && Number.isFinite(initialLng) ? initialLng.toFixed(6) : ""
+        typeof initialLng === "number" && Number.isFinite(initialLng) ? initialLng.toFixed(6) : "",
     );
     const [tagsText, setTagsText] = useState("");
     const [markdownBody, setMarkdownBody] = useState(DEFAULT_MARKDOWN_TEMPLATE);
@@ -97,7 +99,9 @@ export const WikiCreateForm: React.FC<WikiCreateFormProps> = ({
     const [nickname, setNickname] = useState(storedNickname);
     const [summary, setSummary] = useState("새 위키 문서 생성");
     const [honeypot, setHoneypot] = useState("");
-    const [activeTab, setActiveTab] = useState<"markdown" | "routes" | "shuttle" | "stops">("markdown");
+    const [activeTab, setActiveTab] = useState<"markdown" | "routes" | "shuttle" | "stops">(
+        "markdown",
+    );
     const [isSaving, setIsSaving] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -106,7 +110,9 @@ export const WikiCreateForm: React.FC<WikiCreateFormProps> = ({
     const handleCreate = async () => {
         if (isSaving) return;
         if (!isValidWikiSlug(derivedSlug)) {
-            setErrorMessage("문서 제목(슬러그)은 2~80자여야 하며 예약어(new, edit, api 등)나 URL 특수문자(/ ? # %)를 사용할 수 없습니다.");
+            setErrorMessage(
+                "문서 제목(슬러그)은 2~80자여야 하며 예약어(new, edit, api 등)나 URL 특수문자(/ ? # %)를 사용할 수 없습니다.",
+            );
             return;
         }
 
@@ -121,12 +127,12 @@ export const WikiCreateForm: React.FC<WikiCreateFormProps> = ({
 
         const cleanedTags = tagsText
             .split(",")
-            .map((t) => t.trim())
+            .map((t) => t.trim().replace(/^#+/, ""))
             .filter(Boolean)
             .slice(0, 12);
         const cleanedRoutes = linkedRoutes.filter((r) => r.routeNo.trim().length > 0);
         const cleanedStops = boardingStops.filter(
-            (s) => s.name.trim().length > 0 && s.locationDescription.trim().length > 0
+            (s) => s.name.trim().length > 0 && s.locationDescription.trim().length > 0,
         );
 
         try {
@@ -137,7 +143,7 @@ export const WikiCreateForm: React.FC<WikiCreateFormProps> = ({
                     slug: derivedSlug,
                     title: derivedSlug,
                     subtitle: subtitle.trim(),
-                    category,
+                    pinColor,
                     cityCode: cityCode.trim() || undefined,
                     ...(parsedCoords.lat !== undefined && parsedCoords.lng !== undefined
                         ? {lat: parsedCoords.lat, lng: parsedCoords.lng}
@@ -183,11 +189,11 @@ export const WikiCreateForm: React.FC<WikiCreateFormProps> = ({
                                 htmlFor="wiki-create-title"
                                 className="block text-[11px] font-bold text-slate-500 dark:text-slate-400"
                             >
-                                문서 제목 * (한국어 제목이 그대로 문서 주소가 됩니다)
+                                문서 제목 * (한국어 제목이 그대로 문서 키가 됩니다)
                             </label>
                             <span
                                 className="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate max-w-full">
-                                /wiki/{derivedSlug || "문서 제목"}
+                                #{derivedSlug || "문서 제목"}
                             </span>
                         </div>
                         <input
@@ -196,7 +202,7 @@ export const WikiCreateForm: React.FC<WikiCreateFormProps> = ({
                             type="text"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            placeholder="예: 원주고속터미널 정류장 가이드"
+                            placeholder="예: OO역 환승 정류장 안내"
                             maxLength={80}
                             className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-sm font-black text-slate-900 dark:text-slate-100"
                         />
@@ -222,27 +228,23 @@ export const WikiCreateForm: React.FC<WikiCreateFormProps> = ({
                     />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label
-                            htmlFor="wiki-create-category"
+                            htmlFor="wiki-create-tags"
                             className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
                         >
-                            카테고리
+                            해시태그 (쉼표로 구분 · 최대 3개가 지도 핀에 표시됨)
                         </label>
-                        <select
-                            id="wiki-create-category"
-                            name="category"
-                            value={category}
-                            onChange={(e) => setCategory(e.target.value as WikiCategory)}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-900 dark:text-slate-100"
-                        >
-                            {WIKI_CATEGORIES.map((cat) => (
-                                <option key={cat} value={cat}>
-                                    {WIKI_CATEGORY_LABELS[cat]}
-                                </option>
-                            ))}
-                        </select>
+                        <input
+                            id="wiki-create-tags"
+                            name="tags"
+                            type="text"
+                            value={tagsText}
+                            onChange={(e) => setTagsText(e.target.value)}
+                            placeholder="예: 정류장, 환승, 첫차팁"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-semibold text-slate-900 dark:text-slate-100"
+                        />
                     </div>
                     <div>
                         <label
@@ -266,24 +268,9 @@ export const WikiCreateForm: React.FC<WikiCreateFormProps> = ({
                             ))}
                         </select>
                     </div>
-                    <div>
-                        <label
-                            htmlFor="wiki-create-tags"
-                            className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
-                        >
-                            태그 (쉼표로 구분)
-                        </label>
-                        <input
-                            id="wiki-create-tags"
-                            name="tags"
-                            type="text"
-                            value={tagsText}
-                            onChange={(e) => setTagsText(e.target.value)}
-                            placeholder="예: 원주, 터미널, 시내버스"
-                            className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-semibold text-slate-900 dark:text-slate-100"
-                        />
-                    </div>
                 </div>
+
+                <WikiPinColorSelector id="wiki-create-pin-color" value={pinColor} onChange={setPinColor}/>
 
                 <WikiPinLocationFields
                     lat={latText}
@@ -326,14 +313,14 @@ export const WikiCreateForm: React.FC<WikiCreateFormProps> = ({
                 <WikiMarkdownEditor
                     value={markdownBody}
                     onChange={setMarkdownBody}
-                    cityCode={cityCode || "32020"}
+                    cityCode={cityCode}
                 />
             )}
             {activeTab === "routes" && (
                 <WikiRoutesEditor
                     value={linkedRoutes}
                     onChange={setLinkedRoutes}
-                    defaultCityCode={cityCode || "32020"}
+                    defaultCityCode={cityCode}
                 />
             )}
             {activeTab === "shuttle" && (

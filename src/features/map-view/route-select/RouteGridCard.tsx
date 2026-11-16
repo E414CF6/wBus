@@ -10,7 +10,6 @@ interface RouteGridCardProps {
     meta: RouteMeta;
     categoryLabel?: string;
     isSelected: boolean;
-    isYonsei: boolean;
     isBookmarked: boolean;
     onSelect: (route: string) => void;
     onToggleBookmark: (e: React.MouseEvent, route: string) => void;
@@ -21,7 +20,6 @@ export const RouteGridCard: React.FC<RouteGridCardProps> = ({
                                                                 meta,
                                                                 categoryLabel,
                                                                 isSelected,
-                                                                isYonsei,
                                                                 isBookmarked,
                                                                 onSelect,
                                                                 onToggleBookmark,
@@ -59,12 +57,6 @@ export const RouteGridCard: React.FC<RouteGridCardProps> = ({
                                         ? "마을"
                                         : "간선")}
                     </span>
-                    {isYonsei && (
-                        <span
-                            className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700">
-                            {UI_TEXT.ROUTE_SELECT.YONSEI_BADGE}
-                        </span>
-                    )}
                 </div>
                 <div
                     className="font-extrabold text-xs sm:text-[13px] text-slate-900 dark:text-white leading-snug break-keep line-clamp-2"

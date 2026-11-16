@@ -1,7 +1,6 @@
 "use client";
 
 import React, {useCallback, useState, useSyncExternalStore} from "react";
-import Link from "next/link";
 import {useTheme} from "next-themes";
 import {
     ArrowLeft,
@@ -10,8 +9,6 @@ import {
     Check,
     Clock,
     Compass,
-    ExternalLink,
-    GraduationCap,
     MapPin,
     Monitor,
     Moon,
@@ -21,7 +18,6 @@ import {
 } from "lucide-react";
 
 import {NATIONWIDE_CITIES, useCityContext} from "@entities/city";
-import {YONSEI_MIRAE_WIKI_SLUG} from "@entities/wiki";
 import {ToggleSwitch} from "@features/settings/ToggleSwitch";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {applyThemePreference, Modal, type ThemePreference} from "@shared/ui";
@@ -32,7 +28,7 @@ const TOTAL_STEPS = 3;
 const STEP_META = [
     {
         title: "wBus에 오신 것을 환영합니다!",
-        subtitle: "실시간 버스 위치부터 시간표·캠퍼스 셔틀까지 한눈에 확인하세요",
+        subtitle: "실시간 버스 위치부터 시간표·지도 위키까지 한눈에 확인하세요",
     },
     {
         title: "나에게 맞게 빠르게 설정해요",
@@ -167,27 +163,14 @@ export const OnboardingModal: React.FC = () => {
                         <ArrowRight className="w-3.5 h-3.5"/>
                     </button>
                 ) : (
-                    <>
-                        <Link
-                            href={`/?wiki=${encodeURIComponent(YONSEI_MIRAE_WIKI_SLUG)}`}
-                            onClick={() => {
-                                triggerHaptic("light");
-                                closeOnboarding();
-                            }}
-                            className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl text-xs font-bold text-[#003876] dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition"
-                        >
-                            <span>연세대 위키 핀</span>
-                            <ExternalLink className="w-3.5 h-3.5"/>
-                        </Link>
-                        <button
-                            type="button"
-                            onClick={handleComplete}
-                            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#003876] dark:bg-blue-600 text-white text-xs font-black shadow-sm hover:opacity-95 transition cursor-pointer active:scale-95"
-                        >
-                            <Check className="w-3.5 h-3.5"/>
-                            <span>wBus 시작하기</span>
-                        </button>
-                    </>
+                    <button
+                        type="button"
+                        onClick={handleComplete}
+                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#003876] dark:bg-blue-600 text-white text-xs font-black shadow-sm hover:opacity-95 transition cursor-pointer active:scale-95"
+                    >
+                        <Check className="w-3.5 h-3.5"/>
+                        <span>wBus 시작하기</span>
+                    </button>
                 )}
             </div>
         </>
@@ -247,17 +230,17 @@ export const OnboardingModal: React.FC = () => {
                         </div>
 
                         <div
-                            className="p-4 rounded-2xl bg-[#003876]/[0.05] dark:bg-blue-500/10 border border-[#003876]/15 dark:border-blue-400/20 flex items-start gap-3.5">
+                            className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/25 border border-emerald-500/20 flex items-start gap-3.5">
                             <div
-                                className="flex items-center justify-center w-10 h-10 rounded-2xl bg-[#003876] text-white shrink-0">
-                                <GraduationCap className="w-5 h-5"/>
+                                className="flex items-center justify-center w-10 h-10 rounded-2xl bg-emerald-600 text-white shrink-0">
+                                <MapPin className="w-5 h-5"/>
                             </div>
                             <div className="min-w-0 space-y-1">
                                 <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                    연세대 미래캠퍼스 등·하교 맞춤 허브
+                                    지도 위키 핀 &amp; 커뮤니티 버스 정보
                                 </h3>
                                 <p className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
-                                    교내 무료 셔틀과 30·34·34-1번 시내버스의 다음 출발 시각 및 실시간 위치를 시간대에 맞춰 바로 안내합니다.
+                                    정류장·터미널·셔틀 시간표 등 유용한 교통 정보를 지도 핀으로 추가하고 누구나 함께 편집·공유할 수 있습니다.
                                 </p>
                             </div>
                         </div>

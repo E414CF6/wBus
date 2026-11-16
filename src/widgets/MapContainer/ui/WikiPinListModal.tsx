@@ -3,25 +3,20 @@
 import React, {useMemo, useState} from "react";
 import {Eye, EyeOff, Lock, MapPin, MapPinPlus, PenLine, Search, X} from "lucide-react";
 
-import {NATIONWIDE_CITIES, useCityContext} from "@entities/city";
-import {useWikiPins, WIKI_CATEGORY_LABELS, type WikiPageSummary} from "@entities/wiki";
+import {useCityContext} from "@entities/city";
+import {useWikiPins, type WikiPageSummary} from "@entities/wiki";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {markModalReplacing, Modal} from "@shared/ui";
 import {matchesHangul} from "@shared/utils/hangul";
 import {triggerHaptic} from "@shared/utils/haptics";
-import {WIKI_CATEGORY_PIN_STYLES} from "../lib/wikiPinTheme";
+import {resolveWikiPinTheme} from "../lib/wikiPinTheme";
 
 export interface WikiPinListModalProps {
     isOpen: boolean;
     onClose: () => void;
     onStartAddPin: () => void;
     onSelectWikiPin: (slug: string, mode?: "read" | "edit") => void;
-}
-
-function resolveCityName(cityCode?: string): string | null {
-    if (!cityCode) return null;
-    return NATIONWIDE_CITIES.find((c) => c.code === cityCode)?.name ?? null;
 }
 
 export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
@@ -47,17 +42,14 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
 
     const pins = useMemo(() => {
         const raw = (data?.pages ?? []).filter(
-            (page) => typeof page.lat === "number" && typeof page.lng === "number"
+            (page) => typeof page.lat === "number" && typeof page.lng === "number",
         );
-        const trimmed = query.trim();
+        const trimmed = query.trim().replace(/^#/, "");
         const filtered = trimmed
             ? raw.filter((page) => {
-                const cityName = resolveCityName(page.cityCode) ?? "";
                 return (
                     matchesHangul(page.title, trimmed) ||
                     matchesHangul(page.subtitle, trimmed) ||
-                    matchesHangul(cityName, trimmed) ||
-                    matchesHangul(WIKI_CATEGORY_LABELS[page.category], trimmed) ||
                     page.tags.some((t) => matchesHangul(t, trimmed))
                 );
             })
@@ -173,7 +165,7 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="핀 이름, 지역, 태그로 검색 (예: 연세대, ㅇㅈ)"
+                        placeholder="제목 또는 #해시태그로 검색"
                         aria-label="위키 핀 검색"
                         className="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#003876]/40 dark:focus:ring-sky-500/40"
                     />
@@ -217,9 +209,7 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                         </div>
                     ) : (
                         pins.map((page) => {
-                            const style = WIKI_CATEGORY_PIN_STYLES[page.category] ?? WIKI_CATEGORY_PIN_STYLES.guide;
-                            const Icon = style.icon;
-                            const cityName = resolveCityName(page.cityCode);
+                            const theme = resolveWikiPinTheme(page.pinColor);
 
                             return (
                                 <div
@@ -232,9 +222,9 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                                         className="flex-1 min-w-0 flex items-start gap-3 text-left cursor-pointer"
                                     >
                                         <div
-                                            className={`flex items-center justify-center w-9 h-9 rounded-xl text-white shrink-0 mt-0.5 shadow-2xs ${style.badgeBg}`}
+                                            className={`flex items-center justify-center w-9 h-9 rounded-xl text-white shrink-0 mt-0.5 shadow-2xs ${theme.badgeBg}`}
                                         >
-                                            <Icon className="w-4 h-4"/>
+                                            <MapPin className="w-4 h-4"/>
                                         </div>
 
                                         <div className="flex-1 min-w-0 space-y-1">
@@ -244,20 +234,23 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                                                     {page.title}
                                                 </span>
                                                 <span
-                                                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-black bg-slate-100 dark:bg-white/10 ${style.pillTextClass}`}>
-                                                    {style.shortLabel}
-                                                </span>
-                                                {cityName && (
-                                                    <span
-                                                        className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-white/[0.06] text-slate-600 dark:text-slate-300">
-                                                        {cityName}
-                                                    </span>
-                                                )}
-                                                <span
                                                     className="px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 dark:bg-white/[0.06] text-slate-500 dark:text-slate-400">
                                                     v{page.version}
                                                 </span>
                                             </div>
+
+                                            {page.tags.length > 0 && (
+                                                <div className="flex flex-wrap items-center gap-1">
+                                                    {page.tags.slice(0, 3).map((tag) => (
+                                                        <span
+                                                            key={tag}
+                                                            className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-white/10 ${theme.pillTextClass}`}
+                                                        >
+                                                            #{tag}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
 
                                             {page.subtitle && (
                                                 <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 line-clamp-1">

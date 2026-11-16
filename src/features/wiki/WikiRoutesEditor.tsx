@@ -14,8 +14,9 @@ export interface WikiRoutesEditorProps {
 export const WikiRoutesEditor: React.FC<WikiRoutesEditorProps> = ({
                                                                       value,
                                                                       onChange,
-                                                                      defaultCityCode = "32020",
+                                                                      defaultCityCode = NATIONWIDE_CITIES[0]?.code ?? "",
                                                                   }) => {
+    const fallbackCityCode = defaultCityCode || NATIONWIDE_CITIES[0]?.code || "";
     const updateRoute = (idx: number, patch: Partial<WikiLinkedRoute>) => {
         onChange(value.map((item, i) => (i === idx ? {...item, ...patch} : item)));
     };
@@ -25,7 +26,7 @@ export const WikiRoutesEditor: React.FC<WikiRoutesEditorProps> = ({
             ...value,
             {
                 routeNo: "",
-                cityCode: defaultCityCode,
+                cityCode: fallbackCityCode,
                 originLabel: "",
                 destLabel: "",
                 description: "",
@@ -59,7 +60,7 @@ export const WikiRoutesEditor: React.FC<WikiRoutesEditorProps> = ({
             <div className="p-4 space-y-3">
                 {value.length === 0 ? (
                     <p className="text-xs font-medium text-slate-500 dark:text-slate-400 text-center py-4">
-                        연결된 시내버스 노선이 없습니다. 노선 번호(예: 30, 34, 34-1)를 추가하면 실시간 위치/시간표 위젯과 연동됩니다.
+                        연결된 시내버스 노선이 없습니다. 노선 번호를 추가하면 실시간 위치/시간표 위젯과 연동됩니다.
                     </p>
                 ) : (
                     value.map((route, idx) => (
@@ -86,7 +87,7 @@ export const WikiRoutesEditor: React.FC<WikiRoutesEditorProps> = ({
                                     type="text"
                                     value={route.routeNo}
                                     onChange={(e) => updateRoute(idx, {routeNo: e.target.value})}
-                                    placeholder="노선 번호 (예: 30, 34-1)"
+                                    placeholder="노선 번호 (예: 100, 30-1)"
                                     className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-black"
                                 />
                                 <select
@@ -114,14 +115,14 @@ export const WikiRoutesEditor: React.FC<WikiRoutesEditorProps> = ({
                                     type="text"
                                     value={route.originLabel ?? ""}
                                     onChange={(e) => updateRoute(idx, {originLabel: e.target.value || undefined})}
-                                    placeholder="기점/시내방향 표시명 (예: 장양리)"
+                                    placeholder="기점 표시명 (선택)"
                                     className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
                                 />
                                 <input
                                     type="text"
                                     value={route.destLabel ?? ""}
                                     onChange={(e) => updateRoute(idx, {destLabel: e.target.value || undefined})}
-                                    placeholder="종점/학교방향 표시명 (예: 연세대 미래캠퍼스)"
+                                    placeholder="종점 표시명 (선택)"
                                     className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
                                 />
                             </div>
@@ -137,7 +138,7 @@ export const WikiRoutesEditor: React.FC<WikiRoutesEditorProps> = ({
                                 type="text"
                                 value={route.viaStops ?? ""}
                                 onChange={(e) => updateRoute(idx, {viaStops: e.target.value || undefined})}
-                                placeholder="주요 경유지 (예: 원주터미널 · 단계동 · 만종역)"
+                                placeholder="주요 경유지 (선택)"
                                 className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
                             />
                             <input

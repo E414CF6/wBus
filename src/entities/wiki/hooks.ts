@@ -2,7 +2,7 @@
 
 import {useCallback, useSyncExternalStore} from "react";
 import useSWR, {mutate as globalMutate} from "swr";
-import type {WikiCategory, WikiIndexData, WikiPageDocument, WikiRevision, WikiRevisionMeta,} from "./types";
+import type {WikiIndexData, WikiPageDocument, WikiRevision, WikiRevisionMeta,} from "./types";
 
 const WIKI_NICKNAME_KEY = "wbus_wiki_nickname_v1";
 
@@ -20,7 +20,6 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 export function useWikiIndex(options?: {
-    category?: WikiCategory | "all";
     cityCode?: string;
     pinsOnly?: boolean;
     query?: string;
@@ -30,9 +29,6 @@ export function useWikiIndex(options?: {
     fallbackData?: WikiIndexData;
 }) {
     const params = new URLSearchParams();
-    if (options?.category && options.category !== "all") {
-        params.set("category", options.category);
-    }
     if (options?.cityCode) {
         params.set("cityCode", options.cityCode);
     }

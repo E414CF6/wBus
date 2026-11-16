@@ -1,6 +1,5 @@
-import {revalidatePath} from "next/cache";
 import {type NextRequest, NextResponse} from "next/server";
-import {WIKI_CATEGORIES, type WikiCategory, WikiCreatePayloadSchema} from "@entities/wiki";
+import {WikiCreatePayloadSchema} from "@entities/wiki";
 import {createWikiPage, enforceWikiRateLimit, listWikiPages, resolveEditorInfo,} from "@entities/wiki/server";
 import {extractClientIp, handleWikiApiError, WIKI_NO_STORE_HEADERS} from "./wikiApiUtils";
 
@@ -8,7 +7,6 @@ export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
     try {
-        const rawCategory = request.nextUrl.searchParams.get("category");
         const query = request.nextUrl.searchParams.get("q") ?? undefined;
         const cityCode = request.nextUrl.searchParams.get("cityCode")?.trim() || undefined;
         const pinsOnlyParam = request.nextUrl.searchParams.get("pinsOnly");
@@ -18,13 +16,7 @@ export async function GET(request: NextRequest) {
         const limit = limitParam ? Number(limitParam) : undefined;
         const offset = offsetParam ? Number(offsetParam) : undefined;
 
-        const category: WikiCategory | "all" =
-            rawCategory && (WIKI_CATEGORIES as readonly string[]).includes(rawCategory)
-                ? (rawCategory as WikiCategory)
-                : "all";
-
         const data = await listWikiPages({
-            category,
             query,
             ...(cityCode ? {cityCode} : {}),
             ...(pinsOnly ? {pinsOnly: true} : {}),
@@ -67,7 +59,7 @@ export async function POST(request: NextRequest) {
             slug: parsed.data.slug,
             title: parsed.data.title,
             subtitle: parsed.data.subtitle,
-            category: parsed.data.category,
+            pinColor: parsed.data.pinColor,
             cityCode: parsed.data.cityCode,
             lat: parsed.data.lat,
             lng: parsed.data.lng,
@@ -79,13 +71,6 @@ export async function POST(request: NextRequest) {
             summary: parsed.data.summary,
             editor,
         });
-
-        try {
-            revalidatePath("/wiki");
-            revalidatePath("/wiki/[slug]", "page");
-        } catch {
-            // Ignore revalidate outside request context
-        }
 
         return NextResponse.json(created, {status: 201, headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {

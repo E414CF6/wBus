@@ -92,11 +92,11 @@ describe("routeWindow utility functions", () => {
     });
 
     describe("cityCode window and activity isolation", () => {
-        it("resolves Wonju route 30 from yonsei_static while non-Wonju route 30 uses default window", () => {
+        it("resolves Wonju route 30 from schedule_json while non-Wonju route 30 uses default window", () => {
             const wonjuWindow = getRouteOperatingWindow("30", "32020");
             const chuncheonWindow = getRouteOperatingWindow("30", "32010");
 
-            expect(wonjuWindow.source).toBe("yonsei_static");
+            expect(wonjuWindow.source).toBe("schedule_json");
             expect(chuncheonWindow.source).toBe("default");
         });
 
@@ -123,14 +123,14 @@ describe("routeWindow utility functions", () => {
 
             const win = getRouteOperatingWindow("WJB251000999", "32020");
             expect(win.routeNo).toBe("30");
-            expect(win.source).toBe("yonsei_static");
+            expect(win.source).toBe("schedule_json");
         });
 
         it("uses routeNoHint when provided and invalidates windows cleanly", () => {
             invalidateRouteWindowScheduleCache();
             const win = getRouteOperatingWindow("WJB251000888", "32020", {routeNoHint: "34"});
             expect(win.routeNo).toBe("34");
-            expect(win.source).toBe("yonsei_static");
+            expect(win.source).toBe("schedule_json");
         });
     });
 });

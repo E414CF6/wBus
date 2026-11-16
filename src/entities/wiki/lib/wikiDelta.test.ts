@@ -12,8 +12,8 @@ function createTestWikiDoc(): WikiPageDocument {
     return {
         slug: "연세대학교 미래캠퍼스",
         title: "연세대학교 미래캠퍼스",
-        subtitle: "캠퍼스 셔틀·시내버스 안내",
-        category: "campus",
+        subtitle: "셔틀·시내버스 안내",
+        pinColor: "navy",
         cityCode: "32020",
         lat: 37.2779,
         lng: 127.9026,
@@ -74,6 +74,7 @@ describe("wikiDelta checkpoint & patch engine", () => {
                 ...prev,
                 version: v,
                 title: v === 4 ? "연세대 미래캠퍼스 (수정)" : prev.title,
+                pinColor: v === 5 ? "teal" : prev.pinColor,
                 lat: v === 6 ? 37.2791 : prev.lat,
                 lng: v === 6 ? 127.9033 : prev.lng,
                 tags: v === 7 ? [...prev.tags, "KTX환승"] : prev.tags,
@@ -104,10 +105,12 @@ describe("wikiDelta checkpoint & patch engine", () => {
         // Verify v1 and v10 are checkpoints and intermediate edits store compact deltas
         expect(stored[0].isCheckpoint).toBe(true);
         expect(stored[9].isCheckpoint).toBe(true);
-        expect(stored[4].isCheckpoint).toBe(false);
-        expect(stored[4].snapshot).toBeNull();
-        // Structured shuttle block wasn't mutated on v5, so fieldsPatch must omit shuttle
-        expect(stored[4].delta?.fieldsPatch).toBeUndefined();
+        expect(stored[2].isCheckpoint).toBe(false);
+        expect(stored[2].snapshot).toBeNull();
+        // Structured fields weren't mutated on v3, so fieldsPatch must be omitted
+        expect(stored[2].delta?.fieldsPatch).toBeUndefined();
+        // pinColor changed on v5 -> compact fieldsPatch only records pinColor
+        expect(stored[4].delta?.fieldsPatch).toEqual({pinColor: "teal"});
 
         // Reconstruct every single version v1..v15 from nearest prior checkpoint
         for (const expected of docs) {

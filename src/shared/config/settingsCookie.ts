@@ -5,7 +5,6 @@ import {setHapticEnabled} from "@shared/utils/haptics";
 export const SETTINGS_COOKIE_NAME = "wbus_settings";
 export const SETTINGS_COOKIE_MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
-export type YonseiDefaultDirection = "AUTO" | "OUTBOUND" | "INBOUND";
 export type LivePollingIntervalMs = 5000 | 10000 | 15000 | 30000;
 export type FontScale = "normal" | "large";
 
@@ -17,8 +16,6 @@ export const LIVE_POLLING_INTERVAL_OPTIONS: readonly LivePollingIntervalMs[] = [
 ];
 
 export interface AppSettings {
-    showYonseiFeatures: boolean;
-    yonseiDefaultDirection: YonseiDefaultDirection;
     defaultDayMode: DayMode;
     autoDetectCity: boolean;
     hapticEnabled: boolean;
@@ -38,8 +35,6 @@ export interface AppSettings {
 }
 
 export const DEFAULT_APP_SETTINGS: AppSettings = {
-    showYonseiFeatures: true,
-    yonseiDefaultDirection: "AUTO",
     defaultDayMode: "AUTO",
     autoDetectCity: true,
     hapticEnabled: true,
@@ -64,18 +59,6 @@ function sanitizeSettings(raw: unknown): AppSettings {
     }
 
     const obj = raw as Record<string, unknown>;
-
-    const showYonseiFeatures: boolean =
-        typeof obj.showYonseiFeatures === "boolean"
-            ? obj.showYonseiFeatures
-            : DEFAULT_APP_SETTINGS.showYonseiFeatures;
-
-    const yonseiDefaultDirection: YonseiDefaultDirection =
-        obj.yonseiDefaultDirection === "AUTO" ||
-        obj.yonseiDefaultDirection === "OUTBOUND" ||
-        obj.yonseiDefaultDirection === "INBOUND"
-            ? obj.yonseiDefaultDirection
-            : DEFAULT_APP_SETTINGS.yonseiDefaultDirection;
 
     const defaultDayMode: DayMode =
         obj.defaultDayMode === "AUTO" ||
@@ -163,8 +146,6 @@ function sanitizeSettings(raw: unknown): AppSettings {
             : DEFAULT_APP_SETTINGS.fontScale;
 
     return {
-        showYonseiFeatures,
-        yonseiDefaultDirection,
         defaultDayMode,
         autoDetectCity,
         hapticEnabled,
@@ -285,18 +266,4 @@ export function clearSettingsCookie(): void {
     if (typeof document !== "undefined") {
         document.cookie = `${SETTINGS_COOKIE_NAME}=; path=/; max-age=0; SameSite=Lax`;
     }
-}
-
-/**
- * Resolves the initial Yonsei campus direction mode based on user preference and current time.
- * - "AUTO": morning (< 12:00) -> "INBOUND" (등교), afternoon/evening (>= 12:00) -> "OUTBOUND" (하교)
- */
-export function resolveInitialCampusDirection(
-    pref: YonseiDefaultDirection,
-    now: Date = new Date()
-): "OUTBOUND" | "INBOUND" {
-    if (pref === "OUTBOUND" || pref === "INBOUND") {
-        return pref;
-    }
-    return now.getHours() < 12 ? "INBOUND" : "OUTBOUND";
 }

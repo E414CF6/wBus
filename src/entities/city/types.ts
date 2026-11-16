@@ -1,6 +1,5 @@
 export interface CityFeatures {
     hasDetailedTimetable: boolean;
-    hasUniversityShuttle: boolean;
     hasRouteVariations: boolean;
     defaultQuickRoutes: string[];
     defaultRoute: string | null;

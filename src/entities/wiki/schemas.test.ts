@@ -1,5 +1,11 @@
 import {describe, expect, it} from "vitest";
-import {isValidWikiSlug, normalizeWikiSlug, WikiCreatePayloadSchema, WikiEditPayloadSchema,} from "./schemas";
+import {
+    isValidWikiSlug,
+    normalizeWikiSlug,
+    WikiCreatePayloadSchema,
+    WikiEditPayloadSchema,
+    WikiPinPatchPayloadSchema,
+} from "./schemas";
 
 describe("wiki schemas and slug helpers", () => {
     it("normalizes and validates title-matching Korean + alphanumeric slugs while blocking reserved words", () => {
@@ -18,10 +24,16 @@ describe("wiki schemas and slug helpers", () => {
 
         const created = WikiCreatePayloadSchema.parse({
             title: "연세대   미래캠퍼스 정문",
-            category: "guide",
+            pinColor: "blue",
         });
         expect(created.title).toBe("연세대 미래캠퍼스 정문");
         expect(created.slug).toBe("연세대 미래캠퍼스 정문");
+        expect(created.pinColor).toBe("blue");
+
+        const defaulted = WikiCreatePayloadSchema.parse({
+            title: "기본 색상 테스트",
+        });
+        expect(defaulted.pinColor).toBe("navy");
     });
 
     it("validates shuttle HH:MM format in edit payloads", () => {
@@ -29,7 +41,7 @@ describe("wiki schemas and slug helpers", () => {
             baseVersion: 1,
             title: "테스트 문서",
             subtitle: "",
-            category: "guide",
+            pinColor: "emerald",
             tags: ["원주"],
             linkedRoutes: [],
             shuttle: {
@@ -57,7 +69,7 @@ describe("wiki schemas and slug helpers", () => {
         const invalidTime = WikiCreatePayloadSchema.safeParse({
             slug: "bad-time-test",
             title: "테스트 문서",
-            category: "guide",
+            pinColor: "navy",
             shuttle: {
                 enabled: true,
                 title: "셔틀",
@@ -82,7 +94,7 @@ describe("wiki schemas and slug helpers", () => {
     it("validates paired map pin lat/lng coordinates and Korean bounds", () => {
         const withCoords = WikiCreatePayloadSchema.safeParse({
             title: "원주 중앙시장 정류장",
-            category: "stop",
+            pinColor: "teal",
             lat: 37.3489,
             lng: 127.9512,
         });
@@ -94,7 +106,6 @@ describe("wiki schemas and slug helpers", () => {
 
         const missingLng = WikiCreatePayloadSchema.safeParse({
             title: "좌표 한쪽 누락",
-            category: "stop",
             lat: 37.3489,
         });
         expect(missingLng.success).toBe(false);
@@ -102,10 +113,41 @@ describe("wiki schemas and slug helpers", () => {
         const outOfBounds = WikiEditPayloadSchema.safeParse({
             baseVersion: 1,
             title: "범위 초과 테스트",
-            category: "stop",
             lat: 10,
             lng: 127.9,
         });
         expect(outOfBounds.success).toBe(false);
+    });
+
+    it("validates WikiPinPatchPayloadSchema for move and color edits", () => {
+        expect(
+            WikiPinPatchPayloadSchema.safeParse({
+                baseVersion: 2,
+                pinColor: "rose",
+            }).success,
+        ).toBe(true);
+
+        expect(
+            WikiPinPatchPayloadSchema.safeParse({
+                baseVersion: 2,
+                lat: 37.3489,
+                lng: 127.9512,
+            }).success,
+        ).toBe(true);
+
+        // Must provide at least one field (color or coords)
+        expect(
+            WikiPinPatchPayloadSchema.safeParse({
+                baseVersion: 2,
+            }).success,
+        ).toBe(false);
+
+        // Unpaired coords rejected
+        expect(
+            WikiPinPatchPayloadSchema.safeParse({
+                baseVersion: 2,
+                lat: 37.3489,
+            }).success,
+        ).toBe(false);
     });
 });

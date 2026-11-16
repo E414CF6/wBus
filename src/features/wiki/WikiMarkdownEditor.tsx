@@ -13,7 +13,7 @@ export interface WikiMarkdownEditorProps {
 export const WikiMarkdownEditor: React.FC<WikiMarkdownEditorProps> = ({
                                                                           value,
                                                                           onChange,
-                                                                          cityCode = "32020",
+                                                                          cityCode = "",
                                                                       }) => {
     const [mode, setMode] = useState<"write" | "preview">("write");
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -51,17 +51,17 @@ export const WikiMarkdownEditor: React.FC<WikiMarkdownEditorProps> = ({
         {
             label: "위키 링크",
             icon: <BookOpen className="w-3.5 h-3.5"/>,
-            snippet: "[[연세대학교 미래캠퍼스|연세대 미래캠퍼스]]",
+            snippet: "[[문서 제목|표시 텍스트]]",
         },
         {
             label: "노선 배지",
             icon: <Bus className="w-3.5 h-3.5"/>,
-            snippet: `[[route:${cityCode}:30]]`,
+            snippet: cityCode ? `[[route:${cityCode}:100]]` : "[[route:도시코드:노선번호]]",
         },
         {
             label: "로드뷰",
             icon: <Camera className="w-3.5 h-3.5"/>,
-            snippet: "[[roadview:37.283476,127.900657,미래관 승강장]]",
+            snippet: "[[roadview:37.5665,126.9780,정류장 위치]]",
         },
     ];
 

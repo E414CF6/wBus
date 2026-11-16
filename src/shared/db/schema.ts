@@ -12,10 +12,10 @@ import {
 } from "drizzle-orm/pg-core";
 import type {
     WikiBoardingStop,
-    WikiCategory,
     WikiDiffStats,
     WikiLinkedRoute,
     WikiPageDocument,
+    WikiPinColor,
     WikiRevisionDelta,
     WikiShuttleBlock,
 } from "../../entities/wiki/types";
@@ -25,7 +25,7 @@ export const wikiPages = pgTable(
     {
         slug: text("slug").primaryKey(),
         subtitle: text("subtitle").notNull().default(""),
-        category: text("category").$type<WikiCategory>().notNull(),
+        pinColor: text("pin_color").$type<WikiPinColor>().notNull().default("navy"),
         cityCode: text("city_code"),
         lat: doublePrecision("lat"),
         lng: doublePrecision("lng"),
@@ -45,7 +45,6 @@ export const wikiPages = pgTable(
     },
     (table) => [
         index("wiki_pages_pinned_updated_idx").on(table.pinned, table.updatedAt),
-        index("wiki_pages_category_idx").on(table.category),
         index("wiki_pages_lat_lng_idx").on(table.lat, table.lng),
         index("wiki_pages_slug_trgm_idx").using("gin", table.slug.op("gin_trgm_ops")),
         index("wiki_pages_tags_text_trgm_idx").using("gin", table.tagsText.op("gin_trgm_ops")),

@@ -2,6 +2,7 @@
 
 import React from "react";
 import {BookPlus} from "lucide-react";
+import {useCityContext} from "@entities/city";
 import {mutateAllWikiQueries, type WikiPageDocument} from "@entities/wiki";
 import {WikiCreateForm} from "@features/wiki";
 import {Modal} from "@shared/ui";
@@ -22,11 +23,14 @@ export const WikiCreateModal: React.FC<WikiCreateModalProps> = ({
                                                                     initialSlug,
                                                                     initialLat,
                                                                     initialLng,
-                                                                    initialCityCode = "32020",
+                                                                    initialCityCode,
                                                                     onClose,
                                                                     onCreated,
                                                                     onRepickLocation,
                                                                 }) => {
+    const {currentCity} = useCityContext();
+    const resolvedCityCode = initialCityCode ?? currentCity.code;
+
     const modalIcon = (
         <div
             className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-emerald-600 text-white shadow-sm shrink-0">
@@ -39,30 +43,33 @@ export const WikiCreateModal: React.FC<WikiCreateModalProps> = ({
             isOpen={isOpen}
             onClose={onClose}
             title="지도 핀으로 새 위키 만들기"
-            subtitle="지정한 위치에 정류장·캠퍼스·노선 팁 문서를 바로 생성합니다"
+            subtitle="지정한 위치에 새 위키 문서를 생성합니다"
             icon={modalIcon}
-            maxWidth="2xl"
-            height="tall"
+            maxWidth="full"
+            height="full"
             zIndex="z-[125]"
             modalId="wiki-create"
             ariaLabel="새 위키 문서 만들기 모달"
         >
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 custom-scrollbar select-text">
-                {isOpen && (
-                    <WikiCreateForm
-                        key={`${initialLat ?? "none"}-${initialLng ?? "none"}-${initialSlug ?? ""}`}
-                        initialSlug={initialSlug}
-                        initialLat={initialLat}
-                        initialLng={initialLng}
-                        initialCityCode={initialCityCode}
-                        onPickOnMap={onRepickLocation}
-                        onCreated={async (created) => {
-                            await mutateAllWikiQueries().catch(() => []);
-                            onCreated(created);
-                        }}
-                        onCancel={onClose}
-                    />
-                )}
+            <div
+                className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 lg:px-8 custom-scrollbar select-text">
+                <div className="max-w-5xl mx-auto">
+                    {isOpen && (
+                        <WikiCreateForm
+                            key={`${initialLat ?? "none"}-${initialLng ?? "none"}-${initialSlug ?? ""}`}
+                            initialSlug={initialSlug}
+                            initialLat={initialLat}
+                            initialLng={initialLng}
+                            initialCityCode={resolvedCityCode}
+                            onPickOnMap={onRepickLocation}
+                            onCreated={async (created) => {
+                                await mutateAllWikiQueries().catch(() => []);
+                                onCreated(created);
+                            }}
+                            onCancel={onClose}
+                        />
+                    )}
+                </div>
             </div>
         </Modal>
     );

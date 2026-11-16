@@ -1,21 +1,20 @@
 import {z} from "zod";
-import type {WikiCategory} from "./types";
+import type {WikiPinColor} from "./types";
 
-export const WIKI_CATEGORIES: readonly WikiCategory[] = [
-    "campus",
-    "route",
-    "stop",
-    "terminal",
-    "guide",
+export const WIKI_PIN_COLORS: readonly WikiPinColor[] = [
+    "navy",
+    "blue",
+    "emerald",
+    "teal",
+    "indigo",
+    "violet",
+    "amber",
+    "rose",
 ] as const;
 
-export const WIKI_CATEGORY_LABELS: Record<WikiCategory, string> = {
-    campus: "캠퍼스 허브",
-    route: "노선 가이드",
-    stop: "정류장 · 환승",
-    terminal: "터미널 · 역",
-    guide: "이용 팁 · 안내",
-};
+export const DEFAULT_WIKI_PIN_COLOR: WikiPinColor = "navy";
+
+export const WikiPinColorSchema = z.enum(WIKI_PIN_COLORS);
 
 export const RESERVED_WIKI_SLUGS = new Set([
     "new",
@@ -49,18 +48,6 @@ function stripControlChars(str: string): string {
         }
     }
     return out;
-}
-
-export const YONSEI_MIRAE_WIKI_SLUG = "연세대학교 미래캠퍼스";
-
-export const LEGACY_WIKI_SLUG_ALIASES: Record<string, string> = {
-    "yonsei-mirae": YONSEI_MIRAE_WIKI_SLUG,
-};
-
-export function resolveLegacyWikiSlug(rawSlug: string): string | null {
-    if (!rawSlug || typeof rawSlug !== "string") return null;
-    const key = rawSlug.trim().toLowerCase();
-    return LEGACY_WIKI_SLUG_ALIASES[key] ?? null;
 }
 
 export function normalizeWikiSlug(raw: string): string {
@@ -172,7 +159,7 @@ export const WikiPageDocumentSchema = z.object({
     slug: z.string().trim().refine(isValidWikiSlug, "유효하지 않은 위키 슬러그입니다"),
     title: z.string().trim().min(2, "제목은 2자 이상이어야 합니다").max(80),
     subtitle: z.string().trim().max(160).default(""),
-    category: z.enum(["campus", "route", "stop", "terminal", "guide"]),
+    pinColor: WikiPinColorSchema.default(DEFAULT_WIKI_PIN_COLOR),
     cityCode: z.string().trim().regex(/^\d{2,10}$/).optional().or(z.literal("")).transform((v) => (v === "" ? undefined : v)),
     lat: OptionalLatSchema,
     lng: OptionalLngSchema,
@@ -200,7 +187,7 @@ export const WikiEditPayloadSchema = z.object({
             "제목에 사용할 수 없는 예약어이거나 슬러그(2~80자)로 변환할 수 없습니다"
         ),
     subtitle: z.string().trim().max(160).default(""),
-    category: z.enum(["campus", "route", "stop", "terminal", "guide"]),
+    pinColor: WikiPinColorSchema.default(DEFAULT_WIKI_PIN_COLOR),
     cityCode: z.string().trim().regex(/^\d{2,10}$/).optional().or(z.literal("")).transform((v) => (v === "" ? undefined : v)),
     lat: OptionalLatSchema,
     lng: OptionalLngSchema,
@@ -226,7 +213,7 @@ export const WikiCreatePayloadSchema = z.object({
             "제목은 2~80자여야 하며 예약어(new, edit, api 등)나 URL 특수문자를 제외해 주세요"
         ),
     subtitle: z.string().trim().max(160).default(""),
-    category: z.enum(["campus", "route", "stop", "terminal", "guide"]),
+    pinColor: WikiPinColorSchema.default(DEFAULT_WIKI_PIN_COLOR),
     cityCode: z.string().trim().regex(/^\d{2,10}$/).optional().or(z.literal("")).transform((v) => (v === "" ? undefined : v)),
     lat: OptionalLatSchema,
     lng: OptionalLngSchema,
@@ -249,6 +236,19 @@ export const WikiCreatePayloadSchema = z.object({
             slug: derivedSlug,
         };
     });
+
+export const WikiPinPatchPayloadSchema = z.object({
+    baseVersion: z.number().int().min(1),
+    lat: OptionalLatSchema,
+    lng: OptionalLngSchema,
+    pinColor: WikiPinColorSchema.optional(),
+    nickname: z.string().trim().max(24).optional().default(""),
+    summary: z.string().trim().max(160).optional().default(""),
+}).refine(hasPairedCoordinates, "지도 핀 좌표는 위도와 경도를 함께 지정해야 합니다")
+    .refine(
+        (d) => (d.lat !== undefined && d.lng !== undefined) || d.pinColor !== undefined,
+        "변경할 핀 위치 또는 핀 색상을 지정해 주세요."
+    );
 
 export const WikiRevertPayloadSchema = z.object({
     targetVersion: z.number().int().min(1),

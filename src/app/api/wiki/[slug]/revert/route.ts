@@ -1,4 +1,3 @@
-import {revalidatePath} from "next/cache";
 import {type NextRequest, NextResponse} from "next/server";
 import {isValidWikiSlug, WikiRevertPayloadSchema} from "@entities/wiki";
 import {enforceWikiRateLimit, isWikiAdminAuthorized, resolveEditorInfo, revertWikiPage,} from "@entities/wiki/server";
@@ -43,13 +42,6 @@ export async function POST(
             summary: parsed.data.summary,
             isAdmin,
         });
-
-        try {
-            revalidatePath("/wiki");
-            revalidatePath("/wiki/[slug]", "page");
-        } catch {
-            // Ignore
-        }
 
         return NextResponse.json(result, {headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {

@@ -6,7 +6,13 @@ import React, {useCallback, useEffect, useMemo, useState} from "react";
 
 import {useBusRouteMap} from "@entities/route/hooks";
 import {useCityContext, useCityFeatures} from "@entities/city";
-import {type WikiPageDocument} from "@entities/wiki";
+import {
+    mutateAllWikiQueries,
+    useWikiNickname,
+    type WikiPageDocument,
+    type WikiPageSummary,
+    type WikiPinColor,
+} from "@entities/wiki";
 
 import {useBusSortedList} from "@features/live-tracking/useBusSortedList";
 import {MapRouteHeader} from "@features/map-view/MapRouteHeader";
@@ -20,6 +26,7 @@ import {BottomNav} from "@widgets/BottomNav";
 import {WikiPinModal} from "@widgets/MapContainer/ui/WikiPinModal";
 import {WikiPinListModal} from "@widgets/MapContainer/ui/WikiPinListModal";
 import {WikiCreateModal} from "@widgets/MapContainer/ui/WikiCreateModal";
+import {WikiPinContextMenu} from "@widgets/MapContainer/ui/WikiPinContextMenu";
 import {useAppNavigation} from "./hooks/useAppNavigation";
 
 const MapWrapper = dynamic(() => import("@widgets/MapContainer/MapWrapper"), {
@@ -65,6 +72,7 @@ function MapAppShell() {
     const {hasDetailedTimetable, defaultQuickRoutes, defaultRoute} = useCityFeatures();
     const {map} = useAppMapContext();
     const {settings, updateSettings} = useAppSettings();
+    const {storedNickname} = useWikiNickname();
 
     // Centered floating RouteScheduleModal state (for cities with detailed timetable)
     const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
@@ -86,6 +94,18 @@ function MapAppShell() {
     }
     const [isWikiPinListOpen, setIsWikiPinListOpen] = useState(false);
     const [pendingPinCoords, setPendingPinCoords] = useState<{ lat: number; lng: number } | null>(null);
+    const [movingPinTarget, setMovingPinTarget] = useState<{
+        slug: string;
+        title: string;
+        version: number;
+        pinColor: WikiPinColor;
+    } | null>(null);
+    const [pinContextMenu, setPinContextMenu] = useState<{
+        page: WikiPageSummary;
+        position: { x: number; y: number };
+    } | null>(null);
+    const [isUpdatingPinMeta, setIsUpdatingPinMeta] = useState(false);
+    const [pinActionError, setPinActionError] = useState<string | null>(null);
     const [createWikiDraft, setCreateWikiDraft] = useState<{
         lat?: number;
         lng?: number;
@@ -93,12 +113,19 @@ function MapAppShell() {
     } | null>(null);
     const isPinPlacementMode = pendingPinCoords !== null;
 
-    const handleStartAddWikiPin = useCallback(() => {
+    const closeMapPopupsForWiki = useCallback(() => {
         if (typeof window !== "undefined") {
             window.dispatchEvent(new CustomEvent("wbus:close-stop-popup"));
             window.dispatchEvent(new CustomEvent("wbus:close-timetable"));
             window.dispatchEvent(new CustomEvent("wbus:close-bus-list"));
         }
+        setPinContextMenu(null);
+        setPinActionError(null);
+    }, []);
+
+    const handleStartAddWikiPin = useCallback(() => {
+        closeMapPopupsForWiki();
+        setMovingPinTarget(null);
         setIsWikiPinListOpen(false);
         setActiveWikiModal(null);
         setIsScheduleModalOpen(false);
@@ -110,19 +137,135 @@ function MapAppShell() {
             lat: center?.lat ?? currentCity.lat,
             lng: center?.lng ?? currentCity.lng,
         });
-    }, [map, currentCity.lat, currentCity.lng, settings.showWikiPins, updateSettings]);
+    }, [closeMapPopupsForWiki, map, currentCity.lat, currentCity.lng, settings.showWikiPins, updateSettings]);
 
-    const handleConfirmPinLocation = useCallback(() => {
+    const handleStartMovePin = useCallback(
+        (target: {
+            slug: string;
+            title: string;
+            version: number;
+            pinColor: WikiPinColor;
+            lat?: number | null;
+            lng?: number | null
+        }) => {
+            closeMapPopupsForWiki();
+            setIsWikiPinListOpen(false);
+            setActiveWikiModal(null);
+            setIsScheduleModalOpen(false);
+            if (!settings.showWikiPins) {
+                updateSettings({showWikiPins: true});
+            }
+            const center = map?.getCenter();
+            setMovingPinTarget({
+                slug: target.slug,
+                title: target.title,
+                version: target.version,
+                pinColor: target.pinColor,
+            });
+            setPendingPinCoords({
+                lat: typeof target.lat === "number" ? target.lat : (center?.lat ?? currentCity.lat),
+                lng: typeof target.lng === "number" ? target.lng : (center?.lng ?? currentCity.lng),
+            });
+        },
+        [closeMapPopupsForWiki, map, currentCity.lat, currentCity.lng, settings.showWikiPins, updateSettings],
+    );
+
+    const handleChangePinColor = useCallback(
+        async (page: WikiPageSummary, nextColor: WikiPinColor) => {
+            if (isUpdatingPinMeta || page.pinColor === nextColor) return;
+            setIsUpdatingPinMeta(true);
+            setPinActionError(null);
+            try {
+                const res = await fetch(`/api/wiki/${encodeURIComponent(page.slug)}/pin`, {
+                    method: "PATCH",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        baseVersion: page.version,
+                        pinColor: nextColor,
+                        nickname: storedNickname,
+                    }),
+                });
+                const body = await res.json().catch(() => null);
+                if (!res.ok) {
+                    setPinActionError(body?.error || `핀 색상을 변경하지 못했습니다. (${res.status})`);
+                    return;
+                }
+                const updated = body?.document as WikiPageDocument | undefined;
+                if (updated) {
+                    setPinContextMenu((prev) =>
+                        prev && prev.page.slug === page.slug
+                            ? {
+                                ...prev,
+                                page: {
+                                    ...prev.page,
+                                    version: updated.version,
+                                    pinColor: updated.pinColor,
+                                },
+                            }
+                            : prev,
+                    );
+                }
+                await mutateAllWikiQueries().catch(() => []);
+            } catch (err) {
+                setPinActionError(
+                    err instanceof Error ? err.message : "핀 색상 변경 중 오류가 발생했습니다.",
+                );
+            } finally {
+                setIsUpdatingPinMeta(false);
+            }
+        },
+        [isUpdatingPinMeta, storedNickname],
+    );
+
+    const handleConfirmPinLocation = useCallback(async () => {
         if (!pendingPinCoords) return;
+
+        if (movingPinTarget) {
+            if (isUpdatingPinMeta) return;
+            setIsUpdatingPinMeta(true);
+            setPinActionError(null);
+            try {
+                const res = await fetch(
+                    `/api/wiki/${encodeURIComponent(movingPinTarget.slug)}/pin`,
+                    {
+                        method: "PATCH",
+                        headers: {"Content-Type": "application/json"},
+                        body: JSON.stringify({
+                            baseVersion: movingPinTarget.version,
+                            lat: pendingPinCoords.lat,
+                            lng: pendingPinCoords.lng,
+                            nickname: storedNickname,
+                        }),
+                    },
+                );
+                const body = await res.json().catch(() => null);
+                if (!res.ok) {
+                    setPinActionError(body?.error || `핀 위치를 이동하지 못했습니다. (${res.status})`);
+                    return;
+                }
+                await mutateAllWikiQueries().catch(() => []);
+                setMovingPinTarget(null);
+                setPendingPinCoords(null);
+            } catch (err) {
+                setPinActionError(
+                    err instanceof Error ? err.message : "핀 위치 이동 중 오류가 발생했습니다.",
+                );
+            } finally {
+                setIsUpdatingPinMeta(false);
+            }
+            return;
+        }
+
         setCreateWikiDraft({
             lat: pendingPinCoords.lat,
             lng: pendingPinCoords.lng,
         });
         setPendingPinCoords(null);
-    }, [pendingPinCoords]);
+    }, [pendingPinCoords, movingPinTarget, isUpdatingPinMeta, storedNickname]);
 
     const handleCancelPinPlacement = useCallback(() => {
         setPendingPinCoords(null);
+        setMovingPinTarget(null);
     }, []);
 
     const handleWikiCreated = useCallback(
@@ -156,6 +299,7 @@ function MapAppShell() {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") {
                 setPendingPinCoords(null);
+                setMovingPinTarget(null);
             }
         };
         window.addEventListener("keydown", handleKeyDown);
@@ -287,18 +431,57 @@ function MapAppShell() {
                         enabled={settings.showWikiPins}
                         selectedSlug={activeWikiModal?.slug ?? null}
                         isPinPlacementMode={isPinPlacementMode}
-                        onSelectWikiPin={(slug) => setActiveWikiModal({slug, mode: "read"})}
+                        onSelectWikiPin={(slug) => {
+                            setPinContextMenu(null);
+                            setActiveWikiModal({slug, mode: "read"});
+                        }}
+                        onPinContextMenu={(page, position) => {
+                            setPinContextMenu({page, position});
+                        }}
                     />
                     {pendingPinCoords && (
                         <WikiPinPlacementOverlay
+                            mode={movingPinTarget ? "move" : "create"}
+                            targetTitle={movingPinTarget?.title}
+                            pinColor={movingPinTarget?.pinColor}
+                            isSubmitting={isUpdatingPinMeta}
                             coords={pendingPinCoords}
                             onChangeCoords={setPendingPinCoords}
-                            onConfirm={handleConfirmPinLocation}
+                            onConfirm={() => void handleConfirmPinLocation()}
                             onCancel={handleCancelPinPlacement}
                         />
                     )}
                 </MapWrapper>
             </div>
+
+            {pinActionError && (
+                <div
+                    role="alert"
+                    style={{top: "var(--wbus-header-bottom, 5.5rem)"}}
+                    className="fixed left-1/2 -translate-x-1/2 z-[140] px-4 py-2 rounded-full bg-rose-600 text-white text-xs font-extrabold shadow-xl flex items-center gap-2 max-w-[calc(100vw-2rem)]"
+                >
+                    <span className="truncate">{pinActionError}</span>
+                    <button
+                        type="button"
+                        onClick={() => setPinActionError(null)}
+                        className="px-1.5 py-0.5 rounded-full bg-white/20 hover:bg-white/30 text-[10px] font-black shrink-0 cursor-pointer"
+                    >
+                        닫기
+                    </button>
+                </div>
+            )}
+
+            <WikiPinContextMenu
+                page={pinContextMenu?.page ?? null}
+                position={pinContextMenu?.position ?? null}
+                isUpdating={isUpdatingPinMeta}
+                onClose={() => setPinContextMenu(null)}
+                onRead={(slug) => setActiveWikiModal({slug, mode: "read"})}
+                onEdit={(slug) => setActiveWikiModal({slug, mode: "edit"})}
+                onHistory={(slug) => setActiveWikiModal({slug, mode: "history"})}
+                onMovePin={(page) => handleStartMovePin(page)}
+                onChangeColor={(page, color) => void handleChangePinColor(page, color)}
+            />
 
             {/* 2. Centered Floating Full Route Timetable Modal (Cities with detailed timetable) */}
             {hasDetailedTimetable && (
@@ -329,6 +512,16 @@ function MapAppShell() {
                 onClose={() => setActiveWikiModal(null)}
                 onSelectSlug={(nextSlug) => setActiveWikiModal({slug: nextSlug, mode: "read"})}
                 onSelectRouteOnMap={handleSelectRouteFromWiki}
+                onRequestMovePin={(doc) =>
+                    handleStartMovePin({
+                        slug: doc.slug,
+                        title: doc.title,
+                        version: doc.version,
+                        pinColor: doc.pinColor,
+                        lat: doc.lat,
+                        lng: doc.lng,
+                    })
+                }
                 onCreateNewFromSlug={(missingSlug) => {
                     const center = map?.getCenter();
                     setActiveWikiModal(null);

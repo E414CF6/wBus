@@ -1,6 +1,14 @@
 import type {ShuttleInboundItem, ShuttleOutboundItem, ShuttleStopLocation} from "@entities/schedule";
 
-export type WikiCategory = "campus" | "route" | "stop" | "terminal" | "guide";
+export type WikiPinColor =
+    | "navy"
+    | "blue"
+    | "emerald"
+    | "teal"
+    | "indigo"
+    | "violet"
+    | "amber"
+    | "rose";
 
 export interface WikiEditorInfo {
     nickname: string;
@@ -43,7 +51,7 @@ export interface WikiPageDocument {
     slug: string;
     title: string;
     subtitle: string;
-    category: WikiCategory;
+    pinColor: WikiPinColor;
     cityCode?: string;
     lat?: number;
     lng?: number;
@@ -90,7 +98,7 @@ export interface WikiPageSummary {
     slug: string;
     title: string;
     subtitle: string;
-    category: WikiCategory;
+    pinColor: WikiPinColor;
     cityCode?: string;
     lat?: number;
     lng?: number;
@@ -108,7 +116,7 @@ export interface WikiPageSummary {
 export interface WikiRecentChangeItem {
     slug: string;
     title: string;
-    category: WikiCategory;
+    pinColor: WikiPinColor;
     version: number;
     summary: string;
     editor: WikiEditorInfo;
@@ -128,7 +136,7 @@ export interface WikiMarkdownPatch {
 export interface WikiFieldsPatch {
     title?: string;
     subtitle?: string;
-    category?: WikiCategory;
+    pinColor?: WikiPinColor;
     cityCode?: string | null;
     lat?: number | null;
     lng?: number | null;

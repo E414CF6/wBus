@@ -104,8 +104,12 @@ export function computeStructuredChanges(
 
     const changes: string[] = [];
 
-    if (before.title !== after.title || before.subtitle !== after.subtitle || before.category !== after.category) {
-        changes.push("문서 제목·분류 수정");
+    if (before.title !== after.title || before.subtitle !== after.subtitle) {
+        changes.push("문서 제목·부제목 수정");
+    }
+
+    if (before.pinColor !== after.pinColor) {
+        changes.push("핀 색상 변경");
     }
 
     if ((before.lat ?? null) !== (after.lat ?? null) || (before.lng ?? null) !== (after.lng ?? null)) {
@@ -163,7 +167,7 @@ export function hasWikiContentChanged(
     return (
         before.title !== after.title ||
         before.subtitle !== after.subtitle ||
-        before.category !== after.category ||
+        before.pinColor !== after.pinColor ||
         (before.cityCode ?? "") !== (after.cityCode ?? "") ||
         (before.lat ?? null) !== (after.lat ?? null) ||
         (before.lng ?? null) !== (after.lng ?? null) ||

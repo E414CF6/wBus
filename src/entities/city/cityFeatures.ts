@@ -12,7 +12,6 @@ export function getCityFeatures(cityCode?: string | null): CityFeatures {
 
     return {
         hasDetailedTimetable: isWonju,
-        hasUniversityShuttle: isWonju,
         hasRouteVariations: isWonju,
         defaultQuickRoutes: isWonju ? ["30", "34", "34-1"] : [],
         defaultRoute: isWonju ? "30" : null,

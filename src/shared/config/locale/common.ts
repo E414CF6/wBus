@@ -66,7 +66,6 @@ export const NAV_STRINGS = {
 export const BOTTOM_NAV_STRINGS = {
     TAB_SCHEDULE: "시간표",
     TAB_MAP: "실시간 지도",
-    TAB_YONSEI: "연세대",
     TAB_ALL: "전체",
     RUNNING_LIST_BTN: (count: number) => `운행 목록 (${count})`,
     RUNNING_LIST_TITLE: (route: string, count: number) => `${route}번 노선 운행 목록 (${count}대)`,
@@ -151,9 +150,9 @@ export const METADATA_STRINGS = {
     SITE_NAME: "wBus",
     TITLE: "wBus",
     TITLE_TEMPLATE: "wBus / %s",
-    DESC: "원주시 시내버스 실시간 위치 지도, 정류장 도착 정보 및 연세대 미래캠퍼스(30번·34번·34-1번·셔틀) 노선별 최신 운행 시간표",
-    SHORT_DESC: "원주 시내버스 실시간 도착 정보 & 시간표",
-    KEYWORDS: ["wBus", "더블유버스", "원주버스", "원주시내버스", "원주 버스 실시간", "원주 버스 시간표", "원주 버스 위치", "연세대 미래캠퍼스 버스", "연세대 미래캠 버스", "연세대 셔틀버스", "30번 버스", "34번 버스", "34-1번 버스", "원주시 교통정보",],
+    DESC: "전국 시내버스 실시간 위치 지도, 정류장 도착 정보, 운행 시간표 및 커뮤니티 지도 위키",
+    SHORT_DESC: "실시간 시내버스 도착 정보 & 지도 위키",
+    KEYWORDS: ["wBus", "더블유버스", "실시간 버스", "시내버스 시간표", "버스 위치", "정류장 도착정보", "버스 위키"],
     OG_LOCALE: APP_LOCALE.OG_LOCALE,
     AUTHOR: "wBus",
 } as const;
@@ -171,7 +170,6 @@ export const FOOTER_STRINGS = {
     DESCRIPTION: "시내버스 정보 서비스",
     LINKS: [
         {label: "실시간 지도", href: "/"},
-        {label: "커뮤니티 위키", href: "/wiki"},
         {label: "이용약관", href: "/terms"},
         {label: "개인정보처리방침", href: "/privacy"},
     ],

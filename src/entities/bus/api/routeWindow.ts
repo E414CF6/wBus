@@ -3,7 +3,6 @@ import "server-only";
 import fs from "fs";
 import path from "path";
 
-import {YONSEI_STATIC_TIMETABLES} from "@entities/schedule/yonseiStaticTimetables";
 import {distributedCache} from "@shared/cache/distributedCache";
 import {artifactStore} from "@shared/cache/artifactStore";
 // Re-export canonical time utilities
@@ -29,7 +28,7 @@ export interface RouteOperatingWindow {
     lastBus: string;
     startMinutes: number; // e.g. 340 (05:40)
     endMinutes: number;   // e.g. 1445 (24:05)
-    source: "yonsei_static" | "schedule_json" | "default";
+    source: "schedule_json" | "default";
 }
 
 export interface ServiceStatus {
@@ -326,38 +325,7 @@ const nightRouteStrategy: CityWindowStrategy = {
 
 const wonjuStrategy: CityWindowStrategy = {
     resolve(routeNo: string, now: Date = new Date()): RouteOperatingWindow | null {
-        // 1. Check Yonsei Static Timetables (30, 34, 34-1) - Wonju only
-        const yonseiKey = routeNo as keyof typeof YONSEI_STATIC_TIMETABLES;
-        if (YONSEI_STATIC_TIMETABLES[yonseiKey]) {
-            const routeData = YONSEI_STATIC_TIMETABLES[yonseiKey];
-            let earliestMin = Infinity;
-            let latestMin = -Infinity;
-
-            // Check both weekday & vacation origins/destinations
-            [routeData.weekday, routeData.vacation].forEach((modeData) => {
-                if (!modeData) return;
-                [...modeData.origin, ...modeData.dest].forEach((timeStr) => {
-                    const min = parseTimeToMinutes(timeStr);
-                    if (min !== null) {
-                        if (min < earliestMin) earliestMin = min;
-                        if (min > latestMin) latestMin = min;
-                    }
-                });
-            });
-
-            if (earliestMin !== Infinity && latestMin !== -Infinity) {
-                return {
-                    routeNo,
-                    firstBus: formatMinutesToTime(earliestMin),
-                    lastBus: formatMinutesToTime(latestMin),
-                    startMinutes: Math.max(0, earliestMin - PRE_DEPARTURE_BUFFER_MINUTES),
-                    endMinutes: latestMin + POST_DEPARTURE_BUFFER_MINUTES,
-                    source: "yonsei_static",
-                };
-            }
-        }
-
-        // 2. Check full schedule.json dataset for Wonju routes
+        // Check full schedule.json dataset for Wonju routes
         const schedule = getScheduleData();
         if (schedule?.routes) {
             const weekend = isKstWeekend(now);

@@ -20,11 +20,11 @@ describe("wikiMarkdown parser", () => {
 
     it("parses custom wiki, route, and roadview tokens inline", () => {
         const nodes = parseInlineMarkdown(
-            "[[yonsei-mirae|연세대 허브]] 타고 [[원주역 (무실동 KTX)|원주역]] [[route:32020:30]] [[roadview:37.2834,127.9006,미래관]]"
+            "[[연세대학교 미래캠퍼스|연세대 안내]] 타고 [[원주역 (무실동 KTX)|원주역]] [[route:32020:30]] [[roadview:37.2834,127.9006,미래관]]"
         );
         expect(
             nodes.some(
-                (n) => n.type === "wikilink" && n.slug === "연세대학교 미래캠퍼스" && n.label === "연세대 허브"
+                (n) => n.type === "wikilink" && n.slug === "연세대학교 미래캠퍼스" && n.label === "연세대 안내"
             )
         ).toBe(true);
         expect(

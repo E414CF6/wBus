@@ -2,6 +2,7 @@ import {beforeEach, describe, expect, it, vi} from "vitest";
 import {NextRequest} from "next/server";
 import {GET as listWikiGET, POST as createWikiPOST} from "./route";
 import {GET as getWikiGET, PATCH as patchWikiPATCH, PUT as updateWikiPUT} from "./[slug]/route";
+import {PATCH as patchWikiPinPATCH} from "./[slug]/pin/route";
 import {POST as revertWikiPOST} from "./[slug]/revert/route";
 
 const mockWikiServer = vi.hoisted(() => ({
@@ -9,6 +10,7 @@ const mockWikiServer = vi.hoisted(() => ({
     createWikiPage: vi.fn(),
     getWikiPage: vi.fn(),
     saveWikiPageEdit: vi.fn(),
+    updateWikiPinMeta: vi.fn(),
     setWikiPageProtection: vi.fn(),
     deleteWikiPage: vi.fn(),
     getWikiRevisionList: vi.fn(),
@@ -51,12 +53,11 @@ describe("wiki API routes", () => {
             recentChanges: [],
         });
 
-        const req = new NextRequest("http://localhost/api/wiki?category=campus&q=연세&offset=24");
+        const req = new NextRequest("http://localhost/api/wiki?q=원주&offset=24");
         const res = await listWikiGET(req);
         expect(res.status).toBe(200);
         expect(mockWikiServer.listWikiPages).toHaveBeenCalledWith({
-            category: "campus",
-            query: "연세",
+            query: "원주",
             limit: undefined,
             offset: 24,
         });
@@ -69,29 +70,30 @@ describe("wiki API routes", () => {
             recentChanges: [],
         });
 
-        const req = new NextRequest("http://localhost/api/wiki?pinsOnly=true&cityCode=32020&limit=100");
+        const req = new NextRequest(
+            "http://localhost/api/wiki?pinsOnly=true&cityCode=32020&limit=100",
+        );
         const res = await listWikiGET(req);
         expect(res.status).toBe(200);
         expect(mockWikiServer.listWikiPages).toHaveBeenCalledWith({
-            category: "all",
             query: undefined,
-            cityCode: "32020",
-            pinsOnly: true,
             limit: 100,
             offset: undefined,
+            cityCode: "32020",
+            pinsOnly: true,
         });
     });
 
-    it("passes lat/lng map pin coordinates on POST /api/wiki", async () => {
+    it("passes lat/lng map pin coordinates and pinColor on POST /api/wiki", async () => {
         mockWikiServer.createWikiPage.mockResolvedValue({
             slug: "원주역 광장 핀",
             title: "원주역 광장 핀",
             subtitle: "",
-            category: "stop",
+            pinColor: "emerald",
             cityCode: "32020",
             lat: 37.3152,
             lng: 127.9222,
-            tags: [],
+            tags: ["원주역"],
             version: 1,
             createdAt: "2026-03-01T00:00:00.000Z",
             updatedAt: "2026-03-01T00:00:00.000Z",
@@ -107,10 +109,11 @@ describe("wiki API routes", () => {
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
                 title: "원주역 광장 핀",
-                category: "stop",
+                pinColor: "emerald",
                 cityCode: "32020",
                 lat: 37.3152,
                 lng: 127.9222,
+                tags: ["원주역"],
             }),
         });
 
@@ -119,9 +122,10 @@ describe("wiki API routes", () => {
         expect(mockWikiServer.createWikiPage).toHaveBeenCalledWith(
             expect.objectContaining({
                 title: "원주역 광장 핀",
+                pinColor: "emerald",
                 lat: 37.3152,
                 lng: 127.9222,
-            })
+            }),
         );
     });
 
@@ -132,7 +136,7 @@ describe("wiki API routes", () => {
             body: JSON.stringify({
                 slug: "spam-test",
                 title: "스팸 테스트",
-                category: "guide",
+                pinColor: "navy",
                 website: "https://spam.example.com",
             }),
         });
@@ -144,24 +148,77 @@ describe("wiki API routes", () => {
 
     it("forwards 409 conflict payload on PUT /api/wiki/[slug]", async () => {
         mockWikiServer.saveWikiPageEdit.mockRejectedValue(
-            new mockWikiServer.WikiServiceError("편집 충돌", 409, {currentVersion: 5})
+            new mockWikiServer.WikiServiceError("편집 충돌", 409, {currentVersion: 5}),
         );
 
-        const req = new NextRequest("http://localhost/api/wiki/yonsei-mirae", {
+        const req = new NextRequest("http://localhost/api/wiki/테스트-문서", {
             method: "PUT",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
                 baseVersion: 2,
-                title: "연세대 미래캠퍼스",
-                category: "campus",
+                title: "테스트 문서",
+                pinColor: "blue",
                 markdownBody: "수정본",
             }),
         });
 
-        const res = await updateWikiPUT(req, {params: Promise.resolve({slug: "yonsei-mirae"})});
+        const res = await updateWikiPUT(req, {params: Promise.resolve({slug: "테스트 문서"})});
         const body = await res.json();
         expect(res.status).toBe(409);
         expect(body.currentVersion).toBe(5);
+    });
+
+    it("updates pin location and color on PATCH /api/wiki/[slug]/pin", async () => {
+        mockWikiServer.updateWikiPinMeta.mockResolvedValue({
+            document: {
+                slug: "테스트 문서",
+                pinColor: "violet",
+                lat: 37.35,
+                lng: 127.95,
+                version: 3,
+            },
+            revision: {version: 3},
+        });
+
+        const req = new NextRequest("http://localhost/api/wiki/테스트 문서/pin", {
+            method: "PATCH",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                baseVersion: 2,
+                pinColor: "violet",
+                lat: 37.35,
+                lng: 127.95,
+                nickname: "편집자",
+            }),
+        });
+
+        const res = await patchWikiPinPATCH(req, {
+            params: Promise.resolve({slug: encodeURIComponent("테스트 문서")}),
+        });
+        expect(res.status).toBe(200);
+        expect(mockWikiServer.updateWikiPinMeta).toHaveBeenCalledWith(
+            expect.objectContaining({
+                slug: "테스트 문서",
+                baseVersion: 2,
+                pinColor: "violet",
+                lat: 37.35,
+                lng: 127.95,
+            }),
+        );
+    });
+
+    it("returns 400 when PATCH /api/wiki/[slug]/pin omits both pinColor and coords", async () => {
+        const req = new NextRequest("http://localhost/api/wiki/테스트 문서/pin", {
+            method: "PATCH",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({baseVersion: 1}),
+        });
+
+        const res = await patchWikiPinPATCH(req, {
+            params: Promise.resolve({slug: encodeURIComponent("테스트 문서")}),
+        });
+        expect(res.status).toBe(400);
+        expect(mockWikiServer.updateWikiPinMeta).not.toHaveBeenCalled();
     });
 
     it("returns 400 for invalid slug on GET /api/wiki/[slug]", async () => {
@@ -171,22 +228,22 @@ describe("wiki API routes", () => {
     });
 
     it("requires admin bearer token for PATCH protection lock", async () => {
-        const req = new NextRequest("http://localhost/api/wiki/yonsei-mirae", {
+        const req = new NextRequest("http://localhost/api/wiki/테스트 문서", {
             method: "PATCH",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({isProtected: true}),
         });
-        const res = await patchWikiPATCH(req, {params: Promise.resolve({slug: "yonsei-mirae"})});
+        const res = await patchWikiPATCH(req, {params: Promise.resolve({slug: "테스트 문서"})});
         expect(res.status).toBe(401);
     });
 
     it("reverts wiki page on POST /api/wiki/[slug]/revert", async () => {
         mockWikiServer.revertWikiPage.mockResolvedValue({
-            document: {slug: "yonsei-mirae", version: 4},
+            document: {slug: "테스트 문서", version: 4},
             revision: {version: 4},
         });
 
-        const req = new NextRequest("http://localhost/api/wiki/yonsei-mirae/revert", {
+        const req = new NextRequest("http://localhost/api/wiki/테스트 문서/revert", {
             method: "POST",
             headers: {"Content-Type": "application/json"},
             body: JSON.stringify({
@@ -195,14 +252,14 @@ describe("wiki API routes", () => {
                 nickname: "복구자",
             }),
         });
-        const res = await revertWikiPOST(req, {params: Promise.resolve({slug: "yonsei-mirae"})});
+        const res = await revertWikiPOST(req, {params: Promise.resolve({slug: "테스트 문서"})});
         expect(res.status).toBe(200);
         expect(mockWikiServer.revertWikiPage).toHaveBeenCalledWith(
             expect.objectContaining({
-                slug: "yonsei-mirae",
+                slug: "테스트 문서",
                 targetVersion: 2,
                 baseVersion: 3,
-            })
+            }),
         );
     });
 });

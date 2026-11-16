@@ -15,20 +15,13 @@ import {
 } from "@shared/db";
 import {applyWikiDelta, computeWikiDelta, shouldStoreCheckpoint,} from "./lib/wikiDelta";
 import {computeWikiDiffStats, hasWikiContentChanged} from "./lib/wikiDiff";
-import {
-    isValidWikiSlug,
-    LEGACY_WIKI_SLUG_ALIASES,
-    normalizeWikiSlug,
-    resolveLegacyWikiSlug,
-    WikiPageDocumentSchema,
-    YONSEI_MIRAE_WIKI_SLUG,
-} from "./schemas";
+import {DEFAULT_WIKI_PIN_COLOR, isValidWikiSlug, normalizeWikiSlug, WikiPageDocumentSchema,} from "./schemas";
 import type {
-    WikiCategory,
     WikiEditorInfo,
     WikiIndexData,
     WikiPageDocument,
     WikiPageSummary,
+    WikiPinColor,
     WikiRecentChangeItem,
     WikiRevision,
     WikiRevisionMeta,
@@ -169,7 +162,7 @@ function rowToDocument(row: WikiPageRow): WikiPageDocument {
         slug: row.slug,
         title: row.slug,
         subtitle: row.subtitle,
-        category: row.category,
+        pinColor: row.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
         ...(row.cityCode ? {cityCode: row.cityCode} : {}),
         ...(hasCoords ? {lat: row.lat as number, lng: row.lng as number} : {}),
         tags: row.tags ?? [],
@@ -194,7 +187,7 @@ function rowToSummary(row: WikiPageRow): WikiPageSummary {
         slug: row.slug,
         title: row.slug,
         subtitle: row.subtitle,
-        category: row.category,
+        pinColor: row.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
         ...(row.cityCode ? {cityCode: row.cityCode} : {}),
         ...(hasCoords ? {lat: row.lat as number, lng: row.lng as number} : {}),
         tags: row.tags ?? [],
@@ -285,7 +278,7 @@ async function importDocumentIntoDb(
             .values({
                 slug: doc.slug,
                 subtitle: doc.subtitle,
-                category: doc.category,
+                pinColor: doc.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
                 cityCode: doc.cityCode ?? null,
                 lat: doc.lat ?? null,
                 lng: doc.lng ?? null,
@@ -293,7 +286,7 @@ async function importDocumentIntoDb(
                 tagsText: doc.tags.join(" "),
                 version: doc.version,
                 isProtected: Boolean(doc.isProtected),
-                pinned: doc.slug === YONSEI_MIRAE_WIKI_SLUG,
+                pinned: false,
                 lastEditorNickname: doc.lastEditor.nickname,
                 lastEditorId: doc.lastEditor.editorId,
                 linkedRoutes: doc.linkedRoutes,
@@ -357,8 +350,7 @@ async function importDocumentIntoDb(
 }
 
 function resolveCanonicalSlug(rawSlug: string): string {
-    const trimmed = rawSlug.trim();
-    return resolveLegacyWikiSlug(trimmed) ?? trimmed;
+    return rawSlug.trim();
 }
 
 async function migrateSingleSlugFromBlob(
@@ -391,80 +383,16 @@ async function ensureLegacyMigrated(db: WikiDatabase): Promise<void> {
                 slug: wikiPages.slug,
             })
             .from(wikiPages);
-        const existingSet = new Set(existingRows.map((r) => r.slug));
-
-        // 1. Check legacy Blob index when DB is empty
-        if (existingSet.size === 0) {
-            const blobIndex = await artifactStore
-                .getJson<WikiIndexData>(BLOB_INDEX_KEY, {bypassTmp: true})
-                .catch(() => null);
-            const blobSlugs = (blobIndex?.data?.pages ?? []).map((p) => p.slug);
-            for (const candidateSlug of blobSlugs) {
-                const targetSlug = resolveLegacyWikiSlug(candidateSlug) ?? candidateSlug;
-                if (!existingSet.has(targetSlug)) {
-                    const imported =
-                        (await migrateSingleSlugFromBlob(db, candidateSlug)) ??
-                        (targetSlug !== candidateSlug
-                            ? await migrateSingleSlugFromBlob(db, targetSlug)
-                            : null);
-                    if (imported) {
-                        existingSet.add(imported.slug);
-                    }
-                }
-            }
+        if (existingRows.length > 0) {
             return;
         }
 
-        // 2. Migrate legacy ASCII seed slugs (e.g. yonsei-mirae -> 연세대학교 미래캠퍼스) while preserving revisions
-        for (const [legacySlug, canonicalSlug] of Object.entries(LEGACY_WIKI_SLUG_ALIASES)) {
-            if (existingSet.has(legacySlug) && !existingSet.has(canonicalSlug)) {
-                await db.transaction(async (tx) => {
-                    const oldRows = await tx
-                        .select()
-                        .from(wikiPages)
-                        .where(eq(wikiPages.slug, legacySlug))
-                        .limit(1);
-                    const oldRow = oldRows[0];
-                    if (!oldRow) return;
-
-                    await tx
-                        .insert(wikiPages)
-                        .values({
-                            slug: canonicalSlug,
-                            subtitle: oldRow.subtitle,
-                            category: oldRow.category,
-                            cityCode: oldRow.cityCode,
-                            lat: oldRow.lat,
-                            lng: oldRow.lng,
-                            tags: oldRow.tags,
-                            tagsText: oldRow.tagsText,
-                            version: oldRow.version,
-                            isProtected: oldRow.isProtected,
-                            pinned: canonicalSlug === YONSEI_MIRAE_WIKI_SLUG || oldRow.pinned,
-                            lastEditorNickname: oldRow.lastEditorNickname,
-                            lastEditorId: oldRow.lastEditorId,
-                            linkedRoutes: oldRow.linkedRoutes,
-                            shuttle: oldRow.shuttle,
-                            boardingStops: oldRow.boardingStops,
-                            markdownBody: oldRow.markdownBody,
-                            createdAt: oldRow.createdAt,
-                            updatedAt: oldRow.updatedAt,
-                        })
-                        .onConflictDoNothing({target: wikiPages.slug});
-
-                    await tx
-                        .update(wikiRevisions)
-                        .set({slug: canonicalSlug})
-                        .where(eq(wikiRevisions.slug, legacySlug));
-
-                    await tx.delete(wikiPages).where(eq(wikiPages.slug, legacySlug));
-                });
-
-                existingSet.delete(legacySlug);
-                existingSet.add(canonicalSlug);
-                await distributedCache.del(`${REDIS_PAGE_PREFIX}${legacySlug}`).catch(() => false);
-                await distributedCache.del(`${REDIS_PAGE_PREFIX}${canonicalSlug}`).catch(() => false);
-            }
+        const blobIndex = await artifactStore
+            .getJson<WikiIndexData>(BLOB_INDEX_KEY, {bypassTmp: true})
+            .catch(() => null);
+        const blobSlugs = (blobIndex?.data?.pages ?? []).map((p) => p.slug);
+        for (const candidateSlug of blobSlugs) {
+            await migrateSingleSlugFromBlob(db, candidateSlug);
         }
     })().catch((err) => {
         bootstrapPromise = null;
@@ -607,7 +535,6 @@ export async function getWikiPage(slug: string): Promise<WikiPageDocument | null
 }
 
 export async function listWikiPages(filters?: {
-    category?: WikiCategory | "all";
     cityCode?: string;
     pinsOnly?: boolean;
     query?: string;
@@ -628,9 +555,6 @@ export async function listWikiPages(filters?: {
     await ensureLegacyMigrated(db);
 
     const conditions = [];
-    if (filters?.category && filters.category !== "all") {
-        conditions.push(eq(wikiPages.category, filters.category));
-    }
     if (filters?.cityCode) {
         conditions.push(eq(wikiPages.cityCode, filters.cityCode));
     }
@@ -670,7 +594,7 @@ export async function listWikiPages(filters?: {
         db
             .select({
                 slug: wikiRevisions.slug,
-                category: wikiPages.category,
+                pinColor: wikiPages.pinColor,
                 version: wikiRevisions.version,
                 summary: wikiRevisions.summary,
                 editorNickname: wikiRevisions.editorNickname,
@@ -690,7 +614,7 @@ export async function listWikiPages(filters?: {
     const recentChanges: WikiRecentChangeItem[] = recentRows.map((r) => ({
         slug: r.slug,
         title: r.slug,
-        category: r.category,
+        pinColor: r.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
         version: r.version,
         summary: r.summary,
         editor: {
@@ -718,7 +642,7 @@ export async function createWikiPage(input: {
     slug: string;
     title: string;
     subtitle: string;
-    category: WikiCategory;
+    pinColor?: WikiPinColor;
     cityCode?: string;
     lat?: number;
     lng?: number;
@@ -742,12 +666,13 @@ export async function createWikiPage(input: {
     const nowIso = now.toISOString();
     const dedupedTags = Array.from(new Set(input.tags));
     const hasCoords = typeof input.lat === "number" && typeof input.lng === "number";
+    const pinColor = input.pinColor ?? DEFAULT_WIKI_PIN_COLOR;
 
     const doc: WikiPageDocument = {
         slug,
         title,
         subtitle: input.subtitle,
-        category: input.category,
+        pinColor,
         ...(input.cityCode ? {cityCode: input.cityCode} : {}),
         ...(hasCoords ? {lat: input.lat, lng: input.lng} : {}),
         tags: dedupedTags,
@@ -780,7 +705,7 @@ export async function createWikiPage(input: {
             await tx.insert(wikiPages).values({
                 slug,
                 subtitle: doc.subtitle,
-                category: doc.category,
+                pinColor: doc.pinColor,
                 cityCode: doc.cityCode ?? null,
                 lat: doc.lat ?? null,
                 lng: doc.lng ?? null,
@@ -788,7 +713,7 @@ export async function createWikiPage(input: {
                 tagsText: dedupedTags.join(" "),
                 version: 1,
                 isProtected: false,
-                pinned: slug === YONSEI_MIRAE_WIKI_SLUG,
+                pinned: false,
                 lastEditorNickname: input.editor.nickname,
                 lastEditorId: input.editor.editorId,
                 linkedRoutes: doc.linkedRoutes,
@@ -832,7 +757,7 @@ export async function saveWikiPageEdit(input: {
     baseVersion: number;
     title: string;
     subtitle: string;
-    category: WikiCategory;
+    pinColor?: WikiPinColor;
     cityCode?: string;
     lat?: number;
     lng?: number;
@@ -912,7 +837,7 @@ export async function saveWikiPageEdit(input: {
             slug: nextSlug,
             title: nextSlug,
             subtitle: input.subtitle,
-            category: input.category,
+            pinColor: input.pinColor ?? current.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
             ...(input.cityCode ? {cityCode: input.cityCode} : {cityCode: undefined}),
             ...(hasCoords ? {lat: input.lat, lng: input.lng} : {lat: undefined, lng: undefined}),
             tags: dedupedTags,
@@ -942,7 +867,7 @@ export async function saveWikiPageEdit(input: {
                 .values({
                     slug: nextSlug,
                     subtitle: nextDoc.subtitle,
-                    category: nextDoc.category,
+                    pinColor: nextDoc.pinColor,
                     cityCode: nextDoc.cityCode ?? null,
                     lat: nextDoc.lat ?? null,
                     lng: nextDoc.lng ?? null,
@@ -950,7 +875,7 @@ export async function saveWikiPageEdit(input: {
                     tagsText: dedupedTags.join(" "),
                     version: nextVersion,
                     isProtected: Boolean(currentRow.isProtected),
-                    pinned: Boolean(currentRow.pinned) || nextSlug === YONSEI_MIRAE_WIKI_SLUG,
+                    pinned: Boolean(currentRow.pinned),
                     lastEditorNickname: input.editor.nickname,
                     lastEditorId: input.editor.editorId,
                     linkedRoutes: nextDoc.linkedRoutes,
@@ -978,7 +903,7 @@ export async function saveWikiPageEdit(input: {
                 .update(wikiPages)
                 .set({
                     subtitle: nextDoc.subtitle,
-                    category: nextDoc.category,
+                    pinColor: nextDoc.pinColor,
                     cityCode: nextDoc.cityCode ?? null,
                     lat: nextDoc.lat ?? null,
                     lng: nextDoc.lng ?? null,
@@ -1168,7 +1093,7 @@ export async function revertWikiPage(input: {
             .update(wikiPages)
             .set({
                 subtitle: nextDoc.subtitle,
-                category: nextDoc.category,
+                pinColor: nextDoc.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
                 cityCode: nextDoc.cityCode ?? null,
                 lat: nextDoc.lat ?? null,
                 lng: nextDoc.lng ?? null,
@@ -1252,6 +1177,131 @@ export async function setWikiPageProtection(
     return updated;
 }
 
+export async function updateWikiPinMeta(input: {
+    slug: string;
+    baseVersion: number;
+    lat?: number;
+    lng?: number;
+    pinColor?: WikiPinColor;
+    editor: WikiEditorInfo;
+    summary?: string;
+    isAdmin?: boolean;
+}): Promise<{ document: WikiPageDocument; revision: WikiRevision }> {
+    const slug = resolveCanonicalSlug(input.slug);
+    if (!isValidWikiSlug(slug)) {
+        throw new WikiServiceError("유효하지 않은 문서 슬러그입니다.", 400);
+    }
+
+    const db = requireDb();
+    await getWikiPage(slug);
+
+    const result = await db.transaction(async (tx) => {
+        const lockedRows = await tx
+            .select()
+            .from(wikiPages)
+            .where(eq(wikiPages.slug, slug))
+            .for("update");
+
+        if (!lockedRows[0]) {
+            throw new WikiServiceError("핀 문서를 찾을 수 없습니다.", 404);
+        }
+
+        const current = rowToDocument(lockedRows[0]);
+        if (current.isProtected && !input.isAdmin) {
+            throw new WikiServiceError(
+                "이 문서는 현재 보호 잠금 상태입니다. 관리자만 수정할 수 있습니다.",
+                403
+            );
+        }
+
+        if (input.baseVersion !== current.version) {
+            throw new WikiServiceError(
+                `다른 사용자가 먼저 문서를 수정했습니다. (현재 v${current.version}, 편집 기준 v${input.baseVersion})`,
+                409,
+                {currentVersion: current.version, latestDocument: current}
+            );
+        }
+
+        const hasCoords = typeof input.lat === "number" && typeof input.lng === "number";
+        const now = new Date();
+        const nowIso = now.toISOString();
+        const nextVersion = current.version + 1;
+
+        const nextDoc: WikiPageDocument = {
+            ...current,
+            pinColor: input.pinColor ?? current.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
+            ...(hasCoords ? {lat: input.lat, lng: input.lng} : {}),
+            version: nextVersion,
+            updatedAt: nowIso,
+            lastEditor: input.editor,
+        };
+
+        if (!hasWikiContentChanged(current, nextDoc)) {
+            throw new WikiServiceError("변경된 내용이 없습니다.", 400);
+        }
+
+        const diffStats = computeWikiDiffStats(current, nextDoc);
+        const summary =
+            input.summary?.trim() ||
+            diffStats.structuredChanges.join(", ") ||
+            "지도 핀 정보 수정";
+
+        const updatedRows = await tx
+            .update(wikiPages)
+            .set({
+                pinColor: nextDoc.pinColor,
+                lat: nextDoc.lat ?? null,
+                lng: nextDoc.lng ?? null,
+                version: nextVersion,
+                lastEditorNickname: input.editor.nickname,
+                lastEditorId: input.editor.editorId,
+                updatedAt: now,
+            })
+            .where(and(eq(wikiPages.slug, slug), eq(wikiPages.version, current.version)))
+            .returning();
+
+        if (!updatedRows[0]) {
+            throw new WikiServiceError("동시 편집 충돌이 발생했습니다. 다시 시도해 주세요.", 409);
+        }
+
+        const isCheckpoint = shouldStoreCheckpoint(nextVersion);
+        const delta = isCheckpoint ? null : computeWikiDelta(current, nextDoc);
+
+        await tx.insert(wikiRevisions).values({
+            slug,
+            version: nextVersion,
+            baseVersion: current.version,
+            summary,
+            editorNickname: input.editor.nickname,
+            editorId: input.editor.editorId,
+            diffStats,
+            isCheckpoint,
+            snapshot: isCheckpoint ? nextDoc : null,
+            delta,
+            createdAt: now,
+        });
+
+        const revision: WikiRevision = {
+            slug,
+            version: nextVersion,
+            baseVersion: current.version,
+            summary,
+            editor: input.editor,
+            createdAt: nowIso,
+            diffStats,
+            snapshot: nextDoc,
+        };
+
+        return {document: rowToDocument(updatedRows[0]), revision};
+    });
+
+    await distributedCache
+        .set(`${REDIS_PAGE_PREFIX}${slug}`, result.document, REDIS_CACHE_TTL_SECONDS)
+        .catch(() => false);
+
+    return result;
+}
+
 export async function deleteWikiPage(slug: string): Promise<void> {
     const normalized = resolveCanonicalSlug(slug);
     const db = requireDb();
@@ -1262,8 +1312,8 @@ export async function deleteWikiPage(slug: string): Promise<void> {
         .where(eq(wikiPages.slug, normalized))
         .limit(1);
 
-    if (existing[0]?.pinned || normalized === YONSEI_MIRAE_WIKI_SLUG) {
-        throw new WikiServiceError("핵심 고정 허브 문서는 삭제할 수 없습니다.", 400);
+    if (existing[0]?.pinned) {
+        throw new WikiServiceError("핵심 고정 문서는 삭제할 수 없습니다.", 400);
     }
 
     await db.delete(wikiPages).where(eq(wikiPages.slug, normalized));

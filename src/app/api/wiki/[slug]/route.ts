@@ -1,4 +1,3 @@
-import {revalidatePath} from "next/cache";
 import {type NextRequest, NextResponse} from "next/server";
 import {isValidWikiSlug, WikiEditPayloadSchema} from "@entities/wiki";
 import {
@@ -86,7 +85,7 @@ export async function PUT(
             baseVersion: parsed.data.baseVersion,
             title: parsed.data.title,
             subtitle: parsed.data.subtitle,
-            category: parsed.data.category,
+            pinColor: parsed.data.pinColor,
             cityCode: parsed.data.cityCode,
             lat: parsed.data.lat,
             lng: parsed.data.lng,
@@ -99,13 +98,6 @@ export async function PUT(
             editor,
             isAdmin,
         });
-
-        try {
-            revalidatePath("/wiki");
-            revalidatePath("/wiki/[slug]", "page");
-        } catch {
-            // Ignore revalidate outside request context
-        }
 
         return NextResponse.json(result, {headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {
@@ -157,12 +149,6 @@ export async function DELETE(
         const {slug: rawSlug} = await context.params;
         const slug = decodeWikiSlug(rawSlug);
         await deleteWikiPage(slug);
-        try {
-            revalidatePath("/wiki");
-            revalidatePath("/wiki/[slug]", "page");
-        } catch {
-            // Ignore
-        }
         return NextResponse.json({deleted: true, slug}, {headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {
         return handleWikiApiError(err, "문서 삭제에 실패했습니다.");
