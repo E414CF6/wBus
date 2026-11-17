@@ -1,5 +1,5 @@
-// wBus Lightweight Offline & Static Asset Service Worker (v5)
-const CACHE_NAME = "wbus-v5";
+// wBus Lightweight Offline & Static Asset Service Worker (v6)
+const CACHE_NAME = "wbus-v6";
 
 const PRECACHE_ASSETS = [
     "/favicon.ico",

@@ -1,13 +1,13 @@
 import {describe, expect, it} from "vitest";
 import fs from "fs";
 import path from "path";
+import {validateStyleMin} from "@maplibre/maplibre-gl-style-spec";
 import {findFirstLabelLayerId} from "./routeLayerUtils";
 
 interface StyleJson {
     layers: Array<{
         id: string;
-        type: string;
-        paint?: Record<string, unknown>;
+        type: string; "source-layer"?: string; minzoom?: number; maxzoom?: number; paint?: Record<string, unknown>;
     }>;
 }
 
@@ -54,5 +54,25 @@ describe("routeLayerUtils", () => {
         expect(darkById.get("water")?.paint?.["fill-color"]).not.toBe("rgb(158,189,255)");
         expect(darkById.get("label_city")?.paint?.["text-color"]).not.toBe("#000");
         expect(darkById.get("highway-shield-non-us")?.paint?.["text-color"]).toBe("#1e293b");
+    });
+
+    it("includes valid POI, landmark, park, peak, housenumber, and continuous building layers in both styles", () => {
+        const stylesDir = path.resolve(process.cwd(), "public/styles");
+        const expectedLabelLayers = ["park_label", "mountain_peak", "housenumber", "poi_r20", "poi_r7", "poi_r1", "poi_major", "poi_transit",];
+
+        for (const fileName of ["liberty.json", "darker.json"]) {
+            const raw = JSON.parse(fs.readFileSync(path.join(stylesDir, fileName), "utf8")) as StyleJson;
+            expect(validateStyleMin(raw as Parameters<typeof validateStyleMin>[0])).toEqual([]);
+
+            const byId = new Map(raw.layers.map((l) => [l.id, l]));
+            for (const layerId of expectedLabelLayers) {
+                expect(byId.get(layerId)?.type).toBe("symbol");
+            }
+
+            // Ensure flat building footprints do not disappear before 3D extrusions start
+            const building = byId.get("building");
+            const building3d = byId.get("building-3d");
+            expect(building?.maxzoom).toBe(building3d?.minzoom);
+        }
     });
 });

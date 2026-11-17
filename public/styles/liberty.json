@@ -3917,7 +3917,7 @@
       "source": "openmaptiles",
       "source-layer": "building",
       "minzoom": 13,
-      "maxzoom": 14,
+      "maxzoom": 15.5,
       "paint": {
         "fill-color": "#e6ebf2",
         "fill-outline-color": [
@@ -4311,6 +4311,1861 @@
         "text-color": "#4f7da8",
         "text-halo-color": "rgba(255, 255, 255, 0.88)",
         "text-halo-width": 1.5
+      }
+    },
+    {
+      "id": "park_label",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "park",
+      "minzoom": 11,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "MultiPoint",
+            "Point"
+          ],
+          true,
+          false
+        ],
+        [
+          "any",
+          [
+            "has",
+            "name:ko"
+          ],
+          [
+            "has",
+            "name:nonlatin"
+          ],
+          [
+            "has",
+            "name_en"
+          ],
+          [
+            "has",
+            "name"
+          ]
+        ]
+      ],
+      "layout": {
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ko"
+          ],
+          [
+            "get",
+            "name:nonlatin"
+          ],
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-max-width": 8,
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          10.5,
+          14,
+          12.5
+        ]
+      },
+      "paint": {
+        "text-color": "#2f6b47",
+        "text-halo-color": "rgba(255, 255, 255, 0.94)",
+        "text-halo-width": 1.6,
+        "text-halo-blur": 0.5
+      }
+    },
+    {
+      "id": "mountain_peak",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "mountain_peak",
+      "minzoom": 11,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "MultiPoint",
+            "Point"
+          ],
+          true,
+          false
+        ],
+        [
+          "any",
+          [
+            "has",
+            "name:ko"
+          ],
+          [
+            "has",
+            "name:nonlatin"
+          ],
+          [
+            "has",
+            "name_en"
+          ],
+          [
+            "has",
+            "name"
+          ]
+        ]
+      ],
+      "layout": {
+        "icon-image": "mountain_11",
+        "icon-size": 0.85,
+        "icon-optional": true,
+        "text-anchor": "top",
+        "text-offset": [
+          0,
+          0.55
+        ],
+        "text-field": [
+          "case",
+          [
+            "has",
+            "ele"
+          ],
+          [
+            "concat",
+            [
+              "coalesce",
+              [
+                "get",
+                "name:ko"
+              ],
+              [
+                "get",
+                "name:nonlatin"
+              ],
+              [
+                "get",
+                "name_en"
+              ],
+              [
+                "get",
+                "name"
+              ]
+            ],
+            "\n",
+            [
+              "to-string",
+              [
+                "get",
+                "ele"
+              ]
+            ],
+            "m"
+          ],
+          [
+            "coalesce",
+            [
+              "get",
+              "name:ko"
+            ],
+            [
+              "get",
+              "name:nonlatin"
+            ],
+            [
+              "get",
+              "name_en"
+            ],
+            [
+              "get",
+              "name"
+            ]
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-max-width": 8,
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          11,
+          10,
+          14,
+          11.5
+        ]
+      },
+      "paint": {
+        "text-color": "#52604c",
+        "text-halo-color": "rgba(255, 255, 255, 0.94)",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0.5
+      }
+    },
+    {
+      "id": "housenumber",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "housenumber",
+      "minzoom": 17.5,
+      "layout": {
+        "text-field": [
+          "to-string",
+          [
+            "get",
+            "housenumber"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-size": 10,
+        "text-padding": 4
+      },
+      "paint": {
+        "text-color": "#64748b",
+        "text-halo-color": "rgba(255, 255, 255, 0.88)",
+        "text-halo-width": 1.2
+      }
+    },
+    {
+      "id": "poi_r20",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "poi",
+      "minzoom": 15.8,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "MultiPoint",
+            "Point"
+          ],
+          true,
+          false
+        ],
+        [
+          "any",
+          [
+            "has",
+            "name:ko"
+          ],
+          [
+            "has",
+            "name:nonlatin"
+          ],
+          [
+            "has",
+            "name_en"
+          ],
+          [
+            "has",
+            "name"
+          ]
+        ],
+        [
+          "all",
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "bus"
+          ],
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "railway"
+          ],
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "airport"
+          ],
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "ferry"
+          ]
+        ],
+        [
+          "!",
+          [
+            "any",
+            [
+              "match",
+              [
+                "get",
+                "class"
+              ],
+              [
+                "college",
+                "hospital",
+                "town_hall",
+                "stadium",
+                "library",
+                "museum",
+                "theme_park",
+                "fire_station",
+                "police"
+              ],
+              true,
+              false
+            ],
+            [
+              "match",
+              [
+                "get",
+                "subclass"
+              ],
+              [
+                "university",
+                "hospital",
+                "townhall",
+                "courthouse",
+                "government",
+                "research",
+                "educational_institution",
+                "department_store",
+                "dormitory"
+              ],
+              true,
+              false
+            ]
+          ]
+        ],
+        [
+          "any",
+          [
+            ">=",
+            [
+              "get",
+              "rank"
+            ],
+            20
+          ],
+          [
+            "!",
+            [
+              "has",
+              "rank"
+            ]
+          ]
+        ]
+      ],
+      "layout": {
+        "icon-image": [
+          "match",
+          [
+            "get",
+            "subclass"
+          ],
+          "florist",
+          "garden_11",
+          "furniture",
+          "shop_11",
+          "department_store",
+          "shop_11",
+          "government",
+          "town_hall_11",
+          "educational_institution",
+          "college_11",
+          "research",
+          "building_11",
+          "dormitory",
+          "building_11",
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            "office",
+            "building_11",
+            "atm",
+            "bank_11",
+            "sports_centre",
+            "stadium_11",
+            "swimming_pool",
+            "swimming_11",
+            "theme_park",
+            "amusement_park_11",
+            "gate",
+            "entrance_11",
+            "escape_game",
+            "attraction_11",
+            "yoga",
+            "heart_11",
+            "brownfield",
+            "building_11",
+            "running",
+            "pitch_11",
+            [
+              "alcohol_shop",
+              "art_gallery",
+              "attraction",
+              "bakery",
+              "bank",
+              "bar",
+              "basketball",
+              "beer",
+              "bicycle_rental",
+              "building",
+              "bus",
+              "butcher",
+              "cafe",
+              "campsite",
+              "car",
+              "castle",
+              "cemetery",
+              "cinema",
+              "clothing_store",
+              "college",
+              "commercial",
+              "dam",
+              "dentist",
+              "doctors",
+              "dog_park",
+              "drinking_water",
+              "embassy",
+              "entrance",
+              "fast_food",
+              "fire_station",
+              "fuel",
+              "garden",
+              "golf",
+              "grocery",
+              "hairdresser",
+              "harbor",
+              "heart",
+              "hospital",
+              "ice_cream",
+              "industry",
+              "information",
+              "laundry",
+              "library",
+              "lighthouse",
+              "lodging",
+              "marker",
+              "monument",
+              "mountain",
+              "museum",
+              "music",
+              "park",
+              "parking",
+              "pharmacy",
+              "picnic_site",
+              "pitch",
+              "place_of_worship",
+              "playground",
+              "police",
+              "post",
+              "prison",
+              "railway",
+              "restaurant",
+              "school",
+              "shelter",
+              "shop",
+              "soccer",
+              "stadium",
+              "tennis",
+              "theatre",
+              "toilets",
+              "town_hall",
+              "veterinary",
+              "warehouse",
+              "waste_basket",
+              "zoo"
+            ],
+            [
+              "concat",
+              [
+                "get",
+                "class"
+              ],
+              "_11"
+            ],
+            "marker_11"
+          ]
+        ],
+        "icon-size": 0.85,
+        "icon-optional": true,
+        "icon-padding": 2,
+        "text-anchor": "top",
+        "text-offset": [
+          0,
+          0.6
+        ],
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ko"
+          ],
+          [
+            "get",
+            "name:nonlatin"
+          ],
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-max-width": 9,
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          15.8,
+          10.5,
+          18,
+          11.5
+        ],
+        "text-padding": 2,
+        "symbol-sort-key": [
+          "coalesce",
+          [
+            "get",
+            "rank"
+          ],
+          50
+        ]
+      },
+      "paint": {
+        "text-color": [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "park",
+            "garden"
+          ],
+          "#15803d",
+          [
+            "hospital",
+            "doctors",
+            "dentist",
+            "pharmacy"
+          ],
+          "#b91c1c",
+          [
+            "college",
+            "school",
+            "library",
+            "town_hall",
+            "office",
+            "museum",
+            "police",
+            "fire_station",
+            "post"
+          ],
+          "#1e3a5f",
+          "#475569"
+        ],
+        "text-halo-color": "rgba(255, 255, 255, 0.94)",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0.5
+      }
+    },
+    {
+      "id": "poi_r7",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "poi",
+      "minzoom": 14.8,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "MultiPoint",
+            "Point"
+          ],
+          true,
+          false
+        ],
+        [
+          "any",
+          [
+            "has",
+            "name:ko"
+          ],
+          [
+            "has",
+            "name:nonlatin"
+          ],
+          [
+            "has",
+            "name_en"
+          ],
+          [
+            "has",
+            "name"
+          ]
+        ],
+        [
+          "all",
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "bus"
+          ],
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "railway"
+          ],
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "airport"
+          ],
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "ferry"
+          ]
+        ],
+        [
+          "!",
+          [
+            "any",
+            [
+              "match",
+              [
+                "get",
+                "class"
+              ],
+              [
+                "college",
+                "hospital",
+                "town_hall",
+                "stadium",
+                "library",
+                "museum",
+                "theme_park",
+                "fire_station",
+                "police"
+              ],
+              true,
+              false
+            ],
+            [
+              "match",
+              [
+                "get",
+                "subclass"
+              ],
+              [
+                "university",
+                "hospital",
+                "townhall",
+                "courthouse",
+                "government",
+                "research",
+                "educational_institution",
+                "department_store",
+                "dormitory"
+              ],
+              true,
+              false
+            ]
+          ]
+        ],
+        [
+          ">=",
+          [
+            "get",
+            "rank"
+          ],
+          7
+        ],
+        [
+          "<",
+          [
+            "get",
+            "rank"
+          ],
+          20
+        ]
+      ],
+      "layout": {
+        "icon-image": [
+          "match",
+          [
+            "get",
+            "subclass"
+          ],
+          "florist",
+          "garden_11",
+          "furniture",
+          "shop_11",
+          "department_store",
+          "shop_11",
+          "government",
+          "town_hall_11",
+          "educational_institution",
+          "college_11",
+          "research",
+          "building_11",
+          "dormitory",
+          "building_11",
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            "office",
+            "building_11",
+            "atm",
+            "bank_11",
+            "sports_centre",
+            "stadium_11",
+            "swimming_pool",
+            "swimming_11",
+            "theme_park",
+            "amusement_park_11",
+            "gate",
+            "entrance_11",
+            "escape_game",
+            "attraction_11",
+            "yoga",
+            "heart_11",
+            "brownfield",
+            "building_11",
+            "running",
+            "pitch_11",
+            [
+              "alcohol_shop",
+              "art_gallery",
+              "attraction",
+              "bakery",
+              "bank",
+              "bar",
+              "basketball",
+              "beer",
+              "bicycle_rental",
+              "building",
+              "bus",
+              "butcher",
+              "cafe",
+              "campsite",
+              "car",
+              "castle",
+              "cemetery",
+              "cinema",
+              "clothing_store",
+              "college",
+              "commercial",
+              "dam",
+              "dentist",
+              "doctors",
+              "dog_park",
+              "drinking_water",
+              "embassy",
+              "entrance",
+              "fast_food",
+              "fire_station",
+              "fuel",
+              "garden",
+              "golf",
+              "grocery",
+              "hairdresser",
+              "harbor",
+              "heart",
+              "hospital",
+              "ice_cream",
+              "industry",
+              "information",
+              "laundry",
+              "library",
+              "lighthouse",
+              "lodging",
+              "marker",
+              "monument",
+              "mountain",
+              "museum",
+              "music",
+              "park",
+              "parking",
+              "pharmacy",
+              "picnic_site",
+              "pitch",
+              "place_of_worship",
+              "playground",
+              "police",
+              "post",
+              "prison",
+              "railway",
+              "restaurant",
+              "school",
+              "shelter",
+              "shop",
+              "soccer",
+              "stadium",
+              "tennis",
+              "theatre",
+              "toilets",
+              "town_hall",
+              "veterinary",
+              "warehouse",
+              "waste_basket",
+              "zoo"
+            ],
+            [
+              "concat",
+              [
+                "get",
+                "class"
+              ],
+              "_11"
+            ],
+            "marker_11"
+          ]
+        ],
+        "icon-size": 0.9,
+        "icon-optional": true,
+        "icon-padding": 2,
+        "text-anchor": "top",
+        "text-offset": [
+          0,
+          0.6
+        ],
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ko"
+          ],
+          [
+            "get",
+            "name:nonlatin"
+          ],
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-max-width": 9,
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          14.8,
+          11,
+          17,
+          12
+        ],
+        "text-padding": 2,
+        "symbol-sort-key": [
+          "coalesce",
+          [
+            "get",
+            "rank"
+          ],
+          15
+        ]
+      },
+      "paint": {
+        "text-color": [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "park",
+            "garden"
+          ],
+          "#15803d",
+          [
+            "hospital",
+            "doctors",
+            "dentist",
+            "pharmacy"
+          ],
+          "#b91c1c",
+          [
+            "college",
+            "school",
+            "library",
+            "town_hall",
+            "office",
+            "museum",
+            "police",
+            "fire_station",
+            "post"
+          ],
+          "#1e3a5f",
+          "#475569"
+        ],
+        "text-halo-color": "rgba(255, 255, 255, 0.94)",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0.5
+      }
+    },
+    {
+      "id": "poi_r1",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "poi",
+      "minzoom": 14,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "MultiPoint",
+            "Point"
+          ],
+          true,
+          false
+        ],
+        [
+          "any",
+          [
+            "has",
+            "name:ko"
+          ],
+          [
+            "has",
+            "name:nonlatin"
+          ],
+          [
+            "has",
+            "name_en"
+          ],
+          [
+            "has",
+            "name"
+          ]
+        ],
+        [
+          "all",
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "bus"
+          ],
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "railway"
+          ],
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "airport"
+          ],
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "ferry"
+          ]
+        ],
+        [
+          "!",
+          [
+            "any",
+            [
+              "match",
+              [
+                "get",
+                "class"
+              ],
+              [
+                "college",
+                "hospital",
+                "town_hall",
+                "stadium",
+                "library",
+                "museum",
+                "theme_park",
+                "fire_station",
+                "police"
+              ],
+              true,
+              false
+            ],
+            [
+              "match",
+              [
+                "get",
+                "subclass"
+              ],
+              [
+                "university",
+                "hospital",
+                "townhall",
+                "courthouse",
+                "government",
+                "research",
+                "educational_institution",
+                "department_store",
+                "dormitory"
+              ],
+              true,
+              false
+            ]
+          ]
+        ],
+        [
+          "<",
+          [
+            "coalesce",
+            [
+              "get",
+              "rank"
+            ],
+            99
+          ],
+          7
+        ]
+      ],
+      "layout": {
+        "icon-image": [
+          "match",
+          [
+            "get",
+            "subclass"
+          ],
+          "florist",
+          "garden_11",
+          "furniture",
+          "shop_11",
+          "department_store",
+          "shop_11",
+          "government",
+          "town_hall_11",
+          "educational_institution",
+          "college_11",
+          "research",
+          "building_11",
+          "dormitory",
+          "building_11",
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            "office",
+            "building_11",
+            "atm",
+            "bank_11",
+            "sports_centre",
+            "stadium_11",
+            "swimming_pool",
+            "swimming_11",
+            "theme_park",
+            "amusement_park_11",
+            "gate",
+            "entrance_11",
+            "escape_game",
+            "attraction_11",
+            "yoga",
+            "heart_11",
+            "brownfield",
+            "building_11",
+            "running",
+            "pitch_11",
+            [
+              "alcohol_shop",
+              "art_gallery",
+              "attraction",
+              "bakery",
+              "bank",
+              "bar",
+              "basketball",
+              "beer",
+              "bicycle_rental",
+              "building",
+              "bus",
+              "butcher",
+              "cafe",
+              "campsite",
+              "car",
+              "castle",
+              "cemetery",
+              "cinema",
+              "clothing_store",
+              "college",
+              "commercial",
+              "dam",
+              "dentist",
+              "doctors",
+              "dog_park",
+              "drinking_water",
+              "embassy",
+              "entrance",
+              "fast_food",
+              "fire_station",
+              "fuel",
+              "garden",
+              "golf",
+              "grocery",
+              "hairdresser",
+              "harbor",
+              "heart",
+              "hospital",
+              "ice_cream",
+              "industry",
+              "information",
+              "laundry",
+              "library",
+              "lighthouse",
+              "lodging",
+              "marker",
+              "monument",
+              "mountain",
+              "museum",
+              "music",
+              "park",
+              "parking",
+              "pharmacy",
+              "picnic_site",
+              "pitch",
+              "place_of_worship",
+              "playground",
+              "police",
+              "post",
+              "prison",
+              "railway",
+              "restaurant",
+              "school",
+              "shelter",
+              "shop",
+              "soccer",
+              "stadium",
+              "tennis",
+              "theatre",
+              "toilets",
+              "town_hall",
+              "veterinary",
+              "warehouse",
+              "waste_basket",
+              "zoo"
+            ],
+            [
+              "concat",
+              [
+                "get",
+                "class"
+              ],
+              "_11"
+            ],
+            "marker_11"
+          ]
+        ],
+        "icon-size": 0.92,
+        "icon-optional": true,
+        "icon-padding": 2,
+        "text-anchor": "top",
+        "text-offset": [
+          0,
+          0.6
+        ],
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ko"
+          ],
+          [
+            "get",
+            "name:nonlatin"
+          ],
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Regular"
+        ],
+        "text-max-width": 9,
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          14,
+          11,
+          17,
+          12
+        ],
+        "text-padding": 2,
+        "symbol-sort-key": [
+          "coalesce",
+          [
+            "get",
+            "rank"
+          ],
+          5
+        ]
+      },
+      "paint": {
+        "text-color": [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "park",
+            "garden"
+          ],
+          "#15803d",
+          [
+            "hospital",
+            "doctors",
+            "dentist",
+            "pharmacy"
+          ],
+          "#b91c1c",
+          [
+            "college",
+            "school",
+            "library",
+            "town_hall",
+            "office",
+            "museum",
+            "police",
+            "fire_station",
+            "post"
+          ],
+          "#1e3a5f",
+          "#475569"
+        ],
+        "text-halo-color": "rgba(255, 255, 255, 0.94)",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0.5
+      }
+    },
+    {
+      "id": "poi_major",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "poi",
+      "minzoom": 13.5,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "MultiPoint",
+            "Point"
+          ],
+          true,
+          false
+        ],
+        [
+          "any",
+          [
+            "has",
+            "name:ko"
+          ],
+          [
+            "has",
+            "name:nonlatin"
+          ],
+          [
+            "has",
+            "name_en"
+          ],
+          [
+            "has",
+            "name"
+          ]
+        ],
+        [
+          "all",
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "bus"
+          ],
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "railway"
+          ],
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "airport"
+          ],
+          [
+            "!=",
+            [
+              "get",
+              "class"
+            ],
+            "ferry"
+          ]
+        ],
+        [
+          "any",
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            [
+              "college",
+              "hospital",
+              "town_hall",
+              "stadium",
+              "library",
+              "museum",
+              "theme_park",
+              "fire_station",
+              "police"
+            ],
+            true,
+            false
+          ],
+          [
+            "match",
+            [
+              "get",
+              "subclass"
+            ],
+            [
+              "university",
+              "hospital",
+              "townhall",
+              "courthouse",
+              "government",
+              "research",
+              "educational_institution",
+              "department_store",
+              "dormitory"
+            ],
+            true,
+            false
+          ]
+        ]
+      ],
+      "layout": {
+        "icon-image": [
+          "match",
+          [
+            "get",
+            "subclass"
+          ],
+          "florist",
+          "garden_11",
+          "furniture",
+          "shop_11",
+          "department_store",
+          "shop_11",
+          "government",
+          "town_hall_11",
+          "educational_institution",
+          "college_11",
+          "research",
+          "building_11",
+          "dormitory",
+          "building_11",
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            "office",
+            "building_11",
+            "atm",
+            "bank_11",
+            "sports_centre",
+            "stadium_11",
+            "swimming_pool",
+            "swimming_11",
+            "theme_park",
+            "amusement_park_11",
+            "gate",
+            "entrance_11",
+            "escape_game",
+            "attraction_11",
+            "yoga",
+            "heart_11",
+            "brownfield",
+            "building_11",
+            "running",
+            "pitch_11",
+            [
+              "alcohol_shop",
+              "art_gallery",
+              "attraction",
+              "bakery",
+              "bank",
+              "bar",
+              "basketball",
+              "beer",
+              "bicycle_rental",
+              "building",
+              "bus",
+              "butcher",
+              "cafe",
+              "campsite",
+              "car",
+              "castle",
+              "cemetery",
+              "cinema",
+              "clothing_store",
+              "college",
+              "commercial",
+              "dam",
+              "dentist",
+              "doctors",
+              "dog_park",
+              "drinking_water",
+              "embassy",
+              "entrance",
+              "fast_food",
+              "fire_station",
+              "fuel",
+              "garden",
+              "golf",
+              "grocery",
+              "hairdresser",
+              "harbor",
+              "heart",
+              "hospital",
+              "ice_cream",
+              "industry",
+              "information",
+              "laundry",
+              "library",
+              "lighthouse",
+              "lodging",
+              "marker",
+              "monument",
+              "mountain",
+              "museum",
+              "music",
+              "park",
+              "parking",
+              "pharmacy",
+              "picnic_site",
+              "pitch",
+              "place_of_worship",
+              "playground",
+              "police",
+              "post",
+              "prison",
+              "railway",
+              "restaurant",
+              "school",
+              "shelter",
+              "shop",
+              "soccer",
+              "stadium",
+              "tennis",
+              "theatre",
+              "toilets",
+              "town_hall",
+              "veterinary",
+              "warehouse",
+              "waste_basket",
+              "zoo"
+            ],
+            [
+              "concat",
+              [
+                "get",
+                "class"
+              ],
+              "_11"
+            ],
+            "marker_11"
+          ]
+        ],
+        "icon-size": 0.95,
+        "icon-optional": true,
+        "icon-padding": 2,
+        "text-anchor": "top",
+        "text-offset": [
+          0,
+          0.6
+        ],
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ko"
+          ],
+          [
+            "get",
+            "name:nonlatin"
+          ],
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Bold"
+        ],
+        "text-max-width": 9,
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          13.5,
+          11,
+          16,
+          12.5
+        ],
+        "text-padding": 2,
+        "symbol-sort-key": [
+          "coalesce",
+          [
+            "get",
+            "rank"
+          ],
+          3
+        ]
+      },
+      "paint": {
+        "text-color": [
+          "match",
+          [
+            "get",
+            "class"
+          ],
+          [
+            "park",
+            "garden"
+          ],
+          "#15803d",
+          [
+            "hospital",
+            "doctors",
+            "dentist",
+            "pharmacy"
+          ],
+          "#b91c1c",
+          [
+            "college",
+            "school",
+            "library",
+            "town_hall",
+            "office",
+            "museum",
+            "police",
+            "fire_station",
+            "post"
+          ],
+          "#1e3a5f",
+          "#1e293b"
+        ],
+        "text-halo-color": "rgba(255, 255, 255, 0.94)",
+        "text-halo-width": 1.5,
+        "text-halo-blur": 0.5
+      }
+    },
+    {
+      "id": "poi_transit",
+      "type": "symbol",
+      "source": "openmaptiles",
+      "source-layer": "poi",
+      "minzoom": 12,
+      "filter": [
+        "all",
+        [
+          "match",
+          [
+            "geometry-type"
+          ],
+          [
+            "MultiPoint",
+            "Point"
+          ],
+          true,
+          false
+        ],
+        [
+          "any",
+          [
+            "has",
+            "name:ko"
+          ],
+          [
+            "has",
+            "name:nonlatin"
+          ],
+          [
+            "has",
+            "name_en"
+          ],
+          [
+            "has",
+            "name"
+          ]
+        ],
+        [
+          "any",
+          [
+            "==",
+            [
+              "get",
+              "class"
+            ],
+            "railway"
+          ],
+          [
+            "==",
+            [
+              "get",
+              "class"
+            ],
+            "airport"
+          ],
+          [
+            "==",
+            [
+              "get",
+              "class"
+            ],
+            "ferry"
+          ],
+          [
+            "all",
+            [
+              "==",
+              [
+                "get",
+                "class"
+              ],
+              "bus"
+            ],
+            [
+              "!=",
+              [
+                "get",
+                "subclass"
+              ],
+              "bus_stop"
+            ]
+          ]
+        ]
+      ],
+      "layout": {
+        "icon-image": [
+          "match",
+          [
+            "get",
+            "subclass"
+          ],
+          "subway",
+          "railway_metro_11",
+          [
+            "tram_stop",
+            "light_rail"
+          ],
+          "railway_light_11",
+          [
+            "match",
+            [
+              "get",
+              "class"
+            ],
+            "railway",
+            "railway_11",
+            "airport",
+            "airport_11",
+            "ferry",
+            "ferry_11",
+            "bus",
+            "bus_11",
+            "marker_11"
+          ]
+        ],
+        "icon-size": 0.95,
+        "icon-optional": true,
+        "icon-padding": 2,
+        "text-anchor": "top",
+        "text-offset": [
+          0,
+          0.6
+        ],
+        "text-field": [
+          "coalesce",
+          [
+            "get",
+            "name:ko"
+          ],
+          [
+            "get",
+            "name:nonlatin"
+          ],
+          [
+            "get",
+            "name_en"
+          ],
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "text-font": [
+          "Noto Sans Bold"
+        ],
+        "text-max-width": 9,
+        "text-size": [
+          "interpolate",
+          [
+            "linear"
+          ],
+          [
+            "zoom"
+          ],
+          12,
+          11,
+          15,
+          12.5
+        ],
+        "text-padding": 2,
+        "symbol-sort-key": [
+          "coalesce",
+          [
+            "get",
+            "rank"
+          ],
+          1
+        ]
+      },
+      "paint": {
+        "text-color": "#1d4ed8",
+        "text-halo-color": "rgba(255, 255, 255, 0.96)",
+        "text-halo-width": 1.6,
+        "text-halo-blur": 0.5
       }
     },
     {
@@ -4801,10 +6656,33 @@
       "source-layer": "aerodrome_label",
       "minzoom": 10,
       "filter": [
-        "all",
+        "any",
         [
           "has",
           "iata"
+        ],
+        [
+          "has",
+          "icao"
+        ],
+        [
+          "any",
+          [
+            "has",
+            "name:ko"
+          ],
+          [
+            "has",
+            "name:nonlatin"
+          ],
+          [
+            "has",
+            "name_en"
+          ],
+          [
+            "has",
+            "name"
+          ]
         ]
       ],
       "layout": {
@@ -4840,7 +6718,8 @@
         ],
         "text-optional": true,
         "text-padding": 2,
-        "text-size": 12
+        "text-size": 12,
+        "icon-optional": true
       },
       "paint": {
         "text-color": "#475569",
@@ -4893,7 +6772,7 @@
           ]
         ],
         "text-font": [
-          "Noto Sans Italic"
+          "Noto Sans Regular"
         ],
         "text-letter-spacing": 0.1,
         "text-max-width": 9,
@@ -4906,11 +6785,12 @@
             "zoom"
           ],
           8,
-          9,
+          9.5,
           12,
-          10
-        ],
-        "text-transform": "uppercase"
+          11,
+          14,
+          12.5
+        ]
       },
       "paint": {
         "text-color": "#334155",
