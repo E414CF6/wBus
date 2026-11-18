@@ -224,7 +224,7 @@ export const OnboardingModal: React.FC = () => {
                                     원주시 시내버스 상세 시간표 &amp; 공지사항
                                 </h3>
                                 <p className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
-                                    기점·종점 출발 카운트다운, 평일/휴일·방학 전체 회차 시간표 검색과 CSV 내보내기, 교통정보센터 공지사항을 한곳에서 확인합니다.
+                                    기점·종점 출발 카운트다운, 평일/휴일·방학 전체 회차 시간표 검색, 교통정보센터 공지사항을 한곳에서 확인합니다.
                                 </p>
                             </div>
                         </div>

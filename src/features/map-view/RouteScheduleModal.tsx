@@ -14,7 +14,6 @@ import {getRouteMeta} from "@entities/route/routeMetadata";
 import {NoticeBanner, NoticeModal} from "@entities/notice";
 import {Modal} from "@shared/ui";
 import type {DayMode} from "@shared/types/navigation";
-import {exportScheduleCsv} from "./schedule-modal/exportScheduleCsv";
 import {FullTimetableTable} from "./schedule-modal/FullTimetableTable";
 import {NextDepartureCards} from "./schedule-modal/NextDepartureCards";
 
@@ -176,11 +175,6 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
         }
     }, []);
 
-    const handleExportCsv = useCallback(() => {
-        if (!activeVariant) return;
-        exportScheduleCsv(activeVariant, routeName, originName, destName);
-    }, [activeVariant, originName, destName, routeName]);
-
     const renderBodyContent = () => (
         <div className="p-3.5 sm:p-5 overflow-y-auto space-y-3.5 sm:space-y-4 custom-scrollbar flex-1 min-h-0">
             {/* 원주시 교통정보센터 공지사항 배너 */}
@@ -320,7 +314,6 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                             onTableSearchChange={setTableSearch}
                             tableRef={tableRef}
                             onScrollToNextRow={scrollToNextRow}
-                            onExportCsv={handleExportCsv}
                             embedded={embedded}
                         />
                     )}

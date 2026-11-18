@@ -2,15 +2,13 @@
 
 import React, {useCallback, useState, useSyncExternalStore} from "react";
 import {useTheme} from "next-themes";
-import {CheckCircle2, Cookie, Database, MapIcon, Settings, SlidersHorizontal, Sparkles, X} from "lucide-react";
+import {CheckCircle2, MapIcon, Settings, SlidersHorizontal, Sparkles, X} from "lucide-react";
 
 import {useCityContext} from "@entities/city";
-import {SETTINGS_COOKIE_NAME} from "@shared/config/settingsCookie";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {applyThemePreference, Modal, type ThemePreference} from "@shared/ui";
 import {triggerHaptic} from "@shared/utils/haptics";
 
-import {DataSettingsTab} from "./tabs/DataSettingsTab";
 import {DeviceSettingsTab} from "./tabs/DeviceSettingsTab";
 import {GeneralSettingsTab} from "./tabs/GeneralSettingsTab";
 import {MapSettingsTab} from "./tabs/MapSettingsTab";
@@ -22,7 +20,7 @@ export interface SettingsModalProps {
     onClose: () => void;
 }
 
-type SettingsTabId = "general" | "map" | "device" | "data";
+type SettingsTabId = "general" | "map" | "device";
 
 const SETTINGS_TABS: readonly {
     id: SettingsTabId;
@@ -32,7 +30,6 @@ const SETTINGS_TABS: readonly {
     {id: "general", label: "일반", icon: Sparkles},
     {id: "map", label: "지도·추적", icon: MapIcon},
     {id: "device", label: "지역·편의", icon: SlidersHorizontal},
-    {id: "data", label: "데이터·정보", icon: Database},
 ];
 
 const emptySubscribe = () => () => {
@@ -141,21 +138,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
     );
 
     const modalFooter = (
-        <>
-            <div className="flex items-center gap-1.5 text-[11px] font-semibold truncate">
-                <Cookie className="w-3.5 h-3.5 text-amber-500 shrink-0"/>
-                <span className="truncate">
-                    <code className="font-mono">{SETTINGS_COOKIE_NAME}</code> 쿠키에 자동 저장
-                </span>
-            </div>
-            <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black cursor-pointer hover:opacity-90 transition shrink-0 active:scale-95"
-            >
-                완료
-            </button>
-        </>
+        <button
+            type="button"
+            onClick={onClose}
+            className="ml-auto px-4 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black cursor-pointer hover:opacity-90 transition shrink-0 active:scale-95"
+        >
+            완료
+        </button>
     );
 
     return (
@@ -177,7 +166,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                     <div
                         role="tablist"
                         aria-label="환경설정 카테고리"
-                        className="grid grid-cols-4 gap-1 p-1 rounded-2xl bg-slate-200/70 dark:bg-white/[0.06]"
+                        className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-slate-200/70 dark:bg-white/[0.06]"
                     >
                         {SETTINGS_TABS.map((tab) => {
                             const Icon = tab.icon;
@@ -230,8 +219,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                         <GeneralSettingsTab
                             settings={settings}
                             activeTheme={activeTheme}
+                            appVersion={APP_VERSION}
+                            confirmClearData={confirmClearData}
                             onThemeChange={handleThemeChange}
                             onUpdateSettings={updateSettings}
+                            onSetConfirmClearData={setConfirmClearData}
+                            onClose={onClose}
+                            onOpenOnboarding={openOnboarding}
+                            onClearApiCache={handleClearApiCache}
+                            onResetSettings={handleResetSettings}
+                            onClearAllData={handleClearAllData}
                         />
                     )}
 
@@ -249,19 +246,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                             onToggleAutoDetect={handleToggleAutoDetect}
                             onToggleHaptic={handleToggleHaptic}
                             onUpdateSettings={updateSettings}
-                        />
-                    )}
-
-                    {activeTab === "data" && (
-                        <DataSettingsTab
-                            appVersion={APP_VERSION}
-                            confirmClearData={confirmClearData}
-                            onSetConfirmClearData={setConfirmClearData}
-                            onClose={onClose}
-                            onOpenOnboarding={openOnboarding}
-                            onClearApiCache={handleClearApiCache}
-                            onResetSettings={handleResetSettings}
-                            onClearAllData={handleClearAllData}
                         />
                     )}
                 </div>

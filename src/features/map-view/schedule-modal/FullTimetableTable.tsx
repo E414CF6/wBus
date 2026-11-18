@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import {Download, LocateFixed, Search, X} from "lucide-react";
+import {LocateFixed, Search, X} from "lucide-react";
 import type {BusRoute, getNextDeparture} from "@entities/schedule";
 
 type NextDepartureInfo = ReturnType<typeof getNextDeparture>;
@@ -17,7 +17,6 @@ interface FullTimetableTableProps {
     onTableSearchChange: (q: string) => void;
     tableRef: React.RefObject<HTMLDivElement | null>;
     onScrollToNextRow: () => void;
-    onExportCsv: () => void;
     embedded?: boolean;
 }
 
@@ -32,7 +31,6 @@ export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
                                                                           onTableSearchChange,
                                                                           tableRef,
                                                                           onScrollToNextRow,
-                                                                          onExportCsv,
                                                                           embedded = false,
                                                                       }) => (
     <div className="space-y-3">
@@ -55,15 +53,6 @@ export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
                         <span>다음 출발 행으로</span>
                     </button>
                 )}
-                <button
-                    type="button"
-                    onClick={onExportCsv}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[11px] font-extrabold border border-emerald-200 dark:border-emerald-800 cursor-pointer active:scale-95 transition whitespace-nowrap"
-                    title="시간표를 CSV 파일로 다운로드 (엑셀 호환)"
-                >
-                    <Download className="w-3 h-3"/>
-                    <span>CSV 다운로드</span>
-                </button>
             </div>
 
             <div className={`relative w-full ${embedded ? "" : "sm:w-56"}`}>
