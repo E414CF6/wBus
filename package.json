@@ -47,11 +47,12 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.73.0",
-    "vitest": "^3.1.4"
+    "vitest": "^5.1.1"
   },
   "allowScripts": {
     "sharp@0.34.5": true,
     "fsevents@2.3.3": true,
+    "es5-ext@0.10.64": true,
     "esbuild@0.28.2": true
   }
 }
