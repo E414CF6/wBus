@@ -25,7 +25,7 @@ export const WikiEmbeddedRoutesBlock: React.FC<{
     return (
         <div className="space-y-2 my-3">
             <div className="flex items-center gap-1.5 text-xs font-black text-slate-900 dark:text-white">
-                <Bus className="w-4 h-4 text-[#003876] dark:text-sky-400" />
+                <Bus className="w-4 h-4 text-[#003876] dark:text-sky-400"/>
                 <span>{UI_TEXT.WIKI.EMBEDDED.LINKED_ROUTES_TITLE(routes.length)}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
@@ -37,7 +37,8 @@ export const WikiEmbeddedRoutesBlock: React.FC<{
                                     {route.label || UI_TEXT.COMMON.ROUTE_NUMBER(route.routeNo)}
                                 </span>
                                 {onSelectRoute && (
-                                    <span className="text-[10px] font-black text-sky-600 dark:text-sky-400 group-hover:underline">
+                                    <span
+                                        className="text-[10px] font-black text-sky-600 dark:text-sky-400 group-hover:underline">
                                         {UI_TEXT.WIKI.EMBEDDED.VIEW_ON_MAP}
                                     </span>
                                 )}
@@ -113,18 +114,20 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
         shuttleTab === "inbound"
             ? filteredInbound
             : shuttleTab === "outbound"
-              ? filteredOutbound
-              : [];
+                ? filteredOutbound
+                : [];
 
     return (
-        <div className="my-3 rounded-2xl border border-sky-200/80 dark:border-sky-800/60 bg-sky-50/50 dark:bg-sky-950/20 p-4 space-y-3.5">
+        <div
+            className="my-3 rounded-2xl border border-sky-200/80 dark:border-sky-800/60 bg-sky-50/50 dark:bg-sky-950/20 p-4 space-y-3.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-xs sm:text-sm font-black text-[#003876] dark:text-sky-300">
-                    <Clock className="w-4 h-4 shrink-0" />
+                    <Clock className="w-4 h-4 shrink-0"/>
                     <span>{shuttle.title}</span>
                 </div>
                 {shuttleSummary && (
-                    <span className="px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold bg-white dark:bg-slate-900 border border-sky-200/70 dark:border-sky-800 text-slate-700 dark:text-slate-200">
+                    <span
+                        className="px-2.5 py-0.5 rounded-full text-[10.5px] font-extrabold bg-white dark:bg-slate-900 border border-sky-200/70 dark:border-sky-800 text-slate-700 dark:text-slate-200">
                         {shuttleSummary.dayType.label}
                     </span>
                 )}
@@ -132,7 +135,8 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
 
             {shuttleSummary && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-sky-100 dark:border-white/10">
+                    <div
+                        className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-sky-100 dark:border-white/10">
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             {UI_TEXT.WIKI.EMBEDDED.NEXT_INBOUND}
                         </div>
@@ -155,7 +159,8 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                         )}
                     </div>
 
-                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-sky-100 dark:border-white/10">
+                    <div
+                        className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-sky-100 dark:border-white/10">
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                             {UI_TEXT.WIKI.EMBEDDED.NEXT_OUTBOUND}
                         </div>
@@ -165,7 +170,8 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                                     {shuttleSummary.nextOutbound.item.departure_time} ·{" "}
                                     {shuttleSummary.nextOutbound.item.destination}
                                 </span>
-                                <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                <span
+                                    className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
                                     {shuttleSummary.nextOutbound.waitMins === 0
                                         ? UI_TEXT.BUS_ITEM.DEPARTING_SOON
                                         : UI_TEXT.TIME.WAIT_MINUTES_AFTER(shuttleSummary.nextOutbound.waitMins)}
@@ -181,7 +187,8 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
             )}
 
             <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-1 rounded-xl bg-white/80 dark:bg-slate-900/80 p-1 border border-slate-200/70 dark:border-white/10">
+                <div
+                    className="flex flex-wrap items-center gap-1 rounded-xl bg-white/80 dark:bg-slate-900/80 p-1 border border-slate-200/70 dark:border-white/10">
                     {(
                         [
                             {
@@ -200,7 +207,7 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                                 id: "guidelines",
                                 label: UI_TEXT.WIKI.EMBEDDED.TAB_GUIDELINES(shuttle.guidelines.length),
                             },
-                        ] as Array<{id: ShuttleTab; label: string}>
+                        ] as Array<{ id: ShuttleTab; label: string }>
                     ).map((tab) => (
                         <button
                             key={tab.id}
@@ -238,7 +245,7 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                             </button>
                         ))}
                         <div className="relative flex items-center">
-                            <Search className="w-3 h-3 absolute left-2 text-slate-400 pointer-events-none" />
+                            <Search className="w-3 h-3 absolute left-2 text-slate-400 pointer-events-none"/>
                             <input
                                 type="text"
                                 value={shuttleQuery}
@@ -265,10 +272,12 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 px-3 py-2 rounded-xl bg-white dark:bg-slate-900/80 border border-slate-200/70 dark:border-white/10"
                             >
                                 <div className="flex items-center gap-2.5 min-w-0">
-                                    <span className="text-sm font-black text-[#003876] dark:text-sky-300 tabular-nums shrink-0">
+                                    <span
+                                        className="text-sm font-black text-[#003876] dark:text-sky-300 tabular-nums shrink-0">
                                         {item.departure_time}
                                     </span>
-                                    <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-[10px] font-bold text-slate-600 dark:text-slate-300 shrink-0">
+                                    <span
+                                        className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 text-[10px] font-bold text-slate-600 dark:text-slate-300 shrink-0">
                                         {item.operation_type}
                                     </span>
                                     <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
@@ -276,7 +285,8 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                                     </span>
                                 </div>
                                 {(item.via.length > 0 || item.note) && (
-                                    <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400">
+                                    <div
+                                        className="flex flex-wrap items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400">
                                         {item.via.length > 0 && (
                                             <span>
                                                 {UI_TEXT.WIKI.EMBEDDED.VIA_PREFIX}{" "}
@@ -288,7 +298,8 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                                             </span>
                                         )}
                                         {item.note && (
-                                            <span className="px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold">
+                                            <span
+                                                className="px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 font-semibold">
                                                 {item.note}
                                             </span>
                                         )}
@@ -345,7 +356,7 @@ export const WikiEmbeddedStopsBlock: React.FC<{
     return (
         <div className="space-y-2 my-3">
             <div className="flex items-center gap-1.5 text-xs font-black text-slate-900 dark:text-white">
-                <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400"/>
                 <span>{UI_TEXT.WIKI.EMBEDDED.BOARDING_STOPS_TITLE(stops.length)}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
@@ -358,7 +369,8 @@ export const WikiEmbeddedStopsBlock: React.FC<{
                             <span className="text-xs font-black text-slate-900 dark:text-white truncate">
                                 {stop.name}
                             </span>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-slate-200 shrink-0">
+                            <span
+                                className="px-2 py-0.5 rounded-full text-[10px] font-black bg-slate-200/80 dark:bg-white/10 text-slate-700 dark:text-slate-200 shrink-0">
                                 {stop.directionTag}
                             </span>
                         </div>
@@ -367,7 +379,7 @@ export const WikiEmbeddedStopsBlock: React.FC<{
                         </p>
                         {stop.tips && (
                             <p className="flex items-start gap-1 text-[11px] text-slate-500 dark:text-slate-400">
-                                <Info className="w-3 h-3 shrink-0 mt-0.5" />
+                                <Info className="w-3 h-3 shrink-0 mt-0.5"/>
                                 <span>{stop.tips}</span>
                             </p>
                         )}
@@ -378,7 +390,7 @@ export const WikiEmbeddedStopsBlock: React.FC<{
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-200"
                             >
-                                <Navigation className="w-2.5 h-2.5" />
+                                <Navigation className="w-2.5 h-2.5"/>
                                 {UI_TEXT.WIKI.EMBEDDED.KAKAO_MAP}
                             </a>
                             <a
@@ -387,7 +399,7 @@ export const WikiEmbeddedStopsBlock: React.FC<{
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-200"
                             >
-                                <Camera className="w-2.5 h-2.5" />
+                                <Camera className="w-2.5 h-2.5"/>
                                 {UI_TEXT.WIKI.EMBEDDED.ROADVIEW}
                             </a>
                         </div>

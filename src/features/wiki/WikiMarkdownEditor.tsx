@@ -53,11 +53,11 @@ const SHUTTLE_SNIPPET = UI_TEXT.WIKI.MARKDOWN_EDITOR.SNIPPET_SHUTTLE;
 const STOPS_SNIPPET = UI_TEXT.WIKI.MARKDOWN_EDITOR.SNIPPET_STOPS;
 
 export const WikiMarkdownEditor: React.FC<WikiMarkdownEditorProps> = ({
-    value,
-    onChange,
-    onSaveDraft,
-    draftStatusLabel,
-}) => {
+                                                                          value,
+                                                                          onChange,
+                                                                          onSaveDraft,
+                                                                          draftStatusLabel,
+                                                                      }) => {
     const [mode, setMode] = useState<"write" | "split" | "preview">("write");
     const [tocOpen, setTocOpen] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -447,7 +447,8 @@ export const WikiMarkdownEditor: React.FC<WikiMarkdownEditorProps> = ({
                         </button>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-slate-200/60 dark:border-white/[0.06]">
+                    <div
+                        className="flex flex-wrap items-center gap-1 pt-1 border-t border-slate-200/60 dark:border-white/[0.06]">
                         {blockToolbarItems.map((btn) => (
                             <button
                                 key={btn.label}

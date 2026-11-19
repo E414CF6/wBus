@@ -7,7 +7,7 @@ import {UI_TEXT} from "@shared/config/locale";
 
 export const WIKI_PIN_COLOR_META: Record<
     WikiPinColor,
-    {label: string; swatchClass: string}
+    { label: string; swatchClass: string }
 > = {
     navy: {label: UI_TEXT.WIKI.PIN_COLORS.navy, swatchClass: "bg-[#003366]"},
     blue: {label: UI_TEXT.WIKI.PIN_COLORS.blue, swatchClass: "bg-blue-600"},
@@ -26,10 +26,10 @@ export interface WikiPinColorSelectorProps {
 }
 
 export const WikiPinColorSelector: React.FC<WikiPinColorSelectorProps> = ({
-    id = "wiki-pin-color",
-    value,
-    onChange,
-}) => {
+                                                                              id = "wiki-pin-color",
+                                                                              value,
+                                                                              onChange,
+                                                                          }) => {
     return (
         <div>
             <span
@@ -61,7 +61,7 @@ export const WikiPinColorSelector: React.FC<WikiPinColorSelectorProps> = ({
                                     : "opacity-85 hover:opacity-100"
                             }`}
                         >
-                            {selected && <Check className="w-3.5 h-3.5 text-white stroke-[3]" />}
+                            {selected && <Check className="w-3.5 h-3.5 text-white stroke-[3]"/>}
                         </button>
                     );
                 })}

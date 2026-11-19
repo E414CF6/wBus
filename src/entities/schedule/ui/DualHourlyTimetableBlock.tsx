@@ -135,7 +135,8 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
                     className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300 font-semibold leading-snug">
                     <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0"/>
                     <span>
-                        {UI_TEXT.TIMETABLE.HOURLY_CRITERIA_PREFIX} <strong>{locationLabel}</strong> {UI_TEXT.TIMETABLE.HOURLY_CRITERIA_HINT}
+                        {UI_TEXT.TIMETABLE.HOURLY_CRITERIA_PREFIX}
+                        <strong>{locationLabel}</strong> {UI_TEXT.TIMETABLE.HOURLY_CRITERIA_HINT}
                     </span>
                 </div>
                 <div className={`relative w-full ${compact ? "" : "sm:w-52"}`}>

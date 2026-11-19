@@ -4,7 +4,13 @@ import React, {useMemo, useRef, useState} from "react";
 import {BookOpen, Camera, History, Lock, MapPin, MessageSquare, Move, PenLine, Plus, User,} from "lucide-react";
 
 import {getKakaoRoadviewUrl} from "@entities/station";
-import {mutateAllWikiQueries, useWikiDiscussions, useWikiNickname, useWikiPage, type WikiPageDocument,} from "@entities/wiki";
+import {
+    mutateAllWikiQueries,
+    useWikiDiscussions,
+    useWikiNickname,
+    useWikiPage,
+    type WikiPageDocument,
+} from "@entities/wiki";
 import {
     WikiDiscussionPanel,
     WikiEditorForm,
@@ -51,16 +57,16 @@ function formatUpdatedAt(iso: string): string {
 }
 
 export const WikiPinModal: React.FC<WikiPinModalProps> = ({
-    slug,
-    initialMode = "read",
-    initialEditDraft = null,
-    onClose,
-    onSelectSlug,
-    onSelectRouteOnMap,
-    onCreateNewFromSlug,
-    onRequestMovePin,
-    onPickLocationInEditor,
-}) => {
+                                                              slug,
+                                                              initialMode = "read",
+                                                              initialEditDraft = null,
+                                                              onClose,
+                                                              onSelectSlug,
+                                                              onSelectRouteOnMap,
+                                                              onCreateNewFromSlug,
+                                                              onRequestMovePin,
+                                                              onPickLocationInEditor,
+                                                          }) => {
     const isOpen = Boolean(slug);
     const {map} = useAppMapContext();
     const {storedNickname, saveNickname} = useWikiNickname();

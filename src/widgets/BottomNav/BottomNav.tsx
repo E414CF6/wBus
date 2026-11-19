@@ -311,7 +311,8 @@ function BottomNavComponent({
                             title={UI_TEXT.BOTTOM_NAV.SELECT_ROUTE_TITLE}
                         >
                             <Bus className="w-3.5 h-3.5 shrink-0"/>
-                            <span className="whitespace-nowrap font-black">{UI_TEXT.COMMON.ROUTE_NUMBER(selectedRoute || UI_TEXT.BOTTOM_NAV.DEFAULT_ROUTE_NAME)}</span>
+                            <span
+                                className="whitespace-nowrap font-black">{UI_TEXT.COMMON.ROUTE_NUMBER(selectedRoute || UI_TEXT.BOTTOM_NAV.DEFAULT_ROUTE_NAME)}</span>
                             <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-70 shrink-0"/>
                         </button>
 

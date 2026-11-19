@@ -118,7 +118,8 @@ export const OnboardingModal: React.FC = () => {
                     </button>
                 )}
 
-                <div className="flex items-center gap-1.5" role="group" aria-label={UI_TEXT.ONBOARDING.STEPS_GROUP_ARIA}>
+                <div className="flex items-center gap-1.5" role="group"
+                     aria-label={UI_TEXT.ONBOARDING.STEPS_GROUP_ARIA}>
                     {Array.from({length: TOTAL_STEPS}).map((_, idx) => (
                         <button
                             key={idx}

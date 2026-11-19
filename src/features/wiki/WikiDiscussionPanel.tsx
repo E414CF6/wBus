@@ -36,12 +36,12 @@ function formatDiscussionTime(iso: string): string {
 }
 
 export const WikiDiscussionPanel: React.FC<WikiDiscussionPanelProps> = ({
-    slug,
-    initialNickname,
-    onSaveNickname,
-    onOpenWikiSlug,
-    onSelectRoute,
-}) => {
+                                                                            slug,
+                                                                            initialNickname,
+                                                                            onSaveNickname,
+                                                                            onOpenWikiSlug,
+                                                                            onSelectRoute,
+                                                                        }) => {
     const [statusFilter, setStatusFilter] = useState<WikiDiscussionStatus | "all">("all");
     const [isComposerOpen, setIsComposerOpen] = useState(false);
     const [expandedIds, setExpandedIds] = useState<Record<number, boolean>>({});
@@ -482,11 +482,13 @@ export const WikiDiscussionPanel: React.FC<WikiDiscussionPanelProps> = ({
                                                 >
                                                     <div
                                                         className="flex flex-wrap items-center justify-between gap-2 mb-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                                                        <span className="inline-flex items-center gap-1 font-bold text-slate-700 dark:text-slate-200">
+                                                        <span
+                                                            className="inline-flex items-center gap-1 font-bold text-slate-700 dark:text-slate-200">
                                                             <User className="w-3 h-3"/>
                                                             {comment.author.nickname}
                                                             {cIdx === 0 && (
-                                                                <span className="ml-1 px-1.5 py-0.2 rounded bg-sky-100 dark:bg-sky-950 text-[10px] font-black text-sky-700 dark:text-sky-300">
+                                                                <span
+                                                                    className="ml-1 px-1.5 py-0.2 rounded bg-sky-100 dark:bg-sky-950 text-[10px] font-black text-sky-700 dark:text-sky-300">
                                                                     {UI_TEXT.WIKI.DISCUSSION.AUTHOR_BADGE}
                                                                 </span>
                                                             )}

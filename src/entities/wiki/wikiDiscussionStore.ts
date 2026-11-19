@@ -2,10 +2,10 @@ import "server-only";
 
 import {and, asc, desc, eq, inArray} from "drizzle-orm";
 import {
-    wikiDiscussionComments,
     type WikiDiscussionCommentRow,
-    wikiDiscussionThreads,
+    wikiDiscussionComments,
     type WikiDiscussionThreadRow,
+    wikiDiscussionThreads,
 } from "@shared/db";
 import {isValidWikiSlug} from "./schemas";
 import type {

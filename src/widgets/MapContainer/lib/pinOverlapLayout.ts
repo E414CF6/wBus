@@ -111,12 +111,12 @@ export function filterPinsByViewportAndZoom<T extends GeoPinLike>(
         const selectedOnly =
             zoom >= 9 && selectedSlug
                 ? pins.filter(
-                      (p) =>
-                          p.slug === selectedSlug &&
-                          typeof p.lat === "number" &&
-                          typeof p.lng === "number" &&
-                          isInsideBufferedBounds(p.lat, p.lng, bounds, 0.2),
-                  )
+                    (p) =>
+                        p.slug === selectedSlug &&
+                        typeof p.lat === "number" &&
+                        typeof p.lng === "number" &&
+                        isInsideBufferedBounds(p.lat, p.lng, bounds, 0.2),
+                )
                 : [];
         return {
             visiblePins: selectedOnly,
@@ -128,7 +128,7 @@ export function filterPinsByViewportAndZoom<T extends GeoPinLike>(
     const maxCount =
         displayMode === "full" ? MAX_RENDERED_WIKI_PINS_FULL : MAX_RENDERED_WIKI_PINS_COMPACT;
 
-    const inViewport = pins.filter((p): p is T & {lat: number; lng: number} => {
+    const inViewport = pins.filter((p): p is T & { lat: number; lng: number } => {
         if (typeof p.lat !== "number" || typeof p.lng !== "number") return false;
         return isInsideBufferedBounds(p.lat, p.lng, bounds, 0.18);
     });
@@ -199,7 +199,7 @@ interface Rect {
 const PIN_STEM_HEIGHT = 10;
 const BOX_MARGIN = 6;
 
-const CANDIDATE_OFFSETS: ReadonlyArray<{dx: number; dy: number}> = [
+const CANDIDATE_OFFSETS: ReadonlyArray<{ dx: number; dy: number }> = [
     {dx: 0, dy: 0},
     {dx: 0, dy: -62},
     {dx: -116, dy: -32},
@@ -248,8 +248,8 @@ function computeOverlapArea(a: Rect, b: Rect, margin: number): number {
 export function solvePinOverlapLayout(
     items: readonly ScreenBoxInput[],
     fixedObstacles: readonly FixedObstacleBox[] = [],
-): Map<string, {dx: number; dy: number}> {
-    const offsets = new Map<string, {dx: number; dy: number}>();
+): Map<string, { dx: number; dy: number }> {
+    const offsets = new Map<string, { dx: number; dy: number }>();
     if (items.length === 0) return offsets;
 
     const placed: Rect[] = fixedObstacles.map((obs) =>
@@ -313,7 +313,7 @@ export function estimateWikiPinDimensions(
     title: string,
     tagLine: string,
     mode: "compact" | "full",
-): {width: number; height: number} {
+): { width: number; height: number } {
     const estimateTextPx = (text: string, charPx: number) => {
         let px = 0;
         for (const ch of text) {

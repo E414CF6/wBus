@@ -30,7 +30,8 @@ export const VariantDropdown: React.FC<VariantDropdownProps> = ({
             <div
                 className="px-3 py-1.5 border-b border-black/5 dark:border-white/5 flex items-center justify-between text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
                 <span>{UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_DROPDOWN_TITLE}</span>
-                <span className="font-mono text-[10px]">{UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_DROPDOWN_COUNT(effectiveVariations.length)}</span>
+                <span
+                    className="font-mono text-[10px]">{UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_DROPDOWN_COUNT(effectiveVariations.length)}</span>
             </div>
 
             <div className="max-h-60 overflow-y-auto custom-scrollbar p-0.5 space-y-0.5">

@@ -1,10 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {
-    getWikiCreateDraftKey,
-    getWikiEditDraftKey,
-    isWikiFormDirty,
-    parseWikiLocalDraft,
-} from "./wikiLocalDraft";
+import {getWikiCreateDraftKey, getWikiEditDraftKey, isWikiFormDirty, parseWikiLocalDraft,} from "./wikiLocalDraft";
 
 describe("wikiLocalDraft", () => {
     it("builds deterministic storage keys", () => {

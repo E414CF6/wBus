@@ -21,10 +21,10 @@ export interface UseMarkdownHistoryOptions {
 }
 
 export function useMarkdownHistory({
-    value,
-    onChange,
-    textareaRef,
-}: UseMarkdownHistoryOptions) {
+                                       value,
+                                       onChange,
+                                       textareaRef,
+                                   }: UseMarkdownHistoryOptions) {
     const [history, setHistory] = useState<EditorHistoryState>(() =>
         createEditorHistory(value, 0),
     );

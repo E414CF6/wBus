@@ -267,7 +267,8 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                                                 {page.boardingStopCount > 0 && (
                                                     <span>{UI_TEXT.WIKI.PIN_LIST_MODAL.BOARDING_STOPS_COUNT(page.boardingStopCount)}</span>
                                                 )}
-                                                {page.hasShuttle && <span>{UI_TEXT.WIKI.PIN_LIST_MODAL.HAS_SHUTTLE}</span>}
+                                                {page.hasShuttle &&
+                                                    <span>{UI_TEXT.WIKI.PIN_LIST_MODAL.HAS_SHUTTLE}</span>}
                                             </div>
                                         </div>
                                     </button>

@@ -89,7 +89,8 @@ export default function TermsPage() {
                     <section
                         className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                         <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <span className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A1_NUM}</span> {T.ARTICLES.A1_TITLE}
+                            <span
+                                className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A1_NUM}</span> {T.ARTICLES.A1_TITLE}
                         </h2>
                         <p className="text-slate-600 dark:text-slate-300 text-sm">
                             {T.ARTICLES.A1_BODY}
@@ -100,7 +101,8 @@ export default function TermsPage() {
                     <section
                         className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                         <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <span className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A2_NUM}</span> {T.ARTICLES.A2_TITLE}
+                            <span
+                                className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A2_NUM}</span> {T.ARTICLES.A2_TITLE}
                         </h2>
                         <ul className="list-disc list-inside space-y-1.5 text-slate-600 dark:text-slate-300 text-sm pl-1">
                             <li>
@@ -118,7 +120,8 @@ export default function TermsPage() {
                     <section
                         className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                         <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <span className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A3_NUM}</span> {T.ARTICLES.A3_TITLE}
+                            <span
+                                className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A3_NUM}</span> {T.ARTICLES.A3_TITLE}
                         </h2>
                         <p className="text-slate-600 dark:text-slate-300 text-sm">
                             {T.ARTICLES.A3_P1}<br/>
@@ -130,7 +133,8 @@ export default function TermsPage() {
                     <section
                         className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                         <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <span className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A4_NUM}</span> {T.ARTICLES.A4_TITLE}
+                            <span
+                                className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A4_NUM}</span> {T.ARTICLES.A4_TITLE}
                         </h2>
                         <div className="space-y-2 text-slate-600 dark:text-slate-300 text-sm">
                             <p>{T.ARTICLES.A4_P1}</p>
@@ -143,7 +147,8 @@ export default function TermsPage() {
                     <section
                         className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                         <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <span className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A5_NUM}</span> {T.ARTICLES.A5_TITLE}
+                            <span
+                                className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A5_NUM}</span> {T.ARTICLES.A5_TITLE}
                         </h2>
                         <p className="text-slate-600 dark:text-slate-300 text-sm">
                             {T.ARTICLES.A5_P1}<br/>
@@ -155,7 +160,8 @@ export default function TermsPage() {
                     <section
                         className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                         <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <span className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A6_NUM}</span> {T.ARTICLES.A6_TITLE}
+                            <span
+                                className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A6_NUM}</span> {T.ARTICLES.A6_TITLE}
                         </h2>
                         <p className="text-slate-600 dark:text-slate-300 text-sm">
                             {T.ARTICLES.A6_P1}<br/>
@@ -167,7 +173,8 @@ export default function TermsPage() {
                     <section
                         className="p-6 rounded-3xl bg-white dark:bg-[#11131a] border border-slate-200/80 dark:border-white/5 shadow-xs space-y-3">
                         <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                            <span className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A7_NUM}</span> {T.ARTICLES.A7_TITLE}
+                            <span
+                                className="text-blue-600 dark:text-blue-400">{T.ARTICLES.A7_NUM}</span> {T.ARTICLES.A7_TITLE}
                         </h2>
                         <p className="text-slate-600 dark:text-slate-300 text-sm">
                             {T.ARTICLES.A7_BODY}

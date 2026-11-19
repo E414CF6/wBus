@@ -40,15 +40,15 @@ function formatDraftTime(iso: string): string {
 }
 
 export function useWikiDraftPersistence({
-    draftKey,
-    baselineDraft,
-    currentDraft,
-    baseVersion,
-    skipInitialRestore = false,
-    onApplyDraft,
-    onDirtyChange,
-    actionsRef,
-}: UseWikiDraftPersistenceOptions) {
+                                            draftKey,
+                                            baselineDraft,
+                                            currentDraft,
+                                            baseVersion,
+                                            skipInitialRestore = false,
+                                            onApplyDraft,
+                                            onDirtyChange,
+                                            actionsRef,
+                                        }: UseWikiDraftPersistenceOptions) {
     const [bannerDismissed, setBannerDismissed] = useState(skipInitialRestore);
     const [draftStatusLabel, setDraftStatusLabel] = useState<string | null>(null);
 

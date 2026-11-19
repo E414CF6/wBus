@@ -162,95 +162,95 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
             modalId="settings"
             ariaLabel={UI_TEXT.SETTINGS.MODAL_ARIA}
         >
+            <div
+                className="px-4 sm:px-6 pt-3 pb-2.5 border-b border-black/5 dark:border-white/5 bg-slate-50/40 dark:bg-white/[0.01] shrink-0">
                 <div
-                    className="px-4 sm:px-6 pt-3 pb-2.5 border-b border-black/5 dark:border-white/5 bg-slate-50/40 dark:bg-white/[0.01] shrink-0">
-                    <div
-                        role="tablist"
-                        aria-label={UI_TEXT.SETTINGS.TABS_ARIA}
-                        className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-slate-200/70 dark:bg-white/[0.06]"
-                    >
-                        {SETTINGS_TABS.map((tab) => {
-                            const Icon = tab.icon;
-                            const isActive = activeTab === tab.id;
-                            return (
-                                <button
-                                    key={tab.id}
-                                    type="button"
-                                    role="tab"
-                                    aria-selected={isActive}
-                                    onClick={() => handleTabChange(tab.id)}
-                                    className={`flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-[11px] sm:text-xs font-black transition-all cursor-pointer ${
-                                        isActive
-                                            ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
-                                            : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                                    }`}
-                                >
-                                    <Icon className="w-3.5 h-3.5 shrink-0"/>
-                                    <span className="truncate">{tab.label}</span>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
-
-                <div
-                    role="tabpanel"
-                    className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-5 custom-scrollbar"
+                    role="tablist"
+                    aria-label={UI_TEXT.SETTINGS.TABS_ARIA}
+                    className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-slate-200/70 dark:bg-white/[0.06]"
                 >
-                    {statusNotice && (
-                        <div
-                            className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 flex items-start justify-between gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-200">
-                            <div className="flex items-start gap-2 min-w-0">
-                                <CheckCircle2
-                                    className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"/>
-                                <span>{statusNotice}</span>
-                            </div>
+                    {SETTINGS_TABS.map((tab) => {
+                        const Icon = tab.icon;
+                        const isActive = activeTab === tab.id;
+                        return (
                             <button
+                                key={tab.id}
                                 type="button"
-                                onClick={() => setStatusNotice(null)}
-                                className="p-0.5 rounded-lg text-emerald-700/70 dark:text-emerald-300/70 hover:bg-emerald-500/10 cursor-pointer shrink-0"
-                                aria-label={UI_TEXT.SETTINGS.DISMISS_NOTICE_ARIA}
+                                role="tab"
+                                aria-selected={isActive}
+                                onClick={() => handleTabChange(tab.id)}
+                                className={`flex items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-[11px] sm:text-xs font-black transition-all cursor-pointer ${
+                                    isActive
+                                        ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
+                                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                                }`}
                             >
-                                <X className="w-3.5 h-3.5"/>
+                                <Icon className="w-3.5 h-3.5 shrink-0"/>
+                                <span className="truncate">{tab.label}</span>
                             </button>
-                        </div>
-                    )}
-
-                    {activeTab === "general" && (
-                        <GeneralSettingsTab
-                            settings={settings}
-                            activeTheme={activeTheme}
-                            appVersion={APP_VERSION}
-                            confirmClearData={confirmClearData}
-                            onThemeChange={handleThemeChange}
-                            onUpdateSettings={updateSettings}
-                            onSetConfirmClearData={setConfirmClearData}
-                            onClose={onClose}
-                            onOpenOnboarding={openOnboarding}
-                            onClearApiCache={handleClearApiCache}
-                            onResetSettings={handleResetSettings}
-                            onClearAllData={handleClearAllData}
-                        />
-                    )}
-
-                    {activeTab === "map" && (
-                        <MapSettingsTab
-                            settings={settings}
-                            onUpdateSettings={updateSettings}
-                        />
-                    )}
-
-                    {activeTab === "device" && (
-                        <DeviceSettingsTab
-                            settings={settings}
-                            currentCityName={currentCity.name}
-                            onToggleAutoDetect={handleToggleAutoDetect}
-                            onToggleHaptic={handleToggleHaptic}
-                            onUpdateSettings={updateSettings}
-                        />
-                    )}
+                        );
+                    })}
                 </div>
-            </Modal>
+            </div>
+
+            <div
+                role="tabpanel"
+                className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-5 custom-scrollbar"
+            >
+                {statusNotice && (
+                    <div
+                        className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-500/30 flex items-start justify-between gap-2 text-xs font-bold text-emerald-800 dark:text-emerald-200">
+                        <div className="flex items-start gap-2 min-w-0">
+                            <CheckCircle2
+                                className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5"/>
+                            <span>{statusNotice}</span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setStatusNotice(null)}
+                            className="p-0.5 rounded-lg text-emerald-700/70 dark:text-emerald-300/70 hover:bg-emerald-500/10 cursor-pointer shrink-0"
+                            aria-label={UI_TEXT.SETTINGS.DISMISS_NOTICE_ARIA}
+                        >
+                            <X className="w-3.5 h-3.5"/>
+                        </button>
+                    </div>
+                )}
+
+                {activeTab === "general" && (
+                    <GeneralSettingsTab
+                        settings={settings}
+                        activeTheme={activeTheme}
+                        appVersion={APP_VERSION}
+                        confirmClearData={confirmClearData}
+                        onThemeChange={handleThemeChange}
+                        onUpdateSettings={updateSettings}
+                        onSetConfirmClearData={setConfirmClearData}
+                        onClose={onClose}
+                        onOpenOnboarding={openOnboarding}
+                        onClearApiCache={handleClearApiCache}
+                        onResetSettings={handleResetSettings}
+                        onClearAllData={handleClearAllData}
+                    />
+                )}
+
+                {activeTab === "map" && (
+                    <MapSettingsTab
+                        settings={settings}
+                        onUpdateSettings={updateSettings}
+                    />
+                )}
+
+                {activeTab === "device" && (
+                    <DeviceSettingsTab
+                        settings={settings}
+                        currentCityName={currentCity.name}
+                        onToggleAutoDetect={handleToggleAutoDetect}
+                        onToggleHaptic={handleToggleHaptic}
+                        onUpdateSettings={updateSettings}
+                    />
+                )}
+            </div>
+        </Modal>
     );
 };
 

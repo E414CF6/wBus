@@ -12,11 +12,11 @@ export interface WikiUnsavedConfirmDialogProps {
 }
 
 export const WikiUnsavedConfirmDialog: React.FC<WikiUnsavedConfirmDialogProps> = ({
-    isOpen,
-    onContinueEditing,
-    onSaveDraftAndLeave,
-    onDiscardAndLeave,
-}) => {
+                                                                                      isOpen,
+                                                                                      onContinueEditing,
+                                                                                      onSaveDraftAndLeave,
+                                                                                      onDiscardAndLeave,
+                                                                                  }) => {
     if (!isOpen) return null;
 
     return (

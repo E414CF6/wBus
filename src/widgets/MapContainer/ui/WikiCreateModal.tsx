@@ -3,12 +3,7 @@
 import React, {useRef, useState} from "react";
 import {BookPlus} from "lucide-react";
 import {mutateAllWikiQueries, type WikiPageDocument} from "@entities/wiki";
-import {
-    WikiCreateForm,
-    type WikiFormDraft,
-    type WikiFormDraftActions,
-    WikiUnsavedConfirmDialog,
-} from "@features/wiki";
+import {WikiCreateForm, type WikiFormDraft, type WikiFormDraftActions, WikiUnsavedConfirmDialog,} from "@features/wiki";
 import {Modal} from "@shared/ui";
 import {UI_TEXT} from "@shared/config/locale";
 
@@ -24,15 +19,15 @@ export interface WikiCreateModalProps {
 }
 
 export const WikiCreateModal: React.FC<WikiCreateModalProps> = ({
-    isOpen,
-    initialSlug,
-    initialLat,
-    initialLng,
-    initialDraft,
-    onClose,
-    onCreated,
-    onRepickLocation,
-}) => {
+                                                                    isOpen,
+                                                                    initialSlug,
+                                                                    initialLat,
+                                                                    initialLng,
+                                                                    initialDraft,
+                                                                    onClose,
+                                                                    onCreated,
+                                                                    onRepickLocation,
+                                                                }) => {
     const [isDirty, setIsDirty] = useState(false);
     const [confirmOpen, setConfirmOpen] = useState(false);
     const draftActionsRef = useRef<WikiFormDraftActions | null>(null);

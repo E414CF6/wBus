@@ -24,11 +24,11 @@ function formatSavedAt(iso: string): string {
 }
 
 export const WikiDraftBanner: React.FC<WikiDraftBannerProps> = ({
-    draft,
-    currentVersion,
-    onRestore,
-    onDiscard,
-}) => {
+                                                                    draft,
+                                                                    currentVersion,
+                                                                    onRestore,
+                                                                    onDiscard,
+                                                                }) => {
     const versionMismatch =
         typeof draft.baseVersion === "number" &&
         typeof currentVersion === "number" &&

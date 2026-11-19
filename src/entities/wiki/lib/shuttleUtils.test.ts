@@ -1,10 +1,6 @@
 import {describe, expect, it} from "vitest";
 import type {ShuttleBusScheduleData} from "@entities/schedule";
-import {
-    filterShuttleSchedule,
-    getNextShuttleDepartures,
-    resolveEffectiveShuttleDayType,
-} from "./shuttleUtils";
+import {filterShuttleSchedule, getNextShuttleDepartures, resolveEffectiveShuttleDayType,} from "./shuttleUtils";
 
 const SAMPLE_SHUTTLE: ShuttleBusScheduleData = {
     title: "테스트 무료 셔틀",

@@ -1,9 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {
-    estimateWikiPinDimensions,
-    filterPinsByViewportAndZoom,
-    solvePinOverlapLayout,
-} from "./pinOverlapLayout";
+import {estimateWikiPinDimensions, filterPinsByViewportAndZoom, solvePinOverlapLayout,} from "./pinOverlapLayout";
 
 describe("pinOverlapLayout", () => {
     it("culls pins outside viewport bounds and respects zoom thresholds", () => {

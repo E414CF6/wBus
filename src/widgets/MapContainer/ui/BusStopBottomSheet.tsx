@@ -129,7 +129,8 @@ export const BusStopBottomSheet: React.FC<BusStopBottomSheetProps> = ({
                     >
                         <div className="flex items-center gap-1.5 min-w-0">
                             <ArrowLeftRight className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0"/>
-                            <span className="text-slate-500 dark:text-slate-400 font-medium">{UI_TEXT.STOP_POPUP.OPPOSITE_LABEL}</span>
+                            <span
+                                className="text-slate-500 dark:text-slate-400 font-medium">{UI_TEXT.STOP_POPUP.OPPOSITE_LABEL}</span>
                             <span className="font-extrabold truncate text-slate-900 dark:text-white">
                                 {pairedOppositeStop.nodenm}
                             </span>

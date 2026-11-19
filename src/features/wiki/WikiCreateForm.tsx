@@ -45,17 +45,17 @@ export interface WikiCreateFormProps {
 const DEFAULT_MARKDOWN_TEMPLATE = UI_TEXT.WIKI.CREATE_FORM.DEFAULT_MARKDOWN_TEMPLATE;
 
 export const WikiCreateForm: React.FC<WikiCreateFormProps> = ({
-    initialSlug = "",
-    initialLat,
-    initialLng,
-    initialPinColor = DEFAULT_WIKI_PIN_COLOR,
-    initialDraft,
-    onCreated,
-    onCancel,
-    onPickOnMap,
-    onDirtyChange,
-    actionsRef,
-}) => {
+                                                                  initialSlug = "",
+                                                                  initialLat,
+                                                                  initialLng,
+                                                                  initialPinColor = DEFAULT_WIKI_PIN_COLOR,
+                                                                  initialDraft,
+                                                                  onCreated,
+                                                                  onCancel,
+                                                                  onPickOnMap,
+                                                                  onDirtyChange,
+                                                                  actionsRef,
+                                                              }) => {
     const {storedNickname, saveNickname} = useWikiNickname();
 
     const initialNormalized = normalizeWikiSlug(initialDraft?.title ?? initialSlug);

@@ -13,11 +13,11 @@ export interface WikiConflictDiffViewProps {
 }
 
 export const WikiConflictDiffView: React.FC<WikiConflictDiffViewProps> = ({
-    serverDoc,
-    localDoc,
-    onApplyServerDoc,
-    onForceOverwrite,
-}) => {
+                                                                              serverDoc,
+                                                                              localDoc,
+                                                                              onApplyServerDoc,
+                                                                              onForceOverwrite,
+                                                                          }) => {
     const structuredChanges = useMemo(
         () => computeStructuredChanges(serverDoc, localDoc),
         [serverDoc, localDoc],

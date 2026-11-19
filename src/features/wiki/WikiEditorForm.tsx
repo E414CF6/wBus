@@ -26,17 +26,17 @@ export interface WikiEditorFormProps {
 }
 
 export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
-    doc,
-    initialNickname,
-    initialDraft,
-    onSaveNickname,
-    onSaved,
-    onCancel,
-    onReloadLatest,
-    onPickOnMap,
-    onDirtyChange,
-    actionsRef,
-}) => {
+                                                                  doc,
+                                                                  initialNickname,
+                                                                  initialDraft,
+                                                                  onSaveNickname,
+                                                                  onSaved,
+                                                                  onCancel,
+                                                                  onReloadLatest,
+                                                                  onPickOnMap,
+                                                                  onDirtyChange,
+                                                                  actionsRef,
+                                                              }) => {
     const [baseVersion, setBaseVersion] = useState(doc.version);
     const [title, setTitle] = useState(initialDraft?.title ?? doc.title);
     const [subtitle, setSubtitle] = useState(initialDraft?.subtitle ?? doc.subtitle);
