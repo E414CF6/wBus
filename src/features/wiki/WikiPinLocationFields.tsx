@@ -2,6 +2,7 @@
 
 import React from "react";
 import {MapPin, X} from "lucide-react";
+import {UI_TEXT} from "@shared/config/locale";
 
 export interface WikiPinLocationFieldsProps {
     lat?: number;
@@ -32,12 +33,12 @@ export const WikiPinLocationFields: React.FC<WikiPinLocationFieldsProps> = ({
                 </div>
                 <div className="min-w-0">
                     <p className="text-[11px] font-black text-emerald-900 dark:text-emerald-200">
-                        {hasCoords ? "지도 핀 위치 지정됨" : "지도 핀 위치 미지정 (선택)"}
+                        {hasCoords ? UI_TEXT.WIKI.PIN_LOCATION.ASSIGNED : UI_TEXT.WIKI.PIN_LOCATION.UNASSIGNED}
                     </p>
                     <p className="text-[10.5px] font-mono text-emerald-700/80 dark:text-emerald-300/80 truncate tabular-nums">
                         {hasCoords
                             ? `${lat.toFixed(5)}, ${lng.toFixed(5)}`
-                            : "지도에서 직접 마커를 이동해 핀 위치를 지정할 수 있습니다."}
+                            : UI_TEXT.WIKI.PIN_LOCATION.UNASSIGNED_DESC}
                     </p>
                 </div>
             </div>
@@ -50,7 +51,7 @@ export const WikiPinLocationFields: React.FC<WikiPinLocationFieldsProps> = ({
                         className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-black transition cursor-pointer"
                     >
                         <MapPin className="w-3 h-3"/>
-                        <span>{hasCoords ? "지도에서 핀 이동" : "지도에서 위치 지정"}</span>
+                        <span>{hasCoords ? UI_TEXT.WIKI.PIN_LOCATION.MOVE_ON_MAP : UI_TEXT.WIKI.PIN_LOCATION.PICK_ON_MAP}</span>
                     </button>
                 )}
                 {hasCoords && (
@@ -60,7 +61,7 @@ export const WikiPinLocationFields: React.FC<WikiPinLocationFieldsProps> = ({
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white/80 dark:bg-slate-900/70 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-700 text-[11px] font-bold text-slate-600 dark:text-slate-300 hover:text-rose-600 transition cursor-pointer"
                     >
                         <X className="w-3 h-3"/>
-                        <span>핀 제거</span>
+                        <span>{UI_TEXT.WIKI.PIN_LOCATION.CLEAR_PIN}</span>
                     </button>
                 )}
             </div>

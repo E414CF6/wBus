@@ -9,6 +9,7 @@ import {
     saveWikiPageEdit,
     setWikiPageProtection,
 } from "@entities/wiki/server";
+import {UI_TEXT} from "@shared/config/locale";
 import {decodeWikiSlug, extractClientIp, handleWikiApiError, WIKI_NO_STORE_HEADERS} from "../wikiApiUtils";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,7 @@ export async function GET(
         const slug = decodeWikiSlug(rawSlug);
         if (!isValidWikiSlug(slug)) {
             return NextResponse.json(
-                {error: "올바르지 않은 위키 문서 주소입니다."},
+                {error: UI_TEXT.WIKI.API_ERRORS.INVALID_ADDRESS},
                 {status: 400, headers: WIKI_NO_STORE_HEADERS}
             );
         }
@@ -30,14 +31,14 @@ export async function GET(
         const doc = await getWikiPage(slug);
         if (!doc) {
             return NextResponse.json(
-                {error: "위키 문서를 찾을 수 없습니다."},
+                {error: UI_TEXT.WIKI.API_ERRORS.NOT_FOUND},
                 {status: 404, headers: WIKI_NO_STORE_HEADERS}
             );
         }
 
         return NextResponse.json(doc, {headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {
-        return handleWikiApiError(err, "위키 문서를 불러오지 못했습니다.");
+        return handleWikiApiError(err, UI_TEXT.WIKI.API_ERRORS.GET_FAILED);
     }
 }
 
@@ -50,7 +51,7 @@ export async function PUT(
         const slug = decodeWikiSlug(rawSlug);
         if (!isValidWikiSlug(slug)) {
             return NextResponse.json(
-                {error: "올바르지 않은 위키 문서 주소입니다."},
+                {error: UI_TEXT.WIKI.API_ERRORS.INVALID_ADDRESS},
                 {status: 400, headers: WIKI_NO_STORE_HEADERS}
             );
         }
@@ -60,7 +61,7 @@ export async function PUT(
         if (!parsed.success) {
             return NextResponse.json(
                 {
-                    error: parsed.error.issues[0]?.message || "편집 내용이 올바르지 않습니다.",
+                    error: parsed.error.issues[0]?.message || UI_TEXT.WIKI.API_ERRORS.INVALID_EDIT,
                     issues: parsed.error.issues,
                 },
                 {status: 400, headers: WIKI_NO_STORE_HEADERS}
@@ -69,7 +70,7 @@ export async function PUT(
 
         if (parsed.data.website && parsed.data.website.trim().length > 0) {
             return NextResponse.json(
-                {error: "잘못된 요청입니다."},
+                {error: UI_TEXT.WIKI.API_ERRORS.BAD_REQUEST},
                 {status: 400, headers: WIKI_NO_STORE_HEADERS}
             );
         }
@@ -97,7 +98,7 @@ export async function PUT(
 
         return NextResponse.json(result, {headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {
-        return handleWikiApiError(err, "위키 문서 저장 중 오류가 발생했습니다.");
+        return handleWikiApiError(err, UI_TEXT.WIKI.API_ERRORS.SAVE_FAILED);
     }
 }
 
@@ -108,7 +109,7 @@ export async function PATCH(
     try {
         if (!isWikiAdminAuthorized(request.headers.get("authorization"))) {
             return NextResponse.json(
-                {error: "관리자 권한이 필요합니다."},
+                {error: UI_TEXT.WIKI.API_ERRORS.ADMIN_REQUIRED},
                 {status: 401, headers: WIKI_NO_STORE_HEADERS}
             );
         }
@@ -118,7 +119,7 @@ export async function PATCH(
         const body = (await request.json().catch(() => null)) as { isProtected?: boolean } | null;
         if (typeof body?.isProtected !== "boolean") {
             return NextResponse.json(
-                {error: "isProtected(boolean) 값이 필요합니다."},
+                {error: UI_TEXT.WIKI.API_ERRORS.IS_PROTECTED_REQUIRED},
                 {status: 400, headers: WIKI_NO_STORE_HEADERS}
             );
         }
@@ -126,7 +127,7 @@ export async function PATCH(
         const updated = await setWikiPageProtection(slug, body.isProtected);
         return NextResponse.json(updated, {headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {
-        return handleWikiApiError(err, "문서 보호 상태 변경에 실패했습니다.");
+        return handleWikiApiError(err, UI_TEXT.WIKI.API_ERRORS.PROTECTION_FAILED);
     }
 }
 
@@ -137,7 +138,7 @@ export async function DELETE(
     try {
         if (!isWikiAdminAuthorized(request.headers.get("authorization"))) {
             return NextResponse.json(
-                {error: "관리자 권한이 필요합니다."},
+                {error: UI_TEXT.WIKI.API_ERRORS.ADMIN_REQUIRED},
                 {status: 401, headers: WIKI_NO_STORE_HEADERS}
             );
         }
@@ -147,6 +148,6 @@ export async function DELETE(
         await deleteWikiPage(slug);
         return NextResponse.json({deleted: true, slug}, {headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {
-        return handleWikiApiError(err, "문서 삭제에 실패했습니다.");
+        return handleWikiApiError(err, UI_TEXT.WIKI.API_ERRORS.DELETE_FAILED);
     }
 }

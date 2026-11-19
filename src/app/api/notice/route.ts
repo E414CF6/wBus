@@ -1,4 +1,5 @@
 import {scrapeWonjuNoticeList} from "@entities/notice/server";
+import {UI_TEXT} from "@shared/config/locale";
 import {type NextRequest, NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(
             {
                 success: false,
-                error: error instanceof Error ? error.message : "공지사항 조회 실패",
+                error: error instanceof Error ? error.message : UI_TEXT.API.NOTICE_LIST_FAILED,
             },
             {status: 500}
         );

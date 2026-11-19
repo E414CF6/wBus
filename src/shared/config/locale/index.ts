@@ -20,12 +20,26 @@ import {
 import {TIMETABLE_STRINGS} from "./timetable";
 import {ROUTE_SELECT_STRINGS} from "./routeSelect";
 import {NOTICE_STRINGS} from "./notice";
+import {CITY_SELECT_STRINGS} from "./citySelect";
+import {ONBOARDING_STRINGS} from "./onboarding";
+import {SETTINGS_STRINGS} from "./settings";
+import {WIKI_STRINGS} from "./wiki";
+import {MAP_VIEW_STRINGS} from "./mapView";
+import {API_STRINGS} from "./api";
+import {LEGAL_STRINGS} from "./legal";
 
 export * from "./appLocale";
 export * from "./common";
 export * from "./timetable";
 export * from "./routeSelect";
 export * from "./notice";
+export * from "./citySelect";
+export * from "./onboarding";
+export * from "./settings";
+export * from "./wiki";
+export * from "./mapView";
+export * from "./api";
+export * from "./legal";
 
 /**
  * User Interface Text (Korean)
@@ -53,4 +67,11 @@ export const UI_TEXT = {
     DATA_LABELS: DATA_LABELS_STRINGS,
     ROUTE_MAP: ROUTE_MAP_STRINGS,
     FOOTER: FOOTER_STRINGS,
+    CITY_SELECT: CITY_SELECT_STRINGS,
+    ONBOARDING: ONBOARDING_STRINGS,
+    SETTINGS: SETTINGS_STRINGS,
+    WIKI: WIKI_STRINGS,
+    MAP_VIEW: MAP_VIEW_STRINGS,
+    API: API_STRINGS,
+    LEGAL: LEGAL_STRINGS,
 } as const;

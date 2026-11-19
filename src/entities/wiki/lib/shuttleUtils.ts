@@ -1,6 +1,7 @@
 import type {ShuttleBusScheduleData, ShuttleInboundItem, ShuttleOutboundItem} from "@entities/schedule";
 import {isSaturday, parseTimeToMinutes} from "@shared/lib/timeUtils";
 import type {DayMode} from "@shared/types/navigation";
+import {UI_TEXT} from "@shared/config/locale";
 import {matchesHangul} from "@shared/utils/hangul";
 
 export type ShuttleDayFilter = "ALL" | "WEEKDAY" | "SUNDAY";
@@ -29,7 +30,7 @@ export function resolveEffectiveShuttleDayType(
             isSaturday: false,
             isSunday: false,
             isVacation: false,
-            label: "평일 정규운행",
+            label: UI_TEXT.WIKI.SHUTTLE.WEEKDAY_REGULAR,
         };
     }
 
@@ -38,7 +39,7 @@ export function resolveEffectiveShuttleDayType(
             isSaturday: false,
             isSunday: true,
             isVacation: true,
-            label: "방학·휴일(일요일 기준)",
+            label: UI_TEXT.WIKI.SHUTTLE.VACATION_SUNDAY,
         };
     }
 
@@ -47,7 +48,7 @@ export function resolveEffectiveShuttleDayType(
             isSaturday: true,
             isSunday: false,
             isVacation: false,
-            label: "토요일 미운행",
+            label: UI_TEXT.WIKI.SHUTTLE.SATURDAY_CLOSED,
         };
     }
 
@@ -56,7 +57,7 @@ export function resolveEffectiveShuttleDayType(
             isSaturday: false,
             isSunday: true,
             isVacation: false,
-            label: "일요일 특별운행",
+            label: UI_TEXT.WIKI.SHUTTLE.SUNDAY_SPECIAL,
         };
     }
 
@@ -64,7 +65,7 @@ export function resolveEffectiveShuttleDayType(
         isSaturday: false,
         isSunday: false,
         isVacation: false,
-        label: "평일 정규운행",
+        label: UI_TEXT.WIKI.SHUTTLE.WEEKDAY_REGULAR,
     };
 }
 

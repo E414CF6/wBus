@@ -7,6 +7,7 @@ import {fetchAPI, HttpError} from "@shared/api/fetchAPI";
 import {CacheManager} from "@shared/cache/CacheManager";
 import {idbGet, idbSet} from "@shared/cache/idbStorage";
 import {APP_CONFIG, STORAGE_KEYS} from "@shared/config/env";
+import {UI_TEXT} from "@shared/config/locale";
 
 export interface CityRoutesPayload {
     cityCode: string;
@@ -326,8 +327,12 @@ export async function getRouteVariations(routeName: string, cityCode?: string): 
                 .trim() || lastStop;
 
             const meta = getRouteMeta(routeName, cCode);
-            const turnaroundName = cleanTurning || (cleanLast && cleanLast !== cleanOrigin ? cleanLast : "") || meta.destination || "회차지";
-            const originName = cleanOrigin || meta.origin || "기점";
+            const turnaroundName =
+                cleanTurning ||
+                (cleanLast && cleanLast !== cleanOrigin ? cleanLast : "") ||
+                meta.destination ||
+                UI_TEXT.ROUTE_MAP.TURNAROUND;
+            const originName = cleanOrigin || meta.origin || UI_TEXT.ROUTE_MAP.ORIGIN;
 
             let label = `${originName} ↔ ${turnaroundName}`;
 
@@ -336,9 +341,13 @@ export async function getRouteVariations(routeName: string, cityCode?: string): 
                 const last = poly.stops[poly.stops.length - 1]?.name ?? "";
 
                 if (first && baseFirst && first !== baseFirst) {
-                    label = `${first.replace(/ (차고지|종점|승강장)$/, "")} 출발`;
+                    label = UI_TEXT.ROUTE_MAP.TURNAROUND_DEPART_FORMAT(
+                        first.replace(/ (차고지|종점|승강장)$/, "")
+                    );
                 } else if (last && baseLast && last !== baseLast && poly.stops.length < baseStops.length * 0.85) {
-                    label = `${last.replace(/ (차고지|종점|승강장)$/, "")} 종점`;
+                    label = UI_TEXT.ROUTE_MAP.TERMINAL_FORMAT(
+                        last.replace(/ (차고지|종점|승강장)$/, "")
+                    );
                 } else {
                     const diff = poly.stops.filter((s) => !baseNames.has(s.name));
                     if (diff.length > 0) {
@@ -347,11 +356,11 @@ export async function getRouteVariations(routeName: string, cityCode?: string): 
                             .replace(/\(승차전용\)$/, "")
                             .replace(/\(교내\)$/, "")
                             .trim();
-                        label = `${cleanName} 경유`;
+                        label = UI_TEXT.ROUTE_MAP.VIA_FORMAT(cleanName);
                     } else if (poly.stops.length < baseStops.length) {
-                        label = `단축 (${poly.stops.length}개 정류장)`;
+                        label = UI_TEXT.ROUTE_MAP.SHORT_ROUTE_FORMAT(poly.stops.length);
                     } else {
-                        label = `변형 ${index + 1}`;
+                        label = UI_TEXT.ROUTE_MAP.VARIANT_FORMAT(index + 1);
                     }
                 }
             }

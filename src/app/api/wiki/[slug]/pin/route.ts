@@ -6,6 +6,7 @@ import {
     resolveEditorInfo,
     updateWikiPinMeta,
 } from "@entities/wiki/server";
+import {UI_TEXT} from "@shared/config/locale";
 import {decodeWikiSlug, extractClientIp, handleWikiApiError, WIKI_NO_STORE_HEADERS} from "../../wikiApiUtils";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +20,7 @@ export async function PATCH(
         const slug = decodeWikiSlug(rawSlug);
         if (!isValidWikiSlug(slug)) {
             return NextResponse.json(
-                {error: "올바르지 않은 위키 문서 주소입니다."},
+                {error: UI_TEXT.WIKI.API_ERRORS.INVALID_ADDRESS},
                 {status: 400, headers: WIKI_NO_STORE_HEADERS}
             );
         }
@@ -29,7 +30,7 @@ export async function PATCH(
         if (!parsed.success) {
             return NextResponse.json(
                 {
-                    error: parsed.error.issues[0]?.message || "핀 수정 요청 형식이 올바르지 않습니다.",
+                    error: parsed.error.issues[0]?.message || UI_TEXT.WIKI.API_ERRORS.INVALID_PIN_PATCH,
                     issues: parsed.error.issues,
                 },
                 {status: 400, headers: WIKI_NO_STORE_HEADERS}
@@ -55,6 +56,6 @@ export async function PATCH(
 
         return NextResponse.json(result, {headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {
-        return handleWikiApiError(err, "지도 핀 정보 수정 중 오류가 발생했습니다.");
+        return handleWikiApiError(err, UI_TEXT.WIKI.API_ERRORS.PIN_UPDATE_FAILED);
     }
 }

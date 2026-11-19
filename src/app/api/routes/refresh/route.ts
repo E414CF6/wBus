@@ -1,6 +1,7 @@
 import {type NextRequest, NextResponse} from "next/server";
 
 import {refreshRouteData} from "@entities/route/server";
+import {UI_TEXT} from "@shared/config/locale";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -17,7 +18,7 @@ async function handleRefresh(request: NextRequest) {
 
         if (!isAuthorized) {
             return NextResponse.json(
-                {success: false, error: "인증되지 않은 요청입니다. (CRON_SECRET 또는 ADMIN_KEY 필요)"},
+                {success: false, error: UI_TEXT.API.AUTH_REQUIRED},
                 {status: 401}
             );
         }
@@ -62,7 +63,7 @@ async function handleRefresh(request: NextRequest) {
         return NextResponse.json(
             {
                 success: false,
-                error: error instanceof Error ? error.message : "노선 데이터 갱신 실패",
+                error: error instanceof Error ? error.message : UI_TEXT.API.ROUTES_REFRESH_FAILED,
             },
             {status: 500}
         );

@@ -6,6 +6,7 @@ import {revalidatePath} from "next/cache";
 import {CacheManager, getCachedOrFetch, invalidateCacheByPrefixAsync, setCached} from "@shared/cache";
 import {artifactStore} from "@shared/cache/artifactStore";
 import {distributedCache} from "@shared/cache/distributedCache";
+import {UI_TEXT} from "@shared/config/locale";
 import {fetchOsrmPolyline, fetchOsrmPolylineWithMeta, getOsrmClientHealth} from "./osrmClient";
 import type {GeoPolyline} from "./types";
 import {
@@ -217,7 +218,7 @@ export async function refreshRouteData(
         return {
             success: false,
             refreshed: false,
-            message: "DATA_GO_KR_SERVICE_KEY 환경변수가 설정되지 않아 노선 데이터를 갱신할 수 없습니다.",
+            message: UI_TEXT.API.ROUTE_SYNC.MISSING_API_KEY,
             totalRoutesProcessed: 0,
             routesCount: 0,
             nextCursor: null,
@@ -238,7 +239,7 @@ export async function refreshRouteData(
         return {
             success: false,
             refreshed: false,
-            message: `공공데이터포털 노선 목록 조회 실패: ${err instanceof Error ? err.message : String(err)}`,
+            message: UI_TEXT.API.ROUTE_SYNC.FETCH_LIST_FAILED(err instanceof Error ? err.message : String(err)),
             totalRoutesProcessed: 0,
             routesCount: 0,
             nextCursor: options.cursor ?? 0,
@@ -370,7 +371,7 @@ export async function refreshRouteData(
     return {
         success: true,
         refreshed: processedCount > 0,
-        message: `${processedCount}개 노선 갱신 완료 (${skippedUnchanged}개 변경 없음 스킵).`,
+        message: UI_TEXT.API.ROUTE_SYNC.COMPLETE(processedCount, skippedUnchanged),
         totalRoutesProcessed: processedCount,
         skippedUnchanged,
         totalCandidates,

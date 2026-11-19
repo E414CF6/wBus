@@ -1,4 +1,5 @@
 import type {ShuttleInboundItem, ShuttleOutboundItem, ShuttleStopLocation, ShuttleViaStop} from "@entities/schedule";
+import {UI_TEXT} from "@shared/config/locale";
 import {normalizeWikiSlug} from "../schemas";
 import type {WikiBoardingStop, WikiLinkedRoute, WikiShuttleBlock} from "../types";
 
@@ -138,7 +139,7 @@ function parseCustomWikiToken(inner: string): WikiInlineNode | null {
             type: "routelink",
             cityCode,
             routeNo,
-            label: customLabel?.trim() || `${routeNo}번`,
+            label: customLabel?.trim() || UI_TEXT.COMMON.ROUTE_NUMBER(routeNo),
         };
     }
 
@@ -153,7 +154,7 @@ function parseCustomWikiToken(inner: string): WikiInlineNode | null {
                 type: "roadview",
                 lat,
                 lng,
-                label: labelParts.join(",").trim() || "로드뷰",
+                label: labelParts.join(",").trim() || UI_TEXT.WIKI.MARKDOWN.DEFAULT_ROADVIEW_LABEL,
             };
         }
         return null;
@@ -230,7 +231,7 @@ function parseShuttleItemLine(
     const parts = cleaned.split("|").map((p) => p.trim());
     if (parts.length < 3) return null;
 
-    const operation_type = parts[0] || "평일 운행";
+    const operation_type = parts[0] || UI_TEXT.WIKI.MARKDOWN.DEFAULT_OPERATION_TYPE;
     const departure_time = normalizeTimeHHMM(parts[1]);
     if (!departure_time) return null;
 
@@ -319,7 +320,7 @@ function parseShuttleBlock(code: string): WikiShuttleBlock | null {
             const parsed = JSON.parse(trimmed) as Partial<WikiShuttleBlock>;
             return {
                 enabled: parsed.enabled !== false,
-                title: String(parsed.title || "셔틀버스 시간표"),
+                title: String(parsed.title || UI_TEXT.WIKI.MARKDOWN.DEFAULT_SHUTTLE_TITLE),
                 stop_locations: Array.isArray(parsed.stop_locations) ? parsed.stop_locations : [],
                 inbound_to_campus: Array.isArray(parsed.inbound_to_campus)
                     ? parsed.inbound_to_campus
@@ -334,7 +335,7 @@ function parseShuttleBlock(code: string): WikiShuttleBlock | null {
         }
     }
 
-    let title = "셔틀버스 시간표";
+    let title: string = UI_TEXT.WIKI.MARKDOWN.DEFAULT_SHUTTLE_TITLE;
     let section: "stops" | "inbound" | "outbound" | "guidelines" | null = null;
     const stop_locations: ShuttleStopLocation[] = [];
     const inbound_to_campus: ShuttleInboundItem[] = [];
@@ -368,10 +369,18 @@ function parseShuttleBlock(code: string): WikiShuttleBlock | null {
                 stop_locations.push({name, location_description: desc});
             }
         } else if (section === "inbound") {
-            const parsed = parseShuttleItemLine(line, "출발지", "도착지");
+            const parsed = parseShuttleItemLine(
+                line,
+                UI_TEXT.WIKI.MARKDOWN.DEFAULT_DEPARTURE_POINT,
+                UI_TEXT.WIKI.MARKDOWN.DEFAULT_ARRIVAL_POINT
+            );
             if (parsed) inbound_to_campus.push(parsed);
         } else if (section === "outbound") {
-            const parsed = parseShuttleItemLine(line, "출발지", "도착지");
+            const parsed = parseShuttleItemLine(
+                line,
+                UI_TEXT.WIKI.MARKDOWN.DEFAULT_DEPARTURE_POINT,
+                UI_TEXT.WIKI.MARKDOWN.DEFAULT_ARRIVAL_POINT
+            );
             if (parsed) outbound_from_campus.push(parsed);
         } else if (section === "guidelines") {
             const cleaned = line.replace(/^[-*+]\s+/, "").trim();
@@ -493,7 +502,7 @@ export function serializeStructuredBlocksToMarkdown(input: {
             const cols = [
                 r.cityCode,
                 r.routeNo,
-                r.label ?? `${r.routeNo}번`,
+                r.label ?? UI_TEXT.COMMON.ROUTE_NUMBER(r.routeNo),
                 r.description ?? "",
                 r.viaStops ?? "",
                 r.note ?? "",
@@ -503,12 +512,12 @@ export function serializeStructuredBlocksToMarkdown(input: {
             }
             return cols.join(" | ");
         });
-        sections.push(`## 연결 시내버스\n\n\`\`\`routes\n${lines.join("\n")}\n\`\`\``);
+        sections.push(`## ${UI_TEXT.WIKI.MARKDOWN.SECTION_LINKED_ROUTES}\n\n\`\`\`routes\n${lines.join("\n")}\n\`\`\``);
     }
 
     const shuttle = input.shuttle;
     if (shuttle?.enabled) {
-        const shuttleLines: string[] = [`title: ${shuttle.title || "셔틀버스 시간표"}`];
+        const shuttleLines: string[] = [`title: ${shuttle.title || UI_TEXT.WIKI.MARKDOWN.DEFAULT_SHUTTLE_TITLE}`];
 
         if (shuttle.stop_locations.length > 0) {
             shuttleLines.push("", "[stops]");
@@ -524,10 +533,10 @@ export function serializeStructuredBlocksToMarkdown(input: {
                 `${item.departure_point} -> ${item.destination}`,
             ];
             if (item.via && item.via.length > 0) {
-                cols.push(`경유: ${serializeShuttleViaToText(item.via)}`);
+                cols.push(`${UI_TEXT.WIKI.MARKDOWN.VIA_PREFIX} ${serializeShuttleViaToText(item.via)}`);
             }
             if (item.note) {
-                cols.push(`비고: ${item.note}`);
+                cols.push(`${UI_TEXT.WIKI.MARKDOWN.NOTE_PREFIX} ${item.note}`);
             }
             return `- ${cols.join(" | ")}`;
         };
@@ -553,7 +562,7 @@ export function serializeStructuredBlocksToMarkdown(input: {
             }
         }
 
-        sections.push(`## ${shuttle.title || "셔틀 시간표"}\n\n\`\`\`shuttle\n${shuttleLines.join("\n")}\n\`\`\``);
+        sections.push(`## ${shuttle.title || UI_TEXT.WIKI.MARKDOWN.DEFAULT_SHUTTLE_HEADING_FALLBACK}\n\n\`\`\`shuttle\n${shuttleLines.join("\n")}\n\`\`\``);
     }
 
     const stops = input.boardingStops ?? [];
@@ -568,7 +577,7 @@ export function serializeStructuredBlocksToMarkdown(input: {
             ];
             return `- ${cols.join(" | ")}`;
         });
-        sections.push(`## 주요 승강장 · 탑승 위치\n\n\`\`\`stops\n${lines.join("\n")}\n\`\`\``);
+        sections.push(`## ${UI_TEXT.WIKI.MARKDOWN.SECTION_BOARDING_STOPS}\n\n\`\`\`stops\n${lines.join("\n")}\n\`\`\``);
     }
 
     return sections.join("\n\n");

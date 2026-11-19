@@ -3,6 +3,7 @@ import {Bus, RotateCw, Star} from "lucide-react";
 import type {BusItem} from "@entities/bus/types";
 import type {RouteVariationStop} from "@entities/route/types";
 import type {BusStop} from "@entities/station/types";
+import {UI_TEXT} from "@shared/config/locale";
 
 export interface BusDrawerStopItemProps {
     stop: RouteVariationStop;
@@ -98,7 +99,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
             ) : isTurningStop ? (
                 <div
                     className="absolute left-[26px] sm:left-[30px] -translate-x-1/2 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-2 border-amber-500 dark:border-amber-400 bg-amber-50 dark:bg-[#11131a] z-10 shadow-[0_0_10px_rgba(245,158,11,0.3)] flex items-center justify-center pointer-events-none"
-                    title="회차지 정류장"
+                    title={UI_TEXT.MAP_VIEW.BUS_DRAWER.TURNING_STOP_TITLE}
                 >
                     <RotateCw className="w-2.5 h-2.5 text-amber-600 dark:text-amber-400 stroke-[2.5]"/>
                 </div>
@@ -136,7 +137,7 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                         <span
                             className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-black bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-500/40 shadow-xs shrink-0 select-none">
                             <RotateCw className="w-2.5 h-2.5 stroke-[2.5]"/>
-                            회차지
+                            {UI_TEXT.MAP_VIEW.BUS_DRAWER.TURNING_STOP_BADGE}
                         </span>
                     )}
                 </div>
@@ -169,8 +170,8 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                                 style={{backgroundColor: metaThemeMainColor}}
                                 title={
                                     isNearestBus
-                                        ? `${bus.vehicleno} (지도 중심과 가장 가까운 버스) 실시간 위치로 이동`
-                                        : `${bus.vehicleno} 실시간 위치로 이동`
+                                        ? UI_TEXT.MAP_VIEW.BUS_DRAWER.NEAREST_BUS_TITLE(bus.vehicleno)
+                                        : UI_TEXT.MAP_VIEW.BUS_DRAWER.BUS_MOVE_TITLE(bus.vehicleno)
                                 }
                             >
                                 <Bus className="w-3 h-3 shrink-0"/>
@@ -199,8 +200,8 @@ export const BusDrawerStopItem = memo<BusDrawerStopItemProps>(({
                         ? "text-amber-500 hover:text-amber-600"
                         : "text-slate-300 dark:text-slate-600 opacity-60 group-hover:opacity-100 hover:text-amber-500 dark:hover:text-amber-400"
                 }`}
-                title={isFavStop ? "정류장 즐겨찾기 해제" : "정류장 즐겨찾기 추가"}
-                aria-label={isFavStop ? "정류장 즐겨찾기 해제" : "정류장 즐겨찾기 추가"}
+                title={isFavStop ? UI_TEXT.MAP_VIEW.BUS_DRAWER.STOP_FAV_REMOVE : UI_TEXT.MAP_VIEW.BUS_DRAWER.STOP_FAV_ADD}
+                aria-label={isFavStop ? UI_TEXT.MAP_VIEW.BUS_DRAWER.STOP_FAV_REMOVE : UI_TEXT.MAP_VIEW.BUS_DRAWER.STOP_FAV_ADD}
             >
                 <Star className={`w-4 h-4 ${isFavStop ? "fill-amber-500" : ""}`}/>
             </button>

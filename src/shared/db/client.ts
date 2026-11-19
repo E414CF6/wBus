@@ -2,6 +2,7 @@ import "server-only";
 
 import {neonConfig, Pool} from "@neondatabase/serverless";
 import {drizzle, type NeonDatabase} from "drizzle-orm/neon-serverless";
+import {UI_TEXT} from "@shared/config/locale";
 import * as schema from "./schema";
 
 export type WikiDatabase = NeonDatabase<typeof schema>;
@@ -26,7 +27,7 @@ export function getDb(): WikiDatabase {
     const connectionString = resolveDatabaseUrl();
     if (!connectionString) {
         throw new Error(
-            "DATABASE_URL 또는 POSTGRES_URL 환경 변수가 설정되지 않았습니다."
+            UI_TEXT.API.DB.MISSING_URL
         );
     }
 

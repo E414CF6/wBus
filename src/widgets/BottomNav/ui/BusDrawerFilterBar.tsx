@@ -1,6 +1,7 @@
 import React from "react";
 import {Search, Star, X} from "lucide-react";
 import type {RouteVariation, RouteVariationStop} from "@entities/route/types";
+import {UI_TEXT} from "@shared/config/locale";
 import type {DirectionFilter} from "../hooks/useStopSearchFilter";
 
 interface BusDrawerFilterBarProps {
@@ -49,10 +50,10 @@ export const BusDrawerFilterBar: React.FC<BusDrawerFilterBarProps> = ({
                 <div
                     className="flex items-center gap-1.5 px-4 pb-1.5 text-xs shrink-0 overflow-x-auto custom-scrollbar-hidden"
                     role="tablist"
-                    aria-label="노선 종류 선택"
+                    aria-label={UI_TEXT.MAP_VIEW.BUS_DRAWER.VARIANT_TABLIST_ARIA}
                 >
                     <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 shrink-0 mr-0.5">
-                        노선
+                        {UI_TEXT.MAP_VIEW.BUS_DRAWER.ROUTE_LABEL}
                     </span>
                     {effectiveVariations.map((variant) => {
                         const isSelectedVariant = variant.routeId === currentVariant?.routeId;
@@ -83,7 +84,7 @@ export const BusDrawerFilterBar: React.FC<BusDrawerFilterBarProps> = ({
                                                 : "bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300"
                                         }`}
                                     >
-                                        {busCountOnVariant}대
+                                        {UI_TEXT.MAP_VIEW.BUS_DRAWER.BUS_COUNT_UNIT(busCountOnVariant)}
                                     </span>
                                 )}
                             </button>
@@ -106,7 +107,7 @@ export const BusDrawerFilterBar: React.FC<BusDrawerFilterBarProps> = ({
                                         : "bg-slate-100/90 dark:bg-white/[0.06] border border-transparent text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                                 }`}
                             >
-                                전체
+                                {UI_TEXT.MAP_VIEW.BUS_DRAWER.DIRECTION_ALL}
                             </button>
                             {hasDirections && (
                                 <>
@@ -119,7 +120,7 @@ export const BusDrawerFilterBar: React.FC<BusDrawerFilterBarProps> = ({
                                                 : "bg-slate-100/90 dark:bg-white/[0.06] border border-transparent text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                                         }`}
                                     >
-                                        {turningStop ? `${turningStop.nodenm} 방면` : "기점 방면"}
+                                        {turningStop ? UI_TEXT.MAP_VIEW.BUS_DRAWER.DIRECTION_TO_STOP(turningStop.nodenm) : UI_TEXT.MAP_VIEW.BUS_DRAWER.DIRECTION_ORIGIN}
                                     </button>
                                     <button
                                         type="button"
@@ -130,7 +131,7 @@ export const BusDrawerFilterBar: React.FC<BusDrawerFilterBarProps> = ({
                                                 : "bg-slate-100/90 dark:bg-white/[0.06] border border-transparent text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
                                         }`}
                                     >
-                                        {turningStop ? `${turningStop.nodenm} 이후` : "종점 방면"}
+                                        {turningStop ? UI_TEXT.MAP_VIEW.BUS_DRAWER.DIRECTION_AFTER_STOP(turningStop.nodenm) : UI_TEXT.MAP_VIEW.BUS_DRAWER.DIRECTION_DEST}
                                     </button>
                                 </>
                             )}
@@ -145,7 +146,7 @@ export const BusDrawerFilterBar: React.FC<BusDrawerFilterBarProps> = ({
                                     }`}
                                 >
                                     <Star className="w-3 h-3 fill-amber-400 text-amber-500"/>
-                                    <span>즐겨찾기 ({favoriteStopsCountInRoute})</span>
+                                    <span>{UI_TEXT.MAP_VIEW.BUS_DRAWER.FAVORITES_COUNT(favoriteStopsCountInRoute)}</span>
                                 </button>
                             )}
                         </div>
@@ -160,8 +161,8 @@ export const BusDrawerFilterBar: React.FC<BusDrawerFilterBarProps> = ({
                                 type="text"
                                 value={stopSearchQuery}
                                 onChange={(e) => onSearchQueryChange(e.target.value)}
-                                placeholder="정류장 이름 또는 번호 검색..."
-                                aria-label="정류장 검색"
+                                placeholder={UI_TEXT.MAP_VIEW.BUS_DRAWER.STOP_SEARCH_PLACEHOLDER}
+                                aria-label={UI_TEXT.MAP_VIEW.BUS_DRAWER.STOP_SEARCH_ARIA}
                                 className="w-full pl-8.5 pr-8 py-1.5 leading-snug rounded-xl bg-slate-100/85 dark:bg-white/[0.06] border border-transparent focus:border-blue-500/40 focus:bg-white dark:focus:bg-white/10 text-xs font-semibold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
                             />
                             {stopSearchQuery && (
@@ -169,7 +170,7 @@ export const BusDrawerFilterBar: React.FC<BusDrawerFilterBarProps> = ({
                                     type="button"
                                     onClick={() => onSearchQueryChange("")}
                                     className="absolute right-2 p-0.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-                                    aria-label="검색어 지우기"
+                                    aria-label={UI_TEXT.COMMON.CLEAR_SEARCH_ARIA}
                                 >
                                     <X className="w-3.5 h-3.5"/>
                                 </button>

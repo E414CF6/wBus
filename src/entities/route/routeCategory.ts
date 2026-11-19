@@ -1,3 +1,5 @@
+import {UI_TEXT} from "@shared/config/locale";
+
 export interface RouteCategoryInfo {
     id: string;
     label: string;
@@ -20,7 +22,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/공항|airport/i.test(tp)) {
         return {
             id: "AIRPORT",
-            label: "공항",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_AIRPORT,
             dotClass: "bg-sky-500",
             activeClass: "bg-sky-600 text-white shadow-md shadow-sky-500/30 scale-[1.02]",
             order: 10,
@@ -31,7 +33,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/심야|night/i.test(tp)) {
         return {
             id: "NIGHT",
-            label: "심야",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_NIGHT,
             dotClass: "bg-purple-600",
             activeClass: "bg-purple-600 text-white shadow-md shadow-purple-500/30 scale-[1.02]",
             order: 20,
@@ -42,7 +44,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/좌석/i.test(tp)) {
         return {
             id: "SEAT",
-            label: "좌석",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_SEAT,
             dotClass: "bg-orange-500",
             activeClass: "bg-orange-600 text-white shadow-md shadow-orange-500/30 scale-[1.02]",
             order: 30,
@@ -53,7 +55,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/급행|express/i.test(tp)) {
         return {
             id: "EXPRESS",
-            label: "급행",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_EXPRESS,
             dotClass: "bg-red-500",
             activeClass: "bg-red-600 text-white shadow-md shadow-red-500/30 scale-[1.02]",
             order: 40,
@@ -64,7 +66,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/광역/i.test(tp)) {
         return {
             id: "WIDE_AREA",
-            label: "광역",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_WIDE_AREA,
             dotClass: "bg-rose-600",
             activeClass: "bg-rose-600 text-white shadow-md shadow-rose-500/30 scale-[1.02]",
             order: 50,
@@ -75,7 +77,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/간선|trunk/i.test(tp)) {
         return {
             id: "MAIN",
-            label: "간선",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_MAIN,
             dotClass: "bg-blue-600",
             activeClass: "bg-blue-600 text-white shadow-md shadow-blue-500/30 scale-[1.02]",
             order: 60,
@@ -86,7 +88,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/지선|feeder|branch/i.test(tp)) {
         return {
             id: "BRANCH",
-            label: "지선",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_BRANCH,
             dotClass: "bg-emerald-600",
             activeClass: "bg-emerald-600 text-white shadow-md shadow-emerald-500/30 scale-[1.02]",
             order: 70,
@@ -97,7 +99,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/순환|circuit/i.test(tp)) {
         return {
             id: "CIRCULAR",
-            label: "순환",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_CIRCULAR,
             dotClass: "bg-teal-600",
             activeClass: "bg-teal-600 text-white shadow-md shadow-teal-500/30 scale-[1.02]",
             order: 80,
@@ -108,7 +110,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/마을|village|town/i.test(tp)) {
         return {
             id: "VILLAGE",
-            label: "마을",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_VILLAGE,
             dotClass: "bg-lime-500",
             activeClass: "bg-lime-600 text-white shadow-md shadow-lime-500/30 scale-[1.02]",
             order: 90,
@@ -119,7 +121,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/농어촌|rural/i.test(tp)) {
         return {
             id: "RURAL",
-            label: "농어촌",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_RURAL,
             dotClass: "bg-amber-600",
             activeClass: "bg-amber-600 text-white shadow-md shadow-amber-600/30 scale-[1.02]",
             order: 100,
@@ -130,7 +132,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/시외/i.test(tp)) {
         return {
             id: "INTERCITY",
-            label: "시외",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_INTERCITY,
             dotClass: "bg-indigo-600",
             activeClass: "bg-indigo-600 text-white shadow-md shadow-indigo-500/30 scale-[1.02]",
             order: 110,
@@ -141,7 +143,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/관광|tour/i.test(tp)) {
         return {
             id: "TOUR",
-            label: "관광",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_TOUR,
             dotClass: "bg-pink-600",
             activeClass: "bg-pink-600 text-white shadow-md shadow-pink-500/30 scale-[1.02]",
             order: 120,
@@ -152,7 +154,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/맞춤|따복|공영/i.test(tp)) {
         return {
             id: "CUSTOM",
-            label: "맞춤·공영",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_CUSTOM,
             dotClass: "bg-cyan-600",
             activeClass: "bg-cyan-600 text-white shadow-md shadow-cyan-500/30 scale-[1.02]",
             order: 130,
@@ -163,7 +165,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/수요응답|drt/i.test(tp)) {
         return {
             id: "DRT",
-            label: "수요응답",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_DRT,
             dotClass: "bg-indigo-500",
             activeClass: "bg-indigo-600 text-white shadow-md shadow-indigo-500/30 scale-[1.02]",
             order: 135,
@@ -174,7 +176,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     if (/일반|시내/i.test(tp)) {
         return {
             id: "GENERAL",
-            label: "일반",
+            label: UI_TEXT.ROUTE_MAP.CATEGORY_GENERAL,
             dotClass: "bg-blue-500",
             activeClass: "bg-blue-600 text-white shadow-md shadow-blue-500/30 scale-[1.02]",
             order: 55,
@@ -196,7 +198,7 @@ export function resolveRouteCategory(routeType?: string | null): RouteCategoryIn
     // 16. Fallback default
     return {
         id: "GENERAL",
-        label: "일반",
+        label: UI_TEXT.ROUTE_MAP.CATEGORY_GENERAL,
         dotClass: "bg-blue-500",
         activeClass: "bg-blue-600 text-white shadow-md shadow-blue-500/30 scale-[1.02]",
         order: 55,

@@ -64,7 +64,55 @@ export const wikiRevisions = pgTable(
     ],
 );
 
+export const wikiDiscussionThreads = pgTable(
+    "wiki_discussion_threads",
+    {
+        id: bigint("id", {mode: "number"}).generatedAlwaysAsIdentity().primaryKey(),
+        slug: text("slug")
+            .notNull()
+            .references(() => wikiPages.slug, {onDelete: "cascade", onUpdate: "cascade"}),
+        title: text("title").notNull(),
+        status: text("status").$type<"open" | "resolved">().notNull().default("open"),
+        authorNickname: text("author_nickname").notNull(),
+        authorId: text("author_id").notNull(),
+        commentCount: integer("comment_count").notNull().default(1),
+        lastCommentAt: timestamp("last_comment_at", {withTimezone: true}).notNull().defaultNow(),
+        resolvedByNickname: text("resolved_by_nickname"),
+        resolvedById: text("resolved_by_id"),
+        resolvedAt: timestamp("resolved_at", {withTimezone: true}),
+        createdAt: timestamp("created_at", {withTimezone: true}).notNull().defaultNow(),
+    },
+    (table) => [
+        index("wiki_discussion_threads_slug_status_idx").on(
+            table.slug,
+            table.status,
+            table.lastCommentAt,
+        ),
+    ],
+);
+
+export const wikiDiscussionComments = pgTable(
+    "wiki_discussion_comments",
+    {
+        id: bigint("id", {mode: "number"}).generatedAlwaysAsIdentity().primaryKey(),
+        threadId: bigint("thread_id", {mode: "number"})
+            .notNull()
+            .references(() => wikiDiscussionThreads.id, {onDelete: "cascade"}),
+        body: text("body").notNull(),
+        authorNickname: text("author_nickname").notNull(),
+        authorId: text("author_id").notNull(),
+        createdAt: timestamp("created_at", {withTimezone: true}).notNull().defaultNow(),
+    },
+    (table) => [
+        index("wiki_discussion_comments_thread_created_idx").on(table.threadId, table.createdAt),
+    ],
+);
+
 export type WikiPageRow = typeof wikiPages.$inferSelect;
 export type WikiPageInsert = typeof wikiPages.$inferInsert;
 export type WikiRevisionRow = typeof wikiRevisions.$inferSelect;
 export type WikiRevisionInsert = typeof wikiRevisions.$inferInsert;
+export type WikiDiscussionThreadRow = typeof wikiDiscussionThreads.$inferSelect;
+export type WikiDiscussionThreadInsert = typeof wikiDiscussionThreads.$inferInsert;
+export type WikiDiscussionCommentRow = typeof wikiDiscussionComments.$inferSelect;
+export type WikiDiscussionCommentInsert = typeof wikiDiscussionComments.$inferInsert;

@@ -1,3 +1,4 @@
+import {UI_TEXT} from "@shared/config/locale";
 import {classifyRouteType, type GenericRouteType, ROUTE_TYPE_COLORS, type RouteColorConfig} from "./routeColor";
 
 export interface RouteMeta {
@@ -94,8 +95,8 @@ export function registerDynamicRouteMeta(
 ) {
     for (const r of rawRoutes) {
         const routeNo = String(r.routeno);
-        const origin = r.startnodenm || "기점";
-        const destination = r.endnodenm || "종점";
+        const origin = r.startnodenm || UI_TEXT.ROUTE_MAP.ORIGIN;
+        const destination = r.endnodenm || UI_TEXT.ROUTE_MAP.DESTINATION;
         const formatTime = (t?: string | number) => {
             if (t === undefined || t === null || t === "") return undefined;
             const digits = String(t).replace(/[^0-9]/g, "");
@@ -141,10 +142,10 @@ export function getRouteMeta(routeName: string, cityCode = "32020"): RouteMeta {
     if (cityCode === "32020") {
         const staticInfo = STATIC_ROUTE_METADATA[routeName];
 
-        const origin = staticInfo?.origin || "관설동/장양리";
-        const destination = staticInfo?.destination || "원주시내";
+        const origin = staticInfo?.origin || UI_TEXT.ROUTE_MAP.DEFAULT_WONJU_ORIGIN;
+        const destination = staticInfo?.destination || UI_TEXT.ROUTE_MAP.DEFAULT_WONJU_DEST;
         const description = staticInfo?.description || `${origin} ↔ ${destination}`;
-        const routeType = staticInfo?.routeType || "일반버스";
+        const routeType = staticInfo?.routeType || UI_TEXT.ROUTE_MAP.DEFAULT_BUS_TYPE;
         const genericType = classifyRouteType(routeName, routeType);
 
         return {
@@ -162,9 +163,9 @@ export function getRouteMeta(routeName: string, cityCode = "32020"): RouteMeta {
 
     return {
         routeNo: routeName,
-        origin: "기점",
-        destination: "종점",
-        description: `${routeName}번 시내버스`,
+        origin: UI_TEXT.ROUTE_MAP.ORIGIN,
+        destination: UI_TEXT.ROUTE_MAP.DESTINATION,
+        description: UI_TEXT.ROUTE_MAP.GENERIC_CITY_BUS_DESC(routeName),
         genericType,
         colorTheme: ROUTE_TYPE_COLORS[genericType],
     };

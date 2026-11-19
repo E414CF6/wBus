@@ -1,4 +1,5 @@
 import {z} from "zod";
+import {UI_TEXT} from "@shared/config/locale";
 import type {WikiPinColor} from "./types";
 
 export const WIKI_PIN_COLORS: readonly WikiPinColor[] = [
@@ -69,15 +70,15 @@ export function isValidWikiSlug(slug: string): boolean {
 }
 
 export const WikiEditorInfoSchema = z.object({
-    nickname: z.string().trim().max(24).default("익명 버스러"),
+    nickname: z.string().trim().max(24).default(UI_TEXT.WIKI.VALIDATION.DEFAULT_NICKNAME),
     editorId: z.string().trim().min(1).max(64),
 });
 
 const OptionalLatSchema = z
     .number()
     .finite()
-    .min(32, "위도는 32~39.5 범위여야 합니다")
-    .max(39.5, "위도는 32~39.5 범위여야 합니다")
+    .min(32, UI_TEXT.WIKI.VALIDATION.LAT_RANGE)
+    .max(39.5, UI_TEXT.WIKI.VALIDATION.LAT_RANGE)
     .nullable()
     .optional()
     .transform((v) => (v === null ? undefined : v));
@@ -85,8 +86,8 @@ const OptionalLatSchema = z
 const OptionalLngSchema = z
     .number()
     .finite()
-    .min(124, "경도는 124~132.5 범위여야 합니다")
-    .max(132.5, "경도는 124~132.5 범위여야 합니다")
+    .min(124, UI_TEXT.WIKI.VALIDATION.LNG_RANGE)
+    .max(132.5, UI_TEXT.WIKI.VALIDATION.LNG_RANGE)
     .nullable()
     .optional()
     .transform((v) => (v === null ? undefined : v));
@@ -96,8 +97,8 @@ const hasPairedCoordinates = (d: { lat?: number; lng?: number }) =>
 
 export const WikiPageDocumentSchema = z
     .object({
-        slug: z.string().trim().refine(isValidWikiSlug, "유효하지 않은 위키 슬러그입니다"),
-        title: z.string().trim().min(2, "제목은 2자 이상이어야 합니다").max(80),
+        slug: z.string().trim().refine(isValidWikiSlug, UI_TEXT.WIKI.VALIDATION.INVALID_SLUG),
+        title: z.string().trim().min(2, UI_TEXT.WIKI.VALIDATION.TITLE_MIN_LEN).max(80),
         subtitle: z.string().trim().max(160).default(""),
         pinColor: WikiPinColorSchema.default(DEFAULT_WIKI_PIN_COLOR),
         lat: OptionalLatSchema,
@@ -110,7 +111,7 @@ export const WikiPageDocumentSchema = z
         isProtected: z.boolean().optional(),
         markdownBody: z.string().max(100000).default(""),
     })
-    .refine(hasPairedCoordinates, "지도 핀 좌표는 위도와 경도를 함께 지정해야 합니다");
+    .refine(hasPairedCoordinates, UI_TEXT.WIKI.VALIDATION.PAIRED_COORDS);
 
 export const WikiEditPayloadSchema = z
     .object({
@@ -118,11 +119,11 @@ export const WikiEditPayloadSchema = z
         title: z
             .string()
             .trim()
-            .min(2, "제목은 2자 이상이어야 합니다")
+            .min(2, UI_TEXT.WIKI.VALIDATION.TITLE_MIN_LEN)
             .max(80)
             .refine(
                 (t) => isValidWikiSlug(normalizeWikiSlug(t)),
-                "제목에 사용할 수 없는 예약어이거나 슬러그(2~80자)로 변환할 수 없습니다",
+                UI_TEXT.WIKI.VALIDATION.TITLE_EDIT_INVALID,
             ),
         subtitle: z.string().trim().max(160).default(""),
         pinColor: WikiPinColorSchema.default(DEFAULT_WIKI_PIN_COLOR),
@@ -134,7 +135,7 @@ export const WikiEditPayloadSchema = z
         summary: z.string().trim().max(160).optional().default(""),
         website: z.string().optional(), // Honeypot field (must remain empty)
     })
-    .refine(hasPairedCoordinates, "지도 핀 좌표는 위도와 경도를 함께 지정해야 합니다");
+    .refine(hasPairedCoordinates, UI_TEXT.WIKI.VALIDATION.PAIRED_COORDS);
 
 export const WikiCreatePayloadSchema = z
     .object({
@@ -142,11 +143,11 @@ export const WikiCreatePayloadSchema = z
         title: z
             .string()
             .trim()
-            .min(2, "제목은 2자 이상이어야 합니다")
+            .min(2, UI_TEXT.WIKI.VALIDATION.TITLE_MIN_LEN)
             .max(80)
             .refine(
                 (t) => isValidWikiSlug(normalizeWikiSlug(t)),
-                "제목은 2~80자여야 하며 예약어(new, edit, api 등)나 URL 특수문자를 제외해 주세요",
+                UI_TEXT.WIKI.VALIDATION.TITLE_CREATE_INVALID,
             ),
         subtitle: z.string().trim().max(160).default(""),
         pinColor: WikiPinColorSchema.default(DEFAULT_WIKI_PIN_COLOR),
@@ -155,10 +156,10 @@ export const WikiCreatePayloadSchema = z
         tags: z.array(z.string().trim().min(1).max(24)).max(12).default([]),
         markdownBody: z.string().max(100000).default(""),
         nickname: z.string().trim().max(24).optional().default(""),
-        summary: z.string().trim().max(160).optional().default("새 위키 문서 생성"),
+        summary: z.string().trim().max(160).optional().default(UI_TEXT.WIKI.VALIDATION.DEFAULT_CREATE_SUMMARY),
         website: z.string().optional(), // Honeypot field
     })
-    .refine(hasPairedCoordinates, "지도 핀 좌표는 위도와 경도를 함께 지정해야 합니다")
+    .refine(hasPairedCoordinates, UI_TEXT.WIKI.VALIDATION.PAIRED_COORDS)
     .transform((data) => {
         const derivedSlug = normalizeWikiSlug(data.title);
         const derivedTitle = derivedSlug || data.title;
@@ -178,10 +179,10 @@ export const WikiPinPatchPayloadSchema = z
         nickname: z.string().trim().max(24).optional().default(""),
         summary: z.string().trim().max(160).optional().default(""),
     })
-    .refine(hasPairedCoordinates, "지도 핀 좌표는 위도와 경도를 함께 지정해야 합니다")
+    .refine(hasPairedCoordinates, UI_TEXT.WIKI.VALIDATION.PAIRED_COORDS)
     .refine(
         (d) => (d.lat !== undefined && d.lng !== undefined) || d.pinColor !== undefined,
-        "변경할 핀 위치 또는 핀 색상을 지정해 주세요.",
+        UI_TEXT.WIKI.VALIDATION.PIN_PATCH_REQUIRED,
     );
 
 export const WikiRevertPayloadSchema = z.object({
@@ -189,4 +190,36 @@ export const WikiRevertPayloadSchema = z.object({
     baseVersion: z.number().int().min(1),
     nickname: z.string().trim().max(24).optional().default(""),
     summary: z.string().trim().max(160).optional().default(""),
+});
+
+export const WikiDiscussionStatusSchema = z.enum(["open", "resolved"]);
+
+export const WikiDiscussionCreateSchema = z.object({
+    title: z
+        .string()
+        .trim()
+        .min(2, UI_TEXT.WIKI.VALIDATION.DISCUSSION_TITLE_MIN)
+        .max(120, UI_TEXT.WIKI.VALIDATION.DISCUSSION_TITLE_MAX),
+    body: z
+        .string()
+        .trim()
+        .min(2, UI_TEXT.WIKI.VALIDATION.DISCUSSION_BODY_MIN)
+        .max(4000, UI_TEXT.WIKI.VALIDATION.DISCUSSION_BODY_MAX),
+    nickname: z.string().trim().max(24).optional().default(""),
+    website: z.string().optional(),
+});
+
+export const WikiDiscussionCommentCreateSchema = z.object({
+    body: z
+        .string()
+        .trim()
+        .min(1, UI_TEXT.WIKI.VALIDATION.DISCUSSION_COMMENT_REQUIRED)
+        .max(4000, UI_TEXT.WIKI.VALIDATION.DISCUSSION_COMMENT_MAX),
+    nickname: z.string().trim().max(24).optional().default(""),
+    website: z.string().optional(),
+});
+
+export const WikiDiscussionStatusPatchSchema = z.object({
+    status: WikiDiscussionStatusSchema,
+    nickname: z.string().trim().max(24).optional().default(""),
 });

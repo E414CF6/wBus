@@ -1,6 +1,7 @@
 import {type NextRequest, NextResponse} from "next/server";
 import {isValidWikiSlug} from "@entities/wiki";
 import {getWikiRevision, getWikiRevisionList} from "@entities/wiki/server";
+import {UI_TEXT} from "@shared/config/locale";
 import {decodeWikiSlug, handleWikiApiError, WIKI_NO_STORE_HEADERS} from "../../wikiApiUtils";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export async function GET(
         const slug = decodeWikiSlug(rawSlug);
         if (!isValidWikiSlug(slug)) {
             return NextResponse.json(
-                {error: "올바르지 않은 위키 문서 주소입니다."},
+                {error: UI_TEXT.WIKI.API_ERRORS.INVALID_ADDRESS},
                 {status: 400, headers: WIKI_NO_STORE_HEADERS}
             );
         }
@@ -22,7 +23,7 @@ export async function GET(
         const revisions = await getWikiRevisionList(slug);
         if (revisions.length === 0) {
             return NextResponse.json(
-                {error: "위키 문서를 찾을 수 없습니다."},
+                {error: UI_TEXT.WIKI.API_ERRORS.NOT_FOUND},
                 {status: 404, headers: WIKI_NO_STORE_HEADERS}
             );
         }
@@ -49,6 +50,6 @@ export async function GET(
             {headers: WIKI_NO_STORE_HEADERS}
         );
     } catch (err) {
-        return handleWikiApiError(err, "편집 이력을 불러오지 못했습니다.");
+        return handleWikiApiError(err, UI_TEXT.WIKI.API_ERRORS.REVISIONS_FAILED);
     }
 }

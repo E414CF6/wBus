@@ -13,6 +13,7 @@ import {
 import {getRouteMeta} from "@entities/route/routeMetadata";
 import {NoticeBanner, NoticeModal} from "@entities/notice";
 import {Modal} from "@shared/ui";
+import {LOCALE, UI_TEXT} from "@shared/config/locale";
 import type {DayMode} from "@shared/types/navigation";
 import {FullTimetableTable} from "./schedule-modal/FullTimetableTable";
 import {NextDepartureCards} from "./schedule-modal/NextDepartureCards";
@@ -64,13 +65,13 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
             const d = new Date(raw);
             if (isNaN(d.getTime())) return null;
             return (
-                d.toLocaleDateString("ko-KR", {
+                d.toLocaleDateString(LOCALE, {
                     year: "numeric",
                     month: "2-digit",
                     day: "2-digit",
                 }) +
                 " " +
-                d.toLocaleTimeString("ko-KR", {
+                d.toLocaleTimeString(LOCALE, {
                     hour: "2-digit",
                     minute: "2-digit",
                     hour12: false,
@@ -122,8 +123,8 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
 
     const routeMeta = useMemo(() => getRouteMeta(routeName, "32020"), [routeName]);
 
-    const originName = activeVariant?.origin || routeMeta.origin || "기점";
-    const destName = activeVariant?.destination || routeMeta.destination || "종점";
+    const originName = activeVariant?.origin || routeMeta.origin || UI_TEXT.ROUTE_MAP.ORIGIN;
+    const destName = activeVariant?.destination || routeMeta.destination || UI_TEXT.ROUTE_MAP.DESTINATION;
 
     const nextDepInfo = useMemo(() => {
         if (!activeVariant?.timetable) return null;
@@ -182,11 +183,11 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
 
             {isLoading ? (
                 <div className="py-16 text-center text-xs font-bold text-slate-400">
-                    시간표 데이터를 불러오는 중입니다...
+                    {UI_TEXT.TIMETABLE.LOADING_DATA}
                 </div>
             ) : !activeVariant ? (
                 <div className="py-16 text-center text-xs font-bold text-slate-400">
-                    {routeName}번 노선의 시간표 정보가 제공되지 않는 노선입니다.
+                    {UI_TEXT.TIMETABLE.NO_TIMETABLE_FOR_ROUTE(routeName)}
                 </div>
             ) : (
                 <>
@@ -218,7 +219,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                                 }`}
                             >
-                                시간대별 요약
+                                {UI_TEXT.TIMETABLE.VIEW_SUMMARY}
                             </button>
                             <button
                                 type="button"
@@ -229,7 +230,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                         : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                                 }`}
                             >
-                                전체 회차 시간표
+                                {UI_TEXT.TIMETABLE.VIEW_FULL}
                             </button>
                         </div>
 
@@ -259,7 +260,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                             <div
                                 className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-slate-50 dark:bg-white/[0.03] border border-black/5 dark:border-white/5">
                                 <span className="text-xs font-extrabold text-slate-600 dark:text-slate-300 shrink-0">
-                                    출발 기준:
+                                    {UI_TEXT.TIMETABLE.DEPARTURE_CRITERIA_LABEL}
                                 </span>
                                 <div className="flex items-center gap-1 shrink-0">
                                     <button
@@ -271,7 +272,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                 : "bg-white dark:bg-white/10 text-slate-600 dark:text-slate-300"
                                         }`}
                                     >
-                                        회차지 ({destName}) 출발
+                                        {UI_TEXT.TIMETABLE.TURNAROUND_DEP_BTN(destName)}
                                     </button>
                                     <button
                                         type="button"
@@ -282,7 +283,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                                 : "bg-white dark:bg-white/10 text-slate-600 dark:text-slate-300"
                                         }`}
                                     >
-                                        기점 ({originName}) 출발
+                                        {UI_TEXT.TIMETABLE.ORIGIN_DEP_BTN(originName)}
                                     </button>
                                 </div>
                             </div>
@@ -293,8 +294,8 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                                 now={now}
                                 locationLabel={
                                     hourlyLocation === "dest"
-                                        ? `${destName} 종점`
-                                        : `${originName} 기점`
+                                        ? UI_TEXT.TIMETABLE.DEST_TERMINAL_LABEL(destName)
+                                        : UI_TEXT.TIMETABLE.ORIGIN_TERMINAL_LABEL(originName)
                                 }
                                 compact={embedded}
                                 departureLocation={hourlyLocation}
@@ -326,7 +327,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
         return (
             <div
                 role="region"
-                aria-label={`${routeName}번 버스 시간표`}
+                aria-label={UI_TEXT.TIMETABLE.MODAL_ARIA(routeName)}
                 className="w-full h-full flex flex-col overflow-hidden bg-white dark:bg-[#11131a] select-none text-slate-900 dark:text-white"
             >
                 {/* Embedded Header */}
@@ -337,7 +338,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                             className="px-2 py-0.5 rounded-lg text-xs font-black text-white shadow-xs shrink-0"
                             style={{backgroundColor: routeMeta.colorTheme.main}}
                         >
-                            {routeName}번
+                            {UI_TEXT.COMMON.ROUTE_NUMBER(routeName)}
                         </span>
                         <div className="min-w-0">
                             <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight truncate">
@@ -345,13 +346,13 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                             </h2>
                             <div className="flex items-center gap-1.5 flex-wrap">
                                 <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 truncate">
-                                    운행 시간표
+                                    {UI_TEXT.TIMETABLE.RUNNING_TIMETABLE_SUBTITLE}
                                 </p>
                                 {formattedUpdatedAt && (
                                     <span
                                         className="inline-flex items-center gap-1 text-[9px] font-bold text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-white/10 px-1.5 py-0.2 rounded font-mono">
                                         <Clock className="w-2.5 h-2.5 opacity-70 shrink-0"/>
-                                        <span>갱신 {formattedUpdatedAt}</span>
+                                        <span>{UI_TEXT.TIMETABLE.UPDATED_SHORT(formattedUpdatedAt)}</span>
                                     </span>
                                 )}
                             </div>
@@ -364,8 +365,8 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                             onClick={() => refreshSchedule()}
                             disabled={isScheduleRefreshing}
                             className="p-1.5 rounded-full bg-black/5 dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition cursor-pointer active:scale-95 disabled:opacity-40"
-                            aria-label="시간표 새로고침"
-                            title="시간표 새로고침"
+                            aria-label={UI_TEXT.TIMETABLE.REFRESH_TIMETABLE_ARIA}
+                            title={UI_TEXT.TIMETABLE.REFRESH_TIMETABLE_ARIA}
                         >
                             <RotateCw className={`w-3.5 h-3.5 ${isScheduleRefreshing ? "animate-spin" : ""}`}/>
                         </button>
@@ -373,7 +374,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                             type="button"
                             onClick={onClose}
                             className="p-1.5 rounded-full bg-black/5 dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition cursor-pointer active:scale-95"
-                            aria-label="시간표 닫기"
+                            aria-label={UI_TEXT.TIMETABLE.CLOSE_TIMETABLE_ARIA}
                         >
                             <X className="w-3.5 h-3.5"/>
                         </button>
@@ -396,20 +397,20 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
             className="px-2.5 py-1 rounded-xl text-xs font-black text-white shadow-xs shrink-0"
             style={{backgroundColor: routeMeta.colorTheme.main}}
         >
-            {routeName}번
+            {UI_TEXT.COMMON.ROUTE_NUMBER(routeName)}
         </span>
     );
 
     const modalSubtitle = (
         <div className="flex items-center gap-2 flex-wrap">
             <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 truncate">
-                원주시 시내버스 운행 시간표
+                {UI_TEXT.TIMETABLE.WONJU_TIMETABLE_SUBTITLE}
             </p>
             {formattedUpdatedAt && (
                 <span
                     className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-white/10 px-1.5 py-0.5 rounded-md font-mono">
                     <Clock className="w-2.5 h-2.5 opacity-70 shrink-0"/>
-                    <span>최근 갱신 {formattedUpdatedAt}</span>
+                    <span>{UI_TEXT.TIMETABLE.RECENT_UPDATED(formattedUpdatedAt)}</span>
                 </span>
             )}
         </div>
@@ -421,8 +422,8 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
             onClick={() => refreshSchedule()}
             disabled={isScheduleRefreshing}
             className="p-1.5 rounded-full bg-black/5 dark:bg-white/10 text-slate-500 hover:text-slate-900 dark:hover:text-white transition cursor-pointer active:scale-95 disabled:opacity-40"
-            aria-label="시간표 새로고침"
-            title="시간표 새로고침"
+            aria-label={UI_TEXT.TIMETABLE.REFRESH_TIMETABLE_ARIA}
+            title={UI_TEXT.TIMETABLE.REFRESH_TIMETABLE_ARIA}
         >
             <RotateCw className={`w-4 h-4 ${isScheduleRefreshing ? "animate-spin" : ""}`}/>
         </button>
@@ -441,7 +442,7 @@ export const RouteScheduleModal: React.FC<RouteScheduleModalProps> = ({
                 height="default"
                 modalId="schedule"
                 suspended={isNoticeModalOpen}
-                ariaLabel={`${routeName}번 버스 시간표`}
+                ariaLabel={UI_TEXT.TIMETABLE.MODAL_ARIA(routeName)}
             >
                 {renderBodyContent()}
             </Modal>

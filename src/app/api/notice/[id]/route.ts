@@ -1,5 +1,6 @@
 import {ApiValidators} from "@shared/api";
 import {scrapeWonjuNoticeDetail} from "@entities/notice/server";
+import {UI_TEXT} from "@shared/config/locale";
 import {type NextRequest, NextResponse} from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -12,7 +13,7 @@ export async function GET(
         const {id} = await params;
         if (!ApiValidators.isValidNumericId(id)) {
             return NextResponse.json(
-                {success: false, error: "유효하지 않은 공지사항 ID입니다."},
+                {success: false, error: UI_TEXT.API.NOTICE_INVALID_ID},
                 {status: 400}
             );
         }
@@ -32,7 +33,7 @@ export async function GET(
         return NextResponse.json(
             {
                 success: false,
-                error: error instanceof Error ? error.message : "공지사항 상세 조회 실패",
+                error: error instanceof Error ? error.message : UI_TEXT.API.NOTICE_DETAIL_FAILED,
             },
             {status: 500}
         );

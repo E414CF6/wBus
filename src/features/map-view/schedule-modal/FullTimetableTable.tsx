@@ -3,6 +3,7 @@
 import React from "react";
 import {LocateFixed, Search, X} from "lucide-react";
 import type {BusRoute, getNextDeparture} from "@entities/schedule";
+import {UI_TEXT} from "@shared/config/locale";
 
 type NextDepartureInfo = ReturnType<typeof getNextDeparture>;
 
@@ -41,7 +42,7 @@ export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
         >
             <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-extrabold text-slate-700 dark:text-slate-200">
-                    {dayType} 운행 회차 ({filteredTimetable.length}회)
+                    {UI_TEXT.TIMETABLE.DAY_TRIP_COUNT(dayType, filteredTimetable.length)}
                 </span>
                 {nextDepInfo && (nextDepInfo.nextOrigin || nextDepInfo.nextDest) && (
                     <button
@@ -50,7 +51,7 @@ export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-300 text-[11px] font-extrabold border border-blue-200 dark:border-blue-800 cursor-pointer active:scale-95 transition whitespace-nowrap"
                     >
                         <LocateFixed className="w-3 h-3"/>
-                        <span>다음 출발 행으로</span>
+                        <span>{UI_TEXT.TIMETABLE.SCROLL_TO_NEXT_ROW}</span>
                     </button>
                 )}
             </div>
@@ -63,8 +64,8 @@ export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
                     type="text"
                     value={tableSearch}
                     onChange={(e) => onTableSearchChange(e.target.value)}
-                    placeholder="시각·비고 검색"
-                    aria-label="시각·비고 검색"
+                    placeholder={UI_TEXT.TIMETABLE.TABLE_SEARCH_PLACEHOLDER}
+                    aria-label={UI_TEXT.TIMETABLE.TABLE_SEARCH_PLACEHOLDER}
                     className="w-full pl-8 pr-7 py-1.5 text-xs rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11131a] text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
                 {tableSearch && (
@@ -82,7 +83,7 @@ export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
         <div
             ref={tableRef}
             role="region"
-            aria-label="전체 운행 시간표"
+            aria-label={UI_TEXT.TIMETABLE.FULL_TABLE_ARIA}
             tabIndex={0}
             className="max-h-96 overflow-auto overscroll-contain rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#11131a] shadow-xs custom-scrollbar focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/60"
         >
@@ -94,7 +95,7 @@ export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
                         scope="col"
                         className="sticky left-0 z-30 bg-slate-100 dark:bg-[#161922] py-2 px-2.5 w-12 text-center whitespace-nowrap border-r border-black/5 dark:border-white/10"
                     >
-                        회차
+                        {UI_TEXT.TIMETABLE.TRIP_SEQ}
                     </th>
                     <th
                         scope="col"
@@ -105,11 +106,11 @@ export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
                         }`}
                     >
                         <div className="flex items-center gap-1 whitespace-nowrap">
-                            <span>기점 출발 ({originName})</span>
+                            <span>{UI_TEXT.TIMETABLE.ORIGIN_DEP_HEADER(originName)}</span>
                             {hourlyLocation === "origin" && (
                                 <span
                                     className="px-1 py-0.2 rounded text-[9px] font-black bg-blue-600 text-white shrink-0">
-                                        기준
+                                        {UI_TEXT.TIMETABLE.CRITERIA_BADGE}
                                     </span>
                             )}
                         </div>
@@ -123,23 +124,23 @@ export const FullTimetableTable: React.FC<FullTimetableTableProps> = ({
                         }`}
                     >
                         <div className="flex items-center gap-1 whitespace-nowrap">
-                            <span>회차지 출발 ({destName})</span>
+                            <span>{UI_TEXT.TIMETABLE.DEST_DEP_HEADER(destName)}</span>
                             {hourlyLocation === "dest" && (
                                 <span
                                     className="px-1 py-0.2 rounded text-[9px] font-black bg-amber-600 text-white shrink-0">
-                                        기준
+                                        {UI_TEXT.TIMETABLE.CRITERIA_BADGE}
                                     </span>
                             )}
                         </div>
                     </th>
-                    <th scope="col" className="py-2 px-3 whitespace-nowrap min-w-[120px]">비고</th>
+                    <th scope="col" className="py-2 px-3 whitespace-nowrap min-w-[120px]">{UI_TEXT.TIMETABLE.NOTES}</th>
                 </tr>
                 </thead>
                 <tbody className="divide-y divide-black/5 dark:divide-white/5">
                 {filteredTimetable.length === 0 ? (
                     <tr>
                         <td colSpan={4} className="py-8 text-center text-slate-400">
-                            일치하는 운행 회차가 없습니다.
+                            {UI_TEXT.TIMETABLE.NO_MATCHING_TRIPS}
                         </td>
                     </tr>
                 ) : (

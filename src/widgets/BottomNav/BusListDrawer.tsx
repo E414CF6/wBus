@@ -2,6 +2,7 @@
 
 import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {UI_TEXT} from "@shared/config/locale";
 import {isDesktopViewport, useIsDesktop} from "@shared/ui/useIsDesktop";
 import {BottomSheet, markModalReplacing} from "@shared/ui";
 import {triggerHaptic} from "@shared/utils/haptics";
@@ -493,7 +494,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
             <BottomSheet
                 isOpen={isOpen}
                 onClose={onClose}
-                ariaLabel="실시간 버스 노선 및 정류장 목록"
+                ariaLabel={UI_TEXT.MAP_VIEW.BUS_DRAWER.DRAWER_ARIA}
                 modalId="bus-list"
                 role="complementary"
                 heightClassName="h-[82dvh] max-h-[82dvh]"
@@ -506,7 +507,7 @@ export const BusListDrawer: React.FC<BusListDrawerProps> = ({
 
     return (
         <aside
-            aria-label="실시간 버스 노선 및 정류장 목록"
+            aria-label={UI_TEXT.MAP_VIEW.BUS_DRAWER.DRAWER_ARIA}
             className="hidden lg:flex z-40 fixed top-4 bottom-4 left-4 w-[380px] xl:w-[420px] max-h-[calc(100dvh-32px)] bg-white/95 dark:bg-[#11131a]/95 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden flex-col transition-all duration-300 ease-out"
         >
             <div className="shrink-0">{drawerHeader}</div>

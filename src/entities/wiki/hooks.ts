@@ -2,7 +2,15 @@
 
 import {useCallback, useSyncExternalStore} from "react";
 import useSWR, {mutate as globalMutate} from "swr";
-import type {WikiIndexData, WikiPageDocument, WikiRevision, WikiRevisionMeta,} from "./types";
+import {UI_TEXT} from "@shared/config/locale";
+import type {
+    WikiDiscussionsResponse,
+    WikiDiscussionStatus,
+    WikiIndexData,
+    WikiPageDocument,
+    WikiRevision,
+    WikiRevisionMeta,
+} from "./types";
 
 const WIKI_NICKNAME_KEY = "wbus_wiki_nickname_v1";
 
@@ -10,7 +18,7 @@ async function fetchJson<T>(url: string): Promise<T> {
     const res = await fetch(url, {cache: "no-store"});
     if (!res.ok) {
         const body = await res.json().catch(() => null);
-        const msg = body?.error || `요청 실패 (${res.status})`;
+        const msg = body?.error || UI_TEXT.WIKI.HOOKS.REQUEST_FAILED(res.status);
         const err = new Error(msg) as Error & { status?: number; payload?: unknown };
         err.status = res.status;
         err.payload = body;
@@ -100,6 +108,27 @@ export function useWikiRevisions(
             : null;
 
     return useSWR<WikiRevisionsResponse>(key, fetchJson, {
+        revalidateOnFocus: false,
+        dedupingInterval: 2_000,
+    });
+}
+
+export function useWikiDiscussions(
+    slug: string | null | undefined,
+    enabled: boolean,
+    status?: WikiDiscussionStatus | "all",
+) {
+    const params = new URLSearchParams();
+    if (status && status !== "all") {
+        params.set("status", status);
+    }
+    const qs = params.toString();
+    const key =
+        enabled && slug
+            ? `/api/wiki/${encodeURIComponent(slug)}/discussions${qs ? `?${qs}` : ""}`
+            : null;
+
+    return useSWR<WikiDiscussionsResponse>(key, fetchJson, {
         revalidateOnFocus: false,
         dedupingInterval: 2_000,
     });

@@ -5,6 +5,7 @@ import {Loader2} from "lucide-react";
 import type {RouteVariationStop} from "@entities/route";
 import type {BusItem} from "@entities/bus/types";
 import type {BusStop} from "@entities/station/types";
+import {UI_TEXT} from "@shared/config/locale";
 import {BusDrawerStopItem} from "./BusDrawerStopItem";
 
 interface BusDrawerTimelineListProps {
@@ -57,13 +58,13 @@ export const BusDrawerTimelineList: React.FC<BusDrawerTimelineListProps> = ({
                     <Loader2
                         className={`w-6 h-6 animate-spin ${metaThemeText || "text-blue-600 dark:text-blue-400"}`}
                     />
-                    <span className="text-xs font-semibold">정류장 목록을 불러오고 있습니다...</span>
+                    <span className="text-xs font-semibold">{UI_TEXT.MAP_VIEW.BUS_DRAWER.LOADING_STOPS}</span>
                 </div>
             ) : filteredStops.length === 0 ? (
                 <div className="text-center py-12 text-slate-400 dark:text-slate-500 text-xs">
                     {stopSearchQuery
-                        ? `"${stopSearchQuery}" 검색 결과가 없습니다.`
-                        : "해당 방향의 정류장 정보가 없습니다."}
+                        ? UI_TEXT.MAP_VIEW.BUS_DRAWER.EMPTY_SEARCH_STOPS(stopSearchQuery)
+                        : UI_TEXT.MAP_VIEW.BUS_DRAWER.EMPTY_DIRECTION_STOPS}
                 </div>
             ) : (
                 filteredStops.map((stop, index) => {

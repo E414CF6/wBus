@@ -22,23 +22,10 @@ import {ToggleSwitch} from "@features/settings/ToggleSwitch";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {applyThemePreference, Modal, type ThemePreference} from "@shared/ui";
 import {triggerHaptic} from "@shared/utils/haptics";
+import {UI_TEXT} from "@shared/config/locale";
 
-const TOTAL_STEPS = 3;
-
-const STEP_META = [
-    {
-        title: "wBus에 오신 것을 환영합니다!",
-        subtitle: "실시간 버스 위치부터 시간표·지도 위키까지 한눈에 확인하세요",
-    },
-    {
-        title: "나에게 맞게 빠르게 설정해요",
-        subtitle: "자주 쓰는 화면과 테마를 고르면 바로 적용됩니다 (나중에 변경 가능)",
-    },
-    {
-        title: "이제 출발할 준비가 되었어요",
-        subtitle: "wBus를 200% 활용하는 간단한 팁을 확인하고 시작해 보세요",
-    },
-] as const;
+const TOTAL_STEPS = UI_TEXT.ONBOARDING.STEPS.length;
+const STEP_META = UI_TEXT.ONBOARDING.STEPS;
 
 const emptySubscribe = () => () => {
 };
@@ -113,7 +100,7 @@ export const OnboardingModal: React.FC = () => {
                 onClick={handleSkip}
                 className="px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
             >
-                건너뛰기
+                {UI_TEXT.ONBOARDING.SKIP}
             </button>
         ) : null;
 
@@ -127,11 +114,11 @@ export const OnboardingModal: React.FC = () => {
                         className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200/80 dark:bg-white/10 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-black transition cursor-pointer active:scale-95"
                     >
                         <ArrowLeft className="w-3.5 h-3.5"/>
-                        <span>이전</span>
+                        <span>{UI_TEXT.ONBOARDING.PREV}</span>
                     </button>
                 )}
 
-                <div className="flex items-center gap-1.5" role="group" aria-label="온보딩 단계">
+                <div className="flex items-center gap-1.5" role="group" aria-label={UI_TEXT.ONBOARDING.STEPS_GROUP_ARIA}>
                     {Array.from({length: TOTAL_STEPS}).map((_, idx) => (
                         <button
                             key={idx}
@@ -140,7 +127,7 @@ export const OnboardingModal: React.FC = () => {
                                 triggerHaptic("selection");
                                 setStep(idx);
                             }}
-                            aria-label={`${idx + 1}단계로 이동`}
+                            aria-label={UI_TEXT.ONBOARDING.STEP_ARIA(idx + 1)}
                             aria-current={step === idx ? "step" : undefined}
                             className={`h-2 rounded-full transition-all cursor-pointer ${
                                 step === idx
@@ -159,7 +146,7 @@ export const OnboardingModal: React.FC = () => {
                         onClick={handleNext}
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black shadow-sm hover:opacity-90 transition cursor-pointer active:scale-95"
                     >
-                        <span>다음</span>
+                        <span>{UI_TEXT.ONBOARDING.NEXT}</span>
                         <ArrowRight className="w-3.5 h-3.5"/>
                     </button>
                 ) : (
@@ -169,7 +156,7 @@ export const OnboardingModal: React.FC = () => {
                         className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#003876] dark:bg-blue-600 text-white text-xs font-black shadow-sm hover:opacity-95 transition cursor-pointer active:scale-95"
                     >
                         <Check className="w-3.5 h-3.5"/>
-                        <span>wBus 시작하기</span>
+                        <span>{UI_TEXT.ONBOARDING.START_BUTTON}</span>
                     </button>
                 )}
             </div>
@@ -191,7 +178,7 @@ export const OnboardingModal: React.FC = () => {
             height="auto"
             modalId="onboarding"
             footerClassName="flex-wrap gap-2"
-            ariaLabel="wBus 시작하기 온보딩 가이드"
+            ariaLabel={UI_TEXT.ONBOARDING.MODAL_ARIA}
         >
             <div className="overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-3 custom-scrollbar">
                 {/* STEP 1: Core Features */}
@@ -205,10 +192,10 @@ export const OnboardingModal: React.FC = () => {
                             </div>
                             <div className="min-w-0 space-y-1">
                                 <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                    전국 {NATIONWIDE_CITIES.length}개 시·군 실시간 버스 지도 &amp; 도착정보
+                                    {UI_TEXT.ONBOARDING.FEATURE_REALTIME_TITLE(NATIONWIDE_CITIES.length)}
                                 </h3>
                                 <p className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
-                                    초 단위 부드러운 버스 이동 애니메이션, 경유지 필터, 정류장별 실시간 도착 예정 정보와 카카오 로드뷰 연동을 제공합니다.
+                                    {UI_TEXT.ONBOARDING.FEATURE_REALTIME_DESC}
                                 </p>
                             </div>
                         </div>
@@ -221,10 +208,10 @@ export const OnboardingModal: React.FC = () => {
                             </div>
                             <div className="min-w-0 space-y-1">
                                 <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                    원주시 시내버스 상세 시간표 &amp; 공지사항
+                                    {UI_TEXT.ONBOARDING.FEATURE_TIMETABLE_TITLE}
                                 </h3>
                                 <p className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
-                                    기점·종점 출발 카운트다운, 평일/휴일·방학 전체 회차 시간표 검색, 교통정보센터 공지사항을 한곳에서 확인합니다.
+                                    {UI_TEXT.ONBOARDING.FEATURE_TIMETABLE_DESC}
                                 </p>
                             </div>
                         </div>
@@ -237,10 +224,10 @@ export const OnboardingModal: React.FC = () => {
                             </div>
                             <div className="min-w-0 space-y-1">
                                 <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                    지도 위키 핀 &amp; 커뮤니티 버스 정보
+                                    {UI_TEXT.ONBOARDING.FEATURE_WIKI_TITLE}
                                 </h3>
                                 <p className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
-                                    정류장·터미널·셔틀 시간표 등 유용한 교통 정보를 지도 핀으로 추가하고 누구나 함께 편집·공유할 수 있습니다.
+                                    {UI_TEXT.ONBOARDING.FEATURE_WIKI_DESC}
                                 </p>
                             </div>
                         </div>
@@ -254,7 +241,7 @@ export const OnboardingModal: React.FC = () => {
                         <div
                             className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 space-y-2.5">
                             <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white">
-                                화면 테마
+                                {UI_TEXT.ONBOARDING.THEME_LABEL}
                             </p>
                             <div className="grid grid-cols-3 gap-1.5">
                                 <button
@@ -267,7 +254,7 @@ export const OnboardingModal: React.FC = () => {
                                     }`}
                                 >
                                     <Monitor className="w-3.5 h-3.5"/>
-                                    <span>시스템</span>
+                                    <span>{UI_TEXT.ONBOARDING.THEME_SYSTEM}</span>
                                 </button>
                                 <button
                                     type="button"
@@ -279,7 +266,7 @@ export const OnboardingModal: React.FC = () => {
                                     }`}
                                 >
                                     <Sun className="w-3.5 h-3.5"/>
-                                    <span>라이트</span>
+                                    <span>{UI_TEXT.ONBOARDING.THEME_LIGHT}</span>
                                 </button>
                                 <button
                                     type="button"
@@ -291,7 +278,7 @@ export const OnboardingModal: React.FC = () => {
                                     }`}
                                 >
                                     <Moon className="w-3.5 h-3.5"/>
-                                    <span>다크</span>
+                                    <span>{UI_TEXT.ONBOARDING.THEME_DARK}</span>
                                 </button>
                             </div>
                         </div>
@@ -302,10 +289,10 @@ export const OnboardingModal: React.FC = () => {
                             <div className="p-3.5 flex items-center justify-between gap-3">
                                 <div className="min-w-0">
                                     <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white">
-                                        지도 이동 시 지역 자동 감지
+                                        {UI_TEXT.ONBOARDING.AUTO_DETECT_TITLE}
                                     </p>
                                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                                        다른 시·군으로 지도를 옮기면 지역 전환 알림을 띄웁니다
+                                        {UI_TEXT.ONBOARDING.AUTO_DETECT_DESC}
                                     </p>
                                 </div>
                                 <ToggleSwitch
@@ -315,17 +302,17 @@ export const OnboardingModal: React.FC = () => {
                                         updateSettings({autoDetectCity: next});
                                         setIsAutoDetectEnabled(next);
                                     }}
-                                    ariaLabel="지도 이동 시 지역 자동 감지 전환"
+                                    ariaLabel={UI_TEXT.ONBOARDING.AUTO_DETECT_ARIA}
                                 />
                             </div>
 
                             <div className="p-3.5 flex items-center justify-between gap-3">
                                 <div className="min-w-0">
                                     <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white">
-                                        큰 글자 모드
+                                        {UI_TEXT.ONBOARDING.LARGE_FONT_TITLE}
                                     </p>
                                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                                        앱 전체 텍스트 크기를 한 단계 크게 표시합니다
+                                        {UI_TEXT.ONBOARDING.LARGE_FONT_DESC}
                                     </p>
                                 </div>
                                 <ToggleSwitch
@@ -334,7 +321,7 @@ export const OnboardingModal: React.FC = () => {
                                         triggerHaptic("selection");
                                         updateSettings({fontScale: next ? "large" : "normal"});
                                     }}
-                                    ariaLabel="큰 글자 모드 전환"
+                                    ariaLabel={UI_TEXT.ONBOARDING.LARGE_FONT_ARIA}
                                 />
                             </div>
                         </div>
@@ -347,11 +334,17 @@ export const OnboardingModal: React.FC = () => {
                         <div
                             className="p-3.5 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-500/25 flex items-center justify-between gap-2">
                             <span className="text-xs font-black text-emerald-900 dark:text-emerald-200">
-                                선택된 설정
+                                {UI_TEXT.ONBOARDING.SELECTED_SETTINGS_LABEL}
                             </span>
                             <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
-                                {activeTheme === "system" ? "시스템 테마" : activeTheme === "light" ? "라이트" : "다크"} ·{" "}
-                                {settings.autoDetectCity ? "자동 지역 감지" : "수동 지역 선택"}
+                                {activeTheme === "system"
+                                    ? UI_TEXT.ONBOARDING.SUMMARY_THEME_SYSTEM
+                                    : activeTheme === "light"
+                                        ? UI_TEXT.ONBOARDING.SUMMARY_THEME_LIGHT
+                                        : UI_TEXT.ONBOARDING.SUMMARY_THEME_DARK} ·{" "}
+                                {settings.autoDetectCity
+                                    ? UI_TEXT.ONBOARDING.SUMMARY_REGION_AUTO
+                                    : UI_TEXT.ONBOARDING.SUMMARY_REGION_MANUAL}
                             </span>
                         </div>
 
@@ -364,10 +357,10 @@ export const OnboardingModal: React.FC = () => {
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white">
-                                        하단 플로팅 바로 빠른 전환
+                                        {UI_TEXT.ONBOARDING.TIP_NAV_TITLE}
                                     </p>
                                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                                        지역 선택, 노선 검색, 운행 중인 버스 목록을 한 손으로 간편하게 열고 닫을 수 있습니다.
+                                        {UI_TEXT.ONBOARDING.TIP_NAV_DESC}
                                     </p>
                                 </div>
                             </div>
@@ -379,10 +372,10 @@ export const OnboardingModal: React.FC = () => {
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white">
-                                        정류장 · 시간표 · 지도 위키 핀 활용하기
+                                        {UI_TEXT.ONBOARDING.TIP_PINS_TITLE}
                                     </p>
                                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                                        정류장 마커와 기점·종점 핀으로 실시간 도착·시간표를 보고, 위키 핀을 추가하거나 눌러 버스 팁을 바로 확인하세요.
+                                        {UI_TEXT.ONBOARDING.TIP_PINS_DESC}
                                     </p>
                                 </div>
                             </div>
@@ -394,10 +387,10 @@ export const OnboardingModal: React.FC = () => {
                                 </div>
                                 <div className="min-w-0">
                                     <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white">
-                                        세부 옵션은 환경설정에서 언제든 변경
+                                        {UI_TEXT.ONBOARDING.TIP_SETTINGS_TITLE}
                                     </p>
                                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                                        위치 갱신 주기(5초~30초), 차량번호 표시, 모션 줄이기 등 모든 옵션은 하단 ⚙️ 환경설정에서 조절할 수 있습니다.
+                                        {UI_TEXT.ONBOARDING.TIP_SETTINGS_DESC}
                                     </p>
                                 </div>
                             </div>

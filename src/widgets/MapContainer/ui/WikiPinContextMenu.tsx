@@ -1,8 +1,9 @@
 "use client";
 
 import React, {useEffect, useMemo, useRef} from "react";
-import {BookOpen, Check, History, MapPin, Pencil} from "lucide-react";
+import {BookOpen, Check, History, MapPin, MessageSquare, Pencil} from "lucide-react";
 import type {WikiPageSummary, WikiPinColor} from "@entities/wiki";
+import {UI_TEXT} from "@shared/config/locale";
 import {resolveWikiPinTheme, WIKI_PIN_COLOR_LIST} from "../lib/wikiPinTheme";
 
 export interface WikiPinContextMenuProps {
@@ -13,12 +14,13 @@ export interface WikiPinContextMenuProps {
     onRead: (slug: string) => void;
     onEdit: (slug: string) => void;
     onHistory: (slug: string) => void;
+    onDiscussion: (slug: string) => void;
     onMovePin: (page: WikiPageSummary) => void;
     onChangeColor: (page: WikiPageSummary, color: WikiPinColor) => void;
 }
 
 const MENU_WIDTH = 236;
-const MENU_ESTIMATED_HEIGHT = 290;
+const MENU_ESTIMATED_HEIGHT = 330;
 const VIEWPORT_PADDING = 12;
 
 export function WikiPinContextMenu({
@@ -29,6 +31,7 @@ export function WikiPinContextMenu({
     onRead,
     onEdit,
     onHistory,
+    onDiscussion,
     onMovePin,
     onChangeColor,
 }: WikiPinContextMenuProps) {
@@ -80,7 +83,7 @@ export function WikiPinContextMenu({
         <div
             ref={menuRef}
             role="menu"
-            aria-label={`${page.title} 핀 편집 메뉴`}
+            aria-label={UI_TEXT.WIKI.CONTEXT_MENU.ARIA(page.title)}
             style={{
                 left: `${clampedCoords.x}px`,
                 top: `${clampedCoords.y}px`,
@@ -114,7 +117,7 @@ export function WikiPinContextMenu({
                     className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[12px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
                 >
                     <Pencil className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                    <span>내용 편집</span>
+                    <span>{UI_TEXT.WIKI.CONTEXT_MENU.EDIT_CONTENT}</span>
                 </button>
 
                 <button
@@ -127,7 +130,7 @@ export function WikiPinContextMenu({
                     className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[12px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
                 >
                     <MapPin className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                    <span>핀 위치 이동</span>
+                    <span>{UI_TEXT.WIKI.CONTEXT_MENU.MOVE_PIN}</span>
                 </button>
 
                 <button
@@ -140,7 +143,7 @@ export function WikiPinContextMenu({
                     className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[12px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
                 >
                     <BookOpen className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                    <span>문서 보기</span>
+                    <span>{UI_TEXT.WIKI.CONTEXT_MENU.VIEW_DOC}</span>
                 </button>
 
                 <button
@@ -153,17 +156,30 @@ export function WikiPinContextMenu({
                     className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[12px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
                 >
                     <History className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                    <span>편집 이력</span>
+                    <span>{UI_TEXT.WIKI.CONTEXT_MENU.HISTORY}</span>
+                </button>
+
+                <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                        onDiscussion(page.slug);
+                        onClose();
+                    }}
+                    className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-[12px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
+                >
+                    <MessageSquare className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                    <span>{UI_TEXT.WIKI.CONTEXT_MENU.DISCUSSION}</span>
                 </button>
             </div>
 
             <div className="px-3 py-2.5 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/60">
                 <div className="flex items-center justify-between mb-2">
                     <span className="text-[10.5px] font-bold text-slate-500 dark:text-slate-400">
-                        핀 색상 변경
+                        {UI_TEXT.WIKI.CONTEXT_MENU.CHANGE_COLOR}
                     </span>
                     {isUpdating && (
-                        <span className="text-[10px] font-semibold text-slate-400">저장 중...</span>
+                        <span className="text-[10px] font-semibold text-slate-400">{UI_TEXT.WIKI.CONTEXT_MENU.SAVING}</span>
                     )}
                 </div>
                 <div className="grid grid-cols-8 gap-1.5">
@@ -176,7 +192,7 @@ export function WikiPinContextMenu({
                                 disabled={isUpdating}
                                 onClick={() => onChangeColor(page, option.id)}
                                 title={option.label}
-                                aria-label={`핀 색상을 ${option.label}(으)로 변경`}
+                                aria-label={UI_TEXT.WIKI.CONTEXT_MENU.COLOR_OPTION_ARIA(option.label)}
                                 aria-pressed={isSelected}
                                 className={`w-5 h-5 rounded-full flex items-center justify-center transition-transform hover:scale-110 disabled:opacity-50 ${option.swatchClass} ${
                                     isSelected

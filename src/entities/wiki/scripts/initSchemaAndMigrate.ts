@@ -112,6 +112,42 @@ async function main() {
                 ON wiki_pages USING gin (markdown_body gin_trgm_ops);
         `);
 
+        // 2-b. Ensure wiki discussion tables & indexes exist
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS wiki_discussion_threads (
+                id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                slug TEXT NOT NULL REFERENCES wiki_pages(slug) ON DELETE CASCADE ON UPDATE CASCADE,
+                title TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'open',
+                author_nickname TEXT NOT NULL,
+                author_id TEXT NOT NULL,
+                comment_count INTEGER NOT NULL DEFAULT 1,
+                last_comment_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                resolved_by_nickname TEXT,
+                resolved_by_id TEXT,
+                resolved_at TIMESTAMPTZ,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS wiki_discussion_threads_slug_status_idx
+                ON wiki_discussion_threads (slug, status, last_comment_at);
+        `);
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS wiki_discussion_comments (
+                id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                thread_id BIGINT NOT NULL REFERENCES wiki_discussion_threads(id) ON DELETE CASCADE,
+                body TEXT NOT NULL,
+                author_nickname TEXT NOT NULL,
+                author_id TEXT NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+        `);
+        await pool.query(`
+            CREATE INDEX IF NOT EXISTS wiki_discussion_comments_thread_created_idx
+                ON wiki_discussion_comments (thread_id, created_at);
+        `);
+
         // 3. Migrate stored revision snapshots & deltas to unified markdown format
         const revRes = await pool.query<RevisionCleanupRow>(
             `SELECT id, snapshot, delta FROM wiki_revisions`,

@@ -1,5 +1,7 @@
 import {NextResponse} from "next/server";
-import {WikiServiceError} from "@entities/wiki/server";
+import {isValidWikiSlug, type WikiEditorInfo} from "@entities/wiki";
+import {enforceWikiRateLimit, isWikiAdminAuthorized, resolveEditorInfo, WikiServiceError} from "@entities/wiki/server";
+import {UI_TEXT} from "@shared/config/locale";
 
 export const WIKI_NO_STORE_HEADERS = {
     "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0, s-maxage=0",
@@ -44,4 +46,38 @@ export function handleWikiApiError(err: unknown, fallbackMessage: string): NextR
         {error: fallbackMessage},
         {status: 500, headers: WIKI_NO_STORE_HEADERS}
     );
+}
+
+export function resolveValidWikiSlugOrError(rawSlug: string): { slug: string } | { response: NextResponse } {
+    const slug = decodeWikiSlug(rawSlug);
+    if (!isValidWikiSlug(slug)) {
+        return {
+            response: NextResponse.json(
+                {error: UI_TEXT.WIKI.API_ERRORS.INVALID_ADDRESS},
+                {status: 400, headers: WIKI_NO_STORE_HEADERS}
+            ),
+        };
+    }
+    return {slug};
+}
+
+export async function authorizeWikiMutation(
+    request: Request,
+    input: { nickname?: string; website?: string },
+    action: "edit" | "create" | "revert" | "discussion",
+): Promise<{ editor: WikiEditorInfo; isAdmin: boolean } | { response: NextResponse }> {
+    if (input.website && input.website.trim().length > 0) {
+        return {
+            response: NextResponse.json(
+                {error: UI_TEXT.WIKI.API_ERRORS.BAD_REQUEST},
+                {status: 400, headers: WIKI_NO_STORE_HEADERS}
+            ),
+        };
+    }
+    const isAdmin = isWikiAdminAuthorized(request.headers.get("authorization"));
+    const editor = resolveEditorInfo(input.nickname, extractClientIp(request));
+    if (!isAdmin) {
+        await enforceWikiRateLimit(editor.editorId, action);
+    }
+    return {editor, isAdmin};
 }

@@ -65,7 +65,7 @@ export const BusStopBottomSheet: React.FC<BusStopBottomSheetProps> = ({
                                         backgroundColor: isRouteStop ? color : "#64748b",
                                     }}
                                 >
-                                    {isRouteStop ? "현재 노선" : "주변 정류장"}
+                                    {isRouteStop ? UI_TEXT.STOP_POPUP.CURRENT_ROUTE : UI_TEXT.STOP_POPUP.NEARBY_STOP}
                                 </span>
                             </div>
                             <div className="flex items-center gap-1.5 mt-1 text-gray-500 dark:text-gray-400">
@@ -86,8 +86,8 @@ export const BusStopBottomSheet: React.FC<BusStopBottomSheetProps> = ({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer active:scale-90"
-                                title="카카오 로드뷰로 정류장 보기"
-                                aria-label="카카오 로드뷰로 정류장 보기"
+                                title={UI_TEXT.STOP_POPUP.KAKAO_ROADVIEW_TITLE}
+                                aria-label={UI_TEXT.STOP_POPUP.KAKAO_ROADVIEW_TITLE}
                             >
                                 <ExternalLink className="w-3.5 h-3.5"/>
                             </a>
@@ -97,8 +97,8 @@ export const BusStopBottomSheet: React.FC<BusStopBottomSheetProps> = ({
                                 type="button"
                                 onClick={() => onToggleFavorite(stop)}
                                 className={`p-1.5 rounded-full border transition cursor-pointer active:scale-90 ${isFavorite ? "bg-amber-500/15 border-amber-500/40 text-amber-500" : "bg-slate-100 dark:bg-white/10 border-transparent text-slate-400 hover:text-amber-500"}`}
-                                title={isFavorite ? "즐겨찾는 정류장 해제" : "즐겨찾는 정류장 등록"}
-                                aria-label={isFavorite ? "즐겨찾는 정류장 해제" : "즐겨찾는 정류장 등록"}
+                                title={isFavorite ? UI_TEXT.STOP_POPUP.FAVORITE_REMOVE_TITLE : UI_TEXT.STOP_POPUP.FAVORITE_ADD_TITLE}
+                                aria-label={isFavorite ? UI_TEXT.STOP_POPUP.FAVORITE_REMOVE_TITLE : UI_TEXT.STOP_POPUP.FAVORITE_ADD_TITLE}
                             >
                                 <Star className={`w-3.5 h-3.5 ${isFavorite ? "fill-amber-400" : ""}`}/>
                             </button>
@@ -107,8 +107,8 @@ export const BusStopBottomSheet: React.FC<BusStopBottomSheetProps> = ({
                             type="button"
                             onClick={onClose}
                             className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer active:scale-90"
-                            title="팝업 닫기"
-                            aria-label="정류장 팝업 닫기"
+                            title={UI_TEXT.STOP_POPUP.CLOSE_POPUP_TITLE}
+                            aria-label={UI_TEXT.STOP_POPUP.CLOSE_POPUP_ARIA}
                         >
                             <X className="w-3.5 h-3.5"/>
                         </button>
@@ -125,11 +125,11 @@ export const BusStopBottomSheet: React.FC<BusStopBottomSheetProps> = ({
                             onSelectOppositeStop?.(pairedOppositeStop);
                         }}
                         className="mt-1 inline-flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold border border-black/5 dark:border-white/10 transition-all cursor-pointer active:scale-98 group/opp"
-                        title={`건너편 정류장(${pairedOppositeStop.nodenm}) 실시간 정보 보기`}
+                        title={UI_TEXT.STOP_POPUP.OPPOSITE_STOP_TITLE(pairedOppositeStop.nodenm)}
                     >
                         <div className="flex items-center gap-1.5 min-w-0">
                             <ArrowLeftRight className="w-3.5 h-3.5 text-blue-500 dark:text-blue-400 shrink-0"/>
-                            <span className="text-slate-500 dark:text-slate-400 font-medium">건너편</span>
+                            <span className="text-slate-500 dark:text-slate-400 font-medium">{UI_TEXT.STOP_POPUP.OPPOSITE_LABEL}</span>
                             <span className="font-extrabold truncate text-slate-900 dark:text-white">
                                 {pairedOppositeStop.nodenm}
                             </span>
@@ -141,7 +141,7 @@ export const BusStopBottomSheet: React.FC<BusStopBottomSheetProps> = ({
                         </div>
                         <span
                             className="text-[10px] font-black text-blue-600 dark:text-blue-400 shrink-0 group-hover/opp:translate-x-0.5 transition-transform">
-                            전환 →
+                            {UI_TEXT.STOP_POPUP.SWITCH_ACTION}
                         </span>
                     </button>
                 )}
@@ -153,7 +153,7 @@ export const BusStopBottomSheet: React.FC<BusStopBottomSheetProps> = ({
         <BottomSheet
             isOpen={isOpen}
             onClose={onClose}
-            ariaLabel={`${stop.nodenm} 정류장 실시간 도착 정보`}
+            ariaLabel={UI_TEXT.STOP_POPUP.ARRIVAL_SHEET_ARIA(stop.nodenm)}
             modalId="stop-detail"
             zIndexClass="z-[120]"
             backdropZIndexClass="z-[115]"

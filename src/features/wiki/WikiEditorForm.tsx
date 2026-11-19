@@ -1,8 +1,12 @@
 "use client";
 
-import React, {useState} from "react";
+import React, {useCallback, useMemo, useState} from "react";
 import {DEFAULT_WIKI_PIN_COLOR, normalizeWikiSlug, type WikiPageDocument, type WikiPinColor,} from "@entities/wiki";
+import {UI_TEXT} from "@shared/config/locale";
 import type {WikiFormDraft} from "./WikiCreateForm";
+import {getWikiEditDraftKey, type WikiLocalDraft} from "./lib/wikiLocalDraft";
+import {useWikiDraftPersistence, type WikiFormDraftActions} from "./lib/useWikiDraftPersistence";
+import {WikiDraftBanner} from "./WikiDraftBanner";
 import {WikiEditMetaBar} from "./WikiEditMetaBar";
 import {WikiMarkdownEditor} from "./WikiMarkdownEditor";
 import {WikiPinColorSelector} from "./WikiPinColorSelector";
@@ -17,18 +21,22 @@ export interface WikiEditorFormProps {
     onCancel: () => void;
     onReloadLatest: () => Promise<void>;
     onPickOnMap?: (draft: WikiFormDraft) => void;
+    onDirtyChange?: (dirty: boolean) => void;
+    actionsRef?: React.RefObject<WikiFormDraftActions | null>;
 }
 
 export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
-                                                                  doc,
-                                                                  initialNickname,
-                                                                  initialDraft,
-                                                                  onSaveNickname,
-                                                                  onSaved,
-                                                                  onCancel,
-                                                                  onReloadLatest,
-                                                                  onPickOnMap,
-                                                              }) => {
+    doc,
+    initialNickname,
+    initialDraft,
+    onSaveNickname,
+    onSaved,
+    onCancel,
+    onReloadLatest,
+    onPickOnMap,
+    onDirtyChange,
+    actionsRef,
+}) => {
     const [baseVersion, setBaseVersion] = useState(doc.version);
     const [title, setTitle] = useState(initialDraft?.title ?? doc.title);
     const [subtitle, setSubtitle] = useState(initialDraft?.subtitle ?? doc.subtitle);
@@ -51,6 +59,106 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
     const [isSaving, setIsSaving] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [conflictVersion, setConflictVersion] = useState<number | null>(null);
+    const [conflictDoc, setConflictDoc] = useState<WikiPageDocument | null>(null);
+
+    const baselineDraft = useMemo<WikiFormDraft>(
+        () => ({
+            title: doc.title,
+            subtitle: doc.subtitle,
+            pinColor: doc.pinColor ?? DEFAULT_WIKI_PIN_COLOR,
+            tagsText: doc.tags.join(", "),
+            markdownBody: doc.markdownBody,
+            lat: doc.lat,
+            lng: doc.lng,
+            summary: "",
+        }),
+        [doc],
+    );
+
+    const currentDraft = useMemo<WikiFormDraft>(
+        () => ({
+            title,
+            subtitle,
+            pinColor,
+            tagsText,
+            markdownBody,
+            lat,
+            lng,
+            summary,
+        }),
+        [title, subtitle, pinColor, tagsText, markdownBody, lat, lng, summary],
+    );
+
+    const applyLocalDraft = useCallback((draft: WikiLocalDraft) => {
+        setTitle(draft.title);
+        setSubtitle(draft.subtitle);
+        setPinColor(draft.pinColor);
+        setTagsText(draft.tagsText);
+        setMarkdownBody(draft.markdownBody);
+        setLat(draft.lat);
+        setLng(draft.lng);
+        setSummary(draft.summary ?? "");
+    }, []);
+
+    const {
+        recoverableDraft,
+        draftStatusLabel,
+        saveDraftNow,
+        restoreDraft,
+        discardDraft,
+        clearDraft,
+    } = useWikiDraftPersistence({
+        draftKey: getWikiEditDraftKey(doc.slug),
+        baselineDraft,
+        currentDraft,
+        baseVersion,
+        skipInitialRestore: Boolean(initialDraft),
+        onApplyDraft: applyLocalDraft,
+        onDirtyChange,
+        actionsRef,
+    });
+
+    const cleanedTags = useMemo(
+        () =>
+            tagsText
+                .split(",")
+                .map((t) => t.trim().replace(/^#+/, ""))
+                .filter(Boolean)
+                .slice(0, 12),
+        [tagsText],
+    );
+
+    const localDraftDoc = useMemo<WikiPageDocument>(() => {
+        const hasCoords =
+            typeof lat === "number" &&
+            Number.isFinite(lat) &&
+            typeof lng === "number" &&
+            Number.isFinite(lng);
+        return {
+            ...doc,
+            title: normalizeWikiSlug(title) || title,
+            subtitle,
+            pinColor,
+            ...(hasCoords ? {lat, lng} : {lat: undefined, lng: undefined}),
+            tags: cleanedTags,
+            markdownBody,
+        };
+    }, [doc, title, subtitle, pinColor, lat, lng, cleanedTags, markdownBody]);
+
+    const applyConflictServerDoc = useCallback(() => {
+        if (!conflictDoc) return;
+        setBaseVersion(conflictDoc.version);
+        setTitle(conflictDoc.title);
+        setSubtitle(conflictDoc.subtitle);
+        setPinColor(conflictDoc.pinColor ?? DEFAULT_WIKI_PIN_COLOR);
+        setLat(conflictDoc.lat);
+        setLng(conflictDoc.lng);
+        setTagsText(conflictDoc.tags.join(", "));
+        setMarkdownBody(conflictDoc.markdownBody);
+        setConflictVersion(null);
+        setConflictDoc(null);
+        setErrorMessage(null);
+    }, [conflictDoc]);
 
     const submitSave = async (overrideBaseVersion?: number) => {
         if (isSaving) return;
@@ -58,12 +166,7 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
         setIsSaving(true);
         setErrorMessage(null);
         setConflictVersion(null);
-
-        const cleanedTags = tagsText
-            .split(",")
-            .map((t) => t.trim().replace(/^#+/, ""))
-            .filter(Boolean)
-            .slice(0, 12);
+        setConflictDoc(null);
 
         const hasCoords =
             typeof lat === "number" &&
@@ -93,21 +196,23 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
             const body = await res.json().catch(() => null);
             if (res.status === 409 && body?.currentVersion) {
                 setConflictVersion(Number(body.currentVersion));
-                setErrorMessage(body.error || "다른 사용자가 먼저 이 문서를 수정했습니다.");
+                setConflictDoc((body.latestDocument as WikiPageDocument | undefined) ?? null);
+                setErrorMessage(body.error || UI_TEXT.WIKI.EDIT_FORM.CONFLICT_DEFAULT);
                 return;
             }
             if (!res.ok) {
-                setErrorMessage(body?.error || `저장에 실패했습니다. (${res.status})`);
+                setErrorMessage(body?.error || UI_TEXT.WIKI.EDIT_FORM.SAVE_FAILED_STATUS(res.status));
                 return;
             }
 
+            clearDraft();
             if (nickname.trim()) {
                 onSaveNickname(nickname.trim());
             }
             await onSaved(body.document as WikiPageDocument);
         } catch (err) {
             setErrorMessage(
-                err instanceof Error ? err.message : "저장 중 네트워크 오류가 발생했습니다.",
+                err instanceof Error ? err.message : UI_TEXT.WIKI.EDIT_FORM.SAVE_FAILED_NETWORK,
             );
         } finally {
             setIsSaving(false);
@@ -116,6 +221,15 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
 
     return (
         <div className="space-y-5">
+            {recoverableDraft && (
+                <WikiDraftBanner
+                    draft={recoverableDraft}
+                    currentVersion={doc.version}
+                    onRestore={restoreDraft}
+                    onDiscard={discardDraft}
+                />
+            )}
+
             {/* Basic metadata editor */}
             <div
                 className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/95 p-4 sm:p-5 shadow-sm space-y-4">
@@ -123,10 +237,10 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                     className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100 dark:border-slate-800">
                     <div>
                         <span className="text-xs font-black text-sky-700 dark:text-sky-400">
-                            문서 편집 모드 · 기준 v{baseVersion}
+                            {UI_TEXT.WIKI.EDIT_FORM.MODE_BADGE(baseVersion)}
                         </span>
                         <h2 className="text-base font-black text-slate-900 dark:text-white mt-0.5">
-                            기본 정보 &amp; 통합 마크다운 편집
+                            {UI_TEXT.WIKI.EDIT_FORM.HEADING}
                         </h2>
                     </div>
                     <span
@@ -141,7 +255,7 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                             htmlFor="wiki-edit-title"
                             className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
                         >
-                            문서 제목 * (제목 변경 시 문서 키도 함께 변경됩니다)
+                            {UI_TEXT.WIKI.EDIT_FORM.TITLE_LABEL}
                         </label>
                         <input
                             id="wiki-edit-title"
@@ -158,7 +272,7 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                             htmlFor="wiki-edit-subtitle"
                             className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
                         >
-                            한 줄 부제목
+                            {UI_TEXT.WIKI.EDIT_FORM.SUBTITLE_LABEL}
                         </label>
                         <input
                             id="wiki-edit-subtitle"
@@ -177,7 +291,7 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                         htmlFor="wiki-edit-tags"
                         className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1"
                     >
-                        해시태그 (쉼표로 구분 · 최대 3개가 지도 핀에 표시됨)
+                        {UI_TEXT.WIKI.EDIT_FORM.TAGS_LABEL}
                     </label>
                     <input
                         id="wiki-edit-tags"
@@ -185,7 +299,7 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                         type="text"
                         value={tagsText}
                         onChange={(e) => setTagsText(e.target.value)}
-                        placeholder="예: 정류장, 환승, 첫차팁"
+                        placeholder={UI_TEXT.WIKI.EDIT_FORM.TAGS_PLACEHOLDER}
                         className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-xs font-semibold text-slate-900 dark:text-slate-100"
                     />
                 </div>
@@ -217,7 +331,12 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                 />
             </div>
 
-            <WikiMarkdownEditor value={markdownBody} onChange={setMarkdownBody}/>
+            <WikiMarkdownEditor
+                value={markdownBody}
+                onChange={setMarkdownBody}
+                onSaveDraft={saveDraftNow}
+                draftStatusLabel={draftStatusLabel}
+            />
 
             <WikiEditMetaBar
                 nickname={nickname}
@@ -229,16 +348,21 @@ export const WikiEditorForm: React.FC<WikiEditorFormProps> = ({
                 isSaving={isSaving}
                 errorMessage={errorMessage}
                 conflictVersion={conflictVersion}
+                conflictDoc={conflictDoc}
+                localDraftDoc={localDraftDoc}
                 isProtected={Boolean(doc.isProtected)}
                 onReloadLatest={async () => {
+                    clearDraft();
                     await onReloadLatest();
                 }}
+                onApplyConflictServerDoc={applyConflictServerDoc}
                 onForceOverwrite={() => {
                     if (conflictVersion) {
                         setBaseVersion(conflictVersion);
                         void submitSave(conflictVersion);
                     }
                 }}
+                onSaveDraft={saveDraftNow}
                 onSave={() => void submitSave()}
                 onCancel={onCancel}
             />

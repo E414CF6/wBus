@@ -4,6 +4,7 @@ import React from "react";
 import {Check, GitFork} from "lucide-react";
 import type {RouteVariation} from "@entities/route/types";
 import type {RouteMeta} from "@entities/route/routeMetadata";
+import {UI_TEXT} from "@shared/config/locale";
 
 interface VariantDropdownProps {
     meta: RouteMeta;
@@ -28,8 +29,8 @@ export const VariantDropdown: React.FC<VariantDropdownProps> = ({
         >
             <div
                 className="px-3 py-1.5 border-b border-black/5 dark:border-white/5 flex items-center justify-between text-[11px] font-extrabold text-slate-500 dark:text-slate-400">
-                <span>노선 종류 및 경유지 선택</span>
-                <span className="font-mono text-[10px]">총 {effectiveVariations.length}개</span>
+                <span>{UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_DROPDOWN_TITLE}</span>
+                <span className="font-mono text-[10px]">{UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_DROPDOWN_COUNT(effectiveVariations.length)}</span>
             </div>
 
             <div className="max-h-60 overflow-y-auto custom-scrollbar p-0.5 space-y-0.5">
@@ -46,7 +47,7 @@ export const VariantDropdown: React.FC<VariantDropdownProps> = ({
                     <div className="flex items-center gap-2 min-w-0">
                         <GitFork className="w-3.5 h-3.5 shrink-0 opacity-80"/>
                         <div className="truncate">
-                            <p className="truncate">전체 경로 (모든 경유지)</p>
+                            <p className="truncate">{UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_ALL_OPTION}</p>
                             <p className={`text-[10px] font-semibold truncate ${selectedVariantId === "all" ? "text-white/80" : "text-slate-400"}`}>
                                 {meta.origin} ↔ {meta.destination}
                             </p>
@@ -89,12 +90,14 @@ export const VariantDropdown: React.FC<VariantDropdownProps> = ({
                                                         : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                                                 }`}
                                             >
-                                                {count}대 운행
+                                                {UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_RUNNING_COUNT(count)}
                                             </span>
                                         )}
                                     </div>
                                     <p className={`text-[10px] font-semibold truncate ${isSelected ? "text-white/80" : "text-slate-400"}`}>
-                                        {turningStopName ? `회차: ${turningStopName}` : `${variant.stops.length}개 정류장`}
+                                        {turningStopName
+                                            ? UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_TURNING_PREFIX(turningStopName)
+                                            : UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_STOPS_COUNT(variant.stops.length)}
                                     </p>
                                 </div>
                             </div>

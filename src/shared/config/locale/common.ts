@@ -9,7 +9,13 @@ export const COMMON_STRINGS = {
     EXPAND: "펼치기",
     COLLAPSE: "접기",
     CLOSE: "닫기",
+    DONE: "완료",
+    DELETE_ALL: "전체 삭제",
     ROUTE_LABEL: (route: string) => `${route}`,
+    ROUTE_NUMBER: (route: string) => `${route}번`,
+    CLEAR_SEARCH_ARIA: "검색어 지우기",
+    TERMS_OF_SERVICE: "이용약관",
+    PRIVACY_POLICY: "개인정보처리방침",
 } as const;
 
 export const CONNECTION_STRINGS = {
@@ -36,6 +42,10 @@ export const TIME_STRINGS = {
     MINUTES_AGO: (min: number) => `${min}분 전`,
     HOURS_AGO: (hours: number) => `${hours}시간 전`,
     DAYS_AGO: (days: number) => `${days}일 전`,
+    MINUTES_SECONDS: (mins: number, secs: number) => `${mins}분 ${secs}초`,
+    SECONDS_FORMAT: (secs: number) => `${secs}초`,
+    WAIT_MINUTES_AFTER: (mins: number) => `${mins}분 후`,
+    JUST_UPDATED: "방금 갱신",
     REFRESH_AVAILABLE_NOW: "지금 갱신 가능",
     REFRESH_AVAILABLE_DAYS: (days: number, hours: number) => `${days}일 ${hours}시간 후 갱신 가능`,
     REFRESH_AVAILABLE_HOURS: (hours: number, mins: number) => `${hours}시간 ${mins}분 후 갱신 가능`,
@@ -102,6 +112,7 @@ export const BUS_LIST_STRINGS = {
 
 export const BUS_ITEM_STRINGS = {
     ARRIVING_SOON: "곧 도착",
+    DEPARTING_SOON: "곧 출발",
     STOPS_LEFT: (count: number) => (count === 1 ? "1정거장 전" : `${count}정거장 전`),
     VEHICLE_NUM: "차량번호",
     CURRENT_LOC: "현재위치",
@@ -114,6 +125,7 @@ export const BUS_ITEM_STRINGS = {
     JUST_NOW: "방금 전",
     STATUS_CHECKING: "정보 확인 중...",
     RUNNING_NOW: "운행중",
+    RUNNING_STATUS: "운행 중",
     SHOW_ROUTE: "경로보기",
     CLICK_ROUTE_FOR_INFO: "버스 번호를 클릭하여 상세 정보를 확인하세요.",
 } as const;
@@ -131,7 +143,27 @@ export const MAP_STRINGS = {
 } as const;
 
 export const STOP_POPUP_STRINGS = {
-    STATION_ID_LABEL: "정류장 ID", STATION_ID_FALLBACK: "N/A",
+    STATION_ID_LABEL: "정류장 ID",
+    STATION_ID_FALLBACK: "N/A",
+    UNASSIGNED_ID: "미부여",
+    VIEWING_ROUTE: "보고 있는 노선",
+    CURRENT_ROUTE: "현재 노선",
+    NEARBY_STOP: "주변 정류장",
+    NO_ARRIVAL_SOON: "곧 도착 예정인 버스가 없습니다",
+    REFRESH_ARRIVAL: "도착정보 새로고침",
+    REFRESH_ARRIVAL_TITLE: "실시간 도착정보 새로고침",
+    ARRIVAL_EXPECTED: "도착 예정",
+    COUNT_UNIT: (count: number) => `${count}개`,
+    ROUTE_UNIT: "노선",
+    KAKAO_ROADVIEW_TITLE: "카카오 로드뷰로 정류장 보기",
+    FAVORITE_ADD_TITLE: "즐겨찾는 정류장 등록",
+    FAVORITE_REMOVE_TITLE: "즐겨찾는 정류장 해제",
+    CLOSE_POPUP_TITLE: "팝업 닫기",
+    CLOSE_POPUP_ARIA: "정류장 팝업 닫기",
+    OPPOSITE_STOP_TITLE: (stopName: string) => `건너편 정류장(${stopName}) 실시간 정보 보기`,
+    OPPOSITE_LABEL: "건너편",
+    SWITCH_ACTION: "전환 →",
+    ARRIVAL_SHEET_ARIA: (stopName: string) => `${stopName} 정류장 실시간 도착 정보`,
 } as const;
 
 export const ERROR_STRINGS = {
@@ -162,7 +194,41 @@ export const DATA_LABELS_STRINGS = {
 } as const;
 
 export const ROUTE_MAP_STRINGS = {
-    ORIGIN: "기점", DESTINATION: "종점", FIRST_BUS: "첫차", LAST_BUS: "막차", INTERVAL: "배차간격", MINUTES_UNIT: "분",
+    ORIGIN: "기점",
+    DESTINATION: "종점",
+    TURNAROUND: "회차지",
+    FIRST_BUS: "첫차",
+    LAST_BUS: "막차",
+    INTERVAL: "배차간격",
+    MINUTES_UNIT: "분",
+    DEFAULT_WONJU_ORIGIN: "관설동/장양리",
+    DEFAULT_WONJU_DEST: "원주시내",
+    DEFAULT_BUS_TYPE: "일반버스",
+    GENERIC_CITY_BUS_DESC: (routeName: string) => `${routeName}번 시내버스`,
+    TURNAROUND_DEPART_FORMAT: (name: string) => `${name} 출발`,
+    TERMINAL_FORMAT: (name: string) => `${name} 종점`,
+    VIA_FORMAT: (name: string) => `${name} 경유`,
+    SHORT_ROUTE_FORMAT: (stopCount: number) => `단축 (${stopCount}개 정류장)`,
+    VARIANT_FORMAT: (index: number) => `변형 ${index}`,
+    TYPE_EXPRESS: "급행",
+    TYPE_BRANCH: "지선",
+    TYPE_VILLAGE: "마을",
+    TYPE_MAIN: "간선",
+    CATEGORY_AIRPORT: "공항",
+    CATEGORY_NIGHT: "심야",
+    CATEGORY_SEAT: "좌석",
+    CATEGORY_EXPRESS: "급행",
+    CATEGORY_WIDE_AREA: "광역",
+    CATEGORY_MAIN: "간선",
+    CATEGORY_BRANCH: "지선",
+    CATEGORY_CIRCULAR: "순환",
+    CATEGORY_VILLAGE: "마을",
+    CATEGORY_RURAL: "농어촌",
+    CATEGORY_INTERCITY: "시외",
+    CATEGORY_TOUR: "관광",
+    CATEGORY_CUSTOM: "맞춤·공영",
+    CATEGORY_DRT: "수요응답",
+    CATEGORY_GENERAL: "일반",
 } as const;
 
 export const FOOTER_STRINGS = {

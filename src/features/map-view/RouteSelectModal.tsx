@@ -157,7 +157,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
         <div className="flex items-center gap-1.5 flex-wrap">
             <div
                 className="flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 select-none"
-                title={`현재 지도 뷰포인트: ${currentCity.name}`}
+                title={UI_TEXT.ROUTE_SELECT.VIEWPORT_CITY_TITLE(currentCity.name)}
             >
                 <MapPin className="w-3 h-3"/>
                 <span>{currentCity.name}</span>
@@ -343,7 +343,7 @@ export const RouteSelectModal: React.FC<RouteSelectModalProps> = ({
                         {visibleRoutes.length < filteredRoutes.length && (
                             <div
                                 className="col-span-full py-2.5 text-center text-xs font-semibold text-slate-400 dark:text-slate-500">
-                                스크롤하여 더 많은 노선 불러오기 ({visibleRoutes.length} / {filteredRoutes.length})
+                                {UI_TEXT.ROUTE_SELECT.LOAD_MORE_ROUTES(visibleRoutes.length, filteredRoutes.length)}
                             </div>
                         )}
                     </div>

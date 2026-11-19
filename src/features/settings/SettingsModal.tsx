@@ -8,6 +8,7 @@ import {useCityContext} from "@entities/city";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {applyThemePreference, Modal, type ThemePreference} from "@shared/ui";
 import {triggerHaptic} from "@shared/utils/haptics";
+import {UI_TEXT} from "@shared/config/locale";
 
 import {DeviceSettingsTab} from "./tabs/DeviceSettingsTab";
 import {GeneralSettingsTab} from "./tabs/GeneralSettingsTab";
@@ -27,9 +28,9 @@ const SETTINGS_TABS: readonly {
     label: string;
     icon: React.ComponentType<{ className?: string }>;
 }[] = [
-    {id: "general", label: "일반", icon: Sparkles},
-    {id: "map", label: "지도·추적", icon: MapIcon},
-    {id: "device", label: "지역·편의", icon: SlidersHorizontal},
+    {id: "general", label: UI_TEXT.SETTINGS.TABS.GENERAL, icon: Sparkles},
+    {id: "map", label: UI_TEXT.SETTINGS.TABS.MAP, icon: MapIcon},
+    {id: "device", label: UI_TEXT.SETTINGS.TABS.DEVICE, icon: SlidersHorizontal},
 ];
 
 const emptySubscribe = () => () => {
@@ -102,7 +103,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
         triggerHaptic("light");
         clearApiCache();
         setConfirmClearData(false);
-        setStatusNotice("노선·시간표·공지사항 임시 캐시가 삭제되었습니다. 즐겨찾기와 설정은 유지됩니다.");
+        setStatusNotice(UI_TEXT.SETTINGS.NOTICES.CACHE_CLEARED);
     }, [clearApiCache]);
 
     const handleResetSettings = useCallback(() => {
@@ -111,7 +112,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
         setIsAutoDetectEnabled(true);
         applyThemePreference("system", setTheme);
         setConfirmClearData(false);
-        setStatusNotice("쿠키에 저장된 환경설정이 기본값으로 초기화되었습니다.");
+        setStatusNotice(UI_TEXT.SETTINGS.NOTICES.SETTINGS_RESET);
     }, [resetSettings, setIsAutoDetectEnabled, setTheme]);
 
     const handleClearAllData = useCallback(() => {
@@ -120,7 +121,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
         setIsAutoDetectEnabled(true);
         applyThemePreference("system", setTheme);
         setConfirmClearData(false);
-        setStatusNotice("설정 쿠키와 즐겨찾기·최근 조회·캐시가 모두 초기화되었습니다.");
+        setStatusNotice(UI_TEXT.SETTINGS.NOTICES.ALL_DATA_CLEARED);
     }, [clearAllAppData, setIsAutoDetectEnabled, setTheme]);
 
     const modalIcon = (
@@ -143,7 +144,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
             onClick={onClose}
             className="ml-auto px-4 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black cursor-pointer hover:opacity-90 transition shrink-0 active:scale-95"
         >
-            완료
+            {UI_TEXT.COMMON.DONE}
         </button>
     );
 
@@ -151,21 +152,21 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="환경설정"
-            subtitle="화면, 지도, 실시간 추적 및 앱 데이터를 관리합니다"
+            title={UI_TEXT.SETTINGS.MODAL_TITLE}
+            subtitle={UI_TEXT.SETTINGS.MODAL_SUBTITLE}
             icon={modalIcon}
             headerBadge={headerBadge}
             footer={modalFooter}
             maxWidth="lg"
             height="default"
             modalId="settings"
-            ariaLabel="wBus 환경설정 모달"
+            ariaLabel={UI_TEXT.SETTINGS.MODAL_ARIA}
         >
                 <div
                     className="px-4 sm:px-6 pt-3 pb-2.5 border-b border-black/5 dark:border-white/5 bg-slate-50/40 dark:bg-white/[0.01] shrink-0">
                     <div
                         role="tablist"
-                        aria-label="환경설정 카테고리"
+                        aria-label={UI_TEXT.SETTINGS.TABS_ARIA}
                         className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-slate-200/70 dark:bg-white/[0.06]"
                     >
                         {SETTINGS_TABS.map((tab) => {
@@ -208,7 +209,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({isOpen, onClose}) =
                                 type="button"
                                 onClick={() => setStatusNotice(null)}
                                 className="p-0.5 rounded-lg text-emerald-700/70 dark:text-emerald-300/70 hover:bg-emerald-500/10 cursor-pointer shrink-0"
-                                aria-label="알림 닫기"
+                                aria-label={UI_TEXT.SETTINGS.DISMISS_NOTICE_ARIA}
                             >
                                 <X className="w-3.5 h-3.5"/>
                             </button>

@@ -3,6 +3,7 @@
 import React from "react";
 import {MapPin, Navigation, Star} from "lucide-react";
 import type {BusStop} from "@entities/station/types";
+import {UI_TEXT} from "@shared/config/locale";
 
 interface MatchedStopsSectionProps {
     matchedStops: BusStop[];
@@ -25,12 +26,12 @@ export const MatchedStopsSection: React.FC<MatchedStopsSectionProps> = ({
                 <MapPin className="w-3.5 h-3.5 text-amber-500"/>
                 <span>
                     {isFavStopsCategoryOnly
-                        ? `즐겨찾는 정류장 (${matchedStops.length})`
-                        : `정류장 검색 결과 (${matchedStops.length})`}
+                        ? UI_TEXT.ROUTE_SELECT.MATCHED_FAV_STOPS(matchedStops.length)
+                        : UI_TEXT.ROUTE_SELECT.MATCHED_SEARCH_STOPS(matchedStops.length)}
                 </span>
             </span>
             <span className="text-[10px] font-semibold text-slate-400">
-                선택 시 해당 정류장 도착정보 팝업 열림
+                {UI_TEXT.ROUTE_SELECT.MATCHED_STOPS_HINT}
             </span>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -52,7 +53,9 @@ export const MatchedStopsSection: React.FC<MatchedStopsSectionProps> = ({
                                     {stop.nodenm}
                                 </p>
                                 <p className="text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">
-                                    {stop.nodeno ? `정류장 번호 ${stop.nodeno}` : "실시간 도착정보 보기"}
+                                    {stop.nodeno
+                                        ? UI_TEXT.ROUTE_SELECT.STOP_NUMBER_FORMAT(stop.nodeno)
+                                        : UI_TEXT.ROUTE_SELECT.VIEW_LIVE_ARRIVAL}
                                 </p>
                             </div>
                         </div>
@@ -67,7 +70,7 @@ export const MatchedStopsSection: React.FC<MatchedStopsSectionProps> = ({
                                     ? "text-amber-500 hover:text-amber-600"
                                     : "text-slate-300 dark:text-slate-600 hover:text-amber-500"
                             }`}
-                            title={isFav ? "정류장 즐겨찾기 해제" : "정류장 즐겨찾기 추가"}
+                            title={isFav ? UI_TEXT.ROUTE_SELECT.STOP_FAVORITE_REMOVE : UI_TEXT.ROUTE_SELECT.STOP_FAVORITE_ADD}
                         >
                             <Star className={`w-4 h-4 ${isFav ? "fill-amber-500" : ""}`}/>
                         </button>

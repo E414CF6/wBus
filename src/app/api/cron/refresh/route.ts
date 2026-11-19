@@ -3,6 +3,7 @@ import {type NextRequest, NextResponse} from "next/server";
 
 import {refreshRouteData} from "@entities/route/server";
 import {invalidateScheduleTag, refreshSchedule} from "@entities/schedule/server";
+import {UI_TEXT} from "@shared/config/locale";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -24,7 +25,7 @@ async function handleUnifiedCron(request: NextRequest) {
 
         if (!isAuthorized) {
             return NextResponse.json(
-                {success: false, error: "인증되지 않은 요청입니다. (CRON_SECRET 또는 ADMIN_KEY 필요)"},
+                {success: false, error: UI_TEXT.API.AUTH_REQUIRED},
                 {status: 401}
             );
         }
@@ -86,7 +87,7 @@ async function handleUnifiedCron(request: NextRequest) {
                 routeResult = {
                     success: false,
                     refreshed: false,
-                    message: routeErr instanceof Error ? routeErr.message : "노선 갱신 실패",
+                    message: routeErr instanceof Error ? routeErr.message : UI_TEXT.API.CRON_ROUTES_FAILED,
                     totalRoutesProcessed: 0,
                     routesCount: 0,
                     elapsedMs: 0,
@@ -115,7 +116,7 @@ async function handleUnifiedCron(request: NextRequest) {
         return NextResponse.json(
             {
                 success: false,
-                error: error instanceof Error ? error.message : "통합 데이터셋 갱신 실패",
+                error: error instanceof Error ? error.message : UI_TEXT.API.CRON_UNIFIED_FAILED,
             },
             {status: 500}
         );

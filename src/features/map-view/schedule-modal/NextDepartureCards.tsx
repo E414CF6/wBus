@@ -3,6 +3,7 @@
 import React from "react";
 import {Clock, RotateCw} from "lucide-react";
 import type {getNextDeparture} from "@entities/schedule";
+import {UI_TEXT} from "@shared/config/locale";
 
 type NextDepartureInfo = ReturnType<typeof getNextDeparture>;
 
@@ -33,16 +34,16 @@ export const NextDepartureCards: React.FC<NextDepartureCardsProps> = ({
                     ? "border-blue-500 dark:border-blue-500 ring-2 ring-blue-500/50 shadow-md"
                     : "border-blue-200 dark:border-blue-900/60 opacity-80 hover:opacity-100"
             } flex items-center justify-between gap-2`}
-            title={`기점(${originName}) 기준으로 시간표 보기`}
+            title={UI_TEXT.TIMETABLE.ORIGIN_CARD_TITLE(originName)}
         >
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 text-[11px] font-bold text-blue-700 dark:text-blue-300">
                     <Clock className="w-3 h-3 shrink-0"/>
-                    <span className="truncate">기점 ({originName}) 출발</span>
+                    <span className="truncate">{UI_TEXT.TIMETABLE.ORIGIN_DEP_BTN(originName)}</span>
                     {hourlyLocation === "origin" && (
                         <span
                             className="px-1.5 py-0.2 rounded-md bg-blue-600 text-[9px] font-black text-white shrink-0">
-                            기준 정류장
+                            {UI_TEXT.TIMETABLE.CRITERIA_STOP_BADGE}
                         </span>
                     )}
                 </div>
@@ -57,13 +58,13 @@ export const NextDepartureCards: React.FC<NextDepartureCardsProps> = ({
                                 (
                                 {nextDepInfo.originWaitMins !== null &&
                                     (nextDepInfo.originWaitMins <= 0
-                                        ? "곧 출발"
-                                        : `${nextDepInfo.originWaitMins}분 후`)}
+                                        ? UI_TEXT.BUS_ITEM.DEPARTING_SOON
+                                        : UI_TEXT.TIME.WAIT_MINUTES_AFTER(nextDepInfo.originWaitMins))}
                                 )
                             </span>
                         </>
                     ) : (
-                        <span className="text-xs font-bold text-slate-400">금일 운행 종료</span>
+                        <span className="text-xs font-bold text-slate-400">{UI_TEXT.TIMETABLE.SERVICE_ENDED}</span>
                     )}
                 </div>
                 {nextDepInfo.nextOrigin?.notes && (
@@ -85,16 +86,16 @@ export const NextDepartureCards: React.FC<NextDepartureCardsProps> = ({
                     ? "border-amber-500 dark:border-amber-500 ring-2 ring-amber-500/50 shadow-md"
                     : "border-amber-200 dark:border-amber-900/60 opacity-80 hover:opacity-100"
             } flex items-center justify-between gap-2`}
-            title={`회차지(${destName}) 기준으로 시간표 보기`}
+            title={UI_TEXT.TIMETABLE.DEST_CARD_TITLE(destName)}
         >
             <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
                     <RotateCw className="w-3 h-3 shrink-0"/>
-                    <span className="truncate">회차지 ({destName}) 출발</span>
+                    <span className="truncate">{UI_TEXT.TIMETABLE.TURNAROUND_DEP_BTN(destName)}</span>
                     {hourlyLocation === "dest" && (
                         <span
                             className="px-1.5 py-0.2 rounded-md bg-amber-600 text-[9px] font-black text-white shrink-0">
-                            기준 정류장
+                            {UI_TEXT.TIMETABLE.CRITERIA_STOP_BADGE}
                         </span>
                     )}
                 </div>
@@ -109,13 +110,13 @@ export const NextDepartureCards: React.FC<NextDepartureCardsProps> = ({
                                 (
                                 {nextDepInfo.destWaitMins !== null &&
                                     (nextDepInfo.destWaitMins <= 0
-                                        ? "곧 출발"
-                                        : `${nextDepInfo.destWaitMins}분 후`)}
+                                        ? UI_TEXT.BUS_ITEM.DEPARTING_SOON
+                                        : UI_TEXT.TIME.WAIT_MINUTES_AFTER(nextDepInfo.destWaitMins))}
                                 )
                             </span>
                         </>
                     ) : (
-                        <span className="text-xs font-bold text-slate-400">금일 운행 종료</span>
+                        <span className="text-xs font-bold text-slate-400">{UI_TEXT.TIMETABLE.SERVICE_ENDED}</span>
                     )}
                 </div>
                 {nextDepInfo.nextDest?.notes && (

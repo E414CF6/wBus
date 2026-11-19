@@ -3,6 +3,7 @@
 import React, {useMemo, useState} from "react";
 import {Clock, FileDiff, History, RotateCcw, User} from "lucide-react";
 import {computeLineDiff, computeStructuredChanges, useWikiRevisions} from "@entities/wiki";
+import {LOCALE, UI_TEXT} from "@shared/config/locale";
 
 export interface WikiHistoryPanelProps {
     slug: string;
@@ -15,7 +16,7 @@ export interface WikiHistoryPanelProps {
 function formatRevisionTime(iso: string): string {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return iso;
-    return d.toLocaleString("ko-KR", {
+    return d.toLocaleString(LOCALE, {
         month: "short",
         day: "numeric",
         hour: "2-digit",
@@ -74,18 +75,18 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                     targetVersion,
                     baseVersion: currentVersion,
                     nickname: nickname.trim(),
-                    summary: `v${targetVersion} 버전으로 복구`,
+                    summary: UI_TEXT.WIKI.HISTORY.REVERT_SUMMARY(targetVersion),
                 }),
             });
             const body = await res.json().catch(() => null);
             if (!res.ok) {
-                setRevertError(body?.error || "버전 복구에 실패했습니다.");
+                setRevertError(body?.error || UI_TEXT.WIKI.HISTORY.REVERT_FAILED);
                 return;
             }
             await mutate();
             await onReverted();
         } catch (err) {
-            setRevertError(err instanceof Error ? err.message : "버전 복구 중 오류가 발생했습니다.");
+            setRevertError(err instanceof Error ? err.message : UI_TEXT.WIKI.HISTORY.REVERT_ERROR);
         } finally {
             setRevertingVersion(null);
         }
@@ -95,7 +96,7 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
         return (
             <div
                 className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-8 text-center text-xs font-semibold text-slate-500">
-                편집 이력을 불러오는 중...
+                {UI_TEXT.WIKI.HISTORY.LOADING}
             </div>
         );
     }
@@ -104,7 +105,7 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
         return (
             <div
                 className="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 p-5 text-xs font-bold text-rose-700 dark:text-rose-200">
-                편집 이력을 불러오지 못했습니다: {error.message}
+                {UI_TEXT.WIKI.HISTORY.LOAD_FAILED(error.message)}
             </div>
         );
     }
@@ -118,10 +119,10 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                     className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/70 flex items-center justify-between">
                     <span className="text-xs font-black text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                         <History className="w-4 h-4 text-sky-600 dark:text-sky-400"/>
-                        개정 이력 ({revisions.length})
+                        {UI_TEXT.WIKI.HISTORY.REVISION_LIST_TITLE(revisions.length)}
                     </span>
                     <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                        현재 v{currentVersion}
+                        {UI_TEXT.WIKI.HISTORY.CURRENT_VERSION(currentVersion)}
                     </span>
                 </div>
 
@@ -135,7 +136,7 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                 <div className="divide-y divide-slate-100 dark:divide-slate-800/80 max-h-[540px] overflow-y-auto">
                     {revisions.length === 0 ? (
                         <div className="p-6 text-center text-xs text-slate-500">
-                            아직 저장된 편집 이력이 없습니다. 첫 편집 시 v2부터 이력이 누적됩니다.
+                            {UI_TEXT.WIKI.HISTORY.EMPTY_REVISIONS}
                         </div>
                     ) : (
                         revisions.map((rev) => {
@@ -166,12 +167,12 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                                                 {rev.version === currentVersion && (
                                                     <span
                                                         className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold">
-                                                        최신
+                                                        {UI_TEXT.WIKI.HISTORY.LATEST_BADGE}
                                                     </span>
                                                 )}
                                                 <span
                                                     className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
-                                                    {rev.summary || "요약 없음"}
+                                                    {rev.summary || UI_TEXT.WIKI.HISTORY.NO_SUMMARY}
                                                 </span>
                                             </div>
                                             <div
@@ -200,7 +201,9 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                                                 className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-[11px] font-extrabold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-50"
                                             >
                                                 <RotateCcw className="w-3 h-3"/>
-                                                {revertingVersion === rev.version ? "복구 중" : "되돌리기"}
+                                                {revertingVersion === rev.version
+                                                    ? UI_TEXT.WIKI.HISTORY.REVERTING
+                                                    : UI_TEXT.WIKI.HISTORY.REVERT_BTN}
                                             </button>
                                         )}
                                     </div>
@@ -218,22 +221,22 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                     className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/90 dark:bg-slate-800/70 flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-black text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
                         <FileDiff className="w-4 h-4 text-indigo-600 dark:text-indigo-400"/>
-                        변경 비교 (Diff)
+                        {UI_TEXT.WIKI.HISTORY.DIFF_TITLE}
                     </span>
                     {revisions.length > 0 && (
                         <div className="flex items-center gap-2 text-[11px] font-bold">
                             <select
                                 id="wiki-history-compare-to"
                                 name="compareToVersion"
-                                aria-label="비교 기준 버전 선택"
+                                aria-label={UI_TEXT.WIKI.HISTORY.COMPARE_BASE_ARIA}
                                 value={compareToVersion ?? ""}
                                 onChange={(e) => setCompareToVersion(e.target.value ? Number(e.target.value) : null)}
                                 className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
                             >
-                                <option value="">빈 문서와 비교</option>
+                                <option value="">{UI_TEXT.WIKI.HISTORY.COMPARE_EMPTY}</option>
                                 {revisions.map((r) => (
                                     <option key={`cmp-${r.version}`} value={r.version}>
-                                        이전: v{r.version}
+                                        {UI_TEXT.WIKI.HISTORY.COMPARE_PREV_OPTION(r.version)}
                                     </option>
                                 ))}
                             </select>
@@ -241,14 +244,14 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                             <select
                                 id="wiki-history-selected"
                                 name="selectedVersion"
-                                aria-label="대상 버전 선택"
+                                aria-label={UI_TEXT.WIKI.HISTORY.COMPARE_TARGET_ARIA}
                                 value={selectedVersion ?? ""}
                                 onChange={(e) => setSelectedVersion(Number(e.target.value))}
                                 className="px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs"
                             >
                                 {revisions.map((r) => (
                                     <option key={`sel-${r.version}`} value={r.version}>
-                                        대상: v{r.version}
+                                        {UI_TEXT.WIKI.HISTORY.COMPARE_TARGET_OPTION(r.version)}
                                     </option>
                                 ))}
                             </select>
@@ -259,7 +262,7 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                 <div className="p-4 space-y-3 max-h-[540px] overflow-y-auto">
                     {!selectedRev ? (
                         <p className="text-xs text-slate-500 text-center py-10">
-                            왼쪽에서 버전을 선택하면 변경 내역을 확인할 수 있습니다.
+                            {UI_TEXT.WIKI.HISTORY.SELECT_VERSION_HINT}
                         </p>
                     ) : (
                         <>
@@ -267,7 +270,7 @@ export const WikiHistoryPanel: React.FC<WikiHistoryPanelProps> = ({
                                 <div
                                     className="p-3 rounded-xl bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-800/70 space-y-1">
                                     <p className="text-[11px] font-black text-indigo-800 dark:text-indigo-200">
-                                        구조화 데이터 변경 요약
+                                        {UI_TEXT.WIKI.HISTORY.STRUCTURED_CHANGES_TITLE}
                                     </p>
                                     <ul className="list-disc pl-4 space-y-0.5 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300">
                                         {structuredChanges.map((change, idx) => (

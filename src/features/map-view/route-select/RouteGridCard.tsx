@@ -50,12 +50,12 @@ export const RouteGridCard: React.FC<RouteGridCardProps> = ({
                         {meta.routeType ||
                             categoryLabel ||
                             (meta.genericType === "EXPRESS"
-                                ? "급행"
+                                ? UI_TEXT.ROUTE_MAP.TYPE_EXPRESS
                                 : meta.genericType === "BRANCH"
-                                    ? "지선"
+                                    ? UI_TEXT.ROUTE_MAP.TYPE_BRANCH
                                     : meta.genericType === "VILLAGE"
-                                        ? "마을"
-                                        : "간선")}
+                                        ? UI_TEXT.ROUTE_MAP.TYPE_VILLAGE
+                                        : UI_TEXT.ROUTE_MAP.TYPE_MAIN)}
                     </span>
                 </div>
                 <div
@@ -73,7 +73,7 @@ export const RouteGridCard: React.FC<RouteGridCardProps> = ({
                     <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1">
                         <Clock className="w-3 h-3 text-slate-400 shrink-0"/>
                         <span>
-                            첫차 {meta.firstTime || "--:--"} · 막차 {meta.lastTime || "--:--"}
+                            {UI_TEXT.ROUTE_SELECT.FIRST_LAST_TIME(meta.firstTime || "--:--", meta.lastTime || "--:--")}
                         </span>
                     </p>
                 )}

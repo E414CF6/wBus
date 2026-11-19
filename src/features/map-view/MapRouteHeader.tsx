@@ -11,6 +11,7 @@ import {getNextDeparture, useSchedule} from "@entities/schedule";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useRecentRoutes, useRouteBookmarks, useRouteVariations} from "@entities/route";
 import {MarqueeText} from "@shared/ui/MarqueeText";
+import {UI_TEXT} from "@shared/config/locale";
 
 import type {BusItem, LiveConnectionStatus} from "@entities/bus/types";
 import {VariantDropdown} from "./route-header/VariantDropdown";
@@ -173,14 +174,14 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
             return {
                 time: nextOrigin.originDepTime,
                 waitMins: originWaitMins,
-                label: "기점 출발",
+                label: UI_TEXT.MAP_VIEW.ROUTE_HEADER.ORIGIN_DEPARTURE,
             };
         }
         if (nextDest && destWaitMins !== null) {
             return {
                 time: nextDest.destDepTime,
                 waitMins: destWaitMins,
-                label: "종점 출발",
+                label: UI_TEXT.MAP_VIEW.ROUTE_HEADER.DEST_DEPARTURE,
             };
         }
         return null;
@@ -298,10 +299,14 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                             }`}
                             title={
                                 hasMultipleVariants
-                                    ? `클릭하여 노선 종류(경유지) 전환 (현재: ${selectedVariantId === "all" ? "전체 경로" : (activeVariant?.label ?? `${meta.origin} - ${meta.destination}`)})`
+                                    ? UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_SWITCH_TITLE(
+                                        selectedVariantId === "all"
+                                            ? UI_TEXT.MAP_VIEW.ROUTE_HEADER.ALL_ROUTES_LABEL
+                                            : (activeVariant?.label ?? `${meta.origin} - ${meta.destination}`)
+                                    )
                                     : `${meta.origin} ↔ ${meta.destination}`
                             }
-                            aria-label="노선 종류 및 경유지 전환"
+                            aria-label={UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_SWITCH_ARIA}
                         >
                             <span
                                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white ${meta.colorTheme.bg} ${meta.colorTheme.shadow || "shadow-[0_4px_12px_rgba(0,0,0,0.15)]"}`}
@@ -341,7 +346,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                             <GitFork className="w-2.5 h-2.5 shrink-0"/>
                                             <span>
                                                 {selectedVariantId === "all"
-                                                    ? "전체"
+                                                    ? UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_ALL_BADGE
                                                     : `${currentVariantIndex + 1}/${effectiveVariations.length}`}
                                             </span>
                                         </span>
@@ -353,7 +358,14 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                             suppressHydrationWarning
                                             className={`px-1.5 py-0.5 rounded-md text-[9px] font-black shrink-0 ${meta.colorTheme.badgeBg} ${meta.colorTheme.text}`}
                                         >
-                                            {meta.routeType || (meta.genericType === "EXPRESS" ? "급행" : meta.genericType === "BRANCH" ? "지선" : meta.genericType === "VILLAGE" ? "마을" : "간선")}
+                                            {meta.routeType ||
+                                                (meta.genericType === "EXPRESS"
+                                                    ? UI_TEXT.ROUTE_MAP.TYPE_EXPRESS
+                                                    : meta.genericType === "BRANCH"
+                                                        ? UI_TEXT.ROUTE_MAP.TYPE_BRANCH
+                                                        : meta.genericType === "VILLAGE"
+                                                            ? UI_TEXT.ROUTE_MAP.TYPE_VILLAGE
+                                                            : UI_TEXT.ROUTE_MAP.TYPE_MAIN)}
                                         </span>
                                     )}
                                 </div>
@@ -369,8 +381,8 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                     setIsVariantMenuOpen((prev) => !prev);
                                 }}
                                 className="p-1 rounded-full text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
-                                title="전체 경유지/노선 종류 목록 보기"
-                                aria-label="노선 종류 목록 열기"
+                                title={UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_LIST_TITLE}
+                                aria-label={UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_LIST_ARIA}
                             >
                                 <ChevronDown
                                     className={`w-3.5 h-3.5 transition-transform ${isVariantMenuOpen ? "rotate-180" : ""}`}/>
@@ -411,7 +423,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                         aria-live="polite"
                     >
                         <AlertTriangle className="w-3 h-3 shrink-0"/>
-                        <span>공공데이터 API 응답 지연 중 · 최근 수신된 위치를 표시합니다</span>
+                        <span>{UI_TEXT.MAP_VIEW.ROUTE_HEADER.API_DEGRADED_BANNER}</span>
                     </div>
                 )}
 

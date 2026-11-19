@@ -4,6 +4,7 @@ import React from "react";
 import {Star} from "lucide-react";
 import type {FavoriteStop} from "@entities/station/types";
 import type {RouteMeta} from "@entities/route/routeMetadata";
+import {UI_TEXT} from "@shared/config/locale";
 
 interface QuickAccessBarProps {
     quickRoutes: string[];
@@ -42,7 +43,7 @@ export const QuickAccessBar: React.FC<QuickAccessBarProps> = ({
                                     : "bg-white/85 dark:bg-[#11131a]/85 backdrop-blur-xl hover:bg-white dark:hover:bg-[#181922] text-slate-700 dark:text-slate-300 border border-black/8 dark:border-white/10"
                             }`}
                         >
-                            <span>{route}번</span>
+                            <span>{UI_TEXT.COMMON.ROUTE_NUMBER(route)}</span>
                         </button>
                     );
                 })}
@@ -54,7 +55,7 @@ export const QuickAccessBar: React.FC<QuickAccessBarProps> = ({
                             key={`fav-stop-${fav.nodeid}`}
                             type="button"
                             onClick={() => onJumpToFavoriteStop(fav)}
-                            title={`즐겨찾는 정류장: ${fav.nodenm} (클릭하여 이동 및 실시간 도착정보 보기)`}
+                            title={UI_TEXT.MAP_VIEW.ROUTE_HEADER.FAVORITE_STOP_TITLE(fav.nodenm)}
                             className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-extrabold tracking-tight whitespace-nowrap transition-all duration-200 cursor-pointer select-none active:scale-95 shadow-xs bg-amber-50/95 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/70 text-amber-800 dark:text-amber-300 border border-amber-300/70 dark:border-amber-700/60 backdrop-blur-xl"
                         >
                             <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500 shrink-0"/>

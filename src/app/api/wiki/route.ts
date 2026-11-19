@@ -1,6 +1,7 @@
 import {type NextRequest, NextResponse} from "next/server";
 import {WikiCreatePayloadSchema} from "@entities/wiki";
 import {createWikiPage, enforceWikiRateLimit, listWikiPages, resolveEditorInfo,} from "@entities/wiki/server";
+import {UI_TEXT} from "@shared/config/locale";
 import {extractClientIp, handleWikiApiError, WIKI_NO_STORE_HEADERS} from "./wikiApiUtils";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json(data, {headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {
-        return handleWikiApiError(err, "위키 문서 목록을 불러오지 못했습니다.");
+        return handleWikiApiError(err, UI_TEXT.WIKI.API_ERRORS.LIST_FAILED);
     }
 }
 
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
         if (!parsed.success) {
             return NextResponse.json(
                 {
-                    error: parsed.error.issues[0]?.message || "입력 형식이 올바르지 않습니다.",
+                    error: parsed.error.issues[0]?.message || UI_TEXT.WIKI.API_ERRORS.INVALID_INPUT,
                     issues: parsed.error.issues,
                 },
                 {status: 400, headers: WIKI_NO_STORE_HEADERS}
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
         // Honeypot check
         if (parsed.data.website && parsed.data.website.trim().length > 0) {
             return NextResponse.json(
-                {error: "잘못된 요청입니다."},
+                {error: UI_TEXT.WIKI.API_ERRORS.BAD_REQUEST},
                 {status: 400, headers: WIKI_NO_STORE_HEADERS}
             );
         }
@@ -68,6 +69,6 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json(created, {status: 201, headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {
-        return handleWikiApiError(err, "새 위키 문서 생성 중 오류가 발생했습니다.");
+        return handleWikiApiError(err, UI_TEXT.WIKI.API_ERRORS.CREATE_FAILED);
     }
 }

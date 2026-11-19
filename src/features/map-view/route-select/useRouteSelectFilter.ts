@@ -123,7 +123,7 @@ export function useRouteSelectFilter({
         if (favoriteStops.length > 0) {
             list.push({
                 id: "FAV_STOPS",
-                label: `정류장 즐겨찾기 (${favoriteStops.length})`,
+                label: UI_TEXT.ROUTE_SELECT.CATEGORY_FAV_STOPS(favoriteStops.length),
                 icon: MapPin,
                 activeClass: "bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-[1.02]",
             });

@@ -7,6 +7,7 @@ import {Clock, RotateCw} from "lucide-react";
 import {type RouteVariation, type RouteVariationStop, useRouteVariations} from "@entities/route";
 import {type BusRoute, getUpcomingDepartures, resolveActiveScheduleVariant, useSchedule} from "@entities/schedule";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {UI_TEXT} from "@shared/config/locale";
 import {getCityFeatures} from "@entities/city";
 import type {DayMode} from "@shared/types/navigation";
 import {type RegisteredMapPin, usePublishMapPinObstacles} from "./lib/pinOverlapLayout";
@@ -255,8 +256,8 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
             >
                 <div
                     className="relative flex flex-col items-center select-none group transition-transform duration-200 hover:scale-105 active:scale-95"
-                    title={`기점 시간표: ${originStop.nodenm}`}
-                    aria-label={`기점 시간표: ${originStop.nodenm}`}
+                    title={UI_TEXT.TIMETABLE.PIN_ORIGIN_TITLE(originStop.nodenm)}
+                    aria-label={UI_TEXT.TIMETABLE.PIN_ORIGIN_TITLE(originStop.nodenm)}
                 >
                     {/* Pin Pill Label */}
                     <div
@@ -268,7 +269,7 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                         <div className="flex flex-col text-left leading-tight">
                             <span
                                 className="text-[9px] uppercase font-extrabold tracking-wider text-blue-600 dark:text-blue-400">
-                                기점 시간표
+                                {UI_TEXT.TIMETABLE.PIN_ORIGIN_LABEL}
                             </span>
                             <span
                                 className="font-extrabold text-[11px] max-w-[110px] truncate text-slate-900 dark:text-white">
@@ -283,8 +284,8 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                                 </span>
                                 <span className="text-[9px] font-bold text-blue-600 dark:text-blue-300">
                                     {originDepartures.nextDeparture.waitMins <= 0
-                                        ? "곧 출발"
-                                        : `${originDepartures.nextDeparture.waitMins}분 후`}
+                                        ? UI_TEXT.BUS_ITEM.DEPARTING_SOON
+                                        : UI_TEXT.TIME.WAIT_MINUTES_AFTER(originDepartures.nextDeparture.waitMins)}
                                 </span>
                             </div>
                         )}
@@ -316,8 +317,8 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                 >
                     <div
                         className="relative flex flex-col items-center select-none group transition-transform duration-200 hover:scale-105 active:scale-95"
-                        title={`회차지 시간표: ${turningStop.nodenm}`}
-                        aria-label={`회차지 시간표: ${turningStop.nodenm}`}
+                        title={UI_TEXT.TIMETABLE.PIN_DEST_TITLE(turningStop.nodenm)}
+                        aria-label={UI_TEXT.TIMETABLE.PIN_DEST_TITLE(turningStop.nodenm)}
                     >
                         {/* Pin Pill Label */}
                         <div
@@ -329,7 +330,7 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                             <div className="flex flex-col text-left leading-tight">
                                 <span
                                     className="text-[9px] uppercase font-extrabold tracking-wider text-amber-600 dark:text-amber-400">
-                                    회차지 시간표
+                                    {UI_TEXT.TIMETABLE.PIN_DEST_LABEL}
                                 </span>
                                 <span
                                     className="font-extrabold text-[11px] max-w-[110px] truncate text-slate-900 dark:text-white">
@@ -344,8 +345,8 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                                     </span>
                                     <span className="text-[9px] font-bold text-amber-600 dark:text-amber-300">
                                         {destDepartures.nextDeparture.waitMins <= 0
-                                            ? "곧 출발"
-                                            : `${destDepartures.nextDeparture.waitMins}분 후`}
+                                            ? UI_TEXT.BUS_ITEM.DEPARTING_SOON
+                                            : UI_TEXT.TIME.WAIT_MINUTES_AFTER(destDepartures.nextDeparture.waitMins)}
                                     </span>
                                 </div>
                             )}

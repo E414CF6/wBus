@@ -4,6 +4,7 @@ import React, {memo, useCallback, useEffect, useMemo, useRef, useState} from "re
 import {Marker} from "react-map-gl/maplibre";
 import {MapPin} from "lucide-react";
 import {useWikiPins, type WikiPageSummary} from "@entities/wiki";
+import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {triggerHaptic} from "@shared/utils/haptics";
 import {
@@ -256,7 +257,7 @@ export const WikiPinMarker = memo(function WikiPinMarker({
                                 }}
                                 className="flex flex-col items-center group transition-transform duration-200 hover:scale-105 active:scale-95"
                                 title={page.title}
-                                aria-label={`위키 핀: ${page.title}`}
+                                aria-label={UI_TEXT.WIKI.PIN_MARKER.ARIA(page.title)}
                                 onClick={(e) => {
                                     if (isPinPlacementMode) return;
                                     e.stopPropagation();

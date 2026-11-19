@@ -1,6 +1,7 @@
 import {type NextRequest, NextResponse} from "next/server";
 import {isValidWikiSlug, WikiRevertPayloadSchema} from "@entities/wiki";
 import {enforceWikiRateLimit, isWikiAdminAuthorized, resolveEditorInfo, revertWikiPage,} from "@entities/wiki/server";
+import {UI_TEXT} from "@shared/config/locale";
 import {decodeWikiSlug, extractClientIp, handleWikiApiError, WIKI_NO_STORE_HEADERS} from "../../wikiApiUtils";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export async function POST(
         const slug = decodeWikiSlug(rawSlug);
         if (!isValidWikiSlug(slug)) {
             return NextResponse.json(
-                {error: "올바르지 않은 위키 문서 주소입니다."},
+                {error: UI_TEXT.WIKI.API_ERRORS.INVALID_ADDRESS},
                 {status: 400, headers: WIKI_NO_STORE_HEADERS}
             );
         }
@@ -23,7 +24,7 @@ export async function POST(
         const parsed = WikiRevertPayloadSchema.safeParse(body);
         if (!parsed.success) {
             return NextResponse.json(
-                {error: parsed.error.issues[0]?.message || "되돌리기 요청이 올바르지 않습니다."},
+                {error: parsed.error.issues[0]?.message || UI_TEXT.WIKI.API_ERRORS.INVALID_REVERT},
                 {status: 400, headers: WIKI_NO_STORE_HEADERS}
             );
         }
@@ -45,6 +46,6 @@ export async function POST(
 
         return NextResponse.json(result, {headers: WIKI_NO_STORE_HEADERS});
     } catch (err) {
-        return handleWikiApiError(err, "버전 되돌리기 중 오류가 발생했습니다.");
+        return handleWikiApiError(err, UI_TEXT.WIKI.API_ERRORS.REVERT_FAILED);
     }
 }

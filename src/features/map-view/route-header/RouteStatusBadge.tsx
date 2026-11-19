@@ -3,6 +3,7 @@
 import React, {useMemo} from "react";
 import {CalendarClock, RefreshCw} from "lucide-react";
 import type {LiveConnectionStatus} from "@entities/bus/types";
+import {UI_TEXT} from "@shared/config/locale";
 
 export interface NextScheduleInfo {
     time: string;
@@ -34,66 +35,73 @@ export const RouteStatusBadge: React.FC<RouteStatusBadgeProps> = ({
     const statusConfig = useMemo(() => {
         if (!hasFetched || connectionStatus === "connecting") {
             return {
-                label: "연결 중...",
+                label: UI_TEXT.CONNECTION.CONNECTING,
                 badgeClass: "bg-amber-500/10 dark:bg-amber-400/15 border-amber-500/30 text-amber-700 dark:text-amber-300",
                 dotClass: "bg-amber-500",
                 pingClass: "bg-amber-400",
                 isPulsing: true,
-                tooltip: "실시간 위치 API 연결 대기 중",
+                tooltip: UI_TEXT.CONNECTION.TOOLTIP_CONNECTING,
             };
         }
 
         if (connectionStatus === "suspended") {
             return {
-                label: "대기 상태",
+                label: UI_TEXT.CONNECTION.SUSPENDED,
                 badgeClass: "bg-slate-500/10 dark:bg-slate-400/15 border-slate-500/20 text-slate-600 dark:text-slate-400",
                 dotClass: "bg-slate-400 dark:bg-slate-500",
                 pingClass: "",
                 isPulsing: false,
-                tooltip: "화면 비활성화로 일시 대기 중",
+                tooltip: UI_TEXT.CONNECTION.TOOLTIP_WAITING,
             };
         }
 
         if (runningCount > 0) {
             if (isDegraded) {
                 return {
-                    label: `${runningCount}대 운행 (지연)`,
+                    label: UI_TEXT.MAP_VIEW.STATUS_BADGE.RUNNING_DEGRADED(runningCount),
                     badgeClass: "bg-amber-500/10 dark:bg-amber-400/15 border-amber-500/30 text-amber-700 dark:text-amber-300",
                     dotClass: "bg-amber-500",
                     pingClass: "bg-amber-400",
                     isPulsing: true,
-                    tooltip: "실시간 버스 운행 중 (일부 데이터 지연)",
+                    tooltip: UI_TEXT.CONNECTION.TOOLTIP_DEGRADED,
                 };
             }
             return {
-                label: `${runningCount}대 운행 중`,
+                label: UI_TEXT.MAP_VIEW.STATUS_BADGE.RUNNING_NORMAL(runningCount),
                 badgeClass: "bg-emerald-500/10 dark:bg-emerald-400/15 border-emerald-500/20 text-emerald-700 dark:text-emerald-300",
                 dotClass: "bg-emerald-500",
                 pingClass: "bg-emerald-400",
                 isPulsing: true,
-                tooltip: `현재 ${runningCount}대 실시간 운행 중`,
+                tooltip: UI_TEXT.MAP_VIEW.STATUS_BADGE.RUNNING_TOOLTIP(runningCount),
             };
         }
 
         if (nextScheduleInfo) {
-            const waitText = nextScheduleInfo.waitMins <= 0 ? "곧 출발" : `${nextScheduleInfo.waitMins}분 후`;
+            const waitText =
+                nextScheduleInfo.waitMins <= 0
+                    ? UI_TEXT.BUS_ITEM.DEPARTING_SOON
+                    : UI_TEXT.TIME.WAIT_MINUTES_AFTER(nextScheduleInfo.waitMins);
             return {
-                label: `다음 ${nextScheduleInfo.time} (${waitText})`,
+                label: UI_TEXT.MAP_VIEW.STATUS_BADGE.NEXT_DEPARTURE_LABEL(nextScheduleInfo.time, waitText),
                 badgeClass: "bg-blue-500/10 dark:bg-blue-400/15 border-blue-500/30 text-blue-700 dark:text-blue-300",
                 dotClass: "bg-blue-500",
                 pingClass: "",
                 isPulsing: false,
-                tooltip: `현재 운행 대기 중 · 다음 ${nextScheduleInfo.label}: ${nextScheduleInfo.time} (${waitText})`,
+                tooltip: UI_TEXT.MAP_VIEW.STATUS_BADGE.NEXT_DEPARTURE_TOOLTIP(
+                    nextScheduleInfo.label,
+                    nextScheduleInfo.time,
+                    waitText
+                ),
             };
         }
 
         return {
-            label: "운행 종료",
+            label: UI_TEXT.CONNECTION.SERVICE_ENDED,
             badgeClass: "bg-slate-500/10 dark:bg-slate-400/10 border-slate-400/20 text-slate-600 dark:text-slate-400",
             dotClass: "bg-slate-400 dark:bg-slate-500",
             pingClass: "",
             isPulsing: false,
-            tooltip: "현재 운행 중인 버스가 없습니다 (운행 종료 또는 배차 대기)",
+            tooltip: UI_TEXT.CONNECTION.TOOLTIP_SERVICE_ENDED,
         };
     }, [hasFetched, connectionStatus, runningCount, isDegraded, nextScheduleInfo]);
 

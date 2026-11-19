@@ -367,7 +367,7 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
                     <div className="flex items-center gap-2">
                         <span
                             className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-xs">
-                            공지 #{id}
+                            {UI_TEXT.NOTICE.NOTICE_NUMBER_FORMAT(id)}
                         </span>
                     </div>
 
@@ -387,7 +387,7 @@ function DetailView({id, notice, loading, error, onSelectNotice, onBack}: Detail
                         </div>
                         <div className="flex items-center gap-1.5">
                             <span className="font-bold">{UI_TEXT.NOTICE.HITS}:</span>
-                            <span className="font-mono">{notice.views}회</span>
+                            <span className="font-mono">{UI_TEXT.NOTICE.VIEWS_FORMAT(notice.views)}</span>
                         </div>
                     </div>
                 </div>

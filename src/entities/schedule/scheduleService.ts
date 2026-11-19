@@ -9,7 +9,7 @@ import {invalidateRouteWindowScheduleCache} from "@entities/bus/api/routeWindow"
 import {RouteDatasetSchema} from "@shared/api/schemas";
 import {artifactStore} from "@shared/cache/artifactStore";
 import {distributedCache} from "@shared/cache/distributedCache";
-import {LOCALE} from "@shared/config/locale";
+import {LOCALE, UI_TEXT} from "@shared/config/locale";
 import {type ScrapeDatasetResult, scrapeWonjuBusDataset, scrapeWonjuItsYonsei} from "./itsScraper";
 
 export const SCHEDULE_CACHE_TAG = "schedule";
@@ -340,7 +340,7 @@ export async function refreshSchedule(force = true, isAuthorized = false): Promi
             const waitSec = Math.ceil((FORCE_REFRESH_COOLDOWN_MS - (now - lastScrapeAttemptTime)) / 1000);
             return {
                 refreshed: false,
-                message: `방금 시간표를 갱신했습니다. ${waitSec}초 후 다시 시도해주세요.`,
+                message: UI_TEXT.API.SCHEDULE.COOLDOWN_WAIT(waitSec),
                 data: current.data,
                 meta: current.meta,
             };
@@ -364,7 +364,7 @@ export async function refreshSchedule(force = true, isAuthorized = false): Promi
 
                 return {
                     refreshed: false,
-                    message: `수집 데이터 검증 실패(${reconciled.reason})로 기존 시간표를 유지합니다.`,
+                    message: UI_TEXT.API.SCHEDULE.VALIDATION_REJECTED(reconciled.reason ?? ""),
                     data: current.data,
                     meta: current.meta,
                 };
@@ -387,7 +387,7 @@ export async function refreshSchedule(force = true, isAuthorized = false): Promi
 
             return {
                 refreshed: true,
-                message: `최신 시간표 (${cleanData.totalRoutes}개 노선)를 성공적으로 수집하여 갱신했습니다.`,
+                message: UI_TEXT.API.SCHEDULE.SCRAPE_SUCCESS(cleanData.totalRoutes),
                 data: cleanData,
                 meta: updatedMeta,
             };
@@ -400,7 +400,7 @@ export async function refreshSchedule(force = true, isAuthorized = false): Promi
             }, 7 * 24 * 60 * 60).catch(() => false);
             return {
                 refreshed: false,
-                message: "서버 응답 지연으로 기존 저장된 최신 시간표를 유지합니다.",
+                message: UI_TEXT.API.SCHEDULE.SCRAPE_FALLBACK,
                 data: current.data,
                 meta: current.meta,
             };
@@ -413,7 +413,7 @@ export async function refreshSchedule(force = true, isAuthorized = false): Promi
 
     return {
         refreshed: false,
-        message: `최소 갱신 주기(${MIN_REFRESH_INTERVAL_DAYS}일)가 지나지 않아 기존 시간표를 사용합니다. (다음 갱신 가능: ${nextAvailableStr})`,
+        message: UI_TEXT.API.SCHEDULE.MIN_INTERVAL_WAIT(MIN_REFRESH_INTERVAL_DAYS, nextAvailableStr),
         data: current.data,
         meta: current.meta,
     };

@@ -14,6 +14,7 @@ import type {CityInfo} from "@entities/city/types";
 import {matchesHangul} from "@shared/utils/hangul";
 import {triggerHaptic} from "@shared/utils/haptics";
 import {isCoarsePointerDevice, markModalNavigating, Modal} from "@shared/ui";
+import {UI_TEXT} from "@shared/config/locale";
 
 type CityTabId = "ALL" | "FAVORITES" | "CAPITAL" | "GANGWON" | "CHUNGCHEONG" | "JEOLLA" | "GYEONGSANG" | "JEJU";
 
@@ -23,14 +24,14 @@ interface CityTabConfig {
 }
 
 const CITY_TABS: readonly CityTabConfig[] = [
-    {id: "ALL", label: "전체"},
-    {id: "FAVORITES", label: "즐겨찾기"},
-    {id: "CAPITAL", label: "수도권"},
-    {id: "GANGWON", label: "강원"},
-    {id: "CHUNGCHEONG", label: "충청"},
-    {id: "JEOLLA", label: "전라"},
-    {id: "GYEONGSANG", label: "경상"},
-    {id: "JEJU", label: "제주"},
+    {id: "ALL", label: UI_TEXT.CITY_SELECT.TABS.ALL},
+    {id: "FAVORITES", label: UI_TEXT.CITY_SELECT.TABS.FAVORITES},
+    {id: "CAPITAL", label: UI_TEXT.CITY_SELECT.TABS.CAPITAL},
+    {id: "GANGWON", label: UI_TEXT.CITY_SELECT.TABS.GANGWON},
+    {id: "CHUNGCHEONG", label: UI_TEXT.CITY_SELECT.TABS.CHUNGCHEONG},
+    {id: "JEOLLA", label: UI_TEXT.CITY_SELECT.TABS.JEOLLA},
+    {id: "GYEONGSANG", label: UI_TEXT.CITY_SELECT.TABS.GYEONGSANG},
+    {id: "JEJU", label: UI_TEXT.CITY_SELECT.TABS.JEJU},
 ] as const;
 
 interface CitySelectModalProps {
@@ -167,7 +168,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
     const headerBadge = (
         <span
             className="px-2.5 py-0.5 rounded-full text-[11px] font-black bg-blue-500/10 dark:bg-blue-400/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-            현재: {currentCity.name.split("/")[0]}
+            {UI_TEXT.CITY_SELECT.CURRENT_CITY_BADGE(currentCity.name.split("/")[0])}
         </span>
     );
 
@@ -176,7 +177,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
             <div className="flex items-center gap-1.5 truncate">
                 <MapPin className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0"/>
                 <span className="truncate">
-                    선택된 지역:{" "}
+                    {UI_TEXT.CITY_SELECT.SELECTED_REGION_LABEL}{" "}
                     <strong className="text-slate-900 dark:text-white font-extrabold">
                         {currentCity.name}
                     </strong>
@@ -184,8 +185,8 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
             </div>
             <div className="flex items-center gap-2 text-[11px] text-slate-400 dark:text-slate-500 shrink-0">
                 <span className="font-semibold">
-                    총 {filteredCities.length}개 지역
-                    {selectedTab === "FAVORITES" && !searchQuery ? " (즐겨찾기)" : ""}
+                    {UI_TEXT.CITY_SELECT.TOTAL_REGIONS_COUNT(filteredCities.length)}
+                    {selectedTab === "FAVORITES" && !searchQuery ? UI_TEXT.CITY_SELECT.FAVORITES_SUFFIX : ""}
                 </span>
                 <span>•</span>
                 <Link
@@ -196,7 +197,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                     }}
                     className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                 >
-                    이용약관
+                    {UI_TEXT.COMMON.TERMS_OF_SERVICE}
                 </Link>
                 <span>•</span>
                 <Link
@@ -207,7 +208,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                     }}
                     className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors font-bold"
                 >
-                    개인정보처리방침
+                    {UI_TEXT.COMMON.PRIVACY_POLICY}
                 </Link>
             </div>
         </div>
@@ -217,15 +218,15 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="서비스 지역 선택"
-            subtitle={`전국 ${NATIONWIDE_CITIES.length}개 시·군 실시간 버스 노선 및 도착 정보 지원`}
+            title={UI_TEXT.CITY_SELECT.MODAL_TITLE}
+            subtitle={UI_TEXT.CITY_SELECT.MODAL_SUBTITLE(NATIONWIDE_CITIES.length)}
             icon={modalIcon}
             headerBadge={headerBadge}
             footer={modalFooter}
             maxWidth="2xl"
             height="default"
             modalId="city"
-            ariaLabel="서비스 지역 선택"
+            ariaLabel={UI_TEXT.CITY_SELECT.MODAL_TITLE}
         >
             {/* Detected Viewport City Banner (if user panned to another city) */}
             {detectedCity && detectedCity.code !== currentCity.code && (
@@ -238,10 +239,11 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                         </div>
                         <div className="min-w-0">
                             <p className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
-                                지도 화면 위치: <span className="text-blue-600 dark:text-blue-400">{detectedCity.name}</span>
+                                {UI_TEXT.CITY_SELECT.DETECTED_BANNER_PREFIX}{" "}
+                                <span className="text-blue-600 dark:text-blue-400">{detectedCity.name}</span>
                             </p>
                             <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">
-                                현재 보고 계신 지도 위치의 버스 노선으로 전환할까요?
+                                {UI_TEXT.CITY_SELECT.DETECTED_BANNER_DESC}
                             </p>
                         </div>
                     </div>
@@ -250,7 +252,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                         onClick={handleConfirmDetected}
                         className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold whitespace-nowrap shadow-sm shadow-blue-600/25 transition-all cursor-pointer active:scale-95 shrink-0"
                     >
-                        이 지역으로 변경
+                        {UI_TEXT.CITY_SELECT.DETECTED_SWITCH_BTN}
                     </button>
                 </div>
             )}
@@ -267,8 +269,8 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="도시·지역 이름 검색 (예: 서울, 부산, 수원, 원주)"
-                            aria-label="도시·지역 이름 검색"
+                            placeholder={UI_TEXT.CITY_SELECT.SEARCH_PLACEHOLDER}
+                            aria-label={UI_TEXT.CITY_SELECT.SEARCH_ARIA}
                             className="w-full pl-10 pr-10 py-2.5 sm:py-3 bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 rounded-2xl text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-inner"
                         />
                         {searchQuery && (
@@ -276,7 +278,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                 type="button"
                                 onClick={() => setSearchQuery("")}
                                 className="absolute right-3 p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
-                                aria-label="검색어 지우기"
+                                aria-label={UI_TEXT.COMMON.CLEAR_SEARCH_ARIA}
                             >
                                 <X className="w-4 h-4"/>
                             </button>
@@ -286,11 +288,13 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                         type="button"
                         onClick={handleGpsDetect}
                         disabled={isDetecting}
-                        title="GPS로 내 주변 지역 찾기"
+                        title={UI_TEXT.CITY_SELECT.GPS_BUTTON_TITLE}
                         className="flex items-center gap-1.5 px-3 sm:px-4 py-2.5 sm:py-3 bg-blue-500/10 dark:bg-blue-500/15 hover:bg-blue-500/20 dark:hover:bg-blue-500/25 border border-blue-500/25 rounded-2xl text-blue-700 dark:text-blue-300 font-extrabold text-xs transition-all duration-200 cursor-pointer active:scale-95 disabled:opacity-50 shrink-0"
                     >
                         <Navigation className={`w-3.5 h-3.5 ${isDetecting ? "animate-spin" : ""}`}/>
-                        <span className="hidden sm:inline">{isDetecting ? "탐색 중..." : "내 위치 (GPS)"}</span>
+                        <span className="hidden sm:inline">
+                            {isDetecting ? UI_TEXT.CITY_SELECT.GPS_DETECTING : UI_TEXT.CITY_SELECT.GPS_LABEL}
+                        </span>
                     </button>
                 </div>
 
@@ -355,20 +359,24 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                         <div className="py-14 text-center text-slate-400 dark:text-slate-500 space-y-2">
                             <Star className="w-9 h-9 mx-auto opacity-30 text-amber-400 fill-amber-400/20 mb-2"/>
                             <p className="text-sm font-black text-slate-700 dark:text-slate-200">
-                                즐겨찾는 지역이 없습니다
+                                {UI_TEXT.CITY_SELECT.EMPTY_FAVORITES_TITLE}
                             </p>
                             <p className="text-xs">
-                                자주 이용하는 지역 카드의 별표(★)를 눌러 등록해 보세요.
+                                {UI_TEXT.CITY_SELECT.EMPTY_FAVORITES_DESC}
                             </p>
                         </div>
                     ) : (
                         <div className="py-14 text-center text-slate-400 dark:text-slate-500 space-y-1">
                             <Compass className="w-9 h-9 mx-auto opacity-40 mb-2"/>
                             <p className="text-sm font-black text-slate-700 dark:text-slate-200">
-                                {searchQuery ? `"${searchQuery}" 검색 결과가 없습니다` : "해당 권역에 등록된 지역이 없습니다"}
+                                {searchQuery
+                                    ? UI_TEXT.CITY_SELECT.EMPTY_SEARCH_TITLE(searchQuery)
+                                    : UI_TEXT.CITY_SELECT.EMPTY_REGION_TITLE}
                             </p>
                             <p className="text-xs">
-                                {searchQuery ? "초성(예: ㅇㅈ, ㅅㅇ) 또는 다른 시·군 이름으로 검색해 보세요." : "다른 권역 탭을 선택해 보세요."}
+                                {searchQuery
+                                    ? UI_TEXT.CITY_SELECT.EMPTY_SEARCH_DESC
+                                    : UI_TEXT.CITY_SELECT.EMPTY_REGION_DESC}
                             </p>
                         </div>
                     )
@@ -408,13 +416,13 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                             {isDetected && (
                                                 <span
                                                     className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-500 text-white shrink-0">
-                                                    화면위치
+                                                    {UI_TEXT.CITY_SELECT.BADGE_VIEWPORT}
                                                 </span>
                                             )}
                                             {city.isMajor && !isDetected && (
                                                 <span
                                                     className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 shrink-0">
-                                                    주요
+                                                    {UI_TEXT.CITY_SELECT.BADGE_MAJOR}
                                                 </span>
                                             )}
                                         </div>
@@ -428,8 +436,8 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                                         <button
                                             type="button"
                                             onClick={() => toggleFavoriteCity(city.code)}
-                                            title={isFav ? "즐겨찾기 해제" : "즐겨찾기 등록"}
-                                            aria-label={isFav ? `${city.name} 즐겨찾기 해제` : `${city.name} 즐겨찾기 등록`}
+                                            title={isFav ? UI_TEXT.CITY_SELECT.FAVORITE_REMOVE_TITLE : UI_TEXT.CITY_SELECT.FAVORITE_ADD_TITLE}
+                                            aria-label={isFav ? UI_TEXT.CITY_SELECT.FAVORITE_REMOVE_ARIA(city.name) : UI_TEXT.CITY_SELECT.FAVORITE_ADD_ARIA(city.name)}
                                             className="p-1.5 -mr-1 rounded-xl text-slate-400 hover:text-amber-500 hover:bg-black/5 dark:hover:bg-white/10 transition-all cursor-pointer active:scale-125"
                                         >
                                             <Star
@@ -452,7 +460,7 @@ export const CitySelectModal: React.FC<CitySelectModalProps> = ({isOpen, onClose
                         {visibleCities.length < filteredCities.length && (
                             <div
                                 className="col-span-full py-2.5 text-center text-xs font-semibold text-slate-400 dark:text-slate-500">
-                                스크롤하여 더 많은 지역 불러오기 ({visibleCities.length} / {filteredCities.length})
+                                {UI_TEXT.CITY_SELECT.LOAD_MORE_CITIES(visibleCities.length, filteredCities.length)}
                             </div>
                         )}
                     </div>

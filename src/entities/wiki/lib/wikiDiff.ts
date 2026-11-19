@@ -1,3 +1,4 @@
+import {UI_TEXT} from "@shared/config/locale";
 import type {WikiDiffStats, WikiPageDocument} from "../types";
 
 export interface WikiLineDiffEntry {
@@ -99,29 +100,29 @@ export function computeStructuredChanges(
     after: WikiPageDocument
 ): string[] {
     if (!before) {
-        return ["문서 최초 생성"];
+        return [UI_TEXT.WIKI.DIFF.INITIAL_CREATE];
     }
 
     const changes: string[] = [];
 
     if (before.title !== after.title || before.subtitle !== after.subtitle) {
-        changes.push("문서 제목·부제목 수정");
+        changes.push(UI_TEXT.WIKI.DIFF.TITLE_SUBTITLE_CHANGED);
     }
 
     if (before.pinColor !== after.pinColor) {
-        changes.push("핀 색상 변경");
+        changes.push(UI_TEXT.WIKI.DIFF.PIN_COLOR_CHANGED);
     }
 
     if ((before.lat ?? null) !== (after.lat ?? null) || (before.lng ?? null) !== (after.lng ?? null)) {
-        changes.push("지도 핀 위치 수정");
+        changes.push(UI_TEXT.WIKI.DIFF.PIN_LOCATION_CHANGED);
     }
 
     if (JSON.stringify(before.tags) !== JSON.stringify(after.tags)) {
-        changes.push("태그 수정");
+        changes.push(UI_TEXT.WIKI.DIFF.TAGS_CHANGED);
     }
 
     if (before.markdownBody !== after.markdownBody) {
-        changes.push("본문 문서 수정");
+        changes.push(UI_TEXT.WIKI.DIFF.BODY_CHANGED);
     }
 
     return changes;

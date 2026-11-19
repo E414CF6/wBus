@@ -1,4 +1,5 @@
 import type {RawCityRoute, RawNearbyStop} from "../publicApi";
+import {UI_TEXT} from "@shared/config/locale";
 import {fetchTopisJson, SBUS_WEB_BASE, SEOUL_CITY_CODE} from "./seoulClient";
 import {mapSeoulRouteType} from "./seoulParser";
 
@@ -43,8 +44,8 @@ export async function fetchSeoulCityRoutes(routeNo?: string): Promise<RawCityRou
         if (!cleanedName) continue;
 
         const endpoints = String(item.strkey || "").split(/\s+-\s+|\s*~\s*/);
-        const startnodenm = endpoints[0]?.trim() || "기점";
-        const endnodenm = endpoints[1]?.trim() || endpoints[0]?.trim() || "종점";
+        const startnodenm = endpoints[0]?.trim() || UI_TEXT.ROUTE_MAP.ORIGIN;
+        const endnodenm = endpoints[1]?.trim() || endpoints[0]?.trim() || UI_TEXT.ROUTE_MAP.DESTINATION;
 
         routes.push({
             routeid: routeId,

@@ -209,7 +209,7 @@ function BottomNavComponent({
                         />
                         <span
                             className="text-xs font-extrabold tracking-tight flex items-center gap-1 min-w-0 whitespace-nowrap">
-                            <span className="shrink-0">지도 위치:</span>
+                            <span className="shrink-0">{UI_TEXT.MAP_VIEW.BOTTOM_NAV.MAP_POSITION_LABEL}</span>
                             <strong
                                 className="text-blue-600 dark:text-blue-400 font-black truncate max-w-[110px] sm:max-w-[180px]">
                                 {detectedCity.name}
@@ -220,13 +220,13 @@ function BottomNavComponent({
                             onClick={confirmDetectedCity}
                             className="px-2.5 py-1 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-black transition-all cursor-pointer active:scale-95 whitespace-nowrap shadow-xs shrink-0"
                         >
-                            이 지역 노선 보기
+                            {UI_TEXT.MAP_VIEW.BOTTOM_NAV.VIEW_REGION_ROUTES}
                         </button>
                         <button
                             type="button"
                             onClick={dismissDetectedCity}
                             className="p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer shrink-0"
-                            aria-label="지역 전환 알림 닫기"
+                            aria-label={UI_TEXT.MAP_VIEW.BOTTOM_NAV.DISMISS_REGION_ARIA}
                         >
                             <X className="w-3.5 h-3.5"/>
                         </button>
@@ -244,9 +244,9 @@ function BottomNavComponent({
                         <button
                             type="button"
                             onClick={handleRecenterCity}
-                            title={`${currentCity.name} 중심으로 지도 이동`}
+                            title={UI_TEXT.MAP_VIEW.BOTTOM_NAV.RECENTER_CITY_TITLE(currentCity.name)}
                             className="flex items-center gap-1.5 sm:gap-2 p-0.5 sm:pl-1 sm:pr-1.5 sm:py-0.5 rounded-full hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all select-none shrink-0 cursor-pointer active:scale-95"
-                            aria-label={`${APP_CONFIG.NAME} - ${currentCity.name} 중심으로 지도 이동`}
+                            aria-label={UI_TEXT.MAP_VIEW.BOTTOM_NAV.RECENTER_CITY_ARIA(APP_CONFIG.NAME, currentCity.name)}
                         >
                             <div
                                 className="flex items-center justify-center w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-full bg-black dark:bg-white text-white dark:text-black shrink-0 shadow-xs"
@@ -276,10 +276,10 @@ function BottomNavComponent({
                             }`}
                             title={
                                 hasPendingRegion && detectedCity
-                                    ? `현재: ${currentCity.name} (화면 이동 지역: ${detectedCity.name} · 클릭하여 지역 변경)`
-                                    : `현재 지역: ${currentCity.name} (클릭하여 전국 지역 선택)`
+                                    ? UI_TEXT.MAP_VIEW.BOTTOM_NAV.REGION_DETECTED_TITLE(currentCity.name, detectedCity.name)
+                                    : UI_TEXT.MAP_VIEW.BOTTOM_NAV.REGION_CURRENT_TITLE(currentCity.name)
                             }
-                            aria-label="서비스 지역 선택"
+                            aria-label={UI_TEXT.MAP_VIEW.BOTTOM_NAV.REGION_SELECT_ARIA}
                         >
                             {hasPendingRegion ? (
                                 <Sparkles className="w-3.5 h-3.5 animate-pulse shrink-0"/>
@@ -308,10 +308,10 @@ function BottomNavComponent({
                                 setIsRoutePickerOpen(true);
                             }}
                             className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${routeMeta.colorTheme.badgeBg} border ${routeMeta.colorTheme.border} ${routeMeta.colorTheme.text}`}
-                            title="노선 선택 (검색/목록)"
+                            title={UI_TEXT.BOTTOM_NAV.SELECT_ROUTE_TITLE}
                         >
                             <Bus className="w-3.5 h-3.5 shrink-0"/>
-                            <span className="whitespace-nowrap font-black">{selectedRoute || "노선"}번</span>
+                            <span className="whitespace-nowrap font-black">{UI_TEXT.COMMON.ROUTE_NUMBER(selectedRoute || UI_TEXT.BOTTOM_NAV.DEFAULT_ROUTE_NAME)}</span>
                             <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-70 shrink-0"/>
                         </button>
 
@@ -364,9 +364,9 @@ function BottomNavComponent({
                                     onOpenWikiPinList?.();
                                 }
                             }}
-                            aria-label={isPinPlacementMode ? "위키 핀 추가 취소" : "지도 위키 열기"}
+                            aria-label={isPinPlacementMode ? UI_TEXT.MAP_VIEW.BOTTOM_NAV.WIKI_CANCEL_ARIA : UI_TEXT.MAP_VIEW.BOTTOM_NAV.WIKI_OPEN_ARIA}
                             aria-pressed={isPinPlacementMode}
-                            title={isPinPlacementMode ? "핀 추가 취소" : "위키"}
+                            title={isPinPlacementMode ? UI_TEXT.MAP_VIEW.BOTTOM_NAV.WIKI_CANCEL_TITLE : UI_TEXT.MAP_VIEW.BOTTOM_NAV.WIKI_TITLE}
                             className={`inline-flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1.5 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 ${
                                 isPinPlacementMode
                                     ? "bg-emerald-600 text-white shadow-xs"
@@ -379,7 +379,7 @@ function BottomNavComponent({
                                 <BookOpen className="w-4 h-4 stroke-[2.2]"/>
                             )}
                             <span className="hidden sm:inline text-[11px] font-black tracking-tight">
-                                {isPinPlacementMode ? "추가 취소" : "위키"}
+                                {isPinPlacementMode ? UI_TEXT.MAP_VIEW.BOTTOM_NAV.WIKI_CANCEL_SHORT : UI_TEXT.MAP_VIEW.BOTTOM_NAV.WIKI_TITLE}
                             </span>
                         </button>
 
@@ -390,8 +390,8 @@ function BottomNavComponent({
                                 triggerHaptic("light");
                                 setIsSettingsOpen(true);
                             }}
-                            aria-label="환경설정 열기"
-                            title="환경설정"
+                            aria-label={UI_TEXT.MAP_VIEW.BOTTOM_NAV.SETTINGS_ARIA}
+                            title={UI_TEXT.MAP_VIEW.BOTTOM_NAV.SETTINGS_TITLE}
                             className="p-1.5 sm:p-2 rounded-full text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.08] transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0"
                         >
                             <Settings className="w-4 h-4 stroke-[2.2]"/>

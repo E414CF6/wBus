@@ -35,4 +35,6 @@ export const NOTICE_STRINGS = {
     TOTAL_COUNT_FORMAT: (count: number) => `전체 소식 (${count}건)`,
     TOTAL_COUNT_LABEL: "전체 소식",
     SUBTITLE: "Wonju Notice Center",
+    NOTICE_NUMBER_FORMAT: (id: string) => `공지 #${id}`,
+    VIEWS_FORMAT: (views: string | number) => `${views}회`,
 } as const;

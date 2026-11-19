@@ -1,4 +1,5 @@
 import type {WikiPinColor} from "@entities/wiki";
+import {UI_TEXT} from "@shared/config/locale";
 
 export interface WikiPinColorTheme {
     id: WikiPinColor;
@@ -13,7 +14,7 @@ export interface WikiPinColorTheme {
 export const WIKI_PIN_COLOR_THEMES: Record<WikiPinColor, WikiPinColorTheme> = {
     navy: {
         id: "navy",
-        label: "네이비",
+        label: UI_TEXT.WIKI.PIN_COLORS.navy,
         badgeBg: "bg-[#003366]",
         borderClass: "border-[#003366]/35",
         dotBg: "bg-[#003366]",
@@ -22,7 +23,7 @@ export const WIKI_PIN_COLOR_THEMES: Record<WikiPinColor, WikiPinColorTheme> = {
     },
     blue: {
         id: "blue",
-        label: "블루",
+        label: UI_TEXT.WIKI.PIN_COLORS.blue,
         badgeBg: "bg-blue-600",
         borderClass: "border-blue-500/40",
         dotBg: "bg-blue-600",
@@ -31,7 +32,7 @@ export const WIKI_PIN_COLOR_THEMES: Record<WikiPinColor, WikiPinColorTheme> = {
     },
     emerald: {
         id: "emerald",
-        label: "에메랄드",
+        label: UI_TEXT.WIKI.PIN_COLORS.emerald,
         badgeBg: "bg-emerald-600",
         borderClass: "border-emerald-500/40",
         dotBg: "bg-emerald-600",
@@ -40,7 +41,7 @@ export const WIKI_PIN_COLOR_THEMES: Record<WikiPinColor, WikiPinColorTheme> = {
     },
     teal: {
         id: "teal",
-        label: "틸",
+        label: UI_TEXT.WIKI.PIN_COLORS.teal,
         badgeBg: "bg-teal-600",
         borderClass: "border-teal-500/40",
         dotBg: "bg-teal-600",
@@ -49,7 +50,7 @@ export const WIKI_PIN_COLOR_THEMES: Record<WikiPinColor, WikiPinColorTheme> = {
     },
     indigo: {
         id: "indigo",
-        label: "인디고",
+        label: UI_TEXT.WIKI.PIN_COLORS.indigo,
         badgeBg: "bg-indigo-600",
         borderClass: "border-indigo-500/40",
         dotBg: "bg-indigo-600",
@@ -58,7 +59,7 @@ export const WIKI_PIN_COLOR_THEMES: Record<WikiPinColor, WikiPinColorTheme> = {
     },
     violet: {
         id: "violet",
-        label: "바이올렛",
+        label: UI_TEXT.WIKI.PIN_COLORS.violet,
         badgeBg: "bg-violet-600",
         borderClass: "border-violet-500/40",
         dotBg: "bg-violet-600",
@@ -67,7 +68,7 @@ export const WIKI_PIN_COLOR_THEMES: Record<WikiPinColor, WikiPinColorTheme> = {
     },
     amber: {
         id: "amber",
-        label: "앰버",
+        label: UI_TEXT.WIKI.PIN_COLORS.amber,
         badgeBg: "bg-amber-600",
         borderClass: "border-amber-500/40",
         dotBg: "bg-amber-600",
@@ -76,7 +77,7 @@ export const WIKI_PIN_COLOR_THEMES: Record<WikiPinColor, WikiPinColorTheme> = {
     },
     rose: {
         id: "rose",
-        label: "로즈",
+        label: UI_TEXT.WIKI.PIN_COLORS.rose,
         badgeBg: "bg-rose-600",
         borderClass: "border-rose-500/40",
         dotBg: "bg-rose-600",

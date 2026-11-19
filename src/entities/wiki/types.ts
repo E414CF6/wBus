@@ -149,3 +149,34 @@ export interface WikiIndexData {
     totalCount?: number;
     hasMore?: boolean;
 }
+
+export type WikiDiscussionStatus = "open" | "resolved";
+
+export interface WikiDiscussionComment {
+    id: number;
+    threadId: number;
+    body: string;
+    author: WikiEditorInfo;
+    createdAt: string;
+}
+
+export interface WikiDiscussionThread {
+    id: number;
+    slug: string;
+    title: string;
+    status: WikiDiscussionStatus;
+    author: WikiEditorInfo;
+    commentCount: number;
+    lastCommentAt: string;
+    resolvedBy?: WikiEditorInfo | null;
+    resolvedAt?: string | null;
+    createdAt: string;
+    comments: WikiDiscussionComment[];
+}
+
+export interface WikiDiscussionsResponse {
+    slug: string;
+    openCount: number;
+    resolvedCount: number;
+    threads: WikiDiscussionThread[];
+}

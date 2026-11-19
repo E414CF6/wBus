@@ -3,19 +3,20 @@
 import React from "react";
 import {Check} from "lucide-react";
 import {WIKI_PIN_COLORS, type WikiPinColor} from "@entities/wiki";
+import {UI_TEXT} from "@shared/config/locale";
 
 export const WIKI_PIN_COLOR_META: Record<
     WikiPinColor,
     {label: string; swatchClass: string}
 > = {
-    navy: {label: "네이비", swatchClass: "bg-[#003366]"},
-    blue: {label: "블루", swatchClass: "bg-blue-600"},
-    emerald: {label: "에메랄드", swatchClass: "bg-emerald-600"},
-    teal: {label: "틸", swatchClass: "bg-teal-600"},
-    indigo: {label: "인디고", swatchClass: "bg-indigo-600"},
-    violet: {label: "바이올렛", swatchClass: "bg-violet-600"},
-    amber: {label: "앰버", swatchClass: "bg-amber-600"},
-    rose: {label: "로즈", swatchClass: "bg-rose-600"},
+    navy: {label: UI_TEXT.WIKI.PIN_COLORS.navy, swatchClass: "bg-[#003366]"},
+    blue: {label: UI_TEXT.WIKI.PIN_COLORS.blue, swatchClass: "bg-blue-600"},
+    emerald: {label: UI_TEXT.WIKI.PIN_COLORS.emerald, swatchClass: "bg-emerald-600"},
+    teal: {label: UI_TEXT.WIKI.PIN_COLORS.teal, swatchClass: "bg-teal-600"},
+    indigo: {label: UI_TEXT.WIKI.PIN_COLORS.indigo, swatchClass: "bg-indigo-600"},
+    violet: {label: UI_TEXT.WIKI.PIN_COLORS.violet, swatchClass: "bg-violet-600"},
+    amber: {label: UI_TEXT.WIKI.PIN_COLORS.amber, swatchClass: "bg-amber-600"},
+    rose: {label: UI_TEXT.WIKI.PIN_COLORS.rose, swatchClass: "bg-rose-600"},
 };
 
 export interface WikiPinColorSelectorProps {
@@ -35,7 +36,7 @@ export const WikiPinColorSelector: React.FC<WikiPinColorSelectorProps> = ({
                 id={`${id}-label`}
                 className="block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1.5"
             >
-                핀 색상 ({WIKI_PIN_COLOR_META[value]?.label ?? "네이비"})
+                {UI_TEXT.WIKI.PIN_COLOR_SELECTOR.LABEL_FORMAT(WIKI_PIN_COLOR_META[value]?.label ?? UI_TEXT.WIKI.PIN_COLORS.navy)}
             </span>
             <div
                 role="radiogroup"
@@ -51,7 +52,7 @@ export const WikiPinColorSelector: React.FC<WikiPinColorSelectorProps> = ({
                             type="button"
                             role="radio"
                             aria-checked={selected}
-                            aria-label={`${meta.label} 핀 색상`}
+                            aria-label={UI_TEXT.WIKI.PIN_COLOR_SELECTOR.OPTION_ARIA(meta.label)}
                             title={meta.label}
                             onClick={() => onChange(color)}
                             className={`w-7 h-7 rounded-full flex items-center justify-center transition-transform hover:scale-110 cursor-pointer ${meta.swatchClass} ${

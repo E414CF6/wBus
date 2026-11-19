@@ -1,4 +1,5 @@
 import type {BusStop} from "@entities/station/types";
+import {UI_TEXT} from "@shared/config/locale";
 
 export type LabelPlacement = "right" | "left" | "top" | "bottom";
 
@@ -287,9 +288,9 @@ export function computeOptimalLabelPlacements(
             if (stop.nodeno && String(stop.nodeno).trim() !== "") {
                 disambiguationLabel = String(stop.nodeno);
             } else if (stop.updowncd === 0) {
-                disambiguationLabel = "상행";
+                disambiguationLabel = UI_TEXT.BUS_ITEM.DIRECTION_UP;
             } else if (stop.updowncd === 1) {
-                disambiguationLabel = "하행";
+                disambiguationLabel = UI_TEXT.BUS_ITEM.DIRECTION_DOWN;
             }
         }
 

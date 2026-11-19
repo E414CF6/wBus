@@ -5,6 +5,7 @@ import {createPortal} from "react-dom";
 import {X} from "lucide-react";
 import {useBodyScrollLock} from "./useBodyScrollLock";
 import {useModalHistory} from "./useModalHistory";
+import {UI_TEXT} from "@shared/config/locale";
 
 export type ModalMaxWidth = "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "full";
 export type ModalHeight = "default" | "tall" | "auto" | "full";
@@ -217,7 +218,7 @@ export function Modal({
                                     type="button"
                                     onClick={onClose}
                                     className="p-2 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                                    aria-label="닫기"
+                                    aria-label={UI_TEXT.COMMON.CLOSE}
                                 >
                                     <X className="w-5 h-5"/>
                                 </button>

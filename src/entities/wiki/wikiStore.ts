@@ -4,10 +4,12 @@ import {createHash} from "crypto";
 import {and, asc, count, desc, eq, gte, ilike, isNotNull, lte, or} from "drizzle-orm";
 import {artifactStore} from "@shared/cache/artifactStore";
 import {distributedCache} from "@shared/cache/distributedCache";
+import {UI_TEXT} from "@shared/config/locale";
 import {
     getDb,
     isDatabaseConfigured,
     type WikiDatabase,
+    wikiDiscussionThreads,
     type WikiPageRow,
     wikiPages,
     type WikiRevisionRow,
@@ -42,6 +44,8 @@ const BLOB_INDEX_KEY = "wiki/index.json";
 const EDIT_LIMIT_PER_MIN = 4;
 const EDIT_LIMIT_PER_10MIN = 15;
 const CREATE_LIMIT_PER_HOUR = 5;
+const DISCUSSION_LIMIT_PER_MIN = 5;
+const DISCUSSION_LIMIT_PER_10MIN = 25;
 const DEFAULT_LIST_LIMIT = 24;
 const MAX_LIST_LIMIT = 100;
 
@@ -75,7 +79,7 @@ export function resolveEditorInfo(rawNickname: string | undefined, rawIp: string
     const editorId = hashEditorIp(rawIp || "anonymous");
     const trimmed = (rawNickname || "").trim().slice(0, 24);
     return {
-        nickname: trimmed || `버스러#${editorId.slice(0, 4)}`,
+        nickname: trimmed || `${UI_TEXT.WIKI.STORE_ERRORS.ANONYMOUS_NICKNAME_PREFIX}${editorId.slice(0, 4)}`,
         editorId,
     };
 }
@@ -123,7 +127,7 @@ async function checkRateBucket(
 
 export async function enforceWikiRateLimit(
     editorId: string,
-    action: "edit" | "create" | "revert"
+    action: "edit" | "create" | "revert" | "discussion"
 ): Promise<void> {
     if (action === "create") {
         const res = await checkRateBucket(
@@ -133,7 +137,7 @@ export async function enforceWikiRateLimit(
         );
         if (!res.allowed) {
             throw new WikiServiceError(
-                "문서 생성 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+                UI_TEXT.WIKI.STORE_ERRORS.RATE_LIMIT_CREATE,
                 429,
                 {retryAfter: res.retryAfterSeconds}
             );
@@ -141,18 +145,20 @@ export async function enforceWikiRateLimit(
         return;
     }
 
+    const perMinLimit = action === "discussion" ? DISCUSSION_LIMIT_PER_MIN : EDIT_LIMIT_PER_MIN;
+    const per10MinLimit = action === "discussion" ? DISCUSSION_LIMIT_PER_10MIN : EDIT_LIMIT_PER_10MIN;
     const [minRes, tenMinRes] = await Promise.all([
-        checkRateBucket(`${REDIS_RATE_PREFIX}${action}:1m:${editorId}`, EDIT_LIMIT_PER_MIN, 60),
-        checkRateBucket(`${REDIS_RATE_PREFIX}${action}:10m:${editorId}`, EDIT_LIMIT_PER_10MIN, 600),
+        checkRateBucket(`${REDIS_RATE_PREFIX}${action}:1m:${editorId}`, perMinLimit, 60),
+        checkRateBucket(`${REDIS_RATE_PREFIX}${action}:10m:${editorId}`, per10MinLimit, 600),
     ]);
 
     if (!minRes.allowed || !tenMinRes.allowed) {
         const retryAfter = Math.max(minRes.retryAfterSeconds, tenMinRes.retryAfterSeconds, 30);
-        throw new WikiServiceError(
-            "짧은 시간에 편집이 너무 많이 요청되었습니다. 잠시 후 다시 시도해 주세요.",
-            429,
-            {retryAfter}
-        );
+        const msg =
+            action === "discussion"
+                ? UI_TEXT.WIKI.STORE_ERRORS.RATE_LIMIT_DISCUSSION
+                : UI_TEXT.WIKI.STORE_ERRORS.RATE_LIMIT_EDIT;
+        throw new WikiServiceError(msg, 429, {retryAfter});
     }
 }
 
@@ -218,10 +224,10 @@ function rowToRevisionMeta(row: WikiRevisionRow): WikiRevisionMeta {
     };
 }
 
-function requireDb(): WikiDatabase {
+export function requireDb(): WikiDatabase {
     if (!isDatabaseConfigured()) {
         throw new WikiServiceError(
-            "데이터베이스(DATABASE_URL)가 설정되지 않았습니다.",
+            UI_TEXT.WIKI.STORE_ERRORS.DB_NOT_CONFIGURED,
             503
         );
     }
@@ -300,7 +306,7 @@ async function importDocumentIntoDb(
                         slug: doc.slug,
                         version: doc.version,
                         baseVersion: Math.max(0, doc.version - 1),
-                        summary: "초기 위키 문서 생성",
+                        summary: UI_TEXT.WIKI.STORE_ERRORS.INITIAL_SUMMARY,
                         editor: doc.lastEditor,
                         createdAt: doc.updatedAt,
                         diffStats: computeWikiDiffStats(null, doc),
@@ -664,7 +670,7 @@ export async function createWikiPage(input: {
     const canonicalTitle = normalizeWikiSlug(input.title);
     const slug = canonicalTitle || normalizeWikiSlug(input.slug);
     if (!isValidWikiSlug(slug)) {
-        throw new WikiServiceError("유효하지 않은 문서 슬러그입니다.", 400);
+        throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.INVALID_SLUG, 400);
     }
     const title = slug;
 
@@ -691,7 +697,7 @@ export async function createWikiPage(input: {
     };
 
     const diffStats = computeWikiDiffStats(null, doc);
-    const summary = input.summary.trim() || "새 위키 문서 생성";
+    const summary = input.summary.trim() || UI_TEXT.WIKI.STORE_ERRORS.CREATE_SUMMARY;
 
     try {
         await db.transaction(async (tx) => {
@@ -702,7 +708,7 @@ export async function createWikiPage(input: {
                 .limit(1);
 
             if (existing.length > 0) {
-                throw new WikiServiceError("이미 존재하는 위키 문서 주소(슬러그)입니다.", 409);
+                throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.SLUG_EXISTS, 409);
             }
 
             await tx.insert(wikiPages).values({
@@ -739,7 +745,7 @@ export async function createWikiPage(input: {
         });
     } catch (err) {
         if (isPgUniqueViolation(err)) {
-            throw new WikiServiceError("이미 존재하는 위키 문서 주소(슬러그)입니다.", 409);
+            throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.SLUG_EXISTS, 409);
         }
         throw err;
     }
@@ -767,12 +773,12 @@ export async function saveWikiPageEdit(input: {
 }): Promise<{ document: WikiPageDocument; revision: WikiRevision }> {
     const slug = resolveCanonicalSlug(input.slug);
     if (!isValidWikiSlug(slug)) {
-        throw new WikiServiceError("유효하지 않은 문서 슬러그입니다.", 400);
+        throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.INVALID_SLUG, 400);
     }
 
     const nextSlug = normalizeWikiSlug(input.title);
     if (!isValidWikiSlug(nextSlug)) {
-        throw new WikiServiceError("제목은 2~80자의 유효한 위키 슬러그여야 합니다.", 400);
+        throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.INVALID_TITLE_SLUG, 400);
     }
 
     const db = requireDb();
@@ -788,7 +794,7 @@ export async function saveWikiPageEdit(input: {
             .for("update");
 
         if (!lockedRows[0]) {
-            throw new WikiServiceError("편집할 위키 문서를 찾을 수 없습니다.", 404);
+            throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.EDIT_NOT_FOUND, 404);
         }
 
         const currentRow = lockedRows[0];
@@ -796,14 +802,14 @@ export async function saveWikiPageEdit(input: {
 
         if (current.isProtected && !input.isAdmin) {
             throw new WikiServiceError(
-                "이 문서는 현재 보호 잠금 상태입니다. 관리자만 편집할 수 있습니다.",
+                UI_TEXT.WIKI.STORE_ERRORS.PROTECTED_EDIT,
                 403
             );
         }
 
         if (input.baseVersion !== current.version) {
             throw new WikiServiceError(
-                `다른 사용자가 먼저 문서를 수정했습니다. (현재 v${current.version}, 편집 기준 v${input.baseVersion})`,
+                UI_TEXT.WIKI.STORE_ERRORS.VERSION_CONFLICT_EDIT(current.version, input.baseVersion),
                 409,
                 {currentVersion: current.version, latestDocument: current}
             );
@@ -817,7 +823,7 @@ export async function saveWikiPageEdit(input: {
                 .where(eq(wikiPages.slug, nextSlug))
                 .limit(1);
             if (existingTarget.length > 0) {
-                throw new WikiServiceError("같은 제목(슬러그)의 위키 문서가 이미 존재합니다.", 409);
+                throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.DUPLICATE_TITLE_SLUG, 409);
             }
         }
 
@@ -842,14 +848,14 @@ export async function saveWikiPageEdit(input: {
         };
 
         if (!hasWikiContentChanged(current, nextDoc)) {
-            throw new WikiServiceError("변경된 내용이 없습니다.", 400);
+            throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.NO_CHANGES, 400);
         }
 
         const diffStats = computeWikiDiffStats(current, nextDoc);
         const summary =
             input.summary.trim() ||
             diffStats.structuredChanges.join(", ") ||
-            "문서 내용 수정";
+            UI_TEXT.WIKI.STORE_ERRORS.EDIT_DEFAULT_SUMMARY;
 
         let savedRow: WikiPageRow;
         if (slugChanged) {
@@ -875,13 +881,18 @@ export async function saveWikiPageEdit(input: {
                 .returning();
 
             if (!insertedRows[0]) {
-                throw new WikiServiceError("문서 주소 변경 중 오류가 발생했습니다.", 500);
+                throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.RENAME_ERROR, 500);
             }
 
             await tx
                 .update(wikiRevisions)
                 .set({slug: nextSlug})
                 .where(eq(wikiRevisions.slug, slug));
+
+            await tx
+                .update(wikiDiscussionThreads)
+                .set({slug: nextSlug})
+                .where(eq(wikiDiscussionThreads.slug, slug));
 
             await tx.delete(wikiPages).where(eq(wikiPages.slug, slug));
             savedRow = insertedRows[0];
@@ -905,7 +916,7 @@ export async function saveWikiPageEdit(input: {
                 .returning();
 
             if (!updatedRows[0]) {
-                throw new WikiServiceError("동시 편집 충돌이 발생했습니다. 다시 시도해 주세요.", 409);
+                throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.CONCURRENT_CONFLICT, 409);
             }
             savedRow = updatedRows[0];
         }
@@ -964,7 +975,7 @@ export async function getWikiRevisionList(slug: string): Promise<WikiRevisionMet
                 slug: page.slug,
                 version: page.version,
                 baseVersion: 0,
-                summary: "초기 위키 문서 생성",
+                summary: UI_TEXT.WIKI.STORE_ERRORS.INITIAL_SUMMARY,
                 editor: page.lastEditor,
                 createdAt: page.updatedAt,
                 diffStats: computeWikiDiffStats(null, page),
@@ -1007,7 +1018,7 @@ export async function revertWikiPage(input: {
 }): Promise<{ document: WikiPageDocument; revision: WikiRevision }> {
     const slug = resolveCanonicalSlug(input.slug);
     if (!isValidWikiSlug(slug)) {
-        throw new WikiServiceError("유효하지 않은 문서 슬러그입니다.", 400);
+        throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.INVALID_SLUG, 400);
     }
 
     const db = requireDb();
@@ -1021,18 +1032,18 @@ export async function revertWikiPage(input: {
             .for("update");
 
         if (!lockedRows[0]) {
-            throw new WikiServiceError("문서를 찾을 수 없습니다.", 404);
+            throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.NOT_FOUND, 404);
         }
 
         const current = rowToDocument(lockedRows[0]);
 
         if (current.isProtected && !input.isAdmin) {
-            throw new WikiServiceError("보호 잠금된 문서는 관리자만 되돌릴 수 있습니다.", 403);
+            throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.PROTECTED_REVERT, 403);
         }
 
         if (input.baseVersion !== current.version) {
             throw new WikiServiceError(
-                `다른 사용자가 먼저 문서를 수정했습니다. (현재 v${current.version})`,
+                UI_TEXT.WIKI.STORE_ERRORS.VERSION_CONFLICT_REVERT(current.version),
                 409,
                 {currentVersion: current.version, latestDocument: current}
             );
@@ -1045,7 +1056,7 @@ export async function revertWikiPage(input: {
             current.isProtected
         );
         if (!targetRevision) {
-            throw new WikiServiceError(`v${input.targetVersion} 리비전을 찾을 수 없습니다.`, 404);
+            throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.REVISION_NOT_FOUND(input.targetVersion), 404);
         }
 
         const now = new Date();
@@ -1065,12 +1076,12 @@ export async function revertWikiPage(input: {
         };
 
         if (!hasWikiContentChanged(current, nextDoc)) {
-            throw new WikiServiceError("현재 버전과 동일한 내용입니다.", 400);
+            throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.SAME_CONTENT_REVERT, 400);
         }
 
         const diffStats = computeWikiDiffStats(current, nextDoc);
         const summary =
-            input.summary?.trim() || `v${input.targetVersion} 버전으로 되돌리기`;
+            input.summary?.trim() || UI_TEXT.WIKI.STORE_ERRORS.REVERT_SUMMARY_FORMAT(input.targetVersion);
 
         const updatedRows = await tx
             .update(wikiPages)
@@ -1091,7 +1102,7 @@ export async function revertWikiPage(input: {
             .returning();
 
         if (!updatedRows[0]) {
-            throw new WikiServiceError("동시 편집 충돌이 발생했습니다. 다시 시도해 주세요.", 409);
+            throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.CONCURRENT_CONFLICT, 409);
         }
 
         // Always persist full checkpoint on revert for fast recovery chains
@@ -1145,7 +1156,7 @@ export async function setWikiPageProtection(
         .returning();
 
     if (!updatedRows[0]) {
-        throw new WikiServiceError("문서를 찾을 수 없습니다.", 404);
+        throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.NOT_FOUND, 404);
     }
 
     const updated = rowToDocument(updatedRows[0]);
@@ -1168,7 +1179,7 @@ export async function updateWikiPinMeta(input: {
 }): Promise<{ document: WikiPageDocument; revision: WikiRevision }> {
     const slug = resolveCanonicalSlug(input.slug);
     if (!isValidWikiSlug(slug)) {
-        throw new WikiServiceError("유효하지 않은 문서 슬러그입니다.", 400);
+        throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.INVALID_SLUG, 400);
     }
 
     const db = requireDb();
@@ -1182,20 +1193,20 @@ export async function updateWikiPinMeta(input: {
             .for("update");
 
         if (!lockedRows[0]) {
-            throw new WikiServiceError("핀 문서를 찾을 수 없습니다.", 404);
+            throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.PIN_NOT_FOUND, 404);
         }
 
         const current = rowToDocument(lockedRows[0]);
         if (current.isProtected && !input.isAdmin) {
             throw new WikiServiceError(
-                "이 문서는 현재 보호 잠금 상태입니다. 관리자만 수정할 수 있습니다.",
+                UI_TEXT.WIKI.STORE_ERRORS.PROTECTED_PIN,
                 403
             );
         }
 
         if (input.baseVersion !== current.version) {
             throw new WikiServiceError(
-                `다른 사용자가 먼저 문서를 수정했습니다. (현재 v${current.version}, 편집 기준 v${input.baseVersion})`,
+                UI_TEXT.WIKI.STORE_ERRORS.VERSION_CONFLICT_EDIT(current.version, input.baseVersion),
                 409,
                 {currentVersion: current.version, latestDocument: current}
             );
@@ -1216,14 +1227,14 @@ export async function updateWikiPinMeta(input: {
         };
 
         if (!hasWikiContentChanged(current, nextDoc)) {
-            throw new WikiServiceError("변경된 내용이 없습니다.", 400);
+            throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.NO_CHANGES, 400);
         }
 
         const diffStats = computeWikiDiffStats(current, nextDoc);
         const summary =
             input.summary?.trim() ||
             diffStats.structuredChanges.join(", ") ||
-            "지도 핀 정보 수정";
+            UI_TEXT.WIKI.STORE_ERRORS.PIN_DEFAULT_SUMMARY;
 
         const updatedRows = await tx
             .update(wikiPages)
@@ -1240,7 +1251,7 @@ export async function updateWikiPinMeta(input: {
             .returning();
 
         if (!updatedRows[0]) {
-            throw new WikiServiceError("동시 편집 충돌이 발생했습니다. 다시 시도해 주세요.", 409);
+            throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.CONCURRENT_CONFLICT, 409);
         }
 
         const isCheckpoint = shouldStoreCheckpoint(nextVersion);
@@ -1292,7 +1303,7 @@ export async function deleteWikiPage(slug: string): Promise<void> {
         .limit(1);
 
     if (existing[0]?.pinned) {
-        throw new WikiServiceError("핵심 고정 문서는 삭제할 수 없습니다.", 400);
+        throw new WikiServiceError(UI_TEXT.WIKI.STORE_ERRORS.PINNED_DELETE_FORBIDDEN, 400);
     }
 
     await db.delete(wikiPages).where(eq(wikiPages.slug, normalized));

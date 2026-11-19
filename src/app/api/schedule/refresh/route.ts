@@ -2,6 +2,7 @@ import {revalidatePath} from "next/cache";
 import {type NextRequest, NextResponse} from "next/server";
 
 import {invalidateScheduleTag, refreshSchedule} from "@entities/schedule/server";
+import {UI_TEXT} from "@shared/config/locale";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -42,7 +43,7 @@ async function handleRefresh(request: NextRequest) {
     } catch (error) {
         console.error("API /api/schedule/refresh error:", error);
         return NextResponse.json({
-            success: false, error: error instanceof Error ? error.message : "시간표 갱신 실패",
+            success: false, error: error instanceof Error ? error.message : UI_TEXT.API.SCHEDULE_REFRESH_FAILED,
         }, {status: 500});
     }
 }

@@ -4,6 +4,7 @@ import {BusFront, Star} from "lucide-react";
 import type {BusStop} from "@entities/station/types";
 import {useIsDesktop} from "@shared/ui/useIsDesktop";
 import {useAppMapContext} from "@shared/context/AppMapContext";
+import {UI_TEXT} from "@shared/config/locale";
 import type {LabelPlacement} from "@entities/station/busStopMarkerUtils";
 import {BusStopBottomSheet} from "./BusStopBottomSheet";
 
@@ -183,13 +184,13 @@ export const BusStopMarkerItem = memo<BusStopMarkerItemProps>(({
                     {isRouteStop ? (
                         isCompactNode && !isFavorite && !isHovered && !isOpen ? (
                             <div
-                                title={`${stop.nodenm} (현재 노선 정류장)`}
+                                title={UI_TEXT.MAP_VIEW.STOP_MARKER.ROUTE_STOP_TITLE(stop.nodenm)}
                                 className="relative w-2.5 h-2.5 rounded-full bg-white dark:bg-slate-950 shadow-xs group-hover:scale-150 transition-transform cursor-pointer shrink-0 z-10 before:absolute before:-inset-2.5 before:content-['']"
                                 style={{border: `2.5px solid ${color}`}}
                             />
                         ) : (
                             <div
-                                title={`${stop.nodenm} (현재 노선 정류장)`}
+                                title={UI_TEXT.MAP_VIEW.STOP_MARKER.ROUTE_STOP_TITLE(stop.nodenm)}
                                 className={`relative flex items-center justify-center w-6 h-6 rounded-lg text-white shadow-md border-2 group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 before:absolute before:-inset-2 before:content-[''] ${
                                     isFavorite ? "border-amber-300 ring-2 ring-amber-400/60" : "border-white/95 dark:border-slate-900"
                                 }`}
@@ -206,14 +207,14 @@ export const BusStopMarkerItem = memo<BusStopMarkerItemProps>(({
                         )
                     ) : isFavorite ? (
                         <div
-                            title={`${stop.nodenm} (즐겨찾는 정류장)`}
+                            title={UI_TEXT.MAP_VIEW.STOP_MARKER.FAVORITE_STOP_TITLE(stop.nodenm)}
                             className="relative flex items-center justify-center w-6 h-6 rounded-lg bg-amber-500 text-white shadow-md border-2 border-white dark:border-slate-900 group-hover:scale-110 transition-transform cursor-pointer shrink-0 z-10 ring-2 ring-amber-400/50 before:absolute before:-inset-2 before:content-['']"
                         >
                             <Star className="w-3.5 h-3.5 fill-current"/>
                         </div>
                     ) : (
                         <div
-                            title={`${stop.nodenm} (주변 정류장 · 클릭하여 도착정보 확인)`}
+                            title={UI_TEXT.MAP_VIEW.STOP_MARKER.NEARBY_STOP_TITLE(stop.nodenm)}
                             className="flex items-center justify-center w-4 h-4 rounded-full bg-white/95 dark:bg-slate-800/95 shadow-sm border-[1.5px] border-slate-400 dark:border-slate-500 opacity-90 group-hover:opacity-100 group-hover:scale-125 group-hover:border-blue-500 transition-all cursor-pointer shrink-0 z-10 before:absolute before:-inset-2 before:content-['']"
                         >
                             <div

@@ -1,6 +1,7 @@
 import {type NextRequest, NextResponse} from "next/server";
 
 import {findNearestCity, getCityByCode, NATIONWIDE_CITIES, searchCities} from "@entities/city";
+import {UI_TEXT} from "@shared/config/locale";
 
 export const dynamic = "force-static";
 export const revalidate = 86400; // 24 hours ISR
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
 
         // 3. Search / Filter
         let results = query ? searchCities(query) : NATIONWIDE_CITIES;
-        if (province && province !== "전국") {
+        if (province && province !== UI_TEXT.API.CITIES_ALL_PROVINCE) {
             results = results.filter((c) => c.province === province);
         }
 
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         console.error("API /api/cities error:", error);
         return NextResponse.json(
-            {success: false, error: "도시 목록 조회에 실패했습니다."},
+            {success: false, error: UI_TEXT.API.CITIES_FETCH_FAILED},
             {status: 500}
         );
     }

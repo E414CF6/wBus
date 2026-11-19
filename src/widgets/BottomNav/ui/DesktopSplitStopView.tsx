@@ -2,6 +2,7 @@ import React from "react";
 import {ArrowLeftRight, ChevronDown, ChevronUp, ExternalLink, Info, MapPin, MapPinned, Star, X} from "lucide-react";
 import type {BusStop} from "@entities/station/types";
 import {BusStopPopup, getKakaoRoadviewUrl} from "@entities/station";
+import {UI_TEXT} from "@shared/config/locale";
 import type {MapRef} from "react-map-gl/maplibre";
 
 interface DesktopSplitStopViewProps {
@@ -82,7 +83,7 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                                         backgroundColor: isSelectedStopRouteStop ? metaThemeMainColor : "#64748b",
                                     }}
                                 >
-                                    {isSelectedStopRouteStop ? "현재 노선" : "주변 정류장"}
+                                    {isSelectedStopRouteStop ? UI_TEXT.STOP_POPUP.CURRENT_ROUTE : UI_TEXT.STOP_POPUP.NEARBY_STOP}
                                 </span>
                                 {cityName && (
                                     <span className="text-[10px] font-extrabold text-slate-500 dark:text-slate-400">
@@ -101,7 +102,7 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                                     ID
                                 </span>
                                 <span className="font-mono font-bold text-[11px]">
-                                    {selectedStop.nodeno || "미부여"}
+                                    {selectedStop.nodeno || UI_TEXT.STOP_POPUP.UNASSIGNED_ID}
                                 </span>
                             </div>
                         </div>
@@ -115,8 +116,8 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer active:scale-90"
-                                title="카카오 로드뷰로 정류장 보기"
-                                aria-label="카카오 로드뷰로 정류장 보기"
+                                title={UI_TEXT.STOP_POPUP.KAKAO_ROADVIEW_TITLE}
+                                aria-label={UI_TEXT.STOP_POPUP.KAKAO_ROADVIEW_TITLE}
                             >
                                 <ExternalLink className="w-3.5 h-3.5"/>
                             </a>
@@ -129,8 +130,8 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                                     ? "bg-amber-500/15 border-amber-500/40 text-amber-500"
                                     : "bg-slate-100 dark:bg-white/10 border-transparent text-slate-400 hover:text-amber-500"
                             }`}
-                            title={isFavoriteStop(selectedStop.nodeid) ? "즐겨찾기 해제" : "즐겨찾기 등록"}
-                            aria-label="즐겨찾기"
+                            title={isFavoriteStop(selectedStop.nodeid) ? UI_TEXT.MAP_VIEW.BUS_DRAWER.SPLIT_FAV_REMOVE : UI_TEXT.MAP_VIEW.BUS_DRAWER.SPLIT_FAV_ADD}
+                            aria-label={UI_TEXT.MAP_VIEW.BUS_DRAWER.FAVORITE_LABEL}
                         >
                             <Star
                                 className={`w-3.5 h-3.5 ${isFavoriteStop(selectedStop.nodeid) ? "fill-amber-400" : ""}`}
@@ -141,8 +142,8 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                                 type="button"
                                 onClick={onToggleCollapse}
                                 className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer active:scale-90"
-                                title={isCollapsed ? "정류장 도착 정보 펼치기" : "정류장 도착 정보 접기"}
-                                aria-label={isCollapsed ? "정류장 도착 정보 펼치기" : "정류장 도착 정보 접기"}
+                                title={isCollapsed ? UI_TEXT.MAP_VIEW.BUS_DRAWER.EXPAND_ARRIVAL : UI_TEXT.MAP_VIEW.BUS_DRAWER.COLLAPSE_ARRIVAL}
+                                aria-label={isCollapsed ? UI_TEXT.MAP_VIEW.BUS_DRAWER.EXPAND_ARRIVAL : UI_TEXT.MAP_VIEW.BUS_DRAWER.COLLAPSE_ARRIVAL}
                             >
                                 {isCollapsed ? <ChevronUp className="w-3.5 h-3.5"/> :
                                     <ChevronDown className="w-3.5 h-3.5"/>}
@@ -152,8 +153,8 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                             type="button"
                             onClick={onClose}
                             className="p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/15 transition cursor-pointer active:scale-90"
-                            title="정류장 정보 닫기 (분할 해제)"
-                            aria-label="정류장 정보 닫기"
+                            title={UI_TEXT.MAP_VIEW.BUS_DRAWER.CLOSE_SPLIT_TITLE}
+                            aria-label={UI_TEXT.MAP_VIEW.BUS_DRAWER.CLOSE_SPLIT_ARIA}
                         >
                             <X className="w-3.5 h-3.5"/>
                         </button>
@@ -178,11 +179,11 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                                         }
                                     }}
                                     className="w-full inline-flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 text-xs font-bold border border-black/5 dark:border-white/10 transition-all cursor-pointer active:scale-98 group/opp"
-                                    title={`건너편 정류장(${pairedOppositeStop.nodenm}) 실시간 정보 보기`}
+                                    title={UI_TEXT.STOP_POPUP.OPPOSITE_STOP_TITLE(pairedOppositeStop.nodenm)}
                                 >
                                     <div className="flex items-center gap-1.5 min-w-0">
                                         <ArrowLeftRight className={`w-3.5 h-3.5 ${metaThemeTextColor} shrink-0`}/>
-                                        <span className="text-slate-500 dark:text-slate-400 font-medium">건너편</span>
+                                        <span className="text-slate-500 dark:text-slate-400 font-medium">{UI_TEXT.STOP_POPUP.OPPOSITE_LABEL}</span>
                                         <span className="font-extrabold truncate text-slate-900 dark:text-white">
                                             {pairedOppositeStop.nodenm}
                                         </span>
@@ -195,7 +196,7 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                                     <span
                                         className={`text-[10px] font-black ${metaThemeTextColor} shrink-0 group-hover/opp:translate-x-0.5 transition-transform`}
                                     >
-                                        전환 →
+                                        {UI_TEXT.STOP_POPUP.SWITCH_ACTION}
                                     </span>
                                 </button>
                             </div>
@@ -215,7 +216,7 @@ export const DesktopSplitStopView: React.FC<DesktopSplitStopViewProps> = ({
                         <div
                             className="px-4 py-2 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-200/80 dark:border-white/10 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500 font-medium shrink-0">
                             <Info className="w-3.5 h-3.5 text-slate-400 shrink-0"/>
-                            <span>실시간 버스 도착 정보는 정류장 기준 30초 주기로 갱신됩니다</span>
+                            <span>{UI_TEXT.MAP_VIEW.BUS_DRAWER.ARRIVAL_REFRESH_NOTE}</span>
                         </div>
                     </>
                 )}

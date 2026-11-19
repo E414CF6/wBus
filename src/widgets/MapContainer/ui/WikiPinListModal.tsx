@@ -7,6 +7,7 @@ import {useWikiPins, type WikiPageSummary} from "@entities/wiki";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {markModalReplacing, Modal} from "@shared/ui";
+import {UI_TEXT} from "@shared/config/locale";
 import {matchesHangul} from "@shared/utils/hangul";
 import {triggerHaptic} from "@shared/utils/haptics";
 import {resolveWikiPinTheme} from "../lib/wikiPinTheme";
@@ -95,7 +96,7 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-xs transition active:scale-95 cursor-pointer shrink-0"
         >
             <MapPinPlus className="w-3.5 h-3.5"/>
-            <span>핀 추가</span>
+            <span>{UI_TEXT.WIKI.PIN_LIST_MODAL.ADD_PIN}</span>
         </button>
     );
 
@@ -112,26 +113,26 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                 {settings.showWikiPins ? (
                     <>
                         <Eye className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"/>
-                        <span>지도에 핀 표시 중</span>
+                        <span>{UI_TEXT.WIKI.PIN_LIST_MODAL.SHOWING_PINS}</span>
                     </>
                 ) : (
                     <>
                         <EyeOff className="w-3.5 h-3.5 text-slate-400"/>
-                        <span>지도 핀 숨김 (켜기)</span>
+                        <span>{UI_TEXT.WIKI.PIN_LIST_MODAL.HIDDEN_PINS}</span>
                     </>
                 )}
             </button>
 
             <div className="flex items-center gap-2.5 shrink-0">
                 <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tabular-nums">
-                    총 {pins.length}개 핀
+                    {UI_TEXT.WIKI.PIN_LIST_MODAL.TOTAL_PINS(pins.length)}
                 </span>
                 <button
                     type="button"
                     onClick={onClose}
                     className="px-3.5 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black cursor-pointer hover:opacity-90 transition active:scale-95"
                 >
-                    닫기
+                    {UI_TEXT.COMMON.CLOSE}
                 </button>
             </div>
         </>
@@ -141,8 +142,8 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
         <Modal
             isOpen={isOpen}
             onClose={onClose}
-            title="지도 위키"
-            subtitle="등록된 위키 핀을 탐색하고 바로 편집하거나 새 핀을 추가할 수 있습니다"
+            title={UI_TEXT.WIKI.PIN_LIST_MODAL.TITLE}
+            subtitle={UI_TEXT.WIKI.PIN_LIST_MODAL.SUBTITLE}
             icon={modalIcon}
             headerActions={headerActions}
             footer={modalFooter}
@@ -150,7 +151,7 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
             height="default"
             zIndex="z-[120]"
             modalId="wiki-pin-list"
-            ariaLabel="지도 위키 목록 모달"
+            ariaLabel={UI_TEXT.WIKI.PIN_LIST_MODAL.ARIA}
         >
             <div className="flex-1 min-h-0 flex flex-col p-4 sm:p-5 gap-3.5">
                 {/* Search input */}
@@ -160,15 +161,15 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                         type="text"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder="제목 또는 #해시태그로 검색"
-                        aria-label="위키 핀 검색"
+                        placeholder={UI_TEXT.WIKI.PIN_LIST_MODAL.SEARCH_PLACEHOLDER}
+                        aria-label={UI_TEXT.WIKI.PIN_LIST_MODAL.SEARCH_ARIA}
                         className="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-black/[0.03] dark:bg-white/[0.05] border border-black/8 dark:border-white/10 text-xs sm:text-sm font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#003876]/40 dark:focus:ring-sky-500/40"
                     />
                     {query && (
                         <button
                             type="button"
                             onClick={() => setQuery("")}
-                            aria-label="검색어 지우기"
+                            aria-label={UI_TEXT.COMMON.CLEAR_SEARCH_ARIA}
                             className="absolute right-3 p-1 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer"
                         >
                             <X className="w-3.5 h-3.5"/>
@@ -183,15 +184,15 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                             <div
                                 className="w-7 h-7 mx-auto rounded-full border-2 border-[#003876] border-t-transparent animate-spin"/>
                             <p className="text-xs font-bold text-slate-400">
-                                위키 핀 목록을 불러오는 중...
+                                {UI_TEXT.WIKI.PIN_LIST_MODAL.LOADING}
                             </p>
                         </div>
                     ) : pins.length === 0 ? (
                         <div className="py-12 text-center space-y-3">
                             <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
                                 {query.trim()
-                                    ? "검색 조건과 일치하는 위키 핀이 없습니다."
-                                    : "등록된 지도 위키 핀이 아직 없습니다."}
+                                    ? UI_TEXT.WIKI.PIN_LIST_MODAL.EMPTY_SEARCH
+                                    : UI_TEXT.WIKI.PIN_LIST_MODAL.EMPTY_LIST}
                             </p>
                             <button
                                 type="button"
@@ -199,7 +200,7 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition cursor-pointer"
                             >
                                 <MapPinPlus className="w-3.5 h-3.5"/>
-                                <span>지도에 첫 핀 추가하기</span>
+                                <span>{UI_TEXT.WIKI.PIN_LIST_MODAL.ADD_FIRST_PIN}</span>
                             </button>
                         </div>
                     ) : (
@@ -261,12 +262,12 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                                                     </span>
                                                 )}
                                                 {page.linkedRouteCount > 0 && (
-                                                    <span>· 노선 {page.linkedRouteCount}</span>
+                                                    <span>{UI_TEXT.WIKI.PIN_LIST_MODAL.LINKED_ROUTES_COUNT(page.linkedRouteCount)}</span>
                                                 )}
                                                 {page.boardingStopCount > 0 && (
-                                                    <span>· 승강장 {page.boardingStopCount}</span>
+                                                    <span>{UI_TEXT.WIKI.PIN_LIST_MODAL.BOARDING_STOPS_COUNT(page.boardingStopCount)}</span>
                                                 )}
-                                                {page.hasShuttle && <span>· 셔틀</span>}
+                                                {page.hasShuttle && <span>{UI_TEXT.WIKI.PIN_LIST_MODAL.HAS_SHUTTLE}</span>}
                                             </div>
                                         </div>
                                     </button>
@@ -278,10 +279,10 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                                             onClick={() => handleOpenPin(page, "edit")}
                                             title={
                                                 page.isProtected
-                                                    ? "보호된 문서는 편집할 수 없습니다"
-                                                    : `${page.title} 핀 편집`
+                                                    ? UI_TEXT.WIKI.PIN_LIST_MODAL.PROTECTED_TITLE
+                                                    : UI_TEXT.WIKI.PIN_LIST_MODAL.EDIT_PIN_TITLE(page.title)
                                             }
-                                            aria-label={`${page.title} 핀 편집`}
+                                            aria-label={UI_TEXT.WIKI.PIN_LIST_MODAL.EDIT_PIN_TITLE(page.title)}
                                             className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-black transition shrink-0 ${
                                                 page.isProtected
                                                     ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 opacity-75 cursor-not-allowed"
@@ -291,12 +292,12 @@ export const WikiPinListModal: React.FC<WikiPinListModalProps> = ({
                                             {page.isProtected ? (
                                                 <>
                                                     <Lock className="w-3 h-3"/>
-                                                    <span>보호</span>
+                                                    <span>{UI_TEXT.WIKI.PIN_LIST_MODAL.PROTECTED_BADGE}</span>
                                                 </>
                                             ) : (
                                                 <>
                                                     <PenLine className="w-3 h-3"/>
-                                                    <span>편집</span>
+                                                    <span>{UI_TEXT.WIKI.PIN_LIST_MODAL.EDIT_BTN}</span>
                                                 </>
                                             )}
                                         </button>

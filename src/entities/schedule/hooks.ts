@@ -6,6 +6,7 @@ import {useCallback, useEffect, useState} from "react";
 import type {BusCacheData, CacheMetadata, ScheduleApiResponse} from "./types";
 import {idbGet, idbSet} from "@shared/cache/idbStorage";
 import {STORAGE_KEYS} from "@shared/config/env";
+import {UI_TEXT} from "@shared/config/locale";
 
 const SCHEDULE_IDB_TTL_MS = 24 * 60 * 60 * 1000;
 let legacyScheduleCleaned = false;
@@ -60,7 +61,7 @@ async function fetchScheduleApi(): Promise<CachedScheduleSnapshot> {
     }
     const json: ScheduleApiResponse = await res.json();
     if (!json.success || !json.data) {
-        throw new Error(json.error || "시간표 데이터를 불러올 수 없습니다.");
+        throw new Error(json.error || UI_TEXT.API.SCHEDULE.FETCH_FAILED);
     }
     const result = {
         data: json.data,
@@ -108,7 +109,7 @@ export function useSchedule(enabled: boolean = true) {
             });
             const json: ScheduleApiResponse = await res.json();
             if (!json.success || !json.data) {
-                throw new Error(json.error || "시간표 갱신에 실패했습니다.");
+                throw new Error(json.error || UI_TEXT.API.SCHEDULE.REFRESH_FAILED);
             }
             const updated = {
                 data: json.data,
@@ -119,13 +120,17 @@ export function useSchedule(enabled: boolean = true) {
             if (force) {
                 setRefreshToast({
                     type: json.refreshed ? "success" : "info",
-                    message: json.message || (json.refreshed ? "최신 시간표로 갱신되었습니다." : "최신 시간표가 이미 유지되고 있습니다."),
+                    message:
+                        json.message ||
+                        (json.refreshed
+                            ? UI_TEXT.API.SCHEDULE.REFRESHED_TOAST
+                            : UI_TEXT.API.SCHEDULE.UP_TO_DATE_TOAST),
                 });
             }
         } catch (err) {
             setRefreshToast({
                 type: "error",
-                message: err instanceof Error ? err.message : "시간표 갱신 중 오류가 발생했습니다.",
+                message: err instanceof Error ? err.message : UI_TEXT.API.SCHEDULE.REFRESH_ERROR_TOAST,
             });
         } finally {
             setIsRefreshing(false);
@@ -137,7 +142,7 @@ export function useSchedule(enabled: boolean = true) {
         routes: data?.data?.routes ?? [],
         meta: data?.meta ?? null,
         isLoading: isLoading && !data?.data,
-        error: error ? (error instanceof Error ? error.message : "시간표 데이터를 불러오는데 실패했습니다.") : null,
+        error: error ? (error instanceof Error ? error.message : UI_TEXT.API.SCHEDULE.LOAD_ERROR) : null,
         refresh,
         isRefreshing,
         refreshToast,

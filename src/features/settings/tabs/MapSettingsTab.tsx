@@ -8,14 +8,11 @@ import {
     type LivePollingIntervalMs,
 } from "@shared/config/settingsCookie";
 import {triggerHaptic} from "@shared/utils/haptics";
+import {UI_TEXT} from "@shared/config/locale";
 import {SettingsBlock, SettingsGroup, SettingsSectionHeader, SettingsToggleRow} from "../SettingsPrimitives";
 
-const POLLING_INTERVAL_LABELS: Record<LivePollingIntervalMs, { label: string; hint: string }> = {
-    5000: {label: "5초", hint: "빠른 갱신"},
-    10000: {label: "10초", hint: "기본"},
-    15000: {label: "15초", hint: "보통"},
-    30000: {label: "30초", hint: "절약"},
-};
+const POLLING_INTERVAL_LABELS: Record<LivePollingIntervalMs, { label: string; hint: string }> =
+    UI_TEXT.SETTINGS.MAP.POLLING_LABELS;
 
 interface MapSettingsTabProps {
     settings: AppSettings;
@@ -27,16 +24,16 @@ export const MapSettingsTab: React.FC<MapSettingsTabProps> = ({settings, onUpdat
         <section className="space-y-2.5">
             <SettingsSectionHeader
                 icon={<Radio className="w-3.5 h-3.5 text-emerald-500"/>}
-                title="실시간 위치 추적"
+                title={UI_TEXT.SETTINGS.MAP.SECTION_TRACKING}
             />
             <SettingsGroup>
                 <SettingsBlock>
                     <div>
                         <p className="text-xs sm:text-[13px] font-black text-slate-900 dark:text-white">
-                            실시간 버스 위치 갱신 주기
+                            {UI_TEXT.SETTINGS.MAP.POLLING_INTERVAL_TITLE}
                         </p>
                         <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
-                            짧을수록 위치가 빠르게 반영되고, 길수록 배터리·데이터를 절약합니다
+                            {UI_TEXT.SETTINGS.MAP.POLLING_INTERVAL_DESC}
                         </p>
                     </div>
                     <div className="grid grid-cols-4 gap-1.5">
@@ -72,25 +69,25 @@ export const MapSettingsTab: React.FC<MapSettingsTabProps> = ({settings, onUpdat
                 </SettingsBlock>
 
                 <SettingsToggleRow
-                    title="버스 마커 부드러운 이동"
-                    description="노선 경로를 따라 버스가 부드럽게 주행하도록 보간 애니메이션을 적용합니다"
+                    title={UI_TEXT.SETTINGS.MAP.SMOOTH_ANIM_TITLE}
+                    description={UI_TEXT.SETTINGS.MAP.SMOOTH_ANIM_DESC}
                     checked={settings.smoothBusAnimation}
                     onChange={(next) => {
                         triggerHaptic("selection");
                         onUpdateSettings({smoothBusAnimation: next});
                     }}
-                    ariaLabel="버스 마커 부드러운 이동 전환"
+                    ariaLabel={UI_TEXT.SETTINGS.MAP.SMOOTH_ANIM_ARIA}
                 />
 
                 <SettingsToggleRow
-                    title="버스 마커 차량번호 표시"
-                    description="지도 위 버스 아이콘 아래에 차량번호 뒷 4자리를 함께 표시합니다"
+                    title={UI_TEXT.SETTINGS.MAP.PLATE_NUMBER_TITLE}
+                    description={UI_TEXT.SETTINGS.MAP.PLATE_NUMBER_DESC}
                     checked={settings.showBusPlateNumber}
                     onChange={(next) => {
                         triggerHaptic("selection");
                         onUpdateSettings({showBusPlateNumber: next});
                     }}
-                    ariaLabel="버스 마커 차량번호 표시 전환"
+                    ariaLabel={UI_TEXT.SETTINGS.MAP.PLATE_NUMBER_ARIA}
                 />
             </SettingsGroup>
         </section>
@@ -98,73 +95,73 @@ export const MapSettingsTab: React.FC<MapSettingsTabProps> = ({settings, onUpdat
         <section className="space-y-2.5">
             <SettingsSectionHeader
                 icon={<MapIcon className="w-3.5 h-3.5 text-sky-500"/>}
-                title="지도 레이어 및 조작"
+                title={UI_TEXT.SETTINGS.MAP.SECTION_LAYERS}
             />
             <SettingsGroup>
                 <SettingsToggleRow
-                    title="지도 주변 정류장 표시"
-                    description="지도를 확대했을 때 선택한 노선 외 주변 일반 정류장도 함께 표시합니다"
+                    title={UI_TEXT.SETTINGS.MAP.NEARBY_STOPS_TITLE}
+                    description={UI_TEXT.SETTINGS.MAP.NEARBY_STOPS_DESC}
                     checked={settings.showNearbyStops}
                     onChange={(next) => {
                         triggerHaptic("selection");
                         onUpdateSettings({showNearbyStops: next});
                     }}
-                    ariaLabel="지도 주변 정류장 표시 전환"
+                    ariaLabel={UI_TEXT.SETTINGS.MAP.NEARBY_STOPS_ARIA}
                 />
 
                 <SettingsToggleRow
-                    title="지도 정류장 이름 라벨 표시"
-                    description="확대 시 정류장 핀 옆에 정류장 이름을 표시합니다 (끄면 지도가 더 간결해집니다)"
+                    title={UI_TEXT.SETTINGS.MAP.STOP_LABELS_TITLE}
+                    description={UI_TEXT.SETTINGS.MAP.STOP_LABELS_DESC}
                     checked={settings.showStopLabels}
                     onChange={(next) => {
                         triggerHaptic("selection");
                         onUpdateSettings({showStopLabels: next});
                     }}
-                    ariaLabel="지도 정류장 이름 라벨 표시 전환"
+                    ariaLabel={UI_TEXT.SETTINGS.MAP.STOP_LABELS_ARIA}
                 />
 
                 <SettingsToggleRow
-                    title="노선 변경 시 지도 자동 맞춤"
-                    description="새 노선을 선택할 때 전체 노선 경로가 한눈에 들어오도록 지도를 이동합니다"
+                    title={UI_TEXT.SETTINGS.MAP.AUTO_FIT_TITLE}
+                    description={UI_TEXT.SETTINGS.MAP.AUTO_FIT_DESC}
                     checked={settings.autoFitRouteBounds}
                     onChange={(next) => {
                         triggerHaptic("selection");
                         onUpdateSettings({autoFitRouteBounds: next});
                     }}
-                    ariaLabel="노선 변경 시 지도 자동 맞춤 전환"
+                    ariaLabel={UI_TEXT.SETTINGS.MAP.AUTO_FIT_ARIA}
                 />
 
                 <SettingsToggleRow
-                    title="기점·종점 시간표 핀 표시"
-                    description="지도 위 기점·종점·회차 정류장의 다음 출발 시각 핀을 표시합니다"
+                    title={UI_TEXT.SETTINGS.MAP.TIMETABLE_PINS_TITLE}
+                    description={UI_TEXT.SETTINGS.MAP.TIMETABLE_PINS_DESC}
                     checked={settings.showTimetablePins}
                     onChange={(next) => {
                         triggerHaptic("selection");
                         onUpdateSettings({showTimetablePins: next});
                     }}
-                    ariaLabel="기점·종점 시간표 핀 표시 전환"
+                    ariaLabel={UI_TEXT.SETTINGS.MAP.TIMETABLE_PINS_ARIA}
                 />
 
                 <SettingsToggleRow
-                    title="지도 위키 핀 표시"
-                    description="지도 위 캠퍼스·터미널·정류장·팁 위키 핀을 표시해 바로 열람하고 편집합니다"
+                    title={UI_TEXT.SETTINGS.MAP.WIKI_PINS_TITLE}
+                    description={UI_TEXT.SETTINGS.MAP.WIKI_PINS_DESC}
                     checked={settings.showWikiPins}
                     onChange={(next) => {
                         triggerHaptic("selection");
                         onUpdateSettings({showWikiPins: next});
                     }}
-                    ariaLabel="지도 위키 핀 표시 전환"
+                    ariaLabel={UI_TEXT.SETTINGS.MAP.WIKI_PINS_ARIA}
                 />
 
                 <SettingsToggleRow
-                    title="지도 줌·나침반 버튼 표시"
-                    description="지도 우측 상단의 확대/축소 및 나침반 컨트롤 버튼을 표시합니다"
+                    title={UI_TEXT.SETTINGS.MAP.MAP_CONTROLS_TITLE}
+                    description={UI_TEXT.SETTINGS.MAP.MAP_CONTROLS_DESC}
                     checked={settings.showMapControls}
                     onChange={(next) => {
                         triggerHaptic("selection");
                         onUpdateSettings({showMapControls: next});
                     }}
-                    ariaLabel="지도 줌 나침반 버튼 표시 전환"
+                    ariaLabel={UI_TEXT.SETTINGS.MAP.MAP_CONTROLS_ARIA}
                 />
             </SettingsGroup>
         </section>

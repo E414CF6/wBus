@@ -3,6 +3,7 @@
 import React from "react";
 import {Bus} from "lucide-react";
 import type {RouteVariationStop} from "@entities/route";
+import {UI_TEXT} from "@shared/config/locale";
 import type {MatchedBusStopEntry} from "../hooks/useBusStopMatcher";
 
 interface RunningBusesJumpStripProps {
@@ -36,7 +37,7 @@ export const RunningBusesJumpStrip: React.FC<RunningBusesJumpStripProps> = ({
             <span
                 className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 dark:text-slate-500 whitespace-nowrap shrink-0 mr-0.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"/>
-                운행중
+                {UI_TEXT.BUS_ITEM.RUNNING_NOW}
             </span>
             {matchedBusesForJump.map(({stopKey, stop, plateDigits, bus}) => {
                 const isNearestBus = nearestBusVehicleNo === bus.vehicleno;
@@ -51,7 +52,7 @@ export const RunningBusesJumpStrip: React.FC<RunningBusesJumpStripProps> = ({
                                 ? `${metaThemeBg || "bg-blue-600"} text-white border-transparent shadow-xs`
                                 : `${metaThemeBadgeBg || "bg-blue-500/10 dark:bg-blue-500/20"} ${metaThemeText || "text-blue-700 dark:text-blue-300"} ${metaThemeBorder || "border-blue-500/25"}`
                         }`}
-                        title={`${bus.vehicleno} (${stop.nodenm}) 위치로 스크롤`}
+                        title={UI_TEXT.MAP_VIEW.BUS_DRAWER.JUMP_TO_BUS_TITLE(bus.vehicleno, stop.nodenm)}
                     >
                         <Bus className="w-3 h-3 shrink-0"/>
                         <span className="font-mono font-black">{plateDigits}</span>

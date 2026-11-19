@@ -1,5 +1,6 @@
 import React from "react";
 import {Bus, RefreshCw, X} from "lucide-react";
+import {UI_TEXT} from "@shared/config/locale";
 
 interface BusDrawerHeaderProps {
     selectedRoute: string;
@@ -58,7 +59,7 @@ export const BusDrawerHeader: React.FC<BusDrawerHeaderProps> = ({
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"/>
                             )}
                             <span>
-                                {isConnecting ? "연결 중..." : `실시간 ${runningBusCount}대`}
+                                {isConnecting ? UI_TEXT.CONNECTION.CONNECTING : UI_TEXT.MAP_VIEW.BUS_DRAWER.LIVE_BUS_COUNT(runningBusCount)}
                             </span>
                         </span>
                         {timeAgo && (
@@ -82,8 +83,8 @@ export const BusDrawerHeader: React.FC<BusDrawerHeaderProps> = ({
                     type="button"
                     onClick={onRefresh}
                     className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200/80 dark:bg-white/[0.07] dark:hover:bg-white/[0.14] flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer active:scale-90"
-                    title="실시간 위치 새로고침"
-                    aria-label="실시간 위치 새로고침"
+                    title={UI_TEXT.MAP_VIEW.BUS_DRAWER.REFRESH_LIVE_TITLE}
+                    aria-label={UI_TEXT.MAP_VIEW.BUS_DRAWER.REFRESH_LIVE_TITLE}
                 >
                     <RefreshCw
                         className={`w-3.5 h-3.5 ${isRefreshing ? `animate-spin ${metaThemeText}` : ""}`}
@@ -93,8 +94,8 @@ export const BusDrawerHeader: React.FC<BusDrawerHeaderProps> = ({
                     type="button"
                     onClick={onClose}
                     className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200/80 dark:bg-white/[0.07] dark:hover:bg-white/[0.14] flex lg:hidden items-center justify-center text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer active:scale-90"
-                    title="닫기"
-                    aria-label="닫기"
+                    title={UI_TEXT.COMMON.CLOSE}
+                    aria-label={UI_TEXT.COMMON.CLOSE}
                 >
                     <X className="w-4 h-4"/>
                 </button>

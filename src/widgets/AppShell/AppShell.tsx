@@ -20,6 +20,7 @@ import {RouteScheduleModal} from "@features/map-view/RouteScheduleModal";
 import {OnboardingModal} from "@features/onboarding";
 import type {WikiFormDraft} from "@features/wiki";
 
+import {UI_TEXT} from "@shared/config/locale";
 import {useAppMapContext} from "@shared/context/AppMapContext";
 import {useAppSettings} from "@shared/context/AppSettingsContext";
 import {isWeekend} from "@shared/lib/timeUtils";
@@ -84,7 +85,7 @@ function MapAppShell() {
     const initialQueryWiki = searchParams.get("wiki")?.trim() || null;
     const [activeWikiModal, setActiveWikiModal] = useState<{
         slug: string;
-        mode: "read" | "edit" | "history";
+        mode: "read" | "edit" | "history" | "discussion";
         draft?: Partial<WikiFormDraft> | null;
     } | null>(() => (initialQueryWiki ? {slug: initialQueryWiki, mode: "read"} : null));
     const [prevQueryWiki, setPrevQueryWiki] = useState<string | null>(initialQueryWiki);
@@ -218,7 +219,7 @@ function MapAppShell() {
                 });
                 const body = await res.json().catch(() => null);
                 if (!res.ok) {
-                    setPinActionError(body?.error || `핀 색상을 변경하지 못했습니다. (${res.status})`);
+                    setPinActionError(body?.error || UI_TEXT.WIKI.PIN_ACTIONS.COLOR_CHANGE_FAILED_STATUS(res.status));
                     return;
                 }
                 const updated = body?.document as WikiPageDocument | undefined;
@@ -239,7 +240,7 @@ function MapAppShell() {
                 await mutateAllWikiQueries().catch(() => []);
             } catch (err) {
                 setPinActionError(
-                    err instanceof Error ? err.message : "핀 색상 변경 중 오류가 발생했습니다.",
+                    err instanceof Error ? err.message : UI_TEXT.WIKI.PIN_ACTIONS.COLOR_CHANGE_ERROR,
                 );
             } finally {
                 setIsUpdatingPinMeta(false);
@@ -271,7 +272,7 @@ function MapAppShell() {
                 );
                 const body = await res.json().catch(() => null);
                 if (!res.ok) {
-                    setPinActionError(body?.error || `핀 위치를 이동하지 못했습니다. (${res.status})`);
+                    setPinActionError(body?.error || UI_TEXT.WIKI.PIN_ACTIONS.MOVE_FAILED_STATUS(res.status));
                     return;
                 }
                 await mutateAllWikiQueries().catch(() => []);
@@ -279,7 +280,7 @@ function MapAppShell() {
                 setPendingPinCoords(null);
             } catch (err) {
                 setPinActionError(
-                    err instanceof Error ? err.message : "핀 위치 이동 중 오류가 발생했습니다.",
+                    err instanceof Error ? err.message : UI_TEXT.WIKI.PIN_ACTIONS.MOVE_ERROR,
                 );
             } finally {
                 setIsUpdatingPinMeta(false);
@@ -539,7 +540,7 @@ function MapAppShell() {
                         onClick={() => setPinActionError(null)}
                         className="px-1.5 py-0.5 rounded-full bg-white/20 hover:bg-white/30 text-[10px] font-black shrink-0 cursor-pointer"
                     >
-                        닫기
+                        {UI_TEXT.COMMON.CLOSE}
                     </button>
                 </div>
             )}
@@ -552,6 +553,7 @@ function MapAppShell() {
                 onRead={(slug) => setActiveWikiModal({slug, mode: "read"})}
                 onEdit={(slug) => setActiveWikiModal({slug, mode: "edit"})}
                 onHistory={(slug) => setActiveWikiModal({slug, mode: "history"})}
+                onDiscussion={(slug) => setActiveWikiModal({slug, mode: "discussion"})}
                 onMovePin={(page) => handleStartMovePin(page)}
                 onChangeColor={(page, color) => void handleChangePinColor(page, color)}
             />

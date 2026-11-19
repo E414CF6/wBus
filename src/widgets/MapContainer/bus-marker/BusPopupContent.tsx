@@ -29,10 +29,10 @@ export const BusPopupContent = memo(
      }: BusPopupContentProps) => {
         const directionLabel =
             direction === 1
-                ? "상행"
+                ? UI_TEXT.BUS_ITEM.DIRECTION_UP
                 : direction === 0
-                    ? "하행"
-                    : "운행 중";
+                    ? UI_TEXT.BUS_ITEM.DIRECTION_DOWN
+                    : UI_TEXT.BUS_ITEM.RUNNING_STATUS;
 
         return (
             <div
@@ -98,12 +98,12 @@ export const BusPopupContent = memo(
                             {isFollowed ? (
                                 <>
                                     <Navigation className="w-3.5 h-3.5 animate-pulse"/>
-                                    <span>버스 따라가는 중</span>
+                                    <span>{UI_TEXT.MAP_VIEW.BUS_POPUP.FOLLOWING}</span>
                                 </>
                             ) : (
                                 <>
                                     <LocateFixed className="w-3.5 h-3.5"/>
-                                    <span>버스 따라가기</span>
+                                    <span>{UI_TEXT.MAP_VIEW.BUS_POPUP.FOLLOW}</span>
                                 </>
                             )}
                         </button>

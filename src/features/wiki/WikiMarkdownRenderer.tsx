@@ -5,6 +5,7 @@ import Link from "next/link";
 import {AlertTriangle, BookOpen, Bus, Camera, ExternalLink, Info, Lightbulb} from "lucide-react";
 import {getKakaoRoadviewUrl} from "@entities/station";
 import {parseWikiMarkdown, type WikiBlockNode, type WikiCalloutTone, type WikiInlineNode,} from "@entities/wiki";
+import {UI_TEXT} from "@shared/config/locale";
 import {buildMapUrl} from "@widgets/AppShell/hooks/useAppNavigation";
 import {WikiEmbeddedRoutesBlock, WikiEmbeddedShuttleBlock, WikiEmbeddedStopsBlock,} from "./WikiEmbeddedBlocks";
 
@@ -147,25 +148,25 @@ const CALLOUT_STYLES: Record<
         container: "bg-slate-50/90 dark:bg-white/[0.04] border-slate-200/80 dark:border-white/15 text-slate-700 dark:text-slate-200",
         title: "text-slate-900 dark:text-white",
         icon: <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0"/>,
-        label: "참고",
+        label: UI_TEXT.WIKI.RENDERER.CALLOUTS.NOTE,
     },
     TIP: {
         container: "bg-emerald-50/85 dark:bg-emerald-950/30 border-emerald-200/80 dark:border-emerald-500/30 text-emerald-950 dark:text-emerald-100",
         title: "text-emerald-800 dark:text-emerald-300",
         icon: <Lightbulb className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0"/>,
-        label: "꿀팁",
+        label: UI_TEXT.WIKI.RENDERER.CALLOUTS.TIP,
     },
     IMPORTANT: {
         container: "bg-blue-50/85 dark:bg-blue-950/35 border-blue-200/80 dark:border-blue-500/30 text-blue-950 dark:text-blue-100",
         title: "text-[#003876] dark:text-blue-300",
         icon: <Info className="w-4 h-4 text-[#003876] dark:text-blue-400 shrink-0"/>,
-        label: "중요",
+        label: UI_TEXT.WIKI.RENDERER.CALLOUTS.IMPORTANT,
     },
     WARNING: {
         container: "bg-amber-50/90 dark:bg-amber-950/30 border-amber-200/90 dark:border-amber-500/30 text-amber-950 dark:text-amber-100",
         title: "text-amber-800 dark:text-amber-300",
         icon: <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0"/>,
-        label: "주의",
+        label: UI_TEXT.WIKI.RENDERER.CALLOUTS.WARNING,
     },
 };
 
@@ -330,7 +331,7 @@ export const WikiMarkdownRenderer: React.FC<WikiMarkdownRendererProps> = ({
     if (blocks.length === 0) {
         return (
             <p className="text-xs sm:text-sm text-slate-400 dark:text-slate-500 py-4 text-center">
-                아직 작성된 위키 본문이 없습니다. 상단 편집 버튼을 눌러 첫 안내 글을 작성해 보세요!
+                {UI_TEXT.WIKI.RENDERER.EMPTY_BODY}
             </p>
         );
     }
@@ -339,11 +340,11 @@ export const WikiMarkdownRenderer: React.FC<WikiMarkdownRendererProps> = ({
         <div className="space-y-4">
             {showToc && toc.length >= 2 && (
                 <nav
-                    aria-label="문서 목차"
+                    aria-label={UI_TEXT.WIKI.RENDERER.TOC_ARIA}
                     className="p-3.5 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/10 space-y-1.5"
                 >
                     <p className="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        목차
+                        {UI_TEXT.WIKI.RENDERER.TOC_TITLE}
                     </p>
                     <ul className="flex flex-wrap gap-x-3 gap-y-1">
                         {toc.map((item) => (

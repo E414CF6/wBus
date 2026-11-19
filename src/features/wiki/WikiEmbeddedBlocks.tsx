@@ -12,6 +12,7 @@ import {
     type WikiShuttleBlock,
 } from "@entities/wiki";
 import {triggerHaptic} from "@shared/utils/haptics";
+import {UI_TEXT} from "@shared/config/locale";
 
 type ShuttleTab = "outbound" | "inbound" | "stops" | "guidelines";
 
@@ -25,7 +26,7 @@ export const WikiEmbeddedRoutesBlock: React.FC<{
         <div className="space-y-2 my-3">
             <div className="flex items-center gap-1.5 text-xs font-black text-slate-900 dark:text-white">
                 <Bus className="w-4 h-4 text-[#003876] dark:text-sky-400" />
-                <span>연결 시내버스 ({routes.length})</span>
+                <span>{UI_TEXT.WIKI.EMBEDDED.LINKED_ROUTES_TITLE(routes.length)}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {routes.map((route, idx) => {
@@ -33,11 +34,11 @@ export const WikiEmbeddedRoutesBlock: React.FC<{
                         <>
                             <div className="flex items-center justify-between gap-2">
                                 <span className="text-xs font-black text-[#003876] dark:text-sky-300">
-                                    {route.label || `${route.routeNo}번`}
+                                    {route.label || UI_TEXT.COMMON.ROUTE_NUMBER(route.routeNo)}
                                 </span>
                                 {onSelectRoute && (
                                     <span className="text-[10px] font-black text-sky-600 dark:text-sky-400 group-hover:underline">
-                                        지도에서 보기 →
+                                        {UI_TEXT.WIKI.EMBEDDED.VIEW_ON_MAP}
                                     </span>
                                 )}
                             </div>
@@ -133,7 +134,7 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-sky-100 dark:border-white/10">
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            다음 진입 / 등교
+                            {UI_TEXT.WIKI.EMBEDDED.NEXT_INBOUND}
                         </div>
                         {shuttleSummary.nextInbound ? (
                             <div className="mt-0.5 flex items-baseline justify-between gap-2">
@@ -143,20 +144,20 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                                 </span>
                                 <span className="text-[11px] font-black text-sky-600 dark:text-sky-400 tabular-nums">
                                     {shuttleSummary.nextInbound.waitMins === 0
-                                        ? "곧 출발"
-                                        : `${shuttleSummary.nextInbound.waitMins}분 후`}
+                                        ? UI_TEXT.BUS_ITEM.DEPARTING_SOON
+                                        : UI_TEXT.TIME.WAIT_MINUTES_AFTER(shuttleSummary.nextInbound.waitMins)}
                                 </span>
                             </div>
                         ) : (
                             <p className="mt-0.5 text-xs font-bold text-slate-400">
-                                금일 잔여 운행 없음
+                                {UI_TEXT.WIKI.EMBEDDED.NO_REMAINING_TRIPS}
                             </p>
                         )}
                     </div>
 
                     <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/70 border border-sky-100 dark:border-white/10">
                         <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            다음 출발 / 하교
+                            {UI_TEXT.WIKI.EMBEDDED.NEXT_OUTBOUND}
                         </div>
                         {shuttleSummary.nextOutbound ? (
                             <div className="mt-0.5 flex items-baseline justify-between gap-2">
@@ -166,13 +167,13 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                                 </span>
                                 <span className="text-[11px] font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
                                     {shuttleSummary.nextOutbound.waitMins === 0
-                                        ? "곧 출발"
-                                        : `${shuttleSummary.nextOutbound.waitMins}분 후`}
+                                        ? UI_TEXT.BUS_ITEM.DEPARTING_SOON
+                                        : UI_TEXT.TIME.WAIT_MINUTES_AFTER(shuttleSummary.nextOutbound.waitMins)}
                                 </span>
                             </div>
                         ) : (
                             <p className="mt-0.5 text-xs font-bold text-slate-400">
-                                금일 잔여 운행 없음
+                                {UI_TEXT.WIKI.EMBEDDED.NO_REMAINING_TRIPS}
                             </p>
                         )}
                     </div>
@@ -185,19 +186,19 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                         [
                             {
                                 id: "outbound",
-                                label: `출발·하교 (${shuttle.outbound_from_campus.length})`,
+                                label: UI_TEXT.WIKI.EMBEDDED.TAB_OUTBOUND(shuttle.outbound_from_campus.length),
                             },
                             {
                                 id: "inbound",
-                                label: `진입·등교 (${shuttle.inbound_to_campus.length})`,
+                                label: UI_TEXT.WIKI.EMBEDDED.TAB_INBOUND(shuttle.inbound_to_campus.length),
                             },
                             {
                                 id: "stops",
-                                label: `정류장 (${shuttle.stop_locations.length})`,
+                                label: UI_TEXT.WIKI.EMBEDDED.TAB_STOPS(shuttle.stop_locations.length),
                             },
                             {
                                 id: "guidelines",
-                                label: `안내 (${shuttle.guidelines.length})`,
+                                label: UI_TEXT.WIKI.EMBEDDED.TAB_GUIDELINES(shuttle.guidelines.length),
                             },
                         ] as Array<{id: ShuttleTab; label: string}>
                     ).map((tab) => (
@@ -229,7 +230,11 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                                         : "bg-white/80 dark:bg-slate-900/60 text-slate-600 dark:text-slate-300"
                                 }`}
                             >
-                                {day === "ALL" ? "전체" : day === "WEEKDAY" ? "평일" : "일요일"}
+                                {day === "ALL"
+                                    ? UI_TEXT.WIKI.EMBEDDED.DAY_ALL
+                                    : day === "WEEKDAY"
+                                        ? UI_TEXT.WIKI.EMBEDDED.DAY_WEEKDAY
+                                        : UI_TEXT.WIKI.EMBEDDED.DAY_SUNDAY}
                             </button>
                         ))}
                         <div className="relative flex items-center">
@@ -238,8 +243,8 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                                 type="text"
                                 value={shuttleQuery}
                                 onChange={(e) => setShuttleQuery(e.target.value)}
-                                placeholder="시간·정류장 검색"
-                                aria-label="셔틀 시간표 검색"
+                                placeholder={UI_TEXT.WIKI.EMBEDDED.SHUTTLE_SEARCH_PLACEHOLDER}
+                                aria-label={UI_TEXT.WIKI.EMBEDDED.SHUTTLE_SEARCH_ARIA}
                                 className="w-36 sm:w-44 pl-6 pr-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-sky-500"
                             />
                         </div>
@@ -251,7 +256,7 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                 <div className="max-h-72 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
                     {activeScheduleList.length === 0 ? (
                         <p className="py-6 text-center text-xs font-bold text-slate-400">
-                            일치하는 시간표가 없습니다.
+                            {UI_TEXT.WIKI.EMBEDDED.NO_MATCHING_SHUTTLE}
                         </p>
                     ) : (
                         activeScheduleList.map((item, idx) => (
@@ -274,7 +279,7 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                                     <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] text-slate-500 dark:text-slate-400">
                                         {item.via.length > 0 && (
                                             <span>
-                                                경유:{" "}
+                                                {UI_TEXT.WIKI.EMBEDDED.VIA_PREFIX}{" "}
                                                 {item.via
                                                     .map((v) =>
                                                         v.time ? `${v.name}(${v.time})` : v.name,
@@ -299,7 +304,7 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {shuttle.stop_locations.length === 0 ? (
                         <p className="py-4 text-xs font-bold text-slate-400">
-                            등록된 셔틀 정류장 안내가 없습니다.
+                            {UI_TEXT.WIKI.EMBEDDED.NO_SHUTTLE_STOPS}
                         </p>
                     ) : (
                         shuttle.stop_locations.map((stop, idx) => (
@@ -322,7 +327,7 @@ export const WikiEmbeddedShuttleBlock: React.FC<{
             {shuttleTab === "guidelines" && (
                 <ul className="space-y-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 list-disc pl-4">
                     {shuttle.guidelines.length === 0 ? (
-                        <li className="list-none text-slate-400">등록된 이용 안내가 없습니다.</li>
+                        <li className="list-none text-slate-400">{UI_TEXT.WIKI.EMBEDDED.NO_GUIDELINES}</li>
                     ) : (
                         shuttle.guidelines.map((line, idx) => <li key={idx}>{line}</li>)
                     )}
@@ -341,7 +346,7 @@ export const WikiEmbeddedStopsBlock: React.FC<{
         <div className="space-y-2 my-3">
             <div className="flex items-center gap-1.5 text-xs font-black text-slate-900 dark:text-white">
                 <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>주요 승강장 · 탑승 위치 ({stops.length})</span>
+                <span>{UI_TEXT.WIKI.EMBEDDED.BOARDING_STOPS_TITLE(stops.length)}</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
                 {stops.map((stop) => (
@@ -374,7 +379,7 @@ export const WikiEmbeddedStopsBlock: React.FC<{
                                 className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-200"
                             >
                                 <Navigation className="w-2.5 h-2.5" />
-                                카카오맵
+                                {UI_TEXT.WIKI.EMBEDDED.KAKAO_MAP}
                             </a>
                             <a
                                 href={getKakaoRoadviewUrl(stop.lat, stop.lng)}
@@ -383,7 +388,7 @@ export const WikiEmbeddedStopsBlock: React.FC<{
                                 className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-[10px] font-bold text-slate-700 dark:text-slate-200"
                             >
                                 <Camera className="w-2.5 h-2.5" />
-                                로드뷰
+                                {UI_TEXT.WIKI.EMBEDDED.ROADVIEW}
                             </a>
                         </div>
                     </div>

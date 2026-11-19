@@ -4,6 +4,9 @@ import {GET as listWikiGET, POST as createWikiPOST} from "./route";
 import {GET as getWikiGET, PATCH as patchWikiPATCH, PUT as updateWikiPUT} from "./[slug]/route";
 import {PATCH as patchWikiPinPATCH} from "./[slug]/pin/route";
 import {POST as revertWikiPOST} from "./[slug]/revert/route";
+import {GET as listDiscussionsGET, POST as createDiscussionPOST} from "./[slug]/discussions/route";
+import {PATCH as patchDiscussionPATCH} from "./[slug]/discussions/[threadId]/route";
+import {POST as createDiscussionCommentPOST} from "./[slug]/discussions/[threadId]/comments/route";
 
 const mockWikiServer = vi.hoisted(() => ({
     listWikiPages: vi.fn(),
@@ -16,6 +19,10 @@ const mockWikiServer = vi.hoisted(() => ({
     getWikiRevisionList: vi.fn(),
     getWikiRevision: vi.fn(),
     revertWikiPage: vi.fn(),
+    listWikiDiscussions: vi.fn(),
+    createWikiDiscussionThread: vi.fn(),
+    addWikiDiscussionComment: vi.fn(),
+    updateWikiDiscussionStatus: vi.fn(),
     enforceWikiRateLimit: vi.fn(async () => undefined),
     resolveEditorInfo: vi.fn((nickname: string | undefined) => ({
         nickname: nickname?.trim() || "익명 버스러",
@@ -252,6 +259,115 @@ describe("wiki API routes", () => {
                 targetVersion: 2,
                 baseVersion: 3,
             }),
+        );
+    });
+
+    it("lists discussions via GET /api/wiki/[slug]/discussions", async () => {
+        mockWikiServer.listWikiDiscussions.mockResolvedValue({
+            slug: "원주역",
+            openCount: 1,
+            resolvedCount: 0,
+            threads: [],
+        });
+
+        const req = new NextRequest("http://localhost/api/wiki/원주역/discussions?status=open");
+        const res = await listDiscussionsGET(req, {
+            params: Promise.resolve({slug: encodeURIComponent("원주역")}),
+        });
+        expect(res.status).toBe(200);
+        expect(mockWikiServer.listWikiDiscussions).toHaveBeenCalledWith("원주역", "open");
+    });
+
+    it("creates discussion thread via POST and rejects honeypot", async () => {
+        mockWikiServer.createWikiDiscussionThread.mockResolvedValue({
+            id: 1,
+            slug: "원주역",
+            title: "막차 시간 확인",
+            status: "open",
+            author: {nickname: "익명 버스러", editorId: "ed-test"},
+            commentCount: 1,
+            lastCommentAt: "2026-11-19T00:00:00.000Z",
+            createdAt: "2026-11-19T00:00:00.000Z",
+            comments: [],
+        });
+
+        const spamReq = new NextRequest("http://localhost/api/wiki/원주역/discussions", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                title: "스팸",
+                body: "내용입니다",
+                website: "https://spam.example",
+            }),
+        });
+        const spamRes = await createDiscussionPOST(spamReq, {
+            params: Promise.resolve({slug: encodeURIComponent("원주역")}),
+        });
+        expect(spamRes.status).toBe(400);
+
+        const okReq = new NextRequest("http://localhost/api/wiki/원주역/discussions", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                title: "막차 시간 확인",
+                body: "30번 막차가 22:30으로 바뀐 것 같습니다.",
+                nickname: "제보자",
+            }),
+        });
+        const okRes = await createDiscussionPOST(okReq, {
+            params: Promise.resolve({slug: encodeURIComponent("원주역")}),
+        });
+        expect(okRes.status).toBe(201);
+        expect(mockWikiServer.enforceWikiRateLimit).toHaveBeenCalledWith("ed-test", "discussion");
+        expect(mockWikiServer.createWikiDiscussionThread).toHaveBeenCalledWith(
+            expect.objectContaining({
+                slug: "원주역",
+                title: "막차 시간 확인",
+            }),
+        );
+    });
+
+    it("adds reply comment and updates thread status", async () => {
+        mockWikiServer.addWikiDiscussionComment.mockResolvedValue({
+            comment: {
+                id: 2,
+                threadId: 1,
+                body: "확인했습니다.",
+                author: {nickname: "버스러", editorId: "ed-test"},
+                createdAt: "2026-11-19T00:01:00.000Z",
+            },
+            commentCount: 2,
+            lastCommentAt: "2026-11-19T00:01:00.000Z",
+        });
+
+        const commentReq = new NextRequest("http://localhost/api/wiki/원주역/discussions/1/comments", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({body: "확인했습니다."}),
+        });
+        const commentRes = await createDiscussionCommentPOST(commentReq, {
+            params: Promise.resolve({slug: encodeURIComponent("원주역"), threadId: "1"}),
+        });
+        expect(commentRes.status).toBe(201);
+
+        mockWikiServer.updateWikiDiscussionStatus.mockResolvedValue({
+            id: 1,
+            slug: "원주역",
+            title: "막차 시간 확인",
+            status: "resolved",
+        });
+
+        const patchReq = new NextRequest("http://localhost/api/wiki/원주역/discussions/1", {
+            method: "PATCH",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({status: "resolved", nickname: "정리자"}),
+        });
+        const patchRes = await patchDiscussionPATCH(patchReq, {
+            params: Promise.resolve({slug: encodeURIComponent("원주역"), threadId: "1"}),
+        });
+        expect(patchRes.status).toBe(200);
+        expect(mockWikiServer.updateWikiDiscussionStatus).toHaveBeenCalledWith(
+            expect.objectContaining({slug: "원주역", threadId: 1, status: "resolved"}),
         );
     });
 });
