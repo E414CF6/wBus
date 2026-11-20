@@ -180,11 +180,11 @@ export const ERROR_STRINGS = {
 
 export const METADATA_STRINGS = {
     SITE_NAME: "wBus",
-    TITLE: "wBus",
+    TITLE: "wBus — 실시간 버스 지도 · 교통 위키",
     TITLE_TEMPLATE: "wBus / %s",
-    DESC: "전국 시내버스 실시간 위치 지도, 정류장 도착 정보, 운행 시간표 및 커뮤니티 지도 위키",
-    SHORT_DESC: "실시간 시내버스 도착 정보 & 지도 위키",
-    KEYWORDS: ["wBus", "더블유버스", "실시간 버스", "시내버스 시간표", "버스 위치", "정류장 도착정보", "버스 위키"],
+    DESC: "전국 시내·마을·광역버스 실시간 위치 지도, 노선 경로, 정류장 도착 정보와 함께 만드는 커뮤니티 교통 위키",
+    SHORT_DESC: "Wiki + Bus · 전국 실시간 버스 지도 & 교통 위키",
+    KEYWORDS: ["wBus", "Wiki Bus", "더블유버스", "전국 실시간 버스", "버스 위치 지도", "노선 경로", "정류장 도착정보", "주변 정류장", "교통 위키", "지도 위키"],
     OG_LOCALE: APP_LOCALE.OG_LOCALE,
     AUTHOR: "wBus",
 } as const;
@@ -232,8 +232,7 @@ export const ROUTE_MAP_STRINGS = {
 } as const;
 
 export const FOOTER_STRINGS = {
-    COPYRIGHT: "© 2026 wBus",
-    DESCRIPTION: "시내버스 정보 서비스",
+    COPYRIGHT: "© 2026 wBus", DESCRIPTION: "Wiki + Bus · 전국 실시간 버스 지도 & 교통 위키",
     LINKS: [
         {label: "실시간 지도", href: "/"},
         {label: "이용약관", href: "/terms"},
