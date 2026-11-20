@@ -15,7 +15,7 @@ const RAW_POSITION = getEnv(process.env.NEXT_PUBLIC_MAP_DEFAULT_POSITION, DEFAUL
 const [defaultLat, defaultLng] = RAW_POSITION.split(",").map(Number);
 
 export const APP_CONFIG = {
-    NAME: getEnv(process.env.NEXT_PUBLIC_APP_NAME, UI_TEXT.METADATA.TITLE),
+    NAME: getEnv(process.env.NEXT_PUBLIC_APP_NAME, UI_TEXT.METADATA.SITE_NAME),
     IS_DEV: process.env.NODE_ENV === "development",
 } as const;
 
