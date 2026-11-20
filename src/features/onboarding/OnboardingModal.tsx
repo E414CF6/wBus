@@ -7,11 +7,11 @@ import {
     ArrowRight,
     Bus,
     Check,
-    Clock,
     Compass,
     MapPin,
     Monitor,
     Moon,
+    Route,
     Settings,
     Sparkles,
     Sun,
@@ -205,14 +205,14 @@ export const OnboardingModal: React.FC = () => {
                             className="p-4 rounded-2xl bg-slate-50/90 dark:bg-white/[0.03] border border-black/5 dark:border-white/10 flex items-start gap-3.5">
                             <div
                                 className="flex items-center justify-center w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
-                                <Clock className="w-5 h-5"/>
+                                <Route className="w-5 h-5"/>
                             </div>
                             <div className="min-w-0 space-y-1">
                                 <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                    {UI_TEXT.ONBOARDING.FEATURE_TIMETABLE_TITLE}
+                                    {UI_TEXT.ONBOARDING.FEATURE_ROUTES_TITLE}
                                 </h3>
                                 <p className="text-[11px] sm:text-xs font-medium text-slate-600 dark:text-slate-300 leading-relaxed">
-                                    {UI_TEXT.ONBOARDING.FEATURE_TIMETABLE_DESC}
+                                    {UI_TEXT.ONBOARDING.FEATURE_ROUTES_DESC}
                                 </p>
                             </div>
                         </div>
@@ -346,6 +346,9 @@ export const OnboardingModal: React.FC = () => {
                                 {settings.autoDetectCity
                                     ? UI_TEXT.ONBOARDING.SUMMARY_REGION_AUTO
                                     : UI_TEXT.ONBOARDING.SUMMARY_REGION_MANUAL}
+                                {settings.fontScale === "large"
+                                    ? ` · ${UI_TEXT.ONBOARDING.SUMMARY_LARGE_FONT}`
+                                    : ""}
                             </span>
                         </div>
 
