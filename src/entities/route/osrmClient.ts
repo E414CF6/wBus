@@ -3,7 +3,7 @@ import "server-only";
 import {createHash} from "crypto";
 import {OsrmRouteResponseSchema} from "@shared/api/schemas";
 import {fetchWithRetry, SharedCircuitBreaker} from "@shared/api/upstreamClient";
-import {CacheManager} from "@shared/cache";
+import {CacheManager, trackBackgroundPromise} from "@shared/cache";
 import {distributedCache} from "@shared/cache/distributedCache";
 import {mapWithConcurrencyLimit} from "@shared/utils/concurrency";
 import {
@@ -73,7 +73,7 @@ export async function fetchOsrmSingleChunk(chunk: [number, number][]): Promise<[
                         hadDetour = true;
                         return null;
                     }
-                    void distributedCache.set(redisKey, routeCoords, OSRM_REDIS_TTL_SECONDS).catch(() => false);
+                    trackBackgroundPromise(distributedCache.set(redisKey, routeCoords, OSRM_REDIS_TTL_SECONDS));
                     return routeCoords;
                 }
             } else {

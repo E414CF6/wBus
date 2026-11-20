@@ -4,6 +4,8 @@ import {fetchTopisJson, SBUS_WEB_BASE, SEOUL_CITY_CODE} from "./seoulClient";
 import {mapSeoulRouteType} from "./seoulParser";
 
 const ALLOWED_SEOUL_ROUTE_TYPES = new Set(["1", "2", "3", "4", "5", "6", "10", "15"]);
+const SEOUL_ROUTES_PAGE_SIZE = 2000;
+const SEOUL_ROUTES_MAX_PAGES = 5;
 
 interface SbusRouteListItem {
     strdiv?: number | string;
@@ -15,45 +17,54 @@ interface SbusRouteListItem {
 }
 
 export async function fetchSeoulCityRoutes(routeNo?: string): Promise<RawCityRoute[]> {
-    const url = new URL(`${SBUS_WEB_BASE}/selectVApiTotalstr.do`);
-    url.searchParams.set("pageIndex", "1");
-    url.searchParams.set("recordCountPerPage", "2000");
-    url.searchParams.set("strkey", routeNo || "");
-    url.searchParams.set("strdiv", "1");
-
-    const data = await fetchTopisJson<{ resultList?: SbusRouteListItem[] }>(
-        url.toString(),
-        "selectVApiTotalstr.do",
-        {timeoutMs: 8000}
-    );
-    const list = data?.resultList ?? [];
-
     const routes: RawCityRoute[] = [];
-    for (const item of list) {
-        if (String(item.strdiv) !== "1") continue;
-        const tpCode = String(item.strtp ?? "");
-        if (!routeNo && !ALLOWED_SEOUL_ROUTE_TYPES.has(tpCode)) {
-            continue;
+    const seenIds = new Set<string>();
+
+    for (let pageIndex = 1; pageIndex <= SEOUL_ROUTES_MAX_PAGES; pageIndex++) {
+        const url = new URL(`${SBUS_WEB_BASE}/selectVApiTotalstr.do`);
+        url.searchParams.set("pageIndex", String(pageIndex));
+        url.searchParams.set("recordCountPerPage", String(SEOUL_ROUTES_PAGE_SIZE));
+        url.searchParams.set("strkey", routeNo || "");
+        url.searchParams.set("strdiv", "1");
+
+        const data = await fetchTopisJson<{ resultList?: SbusRouteListItem[] }>(
+            url.toString(),
+            "selectVApiTotalstr.do",
+            {timeoutMs: 8000}
+        );
+        const list = data?.resultList ?? [];
+
+        for (const item of list) {
+            if (String(item.strdiv) !== "1") continue;
+            const tpCode = String(item.strtp ?? "");
+            if (!routeNo && !ALLOWED_SEOUL_ROUTE_TYPES.has(tpCode)) {
+                continue;
+            }
+
+            const routeId = String(item.strid ?? "").trim();
+            if (!routeId || seenIds.has(routeId)) continue;
+            seenIds.add(routeId);
+
+            const rawName = String(item.strnm || item.strno || "").trim();
+            const cleanedName = rawName.replace(/\([^)]*\)/g, "").trim() || String(item.strno || "").trim();
+            if (!cleanedName) continue;
+
+            const endpoints = String(item.strkey || "").split(/\s+-\s+|\s*~\s*/);
+            const startnodenm = endpoints[0]?.trim() || UI_TEXT.ROUTE_MAP.ORIGIN;
+            const endnodenm = endpoints[1]?.trim() || endpoints[0]?.trim() || UI_TEXT.ROUTE_MAP.DESTINATION;
+
+            routes.push({
+                routeid: routeId,
+                routeno: cleanedName,
+                routetp: mapSeoulRouteType(tpCode),
+                startnodenm,
+                endnodenm,
+            });
         }
 
-        const routeId = String(item.strid ?? "").trim();
-        if (!routeId) continue;
-
-        const rawName = String(item.strnm || item.strno || "").trim();
-        const cleanedName = rawName.replace(/\([^)]*\)/g, "").trim() || String(item.strno || "").trim();
-        if (!cleanedName) continue;
-
-        const endpoints = String(item.strkey || "").split(/\s+-\s+|\s*~\s*/);
-        const startnodenm = endpoints[0]?.trim() || UI_TEXT.ROUTE_MAP.ORIGIN;
-        const endnodenm = endpoints[1]?.trim() || endpoints[0]?.trim() || UI_TEXT.ROUTE_MAP.DESTINATION;
-
-        routes.push({
-            routeid: routeId,
-            routeno: cleanedName,
-            routetp: mapSeoulRouteType(tpCode),
-            startnodenm,
-            endnodenm,
-        });
+        if (list.length < SEOUL_ROUTES_PAGE_SIZE) {
+            break;
+        }
     }
 
     return routes;

@@ -3,8 +3,7 @@ import {type NextRequest, NextResponse} from "next/server";
 import {findNearestCity, getCityByCode, NATIONWIDE_CITIES, searchCities} from "@entities/city";
 import {UI_TEXT} from "@shared/config/locale";
 
-export const dynamic = "force-static";
-export const revalidate = 86400; // 24 hours ISR
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
     try {

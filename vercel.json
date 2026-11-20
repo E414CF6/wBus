@@ -2,13 +2,15 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "schedules": {
     "daily-refresh": {
-      "schedule": "0 19 * * *",
+      "schedule": "0 4 * * *",
+      "timezone": "Asia/Seoul",
       "path": "/api/cron/refresh?target=schedule",
       "requestMethod": "GET"
     },
     "weekly-route-sync": {
-      "schedule": "15 19 * * 0",
-      "path": "/api/cron/refresh?target=routes&mode=quick",
+      "schedule": "15 4 * * 0,3",
+      "timezone": "Asia/Seoul",
+      "path": "/api/cron/refresh?target=routes&mode=full&resume=true",
       "requestMethod": "GET"
     }
   }

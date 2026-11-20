@@ -3,7 +3,13 @@ import "server-only";
 import {createHash} from "crypto";
 import {revalidatePath} from "next/cache";
 
-import {CacheManager, getCachedOrFetch, invalidateCacheByPrefixAsync, setCached} from "@shared/cache";
+import {
+    CacheManager,
+    getCachedOrFetch,
+    invalidateCacheByPrefixAsync,
+    setCached,
+    trackBackgroundPromise
+} from "@shared/cache";
 import {artifactStore} from "@shared/cache/artifactStore";
 import {distributedCache} from "@shared/cache/distributedCache";
 import {UI_TEXT} from "@shared/config/locale";
@@ -18,6 +24,8 @@ import {
 
 const DEFAULT_CITY_CODE = "32020"; // Wonju
 const ROUTES_CRON_STATUS_KEY = "cron:status:routes";
+const getRoutesCursorKey = (cityCode: string) => `cron:cursor:routes:${cityCode}`;
+const getRoutesSyncLockKey = (cityCode: string) => `lock:routes:refresh:${cityCode}`;
 const DEFAULT_SYNC_TIME_BUDGET_MS = 45_000;
 
 interface NormalizedStopInput {
@@ -80,6 +88,7 @@ export interface RouteRefreshOptions {
     mode?: "quick" | "full";
     maxRoutes?: number;
     cursor?: number;
+    resume?: boolean;
     timeBudgetMs?: number;
     force?: boolean;
 }
@@ -226,159 +235,209 @@ export async function refreshRouteData(
         };
     }
 
-    console.log(`[RouteSyncService] Starting route sync (cityCode: ${cityCode}, mode: ${options.mode || "standard"}, cursor: ${options.cursor ?? 0})...`);
-
-    const {fetchCityRoutes, fetchRouteStops} = await import("@entities/bus");
-
-    // 1. Fetch route list via unified TAGO/Seoul client (key rotation + rate limiting + circuit breaker)
-    let allRoutes: TagoRouteItem[];
-    try {
-        allRoutes = await fetchCityRoutes(cityCode);
-    } catch (err) {
-        console.error("[RouteSyncService] Failed to fetch route list:", err);
+    const redisConfigured = distributedCache.getStatus().configured;
+    const lockKey = getRoutesSyncLockKey(cityCode);
+    const lockToken = redisConfigured
+        ? await distributedCache.acquireLock(lockKey, 65)
+        : null;
+    if (redisConfigured && !lockToken) {
         return {
             success: false,
             refreshed: false,
-            message: UI_TEXT.API.ROUTE_SYNC.FETCH_LIST_FAILED(err instanceof Error ? err.message : String(err)),
+            message: "Route sync already in progress on another worker",
             totalRoutesProcessed: 0,
             routesCount: 0,
-            nextCursor: options.cursor ?? 0,
+            nextCursor: options.cursor ?? null,
             elapsedMs: Date.now() - startTime,
         };
     }
 
-    let targetRoutes = allRoutes.filter((r) => {
-        const routeNo = String(r.routeno || "");
-        if (!routeNo || routeNo === "UNKNOWN") return false;
-        if (options.routeFilter && routeNo !== options.routeFilter) return false;
-        return true;
-    });
+    try {
+        console.log(`[RouteSyncService] Starting route sync (cityCode: ${cityCode}, mode: ${options.mode || "standard"}, cursor: ${options.cursor ?? (options.resume ? "resume" : 0)})...`);
 
-    if (isQuick) {
-        // In quick mode, prioritize key Yonsei and main arterial routes
-        const priorityRoutes = ["30", "34", "34-1", "2", "2-1", "100", "51"];
-        targetRoutes = targetRoutes.filter((r) => priorityRoutes.includes(String(r.routeno)));
-    } else if (options.maxRoutes && options.maxRoutes > 0 && options.cursor === undefined) {
-        targetRoutes = targetRoutes.slice(0, options.maxRoutes);
-    }
+        const {fetchCityRoutes, fetchRouteStops} = await import("@entities/bus");
 
-    const totalCandidates = targetRoutes.length;
-    const startCursor = Math.max(0, Math.min(options.cursor ?? 0, totalCandidates));
-    const endLimit = options.maxRoutes && options.maxRoutes > 0 && options.cursor !== undefined
-        ? Math.min(startCursor + options.maxRoutes, totalCandidates)
-        : totalCandidates;
-
-    console.log(`[RouteSyncService] Identified ${totalCandidates} candidate routes (processing [${startCursor}..${endLimit})).`);
-
-    const routeMapping: Record<string, string[]> = {};
-    const CONCURRENCY = 3;
-    let processedCount = 0;
-    let skippedUnchanged = 0;
-    let nextCursor: number | null = null;
-
-    // 2. Fetch stops & assemble polylines within execution budget
-    for (let i = startCursor; i < endLimit; i += CONCURRENCY) {
-        if (i > startCursor && Date.now() - startTime >= timeBudgetMs) {
-            nextCursor = i;
-            console.warn(`[RouteSyncService] Time budget (${timeBudgetMs}ms) reached; pausing at cursor=${nextCursor}/${endLimit}.`);
-            break;
+        // 1. Fetch route list via unified TAGO/Seoul client (key rotation + rate limiting + circuit breaker)
+        let allRoutes: TagoRouteItem[];
+        try {
+            allRoutes = await fetchCityRoutes(cityCode);
+        } catch (err) {
+            console.error("[RouteSyncService] Failed to fetch route list:", err);
+            return {
+                success: false,
+                refreshed: false,
+                message: UI_TEXT.API.ROUTE_SYNC.FETCH_LIST_FAILED(err instanceof Error ? err.message : String(err)),
+                totalRoutesProcessed: 0,
+                routesCount: 0,
+                nextCursor: options.cursor ?? 0,
+                elapsedMs: Date.now() - startTime,
+            };
         }
 
-        const chunk = targetRoutes.slice(i, Math.min(i + CONCURRENCY, endLimit));
-        await Promise.all(
-            chunk.map(async (route) => {
-                const routeId = String(route.routeid);
-                const routeNo = String(route.routeno);
-
-                try {
-                    const stopItems = await fetchRouteStops(routeId, cityCode);
-                    if (stopItems.length === 0) return;
-
-                    const stops = normalizeStopItems(stopItems);
-                    if (!routeMapping[routeNo]) routeMapping[routeNo] = [];
-                    if (!routeMapping[routeNo].includes(routeId)) routeMapping[routeNo].push(routeId);
-
-                    const stopsHash = computeStopsHash(stops);
-                    const namespacedKey = `routes/${cityCode}/${routeId}.json`;
-
-                    if (!options.force) {
-                        const existing = await artifactStore.getJson<GeoPolyline>(namespacedKey).catch(() => null);
-                        if (existing?.data?.stops_hash && existing.data.stops_hash === stopsHash && !existing.data.is_fallback) {
-                            skippedUnchanged++;
-                            return;
-                        }
-                    }
-
-                    const polylineData = await assembleRoutePolyline({
-                        routeId,
-                        routeNo,
-                        stops,
-                        stopsHash,
-                    });
-                    if (!polylineData) return;
-
-                    // Do not persist degraded spline-only fallbacks so transient OSRM failures self-heal
-                    if (!polylineData.is_fallback) {
-                        await artifactStore.putJson(namespacedKey, polylineData, {pretty: false});
-                        setCached(`polyline:${cityCode}:${routeId}`, polylineData);
-                        void distributedCache.set(
-                            `polyline:${cityCode}:${routeId}`,
-                            {data: polylineData, timestamp: Date.now()},
-                            7 * 86400
-                        ).catch(() => false);
-                    }
-
-                    processedCount++;
-                } catch (err) {
-                    console.error(`[RouteSyncService] Error fetching route ${routeNo} (${routeId}):`, err);
-                }
+        let targetRoutes = allRoutes
+            .filter((r) => {
+                const routeNo = String(r.routeno || "");
+                if (!routeNo || routeNo === "UNKNOWN") return false;
+                if (options.routeFilter && routeNo !== options.routeFilter) return false;
+                return true;
             })
+            .sort((a, b) => String(a.routeid).localeCompare(String(b.routeid)));
+
+        let resolvedCursor = options.cursor;
+        if (resolvedCursor === undefined && options.resume && !options.routeFilter) {
+            const savedCursor = await distributedCache.get<number>(getRoutesCursorKey(cityCode), 400).catch(() => null);
+            if (typeof savedCursor === "number" && Number.isFinite(savedCursor) && savedCursor >= 0) {
+                resolvedCursor = savedCursor;
+            }
+        }
+
+        if (isQuick) {
+            // In quick mode, prioritize key Yonsei and main arterial routes
+            const priorityRoutes = ["30", "34", "34-1", "2", "2-1", "100", "51"];
+            targetRoutes = targetRoutes.filter((r) => priorityRoutes.includes(String(r.routeno)));
+        } else if (options.maxRoutes && options.maxRoutes > 0 && resolvedCursor === undefined) {
+            targetRoutes = targetRoutes.slice(0, options.maxRoutes);
+        }
+
+        const totalCandidates = targetRoutes.length;
+        const normalizedCursor =
+            typeof resolvedCursor === "number" && resolvedCursor >= totalCandidates ? 0 : (resolvedCursor ?? 0);
+        const startCursor = Math.max(0, Math.min(normalizedCursor, totalCandidates));
+        const endLimit = options.maxRoutes && options.maxRoutes > 0 && resolvedCursor !== undefined
+            ? Math.min(startCursor + options.maxRoutes, totalCandidates)
+            : totalCandidates;
+
+        console.log(`[RouteSyncService] Identified ${totalCandidates} candidate routes (processing [${startCursor}..${endLimit})).`);
+
+        const routeMapping: Record<string, string[]> = {};
+        const CONCURRENCY = 3;
+        let processedCount = 0;
+        let skippedUnchanged = 0;
+        let nextCursor: number | null = null;
+
+        // 2. Fetch stops & assemble polylines within execution budget
+        for (let i = startCursor; i < endLimit; i += CONCURRENCY) {
+            if (i > startCursor && Date.now() - startTime >= timeBudgetMs) {
+                nextCursor = i;
+                console.warn(`[RouteSyncService] Time budget (${timeBudgetMs}ms) reached; pausing at cursor=${nextCursor}/${endLimit}.`);
+                break;
+            }
+
+            const chunk = targetRoutes.slice(i, Math.min(i + CONCURRENCY, endLimit));
+            await Promise.all(
+                chunk.map(async (route) => {
+                    const routeId = String(route.routeid);
+                    const routeNo = String(route.routeno);
+
+                    try {
+                        const stopItems = await fetchRouteStops(routeId, cityCode);
+                        if (stopItems.length === 0) return;
+
+                        const stops = normalizeStopItems(stopItems);
+                        if (!routeMapping[routeNo]) routeMapping[routeNo] = [];
+                        if (!routeMapping[routeNo].includes(routeId)) routeMapping[routeNo].push(routeId);
+
+                        const stopsHash = computeStopsHash(stops);
+                        const namespacedKey = `routes/${cityCode}/${routeId}.json`;
+
+                        if (!options.force) {
+                            const existing = await artifactStore.getJson<GeoPolyline>(namespacedKey).catch(() => null);
+                            if (existing?.data?.stops_hash && existing.data.stops_hash === stopsHash && !existing.data.is_fallback) {
+                                skippedUnchanged++;
+                                return;
+                            }
+                        }
+
+                        const polylineData = await assembleRoutePolyline({
+                            routeId,
+                            routeNo,
+                            stops,
+                            stopsHash,
+                        });
+                        if (!polylineData) return;
+
+                        // Do not persist degraded spline-only fallbacks so transient OSRM failures self-heal
+                        if (!polylineData.is_fallback) {
+                            await Promise.all([
+                                artifactStore.putJson(namespacedKey, polylineData, {pretty: false}),
+                                distributedCache.set(
+                                    `polyline:${cityCode}:${routeId}`,
+                                    {data: polylineData, timestamp: Date.now()},
+                                    7 * 86400
+                                ).catch(() => false),
+                            ]);
+                            setCached(`polyline:${cityCode}:${routeId}`, polylineData);
+                        }
+
+                        processedCount++;
+                    } catch (err) {
+                        console.error(`[RouteSyncService] Error fetching route ${routeNo} (${routeId}):`, err);
+                    }
+                })
+            );
+        }
+
+        if (nextCursor === null && endLimit < totalCandidates) {
+            nextCursor = endLimit;
+        }
+
+        if (options.resume && !options.routeFilter && !isQuick) {
+            if (nextCursor !== null) {
+                await distributedCache.set(getRoutesCursorKey(cityCode), nextCursor, 14 * 86400).catch(() => false);
+            } else {
+                await distributedCache.del(getRoutesCursorKey(cityCode)).catch(() => false);
+            }
+        }
+
+        // Invalidate stale L1 + Redis caches for the synced city when routes were rebuilt
+        polylineGenerationCache.clear();
+        if (processedCount > 0) {
+            await invalidateCacheByPrefixAsync([
+                `routes:${cityCode}:`,
+                `bus-stops:${cityCode}:`,
+                `route-stops:${cityCode}:`,
+            ]);
+        }
+        try {
+            revalidatePath("/api/route-stops");
+        } catch {
+            // Silently ignore outside Next.js request context
+        }
+
+        const elapsedMs = Date.now() - startTime;
+        console.log(
+            `[RouteSyncService] Route sync finished in ${elapsedMs}ms (${processedCount} updated, ${skippedUnchanged} unchanged, nextCursor=${nextCursor}).`
         );
+
+        await distributedCache.set(ROUTES_CRON_STATUS_KEY, {
+            ok: true,
+            cityCode,
+            mode: options.mode || "standard",
+            updatedAt: new Date().toISOString(),
+            totalRoutesProcessed: processedCount,
+            skippedUnchanged,
+            totalCandidates,
+            startCursor,
+            nextCursor,
+            elapsedMs,
+        }, 14 * 24 * 60 * 60).catch(() => false);
+
+        return {
+            success: true,
+            refreshed: processedCount > 0,
+            message: UI_TEXT.API.ROUTE_SYNC.COMPLETE(processedCount, skippedUnchanged),
+            totalRoutesProcessed: processedCount,
+            skippedUnchanged,
+            totalCandidates,
+            nextCursor,
+            routesCount: Object.keys(routeMapping).length,
+            elapsedMs,
+        };
+    } finally {
+        if (lockToken) {
+            await distributedCache.releaseLock(lockKey, lockToken);
+        }
     }
-
-    if (nextCursor === null && endLimit < totalCandidates) {
-        nextCursor = endLimit;
-    }
-
-    // Invalidate stale L1 + Redis caches when routes were rebuilt
-    polylineGenerationCache.clear();
-    if (processedCount > 0) {
-        await invalidateCacheByPrefixAsync(["routes:", "bus-stops:", "route-stops:"]);
-    }
-    try {
-        revalidatePath("/api/route-stops");
-    } catch {
-        // Silently ignore outside Next.js request context
-    }
-
-    const elapsedMs = Date.now() - startTime;
-    console.log(
-        `[RouteSyncService] Route sync finished in ${elapsedMs}ms (${processedCount} updated, ${skippedUnchanged} unchanged, nextCursor=${nextCursor}).`
-    );
-
-    await distributedCache.set(ROUTES_CRON_STATUS_KEY, {
-        ok: true,
-        cityCode,
-        mode: options.mode || "standard",
-        updatedAt: new Date().toISOString(),
-        totalRoutesProcessed: processedCount,
-        skippedUnchanged,
-        totalCandidates,
-        nextCursor,
-        elapsedMs,
-    }, 14 * 24 * 60 * 60).catch(() => false);
-
-    return {
-        success: true,
-        refreshed: processedCount > 0,
-        message: UI_TEXT.API.ROUTE_SYNC.COMPLETE(processedCount, skippedUnchanged),
-        totalRoutesProcessed: processedCount,
-        skippedUnchanged,
-        totalCandidates,
-        nextCursor,
-        routesCount: Object.keys(routeMapping).length,
-        elapsedMs,
-    };
 }
 
 /**
@@ -399,13 +458,17 @@ export async function generateSingleRoutePolyline(
                 try {
                     const {fetchSeoulRoutePolyline} = await import("@entities/bus");
                     const seoulPolyline = await fetchSeoulRoutePolyline(routeId, routeNo);
-                    if (seoulPolyline && seoulPolyline.stops?.length) {
+                    if (seoulPolyline && seoulPolyline.stops?.length && !seoulPolyline.is_fallback) {
                         setCached(`polyline:${cityCode}:${routeId}`, seoulPolyline);
-                        void distributedCache.set(
-                            `polyline:${cityCode}:${routeId}`,
-                            {data: seoulPolyline, timestamp: Date.now()},
-                            7 * 86400
-                        ).catch(() => false);
+                        trackBackgroundPromise(
+                            distributedCache.set(
+                                `polyline:${cityCode}:${routeId}`,
+                                {data: seoulPolyline, timestamp: Date.now()},
+                                7 * 86400
+                            )
+                        );
+                    }
+                    if (seoulPolyline && seoulPolyline.stops?.length) {
                         return seoulPolyline;
                     }
                 } catch {
@@ -460,11 +523,13 @@ export async function generateSingleRoutePolyline(
             // Only persist road-snapped polylines; skip durable caching if OSRM fell back to spline
             if (!polylineData.is_fallback) {
                 setCached(`polyline:${cityCode}:${routeId}`, polylineData);
-                void distributedCache.set(
-                    `polyline:${cityCode}:${routeId}`,
-                    {data: polylineData, timestamp: Date.now()},
-                    7 * 86400
-                ).catch(() => false);
+                trackBackgroundPromise(
+                    distributedCache.set(
+                        `polyline:${cityCode}:${routeId}`,
+                        {data: polylineData, timestamp: Date.now()},
+                        7 * 86400
+                    )
+                );
 
                 // Persist minified GeoPolyline under namespaced /tmp + Vercel Blob key
                 await artifactStore.putJson(`routes/${cityCode}/${routeId}.json`, polylineData, {pretty: false});

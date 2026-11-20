@@ -33,6 +33,7 @@ async function handleRefresh(request: NextRequest) {
         const cursor = cursorParam ? parseInt(cursorParam, 10) : undefined;
         const timeBudgetParam = searchParams.get("timeBudgetMs");
         const timeBudgetMs = timeBudgetParam ? parseInt(timeBudgetParam, 10) : undefined;
+        const resume = searchParams.get("resume") === "true";
         const force = searchParams.get("force") === "true";
 
         const result = await refreshRouteData({
@@ -41,6 +42,7 @@ async function handleRefresh(request: NextRequest) {
             cityCode,
             maxRoutes: Number.isFinite(maxRoutes) ? maxRoutes : undefined,
             cursor: Number.isFinite(cursor) ? cursor : undefined,
+            resume,
             timeBudgetMs: Number.isFinite(timeBudgetMs) ? timeBudgetMs : undefined,
             force,
         });

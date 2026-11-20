@@ -3,6 +3,7 @@ import "server-only";
 import fs from "fs";
 import path from "path";
 
+import {trackBackgroundPromise} from "@shared/cache/background";
 import {distributedCache} from "@shared/cache/distributedCache";
 import {artifactStore} from "@shared/cache/artifactStore";
 // Re-export canonical time utilities
@@ -46,9 +47,11 @@ const lastActiveBusTimestamp = new Map<string, number>();
 // Mapping from canonical cityCode:routeId -> human-readable routeNo (e.g. "32020:WJB251000068" -> "30")
 const routeIdToNumberMap = new Map<string, string>();
 const UNRESOLVED_RETRY_MS = 5 * 60 * 1000;
+const WARM_TTL_MS = 10 * 60 * 1000; // Re-validate schedule & route-id-map across serverless containers every 10 min
 const unresolvedRouteIds = new Map<string, number>();
 const warmPromises = new Map<string, Promise<void>>();
-const warmedCities = new Set<string>();
+const warmedCityTimestamps = new Map<string, number>();
+let loadedScheduleUpdatedAt: string | null = null;
 
 export {
     formatMinutesToTime,
@@ -112,17 +115,21 @@ export function registerCityRoutesMapping(
         }
     }
     if (Object.keys(mapping).length > 0) {
-        void distributedCache.set(`route-id-map:${normalizedCity}`, mapping, 7 * 86400);
+        trackBackgroundPromise(distributedCache.set(`route-id-map:${normalizedCity}`, mapping, 7 * 86400));
     }
 }
 
 /**
  * Asynchronously warms schedule.json and routeId->routeNo mappings from durable/distributed stores
- * so cold serverless containers resolve serial route IDs (e.g. WJB...) accurately.
+ * so cold serverless containers resolve serial route IDs (e.g. WJB...) accurately, and periodically
+ * re-validates schedule.json freshness across containers.
  */
 export async function warmRouteWindowResources(cityCode: string = "32020"): Promise<void> {
     const normalizedCity = cityCode || "32020";
-    if (warmedCities.has(normalizedCity)) return;
+    const lastWarmedAt = warmedCityTimestamps.get(normalizedCity);
+    if (lastWarmedAt !== undefined && Date.now() - lastWarmedAt < WARM_TTL_MS) {
+        return;
+    }
 
     const existing = warmPromises.get(normalizedCity);
     if (existing) return existing;
@@ -131,11 +138,10 @@ export async function warmRouteWindowResources(cityCode: string = "32020"): Prom
         try {
             const [mapFromRedis, scheduleStored] = await Promise.all([
                 distributedCache.get<Record<string, string>>(`route-id-map:${normalizedCity}`, 350),
-                !cachedScheduleJson
-                    ? artifactStore.getJson<{
-                        routes: Array<{ routeNo: string; firstBus: string; lastBus: string; dayType?: string }>;
-                    }>("schedule.json")
-                    : Promise.resolve(null),
+                artifactStore.getJson<{
+                    updatedAt?: string;
+                    routes: Array<{ routeNo: string; firstBus: string; lastBus: string; dayType?: string }>;
+                }>("schedule.json"),
             ]);
 
             if (mapFromRedis && typeof mapFromRedis === "object") {
@@ -147,10 +153,14 @@ export async function warmRouteWindowResources(cityCode: string = "32020"): Prom
             }
 
             if (scheduleStored?.data?.routes?.length) {
-                cachedScheduleJson = scheduleStored.data;
-                windowCache.clear();
+                const incomingUpdatedAt = scheduleStored.data.updatedAt ?? null;
+                if (!cachedScheduleJson || (incomingUpdatedAt && incomingUpdatedAt !== loadedScheduleUpdatedAt)) {
+                    cachedScheduleJson = scheduleStored.data;
+                    loadedScheduleUpdatedAt = incomingUpdatedAt;
+                    windowCache.clear();
+                }
             }
-            warmedCities.add(normalizedCity);
+            warmedCityTimestamps.set(normalizedCity, Date.now());
         } catch {
             // Non-blocking warm-up
         } finally {
@@ -217,8 +227,9 @@ export function resolveRouteNumber(routeIdOrNo: string, cityCode: string = "3202
  */
 export function invalidateRouteWindowScheduleCache(): void {
     cachedScheduleJson = null;
+    loadedScheduleUpdatedAt = null;
     windowCache.clear();
-    warmedCities.clear();
+    warmedCityTimestamps.clear();
 }
 
 export function getRouteWindowStats() {
@@ -227,7 +238,7 @@ export function getRouteWindowStats() {
         windowCacheEntries: windowCache.size,
         unresolvedCount: unresolvedRouteIds.size,
         hasScheduleLoaded: Boolean(cachedScheduleJson?.routes?.length),
-        warmedCities: Array.from(warmedCities),
+        warmedCities: Array.from(warmedCityTimestamps.keys()),
     };
 }
 
@@ -264,6 +275,7 @@ export function getClientPollHint(
  * Load static schedule database if available locally
  */
 let cachedScheduleJson: {
+    updatedAt?: string;
     routes: Array<{ routeNo: string; firstBus: string; lastBus: string; dayType?: string }>
 } | null = null;
 
@@ -279,6 +291,7 @@ function getScheduleData() {
             if (fs.existsSync(/*turbopackIgnore: true*/ localPath)) {
                 const raw = fs.readFileSync(/*turbopackIgnore: true*/ localPath, "utf-8");
                 cachedScheduleJson = JSON.parse(raw);
+                loadedScheduleUpdatedAt = cachedScheduleJson?.updatedAt ?? null;
                 return cachedScheduleJson;
             }
         } catch {

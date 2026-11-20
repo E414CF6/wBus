@@ -395,6 +395,10 @@ export class BusLocationStore {
     private resolvePollHintDelayMs(metas: Array<CachedData<BusItem[]>["meta"]>): number | null {
         const validMetas = metas.filter((m): m is NonNullable<CachedData<BusItem[]>["meta"]> => Boolean(m));
         if (validMetas.length === 0) return null;
+        // Never throttle down to out-of-service sleep when upstream lookup/telemetry is degraded
+        if (validMetas.some((m) => m.degraded === true)) {
+            return null;
+        }
         // If any route is actively in service, use normal fast polling
         if (validMetas.some((m) => m.inService === true)) {
             return null;

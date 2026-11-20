@@ -99,4 +99,29 @@ describe("distributedCache & L1/L2 integration", () => {
         expect(fetcher).toHaveBeenCalledTimes(2);
         delByPrefixSpy.mockRestore();
     });
+
+    it("prevents an invalidated in-flight fetch from repopulating L1 or L2 cache", async () => {
+        const setSpy = vi.spyOn(distributedCache, "set").mockResolvedValue(true);
+        let resolveFirst!: (val: string[]) => void;
+        const firstPromise = new Promise<string[]>((resolve) => {
+            resolveFirst = resolve;
+        });
+
+        const firstCall = getCachedOrFetch("dist-test:race:1", () => firstPromise, {
+            ttlSeconds: 60,
+            useDistributedCache: true,
+        });
+
+        await invalidateCacheByPrefixAsync(["dist-test:race:"]);
+        resolveFirst(["stale-inflight"]);
+        const staleResult = await firstCall;
+        expect(staleResult.data).toEqual(["stale-inflight"]);
+        expect(setSpy).not.toHaveBeenCalled();
+
+        const freshFetcher = vi.fn().mockResolvedValue(["fresh-after-invalidation"]);
+        const freshResult = await getCachedOrFetch("dist-test:race:1", freshFetcher, {ttlSeconds: 60});
+        expect(freshResult.data).toEqual(["fresh-after-invalidation"]);
+        expect(freshFetcher).toHaveBeenCalledTimes(1);
+        setSpy.mockRestore();
+    });
 });

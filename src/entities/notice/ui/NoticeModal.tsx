@@ -331,7 +331,15 @@ interface DetailViewProps {
 }
 
 function DetailView({id, notice, loading, error, onSelectNotice, onBack}: DetailViewProps) {
-    const sanitizedContent = useMemo(() => sanitizeHtml(notice?.content), [notice?.content]);
+    const sanitizedContent = useMemo(() => {
+        const clean = sanitizeHtml(notice?.content);
+        if (!clean) return clean;
+        return clean.replace(
+            /(<img\b[^>]*\bsrc=["'])http:\/\/its\.wonju\.go\.kr(\/[^"']*)(["'])/gi,
+            (_m, prefix: string, assetPath: string, suffix: string) =>
+                `${prefix}/api/notice/asset?path=${encodeURIComponent(assetPath)}${suffix}`
+        );
+    }, [notice?.content]);
 
     if (loading) {
         return (

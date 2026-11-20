@@ -4,6 +4,7 @@ import {
     DEFAULT_STALE_IF_ERROR_SECONDS,
     DEFAULT_STALE_WHILE_REVALIDATE_SECONDS,
 } from "@shared/cache/cachePolicy";
+import {trackBackgroundPromise} from "@shared/cache/background";
 import {distributedCache} from "@shared/cache/distributedCache";
 import type {CachedData} from "./types";
 
@@ -29,7 +30,42 @@ const MEMORY_CACHE_MAX_KEYS = 2000;
 const REVALIDATE_COOLDOWN_MS = 1000;
 const REVALIDATE_STATE_TTL_MS = 60 * 60 * 1000;
 
-const pendingRequests = new Map<string, Promise<CachedData<unknown>>>();
+interface PendingRequestEntry {
+    promise: Promise<CachedData<unknown>>;
+    cancelled: boolean;
+}
+
+interface InvalidationRecord {
+    target: string;
+    isPrefix: boolean;
+    seq: number;
+}
+
+const MAX_INVALIDATION_HISTORY = 200;
+let invalidationSeq = 0;
+const invalidationHistory: InvalidationRecord[] = [];
+
+function recordInvalidation(target: string, isPrefix: boolean): void {
+    invalidationSeq += 1;
+    invalidationHistory.push({target, isPrefix, seq: invalidationSeq});
+    if (invalidationHistory.length > MAX_INVALIDATION_HISTORY) {
+        invalidationHistory.shift();
+    }
+}
+
+function wasInvalidatedSince(key: string, sinceSeq: number): boolean {
+    if (sinceSeq >= invalidationSeq) return false;
+    for (let i = invalidationHistory.length - 1; i >= 0; i--) {
+        const rec = invalidationHistory[i];
+        if (rec.seq <= sinceSeq) break;
+        if (rec.isPrefix ? key.startsWith(rec.target) : key === rec.target) {
+            return true;
+        }
+    }
+    return false;
+}
+
+const pendingRequests = new Map<string, PendingRequestEntry>();
 const memoryCache = new CacheManager<CachedData<unknown>>(MEMORY_CACHE_MAX_KEYS);
 const revalidateState = new CacheManager<{ nextAllowedAt: number; failureCount: number }>({
     maxSize: MEMORY_CACHE_MAX_KEYS,
@@ -78,23 +114,36 @@ export function getL1CacheMetrics() {
     };
 }
 
+function removeMatchingL1Entries(prefixList: string[]): number {
+    let removed = 0;
+    for (const prefix of prefixList) {
+        recordInvalidation(prefix, true);
+    }
+    for (const key of memoryCache.keys()) {
+        if (prefixList.some((p) => key.startsWith(p))) {
+            memoryCache.delete(key);
+            revalidateState.delete(key);
+            removed++;
+        }
+    }
+    for (const [key, entry] of pendingRequests.entries()) {
+        if (prefixList.some((p) => key.startsWith(p))) {
+            entry.cancelled = true;
+            pendingRequests.delete(key);
+        }
+    }
+    return removed;
+}
+
 /**
  * Invalidate all L1 cache entries whose key starts with any of the given prefixes,
  * and schedule distributed L2 cache prefix deletion when configured.
  */
 export function invalidateCacheByPrefix(prefixes: string | string[]): number {
     const prefixList = Array.isArray(prefixes) ? prefixes : [prefixes];
-    let removed = 0;
-    for (const key of memoryCache.keys()) {
-        if (prefixList.some((p) => key.startsWith(p))) {
-            memoryCache.delete(key);
-            pendingRequests.delete(key);
-            revalidateState.delete(key);
-            removed++;
-        }
-    }
+    const removed = removeMatchingL1Entries(prefixList);
     for (const prefix of prefixList) {
-        void distributedCache.delByPrefix(prefix);
+        trackBackgroundPromise(distributedCache.delByPrefix(prefix));
     }
     return removed;
 }
@@ -107,15 +156,7 @@ export async function invalidateCacheByPrefixAsync(prefixes: string | string[]):
     l2Removed: number;
 }> {
     const prefixList = Array.isArray(prefixes) ? prefixes : [prefixes];
-    let l1Removed = 0;
-    for (const key of memoryCache.keys()) {
-        if (prefixList.some((p) => key.startsWith(p))) {
-            memoryCache.delete(key);
-            pendingRequests.delete(key);
-            revalidateState.delete(key);
-            l1Removed++;
-        }
-    }
+    const l1Removed = removeMatchingL1Entries(prefixList);
     const counts = await Promise.all(prefixList.map((p) => distributedCache.delByPrefix(p)));
     const l2Removed = counts.reduce((sum, n) => sum + n, 0);
     return {l1Removed, l2Removed};
@@ -125,8 +166,13 @@ export async function invalidateCacheByPrefixAsync(prefixes: string | string[]):
  * Invalidate a single key in both L1 memory and L2 distributed Redis cache.
  */
 export async function invalidateCacheKey(key: string): Promise<void> {
+    recordInvalidation(key, false);
     memoryCache.delete(key);
-    pendingRequests.delete(key);
+    const pending = pendingRequests.get(key);
+    if (pending) {
+        pending.cancelled = true;
+        pendingRequests.delete(key);
+    }
     revalidateState.delete(key);
     await distributedCache.del(key);
 }
@@ -146,6 +192,7 @@ export async function getCachedOrFetch<T>(
     const shouldCache = options?.shouldCache;
     const useDistributedCache = options?.useDistributedCache ?? false;
     const l2TimeoutMs = options?.l2TimeoutMs ?? 400;
+    const callSeq = invalidationSeq;
     const now = Date.now();
 
     // 1. Check L1 Memory Cache
@@ -232,6 +279,7 @@ export async function getCachedOrFetch<T>(
         return fetchAndStore(key, fetcher, ttlSeconds, staleFallback, staleIfErrorSeconds, shouldCache, {
             swrSeconds,
             useDistributedCache,
+            callSeq,
         });
     }
 
@@ -240,6 +288,7 @@ export async function getCachedOrFetch<T>(
     return fetchAndStore(key, fetcher, ttlSeconds, memEntry, staleIfErrorSeconds, shouldCache, {
         swrSeconds,
         useDistributedCache,
+        callSeq,
     });
 }
 
@@ -250,15 +299,22 @@ async function fetchAndStore<T>(
     staleFallback?: CachedData<T>,
     staleIfErrorSeconds = DEFAULT_STALE_IF_ERROR_SECONDS,
     shouldCache?: (data: T) => boolean,
-    l2Options?: { swrSeconds?: number; useDistributedCache?: boolean }
+    l2Options?: { swrSeconds?: number; useDistributedCache?: boolean; callSeq?: number }
 ): Promise<CachedData<T>> {
-    const existing = pendingRequests.get(key) as Promise<CachedData<T>> | undefined;
-    if (existing) return existing;
+    const existing = pendingRequests.get(key);
+    if (existing) return existing.promise as Promise<CachedData<T>>;
+
+    const startSeq = l2Options?.callSeq ?? invalidationSeq;
+    const pendingEntry: PendingRequestEntry = {
+        promise: null as unknown as Promise<CachedData<unknown>>,
+        cancelled: false,
+    };
 
     const requestPromise = (async (): Promise<CachedData<T>> => {
         try {
             const data = await fetcher();
-            const cacheable = shouldCache ? shouldCache(data) : true;
+            const invalidated = pendingEntry.cancelled || wasInvalidatedSince(key, startSeq);
+            const cacheable = !invalidated && (shouldCache ? shouldCache(data) : true);
             const entry: CachedData<T> = {
                 data,
                 timestamp: Date.now(),
@@ -295,11 +351,14 @@ async function fetchAndStore<T>(
             }
             throw err;
         } finally {
-            pendingRequests.delete(key);
+            if (pendingRequests.get(key) === pendingEntry) {
+                pendingRequests.delete(key);
+            }
         }
     })();
 
-    pendingRequests.set(key, requestPromise as Promise<CachedData<unknown>>);
+    pendingEntry.promise = requestPromise as Promise<CachedData<unknown>>;
+    pendingRequests.set(key, pendingEntry);
     return requestPromise;
 }
 
@@ -320,7 +379,7 @@ function triggerBackgroundRevalidate<T>(
     state.nextAllowedAt = now + REVALIDATE_COOLDOWN_MS;
     revalidateState.set(key, state);
 
-    fetchAndStore(
+    const revalidationPromise = fetchAndStore(
         key,
         fetcher,
         ttlSeconds,
@@ -341,4 +400,6 @@ function triggerBackgroundRevalidate<T>(
             revalidateState.set(key, state);
             console.warn(`[CacheManager] Background revalidation failed for '${key}':`, err);
         });
+
+    trackBackgroundPromise(revalidationPromise);
 }

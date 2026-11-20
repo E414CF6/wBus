@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
                         routes: [],
                         ...(routeName ? {routeName} : {}),
                         degraded,
-                        inService: false,
+                        ...(!degraded ? {inService: false} : {}),
                     },
                 },
                 {

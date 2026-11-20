@@ -127,7 +127,7 @@ export const distributedCache = {
         }
     },
 
-    async delByPrefix(prefix: string, maxIterations = 20): Promise<number> {
+    async delByPrefix(prefix: string, maxIterations = 100): Promise<number> {
         const client = getRedisClient();
         if (!client || !prefix) return 0;
 

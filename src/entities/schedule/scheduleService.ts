@@ -8,6 +8,7 @@ import type {CacheMetadata, RouteDataset} from "./types";
 import {invalidateRouteWindowScheduleCache} from "@entities/bus/api/routeWindow";
 import {RouteDatasetSchema} from "@shared/api/schemas";
 import {artifactStore} from "@shared/cache/artifactStore";
+import {trackBackgroundPromise} from "@shared/cache/background";
 import {distributedCache} from "@shared/cache/distributedCache";
 import {LOCALE, UI_TEXT} from "@shared/config/locale";
 import {type ScrapeDatasetResult, scrapeWonjuBusDataset, scrapeWonjuItsYonsei} from "./itsScraper";
@@ -15,6 +16,8 @@ import {type ScrapeDatasetResult, scrapeWonjuBusDataset, scrapeWonjuItsYonsei} f
 export const SCHEDULE_CACHE_TAG = "schedule";
 const SCHEDULE_REDIS_KEY = "schedule:wonju";
 const SCHEDULE_CRON_STATUS_KEY = "cron:status:schedule";
+const SCHEDULE_REFRESH_LOCK_KEY = "lock:schedule:refresh";
+const SCHEDULE_COOLDOWN_KEY = "cooldown:schedule:refresh";
 export const MIN_REFRESH_INTERVAL_DAYS = 3;
 export const MIN_REFRESH_INTERVAL_MS = MIN_REFRESH_INTERVAL_DAYS * 24 * 60 * 60 * 1000;
 export const FORCE_REFRESH_COOLDOWN_MS = 30 * 1000; // 30 seconds cooldown between non-admin force refreshes
@@ -24,6 +27,9 @@ let inMemoryCache: {
     data: RouteDataset; meta: CacheMetadata; timestamp: number;
 } | null = null;
 let lastScrapeAttemptTime = 0;
+let inflightRefreshPromise: Promise<{
+    refreshed: boolean; message: string; data: RouteDataset; meta: CacheMetadata;
+}> | null = null;
 
 function getLocalCachePath(): string {
     return path.join(process.cwd(), "public", "schedule.json");
@@ -256,7 +262,7 @@ async function fetchScheduleDataset(): Promise<{ data: RouteDataset; meta: Cache
         // Seed Redis if missing or stale compared to Blob/bundled snapshot
         const redisTime = redisResult?.updatedAt ? new Date(redisResult.updatedAt).getTime() : 0;
         if (existingTime > redisTime) {
-            void distributedCache.set(SCHEDULE_REDIS_KEY, existing, 24 * 60 * 60).catch(() => false);
+            trackBackgroundPromise(distributedCache.set(SCHEDULE_REDIS_KEY, existing, 24 * 60 * 60));
         }
         return {data: existing, meta: getCacheMetadata(existing)};
     }
@@ -324,6 +330,19 @@ export async function getOrFetchSchedule(force = false): Promise<{ data: RouteDa
 export async function refreshSchedule(force = true, isAuthorized = false): Promise<{
     refreshed: boolean; message: string; data: RouteDataset; meta: CacheMetadata;
 }> {
+    if (inflightRefreshPromise) {
+        return inflightRefreshPromise;
+    }
+
+    inflightRefreshPromise = executeRefreshSchedule(force, isAuthorized).finally(() => {
+        inflightRefreshPromise = null;
+    });
+    return inflightRefreshPromise;
+}
+
+async function executeRefreshSchedule(force = true, isAuthorized = false): Promise<{
+    refreshed: boolean; message: string; data: RouteDataset; meta: CacheMetadata;
+}> {
     const current = await getOrFetchSchedule(false);
     const meta = current.meta;
 
@@ -335,18 +354,46 @@ export async function refreshSchedule(force = true, isAuthorized = false): Promi
 
     const now = Date.now();
     if (shouldScrape) {
-        // Enforce cooldown between scrape attempts
-        if (!isAuthorized && now - lastScrapeAttemptTime < FORCE_REFRESH_COOLDOWN_MS) {
-            const waitSec = Math.ceil((FORCE_REFRESH_COOLDOWN_MS - (now - lastScrapeAttemptTime)) / 1000);
+        // Enforce cooldown between scrape attempts (in-memory + distributed Redis)
+        if (!isAuthorized) {
+            let cooldownSince = lastScrapeAttemptTime;
+            const redisCooldown = await distributedCache.get<number>(SCHEDULE_COOLDOWN_KEY, 300).catch(() => null);
+            if (typeof redisCooldown === "number" && redisCooldown > cooldownSince) {
+                cooldownSince = redisCooldown;
+            }
+            if (now - cooldownSince < FORCE_REFRESH_COOLDOWN_MS) {
+                const waitSec = Math.ceil((FORCE_REFRESH_COOLDOWN_MS - (now - cooldownSince)) / 1000);
+                return {
+                    refreshed: false,
+                    message: UI_TEXT.API.SCHEDULE.COOLDOWN_WAIT(waitSec),
+                    data: current.data,
+                    meta: current.meta,
+                };
+            }
+        }
+
+        const redisConfigured = distributedCache.getStatus().configured;
+        const lockToken = redisConfigured
+            ? await distributedCache.acquireLock(SCHEDULE_REFRESH_LOCK_KEY, 75)
+            : null;
+        if (redisConfigured && !lockToken) {
             return {
                 refreshed: false,
-                message: UI_TEXT.API.SCHEDULE.COOLDOWN_WAIT(waitSec),
+                message: UI_TEXT.API.SCHEDULE.COOLDOWN_WAIT(Math.ceil(FORCE_REFRESH_COOLDOWN_MS / 1000)),
                 data: current.data,
                 meta: current.meta,
             };
         }
 
         lastScrapeAttemptTime = now;
+        if (!isAuthorized) {
+            void distributedCache.set(
+                SCHEDULE_COOLDOWN_KEY,
+                now,
+                Math.ceil(FORCE_REFRESH_COOLDOWN_MS / 1000)
+            ).catch(() => false);
+        }
+
         console.log("[ScheduleService] Triggering Wonju ITS scraper for timetable update...");
         try {
             const scraped = await scrapeWonjuBusDataset();
@@ -404,6 +451,10 @@ export async function refreshSchedule(force = true, isAuthorized = false): Promi
                 data: current.data,
                 meta: current.meta,
             };
+        } finally {
+            if (lockToken) {
+                await distributedCache.releaseLock(SCHEDULE_REFRESH_LOCK_KEY, lockToken);
+            }
         }
     }
 

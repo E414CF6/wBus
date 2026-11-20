@@ -291,4 +291,26 @@ describe("BusLocationStore", () => {
         expect(snapshot.data).toHaveLength(1);
         expect(snapshot.data[0].vehicleno).toBe("7777");
     });
+
+    it("does not throttle polling down to 60s when response meta is degraded", async () => {
+        vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+            ok: true,
+            json: async () => ({
+                data: [],
+                timestamp: Date.now(),
+                meta: {
+                    status: "fallback",
+                    layer: "edge",
+                    degraded: true,
+                    inService: false,
+                },
+            }),
+        } as Response);
+
+        const store = new BusLocationStore(["1001"], "degraded-poll-test", "32020");
+        store.manualReconnect();
+        await vi.advanceTimersByTimeAsync(20);
+
+        expect(store.getCurrentPollDelayMs()).toBeLessThan(60_000);
+    });
 });

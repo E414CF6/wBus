@@ -72,6 +72,7 @@ async function handleUnifiedCron(request: NextRequest) {
             const cursor = cursorParam ? parseInt(cursorParam, 10) : undefined;
             const maxRoutesParam = searchParams.get("maxRoutes");
             const maxRoutes = maxRoutesParam ? parseInt(maxRoutesParam, 10) : undefined;
+            const resume = searchParams.get("resume") === "true";
             const force = searchParams.get("force") === "true";
 
             try {
@@ -80,6 +81,7 @@ async function handleUnifiedCron(request: NextRequest) {
                     cityCode,
                     cursor: Number.isFinite(cursor) ? cursor : undefined,
                     maxRoutes: Number.isFinite(maxRoutes) ? maxRoutes : undefined,
+                    resume,
                     force,
                 });
             } catch (routeErr) {

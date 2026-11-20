@@ -1,4 +1,4 @@
-import {getCachedOrFetch, setCached} from "@shared/cache";
+import {getCachedOrFetch, setCached, trackBackgroundPromise} from "@shared/cache";
 import {artifactStore} from "@shared/cache/artifactStore";
 import {calculatePolylineMeters} from "@entities/route/polylineChunker";
 import type {GeoPolyline} from "@entities/route/types";
@@ -94,6 +94,9 @@ export async function getSeoulRouteBundle(routeId: string): Promise<{
                 }
             }
 
+            const hasRoadPath = downCoords.length >= 2 || upCoords.length >= 2;
+            const isFallback = !hasRoadPath;
+
             const finalDown: [number, number][] =
                 downCoords.length >= 2
                     ? downCoords
@@ -130,6 +133,7 @@ export async function getSeoulRouteBundle(routeId: string): Promise<{
                 total_dist: totalDist,
                 up_polyline: finalUp,
                 down_polyline: finalDown,
+                ...(isFallback ? {is_fallback: true} : {}),
                 stops: stops.map((s) => ({
                     id: s.nodeid,
                     name: s.nodenm,
@@ -142,9 +146,9 @@ export async function getSeoulRouteBundle(routeId: string): Promise<{
             };
 
             setCached(`bus-stops:${SEOUL_CITY_CODE}:${routeId}`, stops);
-            setCached(`polyline:${SEOUL_CITY_CODE}:${routeId}`, polyline);
-            if (stops.length > 0) {
-                void artifactStore.putJson(`routes/${SEOUL_CITY_CODE}/${routeId}.json`, polyline);
+            if (stops.length > 0 && !isFallback) {
+                setCached(`polyline:${SEOUL_CITY_CODE}:${routeId}`, polyline);
+                trackBackgroundPromise(artifactStore.putJson(`routes/${SEOUL_CITY_CODE}/${routeId}.json`, polyline));
             }
 
             return {stops, polyline, routeName};
@@ -154,7 +158,7 @@ export async function getSeoulRouteBundle(routeId: string): Promise<{
             staleWhileRevalidateSeconds: 86400,
             staleIfErrorSeconds: 86400,
             useDistributedCache: true,
-            shouldCache: (b) => Boolean(b?.stops?.length),
+            shouldCache: (b) => Boolean(b?.stops?.length && b?.polyline && !b.polyline.is_fallback),
         }
     );
 

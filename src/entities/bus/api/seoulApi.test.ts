@@ -334,5 +334,90 @@ describe("Seoul Bus OpenAPI (ws.bus.go.kr / TOPIS) parser & normalizer", () => {
                 global.fetch = originalFetch;
             }
         });
+
+        it("marks Seoul route polyline as is_fallback when TOPIS resultRoutePath is empty", async () => {
+            const {fetchSeoulRoutePolyline} = await import("./seoulApi");
+            const originalFetch = global.fetch;
+            global.fetch = async () =>
+                new Response(
+                    JSON.stringify({
+                        ResponseVO: {
+                            code: 0,
+                            data: {
+                                resultRouteStop: [
+                                    {
+                                        busRouteId: "100100999",
+                                        busRouteNm: "999",
+                                        seq: 1,
+                                        station: "1001",
+                                        stationName: "기점",
+                                        gpsX: "126.978",
+                                        gpsY: "37.566",
+                                    },
+                                    {
+                                        busRouteId: "100100999",
+                                        busRouteNm: "999",
+                                        seq: 2,
+                                        station: "1002",
+                                        stationName: "종점",
+                                        gpsX: "126.988",
+                                        gpsY: "37.576",
+                                    },
+                                ],
+                                resultRoutePath: [],
+                            },
+                        },
+                    }),
+                    {status: 200, headers: {"Content-Type": "application/json"}}
+                );
+
+            try {
+                const poly = await fetchSeoulRoutePolyline("100100999");
+                expect(poly).not.toBeNull();
+                expect(poly?.is_fallback).toBe(true);
+            } finally {
+                global.fetch = originalFetch;
+            }
+        });
+
+        it("paginates fetchSeoulCityRoutes when TOPIS returns full page of 2000 items", async () => {
+            const {fetchSeoulCityRoutes} = await import("./seoulApi");
+            const originalFetch = global.fetch;
+            const requestedPages: string[] = [];
+
+            global.fetch = async (input) => {
+                const url = new URL(String(input));
+                const pageIndex = url.searchParams.get("pageIndex") || "1";
+                requestedPages.push(pageIndex);
+                const items = pageIndex === "1"
+                    ? Array.from({length: 2000}, (_, idx) => ({
+                        strdiv: "1",
+                        strid: `1001${String(idx).padStart(5, "0")}`,
+                        strnm: `${idx + 1}`,
+                        strtp: "3",
+                        strkey: "A - B",
+                    }))
+                    : [{
+                        strdiv: "1",
+                        strid: "100199999",
+                        strnm: "9999",
+                        strtp: "3",
+                        strkey: "C - D",
+                    }];
+
+                return new Response(
+                    JSON.stringify({ResponseVO: {code: 0, data: {resultList: items}}}),
+                    {status: 200, headers: {"Content-Type": "application/json"}}
+                );
+            };
+
+            try {
+                const routes = await fetchSeoulCityRoutes();
+                expect(requestedPages).toEqual(["1", "2"]);
+                expect(routes).toHaveLength(2001);
+            } finally {
+                global.fetch = originalFetch;
+            }
+        });
     });
 });

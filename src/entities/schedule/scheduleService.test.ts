@@ -1,14 +1,19 @@
-import {describe, expect, it} from "vitest";
+import {afterEach, describe, expect, it, vi} from "vitest";
+import {distributedCache} from "@shared/cache/distributedCache";
 import {
     getCacheMetadata,
     mergeRouteDatasets,
     MIN_REFRESH_INTERVAL_DAYS,
     MIN_REFRESH_INTERVAL_MS,
     reconcileScrapedDataset,
+    refreshSchedule,
 } from "./scheduleService";
 import type {RouteDataset} from "./types";
 
 describe("scheduleService caching and refresh interval", () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
     it("has MIN_REFRESH_INTERVAL_DAYS set to 3", () => {
         expect(MIN_REFRESH_INTERVAL_DAYS).toBe(3);
         expect(MIN_REFRESH_INTERVAL_MS).toBe(3 * 24 * 60 * 60 * 1000);
@@ -227,6 +232,17 @@ describe("scheduleService caching and refresh interval", () => {
         expect(res.dataset?.routes[0].timetable[0].originDepTime).toBe("05:55");
         expect(res.dataset?.routes[1].timetable).toHaveLength(1);
         expect(res.dataset?.routes[1].timetable[0].originDepTime).toBe("06:10");
+    });
+
+    it("skips scraping when distributed Redis lock is held by another worker", async () => {
+        vi.spyOn(distributedCache, "getStatus").mockReturnValue({configured: true, backend: "upstash"});
+        const lockSpy = vi.spyOn(distributedCache, "acquireLock").mockResolvedValueOnce(null);
+        const fetchSpy = vi.spyOn(globalThis, "fetch");
+
+        const res = await refreshSchedule(true, true);
+        expect(res.refreshed).toBe(false);
+        expect(lockSpy).toHaveBeenCalledWith("lock:schedule:refresh", 75);
+        expect(fetchSpy).not.toHaveBeenCalled();
     });
 });
 

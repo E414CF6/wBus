@@ -292,6 +292,7 @@ export async function getCachedCityRoutes(cityCode: string, routeNo?: string) {
     }
 
     let allResult: CachedData<RawCityRoute[]>;
+    let allLookupFailed = false;
     try {
         allResult = await getCachedOrFetch<RawCityRoute[]>(
             allCacheKey,
@@ -308,7 +309,12 @@ export async function getCachedCityRoutes(cityCode: string, routeNo?: string) {
             registerCityRoutesMapping(cityCode, allResult.data);
         }
     } catch {
-        allResult = {data: [], timestamp: Date.now()};
+        allLookupFailed = true;
+        allResult = {
+            data: [],
+            timestamp: Date.now(),
+            meta: {status: "fallback", layer: "origin", ageMs: 0, degraded: true},
+        };
     }
 
     if (!routeNo) {
@@ -321,15 +327,35 @@ export async function getCachedCityRoutes(cityCode: string, routeNo?: string) {
     }
 
     const specificKey = `routes:${cityCode}:${routeNo}`;
-    return getCachedOrFetch<RawCityRoute[]>(
-        specificKey,
-        async () => {
-            const fetched = await fetchCityRoutes(cityCode, routeNo);
-            return fetched && fetched.length > 0 ? fetched : [];
-        },
-        {
-            ...ROUTE_CACHE_OPTIONS,
-            shouldCache: (items) => Array.isArray(items) && items.length > 0,
+    try {
+        const specificResult = await getCachedOrFetch<RawCityRoute[]>(
+            specificKey,
+            async () => {
+                const fetched = await fetchCityRoutes(cityCode, routeNo);
+                return fetched && fetched.length > 0 ? fetched : [];
+            },
+            {
+                ...ROUTE_CACHE_OPTIONS,
+                shouldCache: (items) => Array.isArray(items) && items.length > 0,
+            }
+        );
+        if (allLookupFailed && (!specificResult.data || specificResult.data.length === 0)) {
+            return {
+                ...specificResult,
+                meta: {
+                    status: "fallback",
+                    layer: specificResult.meta?.layer ?? "origin",
+                    ageMs: specificResult.meta?.ageMs ?? 0,
+                    degraded: true,
+                },
+            };
         }
-    );
+        return specificResult;
+    } catch {
+        return {
+            data: [],
+            timestamp: Date.now(),
+            meta: {status: "fallback", layer: "origin", ageMs: 0, degraded: true},
+        };
+    }
 }

@@ -120,4 +120,22 @@ describe("GET /api/bus", () => {
         expect(body.meta.routes).toEqual(["WJB251000068", "WJB251000376"]);
         expect(mockGetCachedCityRoutes).not.toHaveBeenCalled();
     });
+
+    it("omits inService:false when routeName lookup failed in degraded state", async () => {
+        mockGetCachedCityRoutes.mockResolvedValue({
+            data: [],
+            timestamp: Date.now(),
+            meta: {status: "fallback", layer: "origin", ageMs: 0, degraded: true},
+        });
+
+        const req = new NextRequest("http://localhost:3000/api/bus?routeName=30&cityCode=32020");
+        const res = await GET(req);
+        expect(res.status).toBe(200);
+
+        const body = await res.json();
+        expect(body.meta.degraded).toBe(true);
+        expect(body.meta.inService).toBeUndefined();
+        expect(res.headers.get("X-Cache-Degraded")).toBe("true");
+        expect(res.headers.get("Cache-Control")).toBe("no-store");
+    });
 });

@@ -7,7 +7,11 @@ const {
     mockGetJson,
     mockPutJson,
     mockDistributedSet,
-    mockDistributedGet
+    mockDistributedGet,
+    mockDistributedDel,
+    mockAcquireLock,
+    mockReleaseLock,
+    mockGetStatus,
 } = vi.hoisted(() => ({
     mockFetchCityRoutes: vi.fn(),
     mockFetchRouteStops: vi.fn(),
@@ -15,6 +19,10 @@ const {
     mockPutJson: vi.fn(),
     mockDistributedSet: vi.fn().mockResolvedValue(true),
     mockDistributedGet: vi.fn().mockResolvedValue(null),
+    mockDistributedDel: vi.fn().mockResolvedValue(true),
+    mockAcquireLock: vi.fn().mockResolvedValue("lock-1"),
+    mockReleaseLock: vi.fn().mockResolvedValue(undefined),
+    mockGetStatus: vi.fn().mockReturnValue({configured: false, backend: "memory"}),
 }));
 
 vi.mock("@entities/bus", () => ({
@@ -33,9 +41,11 @@ vi.mock("@shared/cache/distributedCache", () => ({
     distributedCache: {
         get: mockDistributedGet,
         set: mockDistributedSet,
-        del: vi.fn().mockResolvedValue(false),
+        del: mockDistributedDel,
         delByPrefix: vi.fn().mockResolvedValue(0),
-        getStatus: vi.fn().mockReturnValue({configured: false, backend: "memory"}),
+        acquireLock: mockAcquireLock,
+        releaseLock: mockReleaseLock,
+        getStatus: mockGetStatus,
     },
 }));
 
@@ -107,5 +117,47 @@ describe("routeSyncService incremental sync & cursor pagination", () => {
         expect(page1.totalCandidates).toBe(3);
         expect(page1.skippedUnchanged).toBe(2);
         expect(page1.nextCursor).toBe(2);
+    });
+
+    it("resumes from saved Redis cursor and clears cursor once split cycle completes", async () => {
+        vi.stubEnv("DATA_GO_KR_SERVICE_KEY", "test-key");
+        mockGetStatus.mockReturnValue({configured: true, backend: "upstash"});
+        mockAcquireLock.mockResolvedValueOnce("tok-resume");
+        mockDistributedGet.mockResolvedValueOnce(2); // saved cursor = 2
+
+        const routes = [
+            {routeid: "WJB1", routeno: "1"},
+            {routeid: "WJB2", routeno: "2"},
+            {routeid: "WJB3", routeno: "3"},
+        ];
+        const stops = [
+            {nodeid: "S1", nodenm: "기점", nodeord: 1, nodeno: "101", gpslati: 37.341, gpslong: 127.912, updowncd: 0},
+            {nodeid: "S2", nodenm: "종점", nodeord: 2, nodeno: "102", gpslati: 37.345, gpslong: 127.918, updowncd: 0},
+        ];
+        const hash = computeStopsHash(stops);
+
+        mockFetchCityRoutes.mockResolvedValueOnce(routes);
+        mockFetchRouteStops.mockResolvedValue(stops);
+        mockGetJson.mockResolvedValue({source: "blob", data: {stops_hash: hash}});
+
+        const res = await refreshRouteData({cityCode: "32020", mode: "full", resume: true, maxRoutes: 2});
+        expect(res.success).toBe(true);
+        expect(res.skippedUnchanged).toBe(1); // Only WJB3 remained at cursor=2
+        expect(res.nextCursor).toBeNull();
+        expect(mockDistributedDel).toHaveBeenCalledWith("cron:cursor:routes:32020");
+        expect(mockReleaseLock).toHaveBeenCalledWith("lock:routes:refresh:32020", "tok-resume");
+        mockGetStatus.mockReturnValue({configured: false, backend: "memory"});
+    });
+
+    it("aborts cleanly when distributed lock is held by another worker", async () => {
+        vi.stubEnv("DATA_GO_KR_SERVICE_KEY", "test-key");
+        mockGetStatus.mockReturnValue({configured: true, backend: "upstash"});
+        mockAcquireLock.mockResolvedValueOnce(null);
+
+        const res = await refreshRouteData({cityCode: "32020", mode: "full"});
+        expect(res.success).toBe(false);
+        expect(res.refreshed).toBe(false);
+        expect(mockFetchCityRoutes).not.toHaveBeenCalled();
+        mockGetStatus.mockReturnValue({configured: false, backend: "memory"});
     });
 });

@@ -171,7 +171,11 @@ export async function fetchDetail(detailId: string, csrfToken: string, cookieStr
     return parseItsDetailHtml(html);
 }
 
-export async function scrapeWonjuBusDataset(filterYonseiOnly = false): Promise<ScrapeDatasetResult> {
+export async function scrapeWonjuBusDataset(
+    filterYonseiOnly = false,
+    timeBudgetMs = 48_000
+): Promise<ScrapeDatasetResult> {
+    const startTime = Date.now();
     const {csrfToken, cookieStr, routes} = await fetchList(filterYonseiOnly);
     const failedRouteNos: string[] = [];
     let successCount = 0;
@@ -179,7 +183,17 @@ export async function scrapeWonjuBusDataset(filterYonseiOnly = false): Promise<S
     // Gently fetch timetables in chunks of 2 with small throttling to avoid overloading legacy server
     const CHUNK_SIZE = 2;
     for (let i = 0; i < routes.length; i += CHUNK_SIZE) {
-        const chunk = routes.slice(i, i + CHUNK_SIZE);
+        const chunk = routes.slice(i, Math.min(i + CHUNK_SIZE, routes.length));
+        if (i > 0 && Date.now() - startTime >= timeBudgetMs) {
+            for (let j = i; j < routes.length; j++) {
+                failedRouteNos.push(routes[j].rawNo);
+            }
+            console.warn(
+                `[ItsScraper] Time budget (${timeBudgetMs}ms) reached at ${i}/${routes.length} routes; remaining timetables will be preserved from snapshot.`
+            );
+            break;
+        }
+
         await Promise.all(chunk.map(async (r) => {
             try {
                 r.timetable = await fetchDetail(r.id, csrfToken, cookieStr);

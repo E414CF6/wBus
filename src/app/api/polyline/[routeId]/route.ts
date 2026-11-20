@@ -1,7 +1,7 @@
 import {type NextRequest, NextResponse} from "next/server";
 import {getCityBoundaryErrorMessage} from "@entities/city";
 import {ApiValidators} from "@shared/api";
-import {type CachedData, distributedCache, peekCached, setCached} from "@shared/cache";
+import {type CachedData, distributedCache, peekCached, setCached, trackBackgroundPromise} from "@shared/cache";
 import {artifactStore} from "@shared/cache/artifactStore";
 import {generateSingleRoutePolyline} from "@entities/route/routeSyncService";
 import type {GeoPolyline} from "@entities/route/types";
@@ -80,7 +80,10 @@ export async function GET(
             (await artifactStore.getJson<GeoPolyline>(`routes/${routeId}.json`));
         if (stored?.data && !stored.data.is_fallback && Array.isArray(stored.data.stops) && stored.data.stops.length > 0) {
             setCached(cacheKey, stored.data);
-            void distributedCache.set(cacheKey, {data: stored.data, timestamp: Date.now()}, 7 * 86400);
+            trackBackgroundPromise(distributedCache.set(cacheKey, {
+                data: stored.data,
+                timestamp: Date.now()
+            }, 7 * 86400));
             return NextResponse.json(stored.data, {
                 status: 200,
                 headers: {
@@ -109,7 +112,7 @@ export async function GET(
                 });
             }
             setCached(cacheKey, polyline);
-            void distributedCache.set(cacheKey, {data: polyline, timestamp: Date.now()}, 7 * 86400);
+            trackBackgroundPromise(distributedCache.set(cacheKey, {data: polyline, timestamp: Date.now()}, 7 * 86400));
             return NextResponse.json(polyline, {
                 status: 200,
                 headers: {

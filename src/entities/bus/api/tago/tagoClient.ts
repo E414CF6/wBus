@@ -256,18 +256,22 @@ export async function fetchAllPublicApiPages<T>(
     params: Record<string, string>,
     priority: number,
     urlHint: string,
-    maxPages = 4
+    maxPages = 20
 ): Promise<T[]> {
     const firstPage = await fetchPublicApi<PublicApiResponseEnvelope<T>>(path, {...params, pageNo: "1"}, {priority});
     const collected = extractItems(firstPage, urlHint);
     const totalCount = Number(firstPage.response?.body?.totalCount ?? collected.length);
-    const pageSize = Number(params.numOfRows ?? firstPage.response?.body?.numOfRows ?? 1024);
+    const responsePageSize = Number(firstPage.response?.body?.numOfRows);
+    const effectivePageSize =
+        Number.isFinite(responsePageSize) && responsePageSize > 0
+            ? Math.min(responsePageSize, collected.length > 0 ? collected.length : responsePageSize)
+            : (collected.length > 0 ? collected.length : Number(params.numOfRows ?? 1024));
 
-    if (!Number.isFinite(totalCount) || totalCount <= collected.length || pageSize <= 0) {
+    if (!Number.isFinite(totalCount) || totalCount <= collected.length || effectivePageSize <= 0 || collected.length === 0) {
         return collected;
     }
 
-    const totalPages = Math.min(maxPages, Math.ceil(totalCount / pageSize));
+    const totalPages = Math.min(maxPages, Math.ceil(totalCount / effectivePageSize));
     if (totalPages <= 1) return collected;
 
     for (let page = 2; page <= totalPages; page++) {
@@ -279,6 +283,7 @@ export async function fetchAllPublicApiPages<T>(
         const pageItems = extractItems(nextPage, `${urlHint}:p${page}`);
         if (pageItems.length === 0) break;
         collected.push(...pageItems);
+        if (collected.length >= totalCount) break;
     }
 
     return collected;
