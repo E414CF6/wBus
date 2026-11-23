@@ -10,8 +10,6 @@
 
 > *A high-performance, real-time public transit tracking platform supporting 140 municipalities across South Korea.*
 
----
-
 ## Table of Contents
 
 - [Overview](#-overview)
@@ -29,8 +27,6 @@
 - [Automated Sync](#-automated-sync)
 - [Testing & Quality](#-testing--quality)
 - [License](#-license)
-
----
 
 ## 📋 Overview
 
@@ -52,8 +48,6 @@ Core engineering pillars:
    **Vercel Blob** durable artifact storage, in-flight request coalescing, and Zod runtime validation.
 4. **Adaptive Client Efficiency**: Stores bulky stop metadata asynchronously in **IndexedDB**, chunks multi-route
    telemetry polling, and pauses background loops via the Page Visibility API.
-
----
 
 ## ✨ Key Features
 
@@ -116,8 +110,6 @@ Core engineering pillars:
       `localStorage`.
     - Service Worker (`public/sw.js`) static asset pre-caching and PWA Add-to-Home-Screen support.
 
----
-
 ## 🏗️ System Architecture
 
 `wBus` follows **Feature-Sliced Design (FSD)** principles to maintain strict, unidirectional module dependencies: `app`
@@ -169,8 +161,6 @@ src/
     └── MapContainer/             # MapLibre GL canvas, bus markers, stop pins, route polylines
 ```
 
----
-
 ## 🔄 Data Pipeline
 
 ```mermaid
@@ -211,8 +201,6 @@ flowchart TD
     PHYSICS --> MAP
 ```
 
----
-
 ## 🛠️ Technology Stack
 
 | Layer | Technology | Version | Role & Highlights |
@@ -229,8 +217,6 @@ flowchart TD
 | **Routing Engine** | OSRM (Driving Profile) | — | Stop-sequence road matching and fallback spline synthesis |
 | **Testing** | Vitest | `5.0.5` (`5.1.0`) | 53 test suites / 406 unit & integration tests |
 | **Observability** | Vercel Analytics / Speed Insights | `2.0.1` / `2.0.0` | Real-user Core Web Vitals & telemetry |
-
----
 
 ## 📡 API Reference
 
@@ -253,8 +239,6 @@ All API handlers apply standardized error handling, Zod/parameter validation, an
 | `GET/POST` | `/api/routes/refresh` | Manual route catalog & geometry resynchronization | `no-store` (Bearer Auth) |
 | `GET/POST` | `/api/schedule/refresh` | On-demand schedule snapshot refresh & tag invalidation | `no-store` (Bearer Auth) |
 | `GET/POST` | `/api/cron/refresh?target=...` | Scheduled Vercel refresh endpoint (`auto`, `routes`, `all`) | `no-store` (Bearer Auth) |
-
----
 
 ## ⚡️ Getting Started
 
@@ -314,8 +298,6 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
----
-
 ## 📜 Available Scripts
 
 ```bash
@@ -341,8 +323,6 @@ npm run typecheck
 npm run test
 ```
 
----
-
 ## ⏱️ Automated Sync
 
 `wBus` uses **Vercel Schedules** configured in [`vercel.json`](./vercel.json) to synchronize datasets automatically:
@@ -360,8 +340,6 @@ curl -X GET "https://your-domain.vercel.app/api/cron/refresh?target=all" \
   -H "Authorization: Bearer YOUR_CRON_SECRET"
 ```
 
----
-
 ## 🧪 Testing & Quality
 
 `wBus` passes **53 test files (406 tests)** under Vitest covering:
@@ -376,8 +354,6 @@ curl -X GET "https://your-domain.vercel.app/api/cron/refresh?target=all" \
 ```bash
 npm run test && npm run typecheck && npm run lint
 ```
-
----
 
 ## 📄 License
 
