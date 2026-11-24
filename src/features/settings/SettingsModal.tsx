@@ -13,8 +13,9 @@ import {UI_TEXT} from "@shared/config/locale";
 import {DeviceSettingsTab} from "./tabs/DeviceSettingsTab";
 import {GeneralSettingsTab} from "./tabs/GeneralSettingsTab";
 import {MapSettingsTab} from "./tabs/MapSettingsTab";
+import packageJson from "../../../package.json";
 
-const APP_VERSION = "26.13.0";
+const APP_VERSION = packageJson.version;
 
 export interface SettingsModalProps {
     isOpen: boolean;

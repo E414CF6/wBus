@@ -23,8 +23,15 @@ export const RouteGridCard: React.FC<RouteGridCardProps> = ({
                                                                 isBookmarked,
                                                                 onSelect,
                                                                 onToggleBookmark,
-                                                            }) => (
-    <div
+                                                            }) => {
+    const normalizedRouteTitle = `${meta.origin} ↔ ${meta.destination}`;
+    const strippedDescription = meta.description?.replace(/^\[[^\]]+\]\s*/, "").trim();
+    const showDistinctDescription = Boolean(
+        strippedDescription && strippedDescription !== normalizedRouteTitle
+    );
+
+    return (
+        <div
         className={`cv-auto-route group relative flex items-start justify-between rounded-2xl transition-all duration-200 select-none border ${
             isSelected
                 ? `bg-slate-50/90 dark:bg-white/[0.06] ${meta.colorTheme.border} shadow-md ring-2 ${meta.colorTheme.ring || "ring-blue-500/30"}`
@@ -64,7 +71,7 @@ export const RouteGridCard: React.FC<RouteGridCardProps> = ({
                 >
                     {meta.origin} <span className="text-slate-400 font-normal">↔</span> {meta.destination}
                 </div>
-                {meta.description && (
+                {showDistinctDescription && (
                     <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate mt-1">
                         {meta.description}
                     </p>
@@ -104,4 +111,5 @@ export const RouteGridCard: React.FC<RouteGridCardProps> = ({
             </button>
         </div>
     </div>
-);
+    );
+};

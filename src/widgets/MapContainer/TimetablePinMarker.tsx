@@ -255,10 +255,19 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                 }}
             >
                 <div
-                    className="relative flex flex-col items-center select-none group transition-transform duration-200 hover:scale-105 active:scale-95"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleOpenPinSchedule("ORIGIN");
+                        }
+                    }}
+                    className="relative flex flex-col items-center select-none group transition-transform duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded-full"
                     title={UI_TEXT.TIMETABLE.PIN_ORIGIN_TITLE(originStop.nodenm)}
-                    aria-label={UI_TEXT.TIMETABLE.PIN_ORIGIN_TITLE(originStop.nodenm)}
                 >
+                    <span className="sr-only"> ({originStop.nodenm})</span>
                     {/* Pin Pill Label */}
                     <div
                         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full shadow-lg border backdrop-blur-xl bg-white/94 dark:bg-slate-900/94 text-slate-900 dark:text-slate-50 border-blue-500/35 dark:border-blue-400/35 shadow-slate-900/12 dark:shadow-black/50 ring-1 ring-black/5 dark:ring-white/10">
@@ -316,10 +325,19 @@ export const TimetablePinMarker = memo(function TimetablePinMarker({
                     }}
                 >
                     <div
-                        className="relative flex flex-col items-center select-none group transition-transform duration-200 hover:scale-105 active:scale-95"
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleOpenPinSchedule("DEST");
+                            }
+                        }}
+                        className="relative flex flex-col items-center select-none group transition-transform duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 rounded-full"
                         title={UI_TEXT.TIMETABLE.PIN_DEST_TITLE(turningStop.nodenm)}
-                        aria-label={UI_TEXT.TIMETABLE.PIN_DEST_TITLE(turningStop.nodenm)}
                     >
+                        <span className="sr-only"> ({turningStop.nodenm})</span>
                         {/* Pin Pill Label */}
                         <div
                             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full shadow-lg border backdrop-blur-xl bg-white/94 dark:bg-slate-900/94 text-slate-900 dark:text-slate-50 border-amber-500/35 dark:border-amber-400/35 shadow-slate-900/12 dark:shadow-black/50 ring-1 ring-black/5 dark:ring-white/10">

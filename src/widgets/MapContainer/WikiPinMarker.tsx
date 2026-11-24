@@ -250,14 +250,23 @@ export const WikiPinMarker = memo(function WikiPinMarker({
 
                             {/* Movable interactive Pill */}
                             <div
+                                role="button"
+                                tabIndex={isPinPlacementMode ? -1 : 0}
                                 style={{
                                     transform: `translate3d(${offset.dx}px, ${offset.dy}px, 0)`,
                                     pointerEvents: isPinPlacementMode ? "none" : "auto",
                                     cursor: isPinPlacementMode ? "crosshair" : "pointer",
                                 }}
-                                className="flex flex-col items-center group transition-transform duration-200 hover:scale-105 active:scale-95"
+                                className="flex flex-col items-center group transition-transform duration-200 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 rounded-full"
                                 title={page.title}
-                                aria-label={UI_TEXT.WIKI.PIN_MARKER.ARIA(page.title)}
+                                onKeyDown={(e) => {
+                                    if (isPinPlacementMode) return;
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handlePinClick(page);
+                                    }
+                                }}
                                 onClick={(e) => {
                                     if (isPinPlacementMode) return;
                                     e.stopPropagation();
@@ -330,6 +339,7 @@ export const WikiPinMarker = memo(function WikiPinMarker({
                                             className="font-extrabold text-[11px] max-w-[144px] truncate text-slate-900 dark:text-white">
                                             {page.title}
                                         </span>
+                                        <span className="sr-only"> ({UI_TEXT.WIKI.PIN_MARKER.ARIA(page.title)})</span>
                                     </div>
                                 </div>
 

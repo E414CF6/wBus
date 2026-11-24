@@ -68,6 +68,10 @@ export interface ModalProps {
      * 하위 모달이 열린 동안 히스토리/스크롤 락은 유지한 채 현재 다이얼로그 표시와 키보드 이벤트를 일시 중단합니다.
      */
     suspended?: boolean;
+    /**
+     * 모바일(<640px)에서 headerActions가 길 경우 제목 영역을 압박하지 않도록 2행으로 줄바꿈 배치합니다.
+     */
+    stackHeaderActionsOnMobile?: boolean;
 }
 
 const emptySubscribe = () => () => {
@@ -99,6 +103,7 @@ export function Modal({
                           queryKey = "modal",
                           enableHistory = true,
                           suspended = false,
+                          stackHeaderActionsOnMobile = false,
                           children,
                       }: ModalProps) {
     const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
@@ -178,9 +183,13 @@ export function Modal({
                 {/* Header */}
                 {hasHeader && (
                     <div
-                        className={`flex items-start sm:items-center justify-between gap-2 px-4 sm:px-6 pt-3.5 pb-3 border-b border-black/5 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] shrink-0 ${headerClassName}`}
+                        className={`flex ${
+                            stackHeaderActionsOnMobile && headerActions
+                                ? "flex-wrap sm:flex-nowrap"
+                                : ""
+                        } items-start sm:items-center justify-between gap-2 px-4 sm:px-6 pt-3.5 pb-3 border-b border-black/5 dark:border-white/5 bg-slate-50/70 dark:bg-white/[0.02] shrink-0 ${headerClassName}`}
                     >
-                        <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0">
+                        <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1 order-1">
                             {headerLeading}
                             {!headerLeading && icon && (
                                 <div
@@ -188,7 +197,7 @@ export function Modal({
                                     {icon}
                                 </div>
                             )}
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 flex-wrap">
                                     {typeof title === "string" ? (
                                         <h2
@@ -211,9 +220,24 @@ export function Modal({
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                            {headerActions}
-                            {!hideCloseButton && (
+                        {headerActions && (
+                            <div
+                                className={
+                                    stackHeaderActionsOnMobile
+                                        ? "order-3 sm:order-2 w-full sm:w-auto flex items-center shrink-0"
+                                        : "order-2 flex items-center shrink-0"
+                                }
+                            >
+                                {headerActions}
+                            </div>
+                        )}
+
+                        {!hideCloseButton && (
+                            <div
+                                className={`flex items-center shrink-0 ${
+                                    stackHeaderActionsOnMobile && headerActions ? "order-2 sm:order-3" : "order-3"
+                                }`}
+                            >
                                 <button
                                     type="button"
                                     onClick={onClose}
@@ -222,8 +246,8 @@ export function Modal({
                                 >
                                     <X className="w-5 h-5"/>
                                 </button>
-                            )}
-                        </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

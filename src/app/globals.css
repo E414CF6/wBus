@@ -229,6 +229,12 @@ input[type="submit"] {
     margin-right: max(8px, env(safe-area-inset-right, 8px)) !important;
 }
 
+@media (max-width: 639px) {
+    .maplibregl-ctrl-bottom-right {
+        margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 68px) !important;
+    }
+}
+
 @media (min-width: 640px) {
     .maplibregl-ctrl-top-right {
         top: calc(env(safe-area-inset-top, 0px) + 14px) !important;

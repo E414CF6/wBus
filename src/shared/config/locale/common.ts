@@ -78,7 +78,7 @@ export const BOTTOM_NAV_STRINGS = {
     TAB_MAP: "실시간 지도",
     TAB_ALL: "전체",
     RUNNING_LIST_BTN: (count: number) => `운행 목록 (${count})`,
-    RUNNING_LIST_TITLE: (route: string, count: number) => `${route}번 노선 운행 목록 (${count}대)`,
+    RUNNING_LIST_TITLE: (route: string, count: number) => `${count} · ${route}번 노선 운행 목록`,
     TOGGLE_THEME: "테마 변경",
     PICK_ROUTE_TITLE: "노선 선택",
     SELECT_ROUTE_TITLE: "노선 선택 (검색/목록)",

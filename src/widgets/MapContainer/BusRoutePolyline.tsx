@@ -150,7 +150,7 @@ export default function BusRoutePolyline({
                 ],
                 {
                     padding: {
-                        top: isCompact ? 196 : 168,
+                        top: isCompact ? 196 : 188,
                         bottom: isCompact ? 124 : 116,
                         left: isCompact ? 56 : isDesktop ? 440 : 64,
                         right: isCompact ? 76 : 84,

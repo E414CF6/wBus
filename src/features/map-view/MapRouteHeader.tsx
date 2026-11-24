@@ -306,8 +306,8 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                     )
                                     : `${meta.origin} ↔ ${meta.destination}`
                             }
-                            aria-label={UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_SWITCH_ARIA}
                         >
+                            <span className="sr-only"> - {UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_SWITCH_ARIA}</span>
                             <span
                                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white ${meta.colorTheme.bg} ${meta.colorTheme.shadow || "shadow-[0_4px_12px_rgba(0,0,0,0.15)]"}`}
                                 aria-hidden="true"
@@ -380,7 +380,7 @@ export const MapRouteHeader: React.FC<MapRouteHeaderProps> = ({
                                     e.stopPropagation();
                                     setIsVariantMenuOpen((prev) => !prev);
                                 }}
-                                className="p-1 rounded-full text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
+                                className="inline-flex items-center justify-center min-w-6 min-h-6 p-1.5 rounded-full text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition cursor-pointer"
                                 title={UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_LIST_TITLE}
                                 aria-label={UI_TEXT.MAP_VIEW.ROUTE_HEADER.VARIANT_LIST_ARIA}
                             >

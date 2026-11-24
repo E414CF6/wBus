@@ -95,6 +95,29 @@ function MapAppShell() {
             setActiveWikiModal({slug: initialQueryWiki, mode: "read"});
         }
     }
+
+    // Clear ?wiki= query param after closing the modal so page reload does not re-open it
+    useEffect(() => {
+        if (activeWikiModal !== null || typeof window === "undefined") return;
+        const url = new URL(window.location.href);
+        if (!url.searchParams.has("wiki")) return;
+        const timer = window.setTimeout(() => {
+            try {
+                const latest = new URL(window.location.href);
+                if (latest.searchParams.has("wiki")) {
+                    latest.searchParams.delete("wiki");
+                    window.history.replaceState(
+                        window.history.state,
+                        "",
+                        latest.pathname + latest.search + latest.hash
+                    );
+                }
+            } catch {
+                // Ignore
+            }
+        }, 50);
+        return () => window.clearTimeout(timer);
+    }, [activeWikiModal]);
     const [isWikiPinListOpen, setIsWikiPinListOpen] = useState(false);
     const [pendingPinCoords, setPendingPinCoords] = useState<{ lat: number; lng: number } | null>(null);
     const [movingPinTarget, setMovingPinTarget] = useState<{

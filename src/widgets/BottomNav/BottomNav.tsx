@@ -194,7 +194,7 @@ function BottomNavComponent({
             )}
 
             <div
-                className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1.125rem)] left-1/2 lg:left-[calc(50%+198px)] xl:left-[calc(50%+218px)] -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-2.5 max-w-[calc(100vw-1.5rem)] lg:max-w-[calc(100vw-428px)] xl:max-w-[calc(100vw-468px)] sm:w-auto ${className}`}
+                className={`fixed bottom-[calc(env(safe-area-inset-bottom,0px)+1.125rem)] left-1/2 lg:left-[calc(50%+198px)] xl:left-[calc(50%+218px)] -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center gap-2.5 max-w-[calc(100vw-1rem)] lg:max-w-[calc(100vw-428px)] xl:max-w-[calc(100vw-468px)] sm:w-auto ${className}`}
             >
                 {/* Floating Region Switch Prompt Pill */}
                 {hasPendingRegion && detectedCity && !isBusListOpen && (
@@ -239,7 +239,7 @@ function BottomNavComponent({
                     className="relative max-w-full bg-white/92 dark:bg-[#11131a]/92 backdrop-blur-3xl border border-black/8 dark:border-white/10 shadow-[0_12px_40px_rgba(0,0,0,0.16)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.6)] rounded-full transition-all duration-300 select-none overflow-hidden shrink-0"
                 >
                     <div
-                        className="flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 px-2 sm:px-3 overflow-x-auto scrollbar-hide custom-scrollbar-hidden scroll-smooth touch-pan-x overscroll-x-contain">
+                        className="flex w-full items-center gap-0.5 sm:gap-1.5 p-1 sm:p-1.5 px-1.5 sm:px-3 overflow-x-auto scrollbar-hide custom-scrollbar-hidden scroll-smooth touch-pan-x overscroll-x-contain">
                         {/* Brand Logo & Title (Recenter on Current City) */}
                         <button
                             type="button"
@@ -260,7 +260,7 @@ function BottomNavComponent({
                             </span>
                         </button>
 
-                        <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+                        <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0 sm:mx-0.5 shrink-0"/>
 
                         {/* Region Selector Button */}
                         <button
@@ -269,7 +269,7 @@ function BottomNavComponent({
                                 triggerHaptic("light");
                                 setIsCityModalOpen(true);
                             }}
-                            className={`relative flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
+                            className={`relative flex items-center gap-0.5 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 ${
                                 hasPendingRegion
                                     ? "bg-blue-600 text-white shadow-md shadow-blue-600/25 ring-2 ring-blue-400/40"
                                     : "bg-black text-white dark:bg-white dark:text-black shadow-sm shadow-black/10 dark:shadow-white/10 hover:opacity-90"
@@ -279,7 +279,7 @@ function BottomNavComponent({
                                     ? UI_TEXT.MAP_VIEW.BOTTOM_NAV.REGION_DETECTED_TITLE(currentCity.name, detectedCity.name)
                                     : UI_TEXT.MAP_VIEW.BOTTOM_NAV.REGION_CURRENT_TITLE(currentCity.name)
                             }
-                            aria-label={UI_TEXT.MAP_VIEW.BOTTOM_NAV.REGION_SELECT_ARIA}
+                            aria-label={`${shortCityName} · ${UI_TEXT.MAP_VIEW.BOTTOM_NAV.REGION_SELECT_ARIA}`}
                         >
                             {hasPendingRegion ? (
                                 <Sparkles className="w-3.5 h-3.5 animate-pulse shrink-0"/>
@@ -287,7 +287,7 @@ function BottomNavComponent({
                                 <MapPin className="w-3.5 h-3.5 stroke-[2.4] shrink-0"/>
                             )}
                             <span
-                                className="whitespace-nowrap font-black max-w-[70px] sm:max-w-none truncate">{shortCityName}</span>
+                                className="whitespace-nowrap font-black max-w-[64px] sm:max-w-none truncate">{shortCityName}</span>
                             <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-75 shrink-0"/>
 
                             {hasPendingRegion && (
@@ -307,12 +307,12 @@ function BottomNavComponent({
                                 triggerHaptic("light");
                                 setIsRoutePickerOpen(true);
                             }}
-                            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${routeMeta.colorTheme.badgeBg} border ${routeMeta.colorTheme.border} ${routeMeta.colorTheme.text}`}
+                            className={`flex items-center gap-0.5 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-extrabold tracking-tight transition-all duration-200 cursor-pointer select-none active:scale-95 shrink-0 animate-fadeIn shadow-xs ${routeMeta.colorTheme.badgeBg} border ${routeMeta.colorTheme.border} ${routeMeta.colorTheme.text}`}
                             title={UI_TEXT.BOTTOM_NAV.SELECT_ROUTE_TITLE}
                         >
                             <Bus className="w-3.5 h-3.5 shrink-0"/>
                             <span
-                                className="whitespace-nowrap font-black">{UI_TEXT.COMMON.ROUTE_NUMBER(selectedRoute || UI_TEXT.BOTTOM_NAV.DEFAULT_ROUTE_NAME)}</span>
+                                className="whitespace-nowrap font-black max-w-[68px] sm:max-w-none truncate">{UI_TEXT.COMMON.ROUTE_NUMBER(selectedRoute || UI_TEXT.BOTTOM_NAV.DEFAULT_ROUTE_NAME)}</span>
                             <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 opacity-70 shrink-0"/>
                         </button>
 
@@ -320,7 +320,7 @@ function BottomNavComponent({
                         <button
                             type="button"
                             onClick={handleToggleBusList}
-                            className={`flex lg:hidden items-center justify-center gap-1 px-2 py-1.5 sm:px-2.5 sm:py-2 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 ${
+                            className={`flex lg:hidden items-center justify-center gap-1 px-1.5 py-1.5 sm:px-2.5 sm:py-2 rounded-full transition-all duration-200 cursor-pointer select-none active:scale-90 shrink-0 ${
                                 isBusListOpen
                                     ? "bg-indigo-600 text-white shadow-xs"
                                     : "hover:bg-black/[0.04] dark:hover:bg-white/[0.08]"
@@ -352,7 +352,7 @@ function BottomNavComponent({
                             )}
                         </button>
 
-                        <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0.5 shrink-0"/>
+                        <div className="w-px h-3.5 sm:h-4 bg-black/10 dark:bg-white/10 mx-0 sm:mx-0.5 shrink-0"/>
 
                         {/* Wiki Modal Trigger (or Cancel Pin Placement when active) */}
                         <button

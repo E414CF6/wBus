@@ -139,7 +139,7 @@ export const DualHourlyTimetableBlock: React.FC<DualHourlyTimetableBlockProps> =
                         <strong>{locationLabel}</strong> {UI_TEXT.TIMETABLE.HOURLY_CRITERIA_HINT}
                     </span>
                 </div>
-                <div className={`relative w-full ${compact ? "" : "sm:w-52"}`}>
+                <div className={`relative w-full ${compact ? "" : "sm:w-64"}`}>
                     <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"/>
                     <input
                         id={`timetable-search-${locationLabel}`}

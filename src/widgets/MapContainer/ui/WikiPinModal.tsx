@@ -159,29 +159,15 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
     );
 
     const headerSubtitle = useMemo(() => {
-        if (!wikiDoc) return undefined;
-        const hasTags = wikiDoc.tags.length > 0;
-        const hasSubtitle = Boolean(wikiDoc.subtitle?.trim());
-        if (!hasTags && !hasSubtitle) return undefined;
+        const subtitleText = wikiDoc?.subtitle?.trim();
+        if (!subtitleText) return undefined;
 
         return (
-            <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                {wikiDoc.tags.slice(0, 5).map((tag) => (
-                    <span
-                        key={tag}
-                        className={`inline-flex items-center px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.08] text-[10.5px] font-bold ${theme.pillTextClass}`}
-                    >
-                        #{tag}
-                    </span>
-                ))}
-                {hasSubtitle && (
-                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-md">
-                        {wikiDoc.subtitle}
-                    </span>
-                )}
-            </div>
+            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate max-w-full sm:max-w-md mt-0.5">
+                {subtitleText}
+            </p>
         );
-    }, [wikiDoc, theme.pillTextClass]);
+    }, [wikiDoc?.subtitle]);
 
     const headerBadge = wikiDoc ? (
         <span
@@ -193,13 +179,13 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
     const openDiscussionCount = discussionsData?.openCount ?? 0;
 
     const headerActions = wikiDoc ? (
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 w-full sm:w-auto">
             <div
-                className="inline-flex items-center rounded-xl bg-slate-100 dark:bg-white/[0.06] p-0.5 border border-slate-200/60 dark:border-white/10">
+                className="inline-flex w-full sm:w-auto items-center justify-between sm:justify-start rounded-xl bg-slate-100 dark:bg-white/[0.06] p-0.5 border border-slate-200/60 dark:border-white/10">
                 <button
                     type="button"
                     onClick={() => requestModeChange("read")}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
+                    className={`flex-1 sm:flex-none px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
                         viewMode === "read"
                             ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
                             : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
@@ -210,7 +196,7 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                 <button
                     type="button"
                     onClick={() => requestModeChange("edit")}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
+                    className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
                         viewMode === "edit"
                             ? `${theme.badgeBg} text-white shadow-xs`
                             : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
@@ -222,7 +208,7 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                 <button
                     type="button"
                     onClick={() => requestModeChange("history")}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
+                    className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
                         viewMode === "history"
                             ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
                             : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
@@ -234,7 +220,7 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                 <button
                     type="button"
                     onClick={() => requestModeChange("discussion")}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
+                    className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black transition cursor-pointer ${
                         viewMode === "discussion"
                             ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs"
                             : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
@@ -289,6 +275,7 @@ export const WikiPinModal: React.FC<WikiPinModalProps> = ({
                 icon={modalIcon}
                 headerBadge={headerBadge}
                 headerActions={headerActions}
+                stackHeaderActionsOnMobile
                 footer={modalFooter}
                 maxWidth="full"
                 height="full"
